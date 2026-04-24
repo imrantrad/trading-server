@@ -422,3 +422,217 @@ def caps():
         "api_endpoints":["/strategy","/trade","/trade/close","/positions","/trades",
             "/stats","/prices/update","/hedge/analyze","/risk/calculate",
             "/risk/report","/risk/kill_switch","/events/history","/events/log","/paper/reset"]}
+
+# ═══════════════════════════════════════
+# NEW MODULES
+# ═══════════════════════════════════════
+try:
+    from backtest.engine import BacktestEngine, backtest_engine
+    from engine.strategy_engine import StrategyEngine, strategy_engine, BUILTIN_STRATEGIES, StrategyConfig
+    from engine.notifications import NotificationEngine, notifier
+    from engine.portfolio import PortfolioTracker, PortfolioPosition, portfolio
+    from engine.options_chain import generate_chain
+    from brokers import get_broker
+    MODULES_LOADED = True
+except Exception as e:
+    MODULES_LOADED = False
+    print(f"Modules: {e}")
+
+# ─── BACKTEST ────────────────────────────────────────
+class BacktestPayload(BaseModel):
+    strategy: str = "EMA_CROSS"
+    instrument: str = "NIFTY"
+    bars: int = 252
+    quantity: int = 1
+    sl_pct: float = 1.0
+    target_pct: float = 2.0
+    run_monte_carlo: bool = True
+    run_walk_forward: bool = True
+
+@app.post("/backtest/run")
+def run_backtest(payload: BacktestPayload):
+    if not MODULES_LOADED:
+        return {"error": "Backtest module not loaded"}
+    candles = backtest_engine.generate_sample_data(payload.instrument, payload.bars)
+    result = backtest_engine.run_strategy(
+        payload.strategy, candles, payload.quantity, payload.sl_pct, payload.target_pct)
+    response = {
+        "strategy": result.strategy,
+        "instrument": payload.instrument,
+        "bars_tested": len(candles),
+        "total_trades": result.total_trades,
+        "winning_trades": result.winning_trades,
+        "losing_trades": result.losing_trades,
+        "win_rate": result.win_rate,
+        "total_pnl": result.total_pnl,
+        "profit_factor": result.profit_factor,
+        "avg_win": result.avg_win,
+        "avg_loss": result.avg_loss,
+        "max_drawdown_pct": result.max_drawdown,
+        "sharpe_ratio": result.sharpe_ratio,
+        "expectancy": result.expectancy,
+        "max_consecutive_wins": result.max_consecutive_wins,
+        "max_consecutive_losses": result.max_consecutive_losses,
+        "equity_curve": result.equity_curve,
+        "verdict": "PROFITABLE" if result.total_pnl > 0 else "UNPROFITABLE",
+    }
+    if payload.run_monte_carlo:
+        pnls = [t.pnl for t in result.trades]
+        response["monte_carlo"] = backtest_engine.monte_carlo(pnls)
+    if payload.run_walk_forward:
+        response["walk_forward"] = backtest_engine.walk_forward(payload.strategy, candles)
+    return response
+
+@app.get("/backtest/strategies")
+def backtest_strategies():
+    return {"strategies": ["EMA_CROSS","RSI_MEAN_REVERSION","BOLLINGER_BREAKOUT",
+                           "EMA_RSI_COMBO","SUPERTREND_LIKE"]}
+
+# ─── STRATEGY ENGINE ────────────────────────────────
+class StrategyPayloadNew(BaseModel):
+    name: str; instrument: str = "NIFTY"; quantity: int = 1
+    sl_pct: float = 1.0; target_pct: float = 2.0
+    auto_execute: bool = False; mode: str = "PAPER"
+
+@app.post("/strategy/add")
+def add_strategy(payload: StrategyPayloadNew):
+    if not MODULES_LOADED: return {"error": "Module not loaded"}
+    config = StrategyConfig(name=payload.name, instrument=payload.instrument,
+        quantity=payload.quantity, auto_execute=payload.auto_execute, mode=payload.mode)
+    sid = strategy_engine.add_strategy(config)
+    return {"status": "added", "strategy_id": sid}
+
+@app.get("/strategy/list")
+def list_strategies():
+    if not MODULES_LOADED: return {"strategies": [], "builtin": BUILTIN_STRATEGIES}
+    return {"active": strategy_engine.get_all_status(),
+            "builtin": BUILTIN_STRATEGIES, "count": len(strategy_engine.strategies)}
+
+@app.get("/strategy/signals")
+def get_signals(limit: int = 20):
+    if not MODULES_LOADED: return {"signals": []}
+    return {"signals": strategy_engine.get_recent_signals(limit)}
+
+@app.post("/strategy/{sid}/pause")
+def pause_strategy(sid: str):
+    if MODULES_LOADED: strategy_engine.pause_strategy(sid)
+    return {"status": "paused", "id": sid}
+
+@app.post("/strategy/{sid}/resume")
+def resume_strategy(sid: str):
+    if MODULES_LOADED: strategy_engine.resume_strategy(sid)
+    return {"status": "resumed", "id": sid}
+
+@app.post("/strategy/update_market")
+def update_market(prices: dict, indicators: dict = {}):
+    if MODULES_LOADED: strategy_engine.update_market_data(prices, indicators)
+    return {"updated": True}
+
+# ─── OPTIONS CHAIN ─────────────────────────────────
+@app.get("/options/chain")
+def options_chain(spot: float = 22450, dte: int = 7, iv: float = 15,
+                  instrument: str = "NIFTY"):
+    chain = generate_chain(spot, dte, iv/100)
+    return chain
+
+@app.get("/options/greeks")
+def option_greeks(spot: float, strike: float, dte: int = 7,
+                  iv: float = 15, opt_type: str = "CE"):
+    from engine.options_chain import black_scholes
+    result = black_scholes(spot, strike, dte, 0.065, iv/100, opt_type)
+    intrinsic = max(0, spot-strike) if opt_type=="CE" else max(0, strike-spot)
+    return {**result, "intrinsic_value": round(intrinsic, 2),
+            "time_value": round(result["price"]-intrinsic, 2),
+            "moneyness": "ATM" if abs(spot-strike)<25 else ("ITM" if
+                (opt_type=="CE" and spot>strike) or (opt_type=="PE" and spot<strike) else "OTM")}
+
+# ─── PORTFOLIO ──────────────────────────────────────
+@app.get("/portfolio/summary")
+def portfolio_summary():
+    if not MODULES_LOADED: return {"error": "Module not loaded"}
+    return portfolio.get_summary()
+
+@app.get("/portfolio/positions")
+def portfolio_positions():
+    if not MODULES_LOADED: return {"positions": []}
+    return {"positions": [
+        {"id": pid, "instrument": p.instrument, "action": p.action,
+         "option_type": p.option_type, "strike": p.strike,
+         "quantity": p.quantity, "avg_price": p.avg_price,
+         "current_price": p.current_price, "pnl": round(p.pnl, 0),
+         "pnl_pct": p.pnl_pct, "is_hedge": p.is_hedge, "delta": p.delta}
+        for pid, p in portfolio.positions.items()
+    ]}
+
+# ─── NOTIFICATIONS ──────────────────────────────────
+class NotifConfig(BaseModel):
+    telegram_token: str = ""; telegram_chat_id: str = ""; webhook_url: str = ""
+
+@app.post("/notifications/configure")
+def configure_notif(payload: NotifConfig):
+    if not MODULES_LOADED: return {"error": "Module not loaded"}
+    if payload.telegram_token:
+        notifier.configure_telegram(payload.telegram_token, payload.telegram_chat_id)
+    if payload.webhook_url:
+        notifier.configure_webhook(payload.webhook_url)
+    return {"telegram": notifier.enabled["telegram"], "webhook": notifier.enabled["webhook"]}
+
+@app.get("/notifications/history")
+def notif_history(limit: int = 20):
+    if not MODULES_LOADED: return {"notifications": []}
+    return {"notifications": notifier.get_recent(limit)}
+
+@app.post("/notifications/test")
+def test_notif():
+    if not MODULES_LOADED: return {"error": "Module not loaded"}
+    notifier.send(__import__('engine.notifications', fromlist=['Notification']).Notification(
+        "SYSTEM","INFO","Test Notification","Trading System v12.3 is running!"))
+    return {"sent": True}
+
+# ─── BROKER STATUS ──────────────────────────────────
+@app.get("/broker/status")
+def broker_status():
+    return {"active_broker": "ZERODHA", "mode": "PAPER",
+            "brokers": ["ZERODHA","ANGEL","FYERS"],
+            "note": "Add API keys in config/settings.py for live trading",
+            "live_trading": False}
+
+@app.get("/broker/connect/{broker_name}")
+def connect_broker(broker_name: str, api_key: str = "", access_token: str = ""):
+    if not MODULES_LOADED: return {"error": "Module not loaded"}
+    try:
+        broker = get_broker(broker_name, api_key=api_key, access_token=access_token)
+        connected = broker.login()
+        return {"broker": broker_name, "connected": connected,
+                "note": "Add real API keys for live connection"}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ─── SYSTEM STATUS ──────────────────────────────────
+@app.get("/system/status")
+def system_status():
+    stats = paper_engine.get_stats()
+    return {
+        "version": "12.3",
+        "status": "RUNNING",
+        "mode": "PAPER",
+        "event_driven": EVENT_DRIVEN,
+        "modules_loaded": MODULES_LOADED,
+        "uptime": time.strftime("%H:%M:%S"),
+        "performance": {
+            "capital": stats.get("capital", 500000),
+            "total_pnl": stats.get("total_pnl", 0),
+            "total_trades": stats.get("total_trades", 0),
+            "win_rate": stats.get("win_rate", 0),
+        },
+        "risk": risk_manager.get_risk_report(),
+        "components": {
+            "nlp": "ACTIVE", "paper_engine": "ACTIVE",
+            "risk_manager": "ACTIVE", "event_bus": "ACTIVE" if EVENT_DRIVEN else "INACTIVE",
+            "backtest": "ACTIVE" if MODULES_LOADED else "INACTIVE",
+            "strategy_engine": "ACTIVE" if MODULES_LOADED else "INACTIVE",
+            "options_chain": "ACTIVE" if MODULES_LOADED else "INACTIVE",
+            "notifications": "CONFIGURED" if MODULES_LOADED and notifier.enabled.get("telegram") else "NOT_CONFIGURED",
+            "brokers": "ZERODHA/ANGEL/FYERS (Paper Mode)",
+        }
+    }
