@@ -1,439 +1,515 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import re, time, math
+import re, time
 
-app = FastAPI(title="Trading System v12.3 - Complete NLP")
+app = FastAPI(title="Institutional Trading NLP v12.3")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # ═══════════════════════════════════════════════════════════
 # INSTRUMENTS
 # ═══════════════════════════════════════════════════════════
 INSTRUMENTS = {
-    "nifty 50":"NIFTY","nifty50":"NIFTY","nifty":"NIFTY","nifti":"NIFTY",
-    "निफ्टी":"NIFTY","nf":"NIFTY",
-    "bank nifty":"BANKNIFTY","banknifty":"BANKNIFTY","bnf":"BANKNIFTY",
-    "बैंक निफ्टी":"BANKNIFTY","बैंकनिफ्टी":"BANKNIFTY","bank":"BANKNIFTY",
+    "nifty 50":"NIFTY","nifty50":"NIFTY","nifty":"NIFTY","nifti":"NIFTY","nf":"NIFTY","निफ्टी":"NIFTY",
+    "bank nifty":"BANKNIFTY","banknifty":"BANKNIFTY","bnf":"BANKNIFTY","बैंकनिफ्टी":"BANKNIFTY",
     "fin nifty":"FINNIFTY","finnifty":"FINNIFTY","fn":"FINNIFTY","फिन निफ्टी":"FINNIFTY",
     "midcap nifty":"MIDCPNIFTY","midcap":"MIDCPNIFTY","mid":"MIDCPNIFTY",
-    "sensex":"SENSEX","बीएसई":"SENSEX","सेंसेक्स":"SENSEX",
-    "reliance":"RELIANCE","tcs":"TCS","hdfc":"HDFCBANK",
-    "infosys":"INFY","infy":"INFY","icici":"ICICIBANK",
-    "sbi":"SBIN","tatasteel":"TATASTEEL","bajaj":"BAJFINANCE",
+    "sensex":"SENSEX","सेंसेक्स":"SENSEX",
+    "reliance":"RELIANCE","tcs":"TCS","hdfc":"HDFCBANK","infosys":"INFY",
+    "icici":"ICICIBANK","sbi":"SBIN","tatasteel":"TATASTEEL",
+    "usdinr":"USDINR","dollar":"USDINR","crude":"CRUDEOIL",
+    "gold":"GOLD","silver":"SILVER","copper":"COPPER",
 }
 
-# ═══════════════════════════════════════════════════════════
-# BUY / SELL
-# ═══════════════════════════════════════════════════════════
-BUY_WORDS = [
-    "buy","long","bullish","upside","call buy","ce buy","entry","enter",
-    "open long","go long","purchase","accumulate","add position",
-    "kharido","kharid","le lo","lelo","lo","khareedna",
-    "bullish hai","upar jayega","upar jaega","badhega",
-    "खरीदो","खरीद","खरीदना","लेना","ले लो","लो","बढ़ेगा",
-]
-SELL_WORDS = [
-    "sell","short","bearish","downside","put buy","pe buy","exit","close",
-    "square off","squareoff","book profit","book loss","reduce",
-    "becho","bech","niklo","nikal","bechna","nikal lo",
-    "bearish hai","niche jayega","neeche jaega","girega",
-    "बेचो","बेच","बेचना","निकलो","निकालो","गिरेगा","बाहर",
-]
+BUY_WORDS = ["buy","long","bullish","call buy","entry","enter","go long","accumulate",
+    "kharido","le lo","lelo","lo","खरीदो","खरीद","लेना","ले लो","badhega","upar"]
+SELL_WORDS = ["sell","short","bearish","put buy","exit","close","square off","squareoff",
+    "book profit","reduce","becho","bech","niklo","nikal","बेचो","बेच","निकलो","girega","neeche"]
 
-# ═══════════════════════════════════════════════════════════
-# OPTION TYPES
-# ═══════════════════════════════════════════════════════════
-OPTION_TYPES = {
-    "call":"CE","ce":"CE","c":"CE","कॉल":"CE",
-    "put":"PE","pe":"PE","p":"PE","पुट":"PE",
-}
+OPTION_TYPES = {"call":"CE","ce":"CE","कॉल":"CE","put":"PE","pe":"PE","पुट":"PE"}
 
 # ═══════════════════════════════════════════════════════════
 # STRATEGIES
 # ═══════════════════════════════════════════════════════════
 STRATEGIES = {
-    # Basic
-    "straddle":"STRADDLE","atm straddle":"ATM_STRADDLE",
-    "strangle":"STRANGLE","otm strangle":"OTM_STRANGLE",
+    "straddle":"STRADDLE","atm straddle":"ATM_STRADDLE","short straddle":"SHORT_STRADDLE",
+    "long straddle":"LONG_STRADDLE","strangle":"STRANGLE","short strangle":"SHORT_STRANGLE",
+    "long strangle":"LONG_STRANGLE","otm strangle":"OTM_STRANGLE",
     "covered call":"COVERED_CALL","protective put":"PROTECTIVE_PUT",
-    "naked call":"NAKED_CALL","naked put":"NAKED_PUT",
-    # Spreads
-    "bull call spread":"BULL_CALL_SPREAD",
-    "bear call spread":"BEAR_CALL_SPREAD",
-    "bull put spread":"BULL_PUT_SPREAD",
-    "bear put spread":"BEAR_PUT_SPREAD",
-    "calendar spread":"CALENDAR_SPREAD",
-    "diagonal spread":"DIAGONAL_SPREAD",
-    "ratio spread":"RATIO_SPREAD",
-    "back spread":"BACK_SPREAD",
-    "debit spread":"DEBIT_SPREAD",
-    "credit spread":"CREDIT_SPREAD",
-    # Complex
-    "iron condor":"IRON_CONDOR",
-    "iron butterfly":"IRON_BUTTERFLY",
-    "broken wing butterfly":"BWB","bwb":"BWB",
-    "butterfly":"BUTTERFLY","condor":"CONDOR",
-    "jade lizard":"JADE_LIZARD",
-    "double diagonal":"DOUBLE_DIAGONAL",
-    "christmas tree":"CHRISTMAS_TREE",
+    "naked call":"NAKED_CALL","naked put":"NAKED_PUT","cash secured put":"CSP",
+    "bull call spread":"BULL_CALL_SPREAD","bear call spread":"BEAR_CALL_SPREAD",
+    "bull put spread":"BULL_PUT_SPREAD","bear put spread":"BEAR_PUT_SPREAD",
+    "calendar spread":"CALENDAR_SPREAD","diagonal spread":"DIAGONAL_SPREAD",
+    "ratio spread":"RATIO_SPREAD","back spread":"BACK_SPREAD",
+    "debit spread":"DEBIT_SPREAD","credit spread":"CREDIT_SPREAD",
+    "iron condor":"IRON_CONDOR","iron butterfly":"IRON_BUTTERFLY",
+    "broken wing butterfly":"BWB","bwb":"BWB","butterfly":"BUTTERFLY",
+    "condor":"CONDOR","jade lizard":"JADE_LIZARD",
+    "double diagonal":"DOUBLE_DIAGONAL","christmas tree":"CHRISTMAS_TREE",
     "collar":"COLLAR","risk reversal":"RISK_REVERSAL",
-    # Hinglish
-    "straddle lagao":"STRADDLE","strangle banao":"STRANGLE",
-    "iron condor lagao":"IRON_CONDOR","butterfly banao":"BUTTERFLY",
+    "ratio write":"RATIO_WRITE","synthetic long":"SYNTH_LONG",
+    "synthetic short":"SYNTH_SHORT","synthetic future":"SYNTH_FUT",
+    "delta hedge":"DELTA_HEDGE","gamma scalp":"GAMMA_SCALP",
+    "vega trade":"VEGA_TRADE","theta harvest":"THETA_HARVEST",
+    "dispersion trade":"DISPERSION","volatility arbitrage":"VOL_ARB",
 }
 
 # ═══════════════════════════════════════════════════════════
-# ENTRY CONDITIONS
+# INSTITUTIONAL CONDITIONS
 # ═══════════════════════════════════════════════════════════
-ENTRY_CONDITIONS = {
-    # Momentum Indicators
+ALL_CONDITIONS = {
+
+    # ── MOMENTUM ──────────────────────────────────────────
     "rsi":"RSI","rsi oversold":"RSI_OVERSOLD","rsi overbought":"RSI_OVERBOUGHT",
-    "rsi crossover":"RSI_CROSS","rsi divergence":"RSI_DIV",
+    "rsi divergence":"RSI_DIV","rsi crossover":"RSI_CROSS","rsi 30":"RSI_30",
+    "rsi 70":"RSI_70","rsi 50":"RSI_50","rsi trend":"RSI_TREND",
     "macd":"MACD","macd crossover":"MACD_CROSS","macd bullish":"MACD_BULL",
-    "macd bearish":"MACD_BEAR","macd histogram":"MACD_HIST",
-    "stochastic":"STOCH","stoch crossover":"STOCH_CROSS",
-    "cci":"CCI","williams r":"WILLIAMS_R","roc":"ROC",
-    "mfi":"MFI","money flow":"MFI",
-    # Trend Indicators
-    "ema":"EMA","ema crossover":"EMA_CROSS","ema200":"EMA200",
-    "sma":"SMA","sma crossover":"SMA_CROSS","wma":"WMA",
+    "macd bearish":"MACD_BEAR","macd histogram":"MACD_HIST","macd zero cross":"MACD_ZERO",
+    "macd divergence":"MACD_DIV","macd signal":"MACD_SIG",
+    "stochastic":"STOCH","stoch crossover":"STOCH_CROSS","stoch oversold":"STOCH_OS",
+    "stoch overbought":"STOCH_OB","stochastic divergence":"STOCH_DIV",
+    "cci":"CCI","williams r":"WILLIAMS_R","roc":"ROC","mfi":"MFI",
+    "tsi":"TSI","ultimate oscillator":"ULT_OSC","awesome oscillator":"AO",
+
+    # ── TREND ─────────────────────────────────────────────
+    "ema":"EMA","ema crossover":"EMA_CROSS","ema200":"EMA200","ema50":"EMA50",
+    "ema20":"EMA20","ema9":"EMA9","ema above":"EMA_ABOVE","ema below":"EMA_BELOW",
+    "sma":"SMA","sma crossover":"SMA_CROSS","sma200":"SMA200","sma50":"SMA50",
+    "wma":"WMA","hull moving average":"HMA","hma":"HMA","dema":"DEMA","tema":"TEMA",
     "golden cross":"GOLDEN_CROSS","death cross":"DEATH_CROSS",
-    "supertrend":"SUPERTREND","super trend buy":"ST_BUY","super trend sell":"ST_SELL",
-    "adx":"ADX","adx trending":"ADX_TREND","adx strong":"ADX_STRONG",
+    "supertrend":"SUPERTREND","supertrend buy":"ST_BUY","supertrend sell":"ST_SELL",
+    "adx":"ADX","adx trending":"ADX_TREND","adx strong":"ADX_STRONG","dmi":"DMI",
     "parabolic sar":"PSAR","psar":"PSAR","ichimoku":"ICHIMOKU",
     "ichimoku cloud":"ICHI_CLOUD","kumo breakout":"KUMO_BO",
-    # Volatility
+    "tenkan kijun cross":"TK_CROSS","chikou":"CHIKOU",
+    "linear regression":"LIN_REG","least squares":"LSQ",
+    "zigzag":"ZIGZAG","fractal":"FRACTAL",
+
+    # ── VOLATILITY ────────────────────────────────────────
     "bollinger band":"BB","bollinger":"BB","bb squeeze":"BB_SQUEEZE",
     "bb breakout":"BB_BO","bb upper":"BB_UPPER","bb lower":"BB_LOWER",
-    "atr":"ATR","keltner channel":"KELTNER",
-    "vix":"VIX","india vix":"VIX","vix spike":"VIX_SPIKE",
-    "iv":"IV","implied volatility":"IV","iv crush":"IV_CRUSH",
-    "iv expansion":"IV_EXP","hv":"HV",
-    # Volume
-    "vwap":"VWAP","vwap breakout":"VWAP_BO","vwap bounce":"VWAP_BNC",
-    "obv":"OBV","volume surge":"VOL_SURGE","high volume":"HIGH_VOL",
-    "low volume":"LOW_VOL","volume breakout":"VOL_BO",
-    # Price Action
-    "support":"SUPPORT","resistance":"RESISTANCE",
-    "breakout":"BREAKOUT","breakdown":"BREAKDOWN",
-    "reversal":"REVERSAL","bounce":"BOUNCE",
-    "higher high":"HH","lower low":"LL","higher low":"HL",
-    "double top":"DOUBLE_TOP","double bottom":"DOUBLE_BOTTOM",
-    "head and shoulder":"HEAD_SHOULDER","inverse head shoulder":"INV_HS",
-    "cup and handle":"CUP_HANDLE","rounding bottom":"ROUND_BOTTOM",
-    "flag":"FLAG","pennant":"PENNANT","wedge":"WEDGE",
-    "ascending triangle":"ASC_TRI","descending triangle":"DESC_TRI",
-    "symmetrical triangle":"SYM_TRI",
-    "gap up":"GAP_UP","gap down":"GAP_DOWN","gap fill":"GAP_FILL",
-    "engulfing":"ENGULF","doji":"DOJI","hammer":"HAMMER",
-    "shooting star":"SHOOT_STAR","morning star":"MORNING_STAR",
-    "evening star":"EVENING_STAR","harami":"HARAMI",
-    "three white soldiers":"THREE_WS","three black crows":"THREE_BC",
-    # Greeks
-    "delta":"DELTA","gamma":"GAMMA","theta":"THETA",
-    "vega":"VEGA","rho":"RHO","delta neutral":"DELTA_NEUTRAL",
-    # Options Specific
-    "open interest":"OI","oi buildup":"OI_BUILD","oi unwinding":"OI_UNWIND",
-    "pcr":"PCR","put call ratio":"PCR","max pain":"MAX_PAIN",
-    "gamma scalping":"GAMMA_SCALP","theta decay":"THETA_DECAY",
-    "iv rank":"IV_RANK","iv percentile":"IV_PERC",
-    # Market Conditions
-    "trending":"TRENDING","sideways":"SIDEWAYS","rangebound":"RANGEBOUND",
-    "range bound":"RANGEBOUND","consolidating":"CONSOLIDATING",
-    "volatile":"VOLATILE","low volatility":"LOW_VOL_MKT",
-    "bull market":"BULL_MKT","bear market":"BEAR_MKT",
-    "overbought":"OVERBOUGHT","oversold":"OVERSOLD",
-    # Fundamental
-    "earnings":"EARNINGS","results":"RESULTS","event":"EVENT",
-    "expiry":"EXPIRY","expiry day":"EXPIRY_DAY",
-    "budget":"BUDGET","rbi policy":"RBI","fed":"FED",
-}
+    "bb width":"BB_WIDTH","bb percent":"BB_PCT",
+    "atr":"ATR","atr breakout":"ATR_BO","keltner channel":"KELTNER",
+    "keltner breakout":"KELT_BO","donchian channel":"DONCHIAN",
+    "vix":"VIX","india vix":"VIX","vix spike":"VIX_SPIKE","vix crush":"VIX_CRUSH",
+    "vix high":"VIX_HIGH","vix low":"VIX_LOW",
+    "iv":"IV","implied volatility":"IV","iv rank":"IV_RANK",
+    "iv percentile":"IV_PERC","iv crush":"IV_CRUSH","iv expansion":"IV_EXP",
+    "hv":"HV","historical volatility":"HV","iv hv ratio":"IV_HV",
+    "volatility smile":"VOL_SMILE","volatility skew":"VOL_SKEW",
+    "volatility surface":"VOL_SURF","term structure":"TERM_STRUC",
+    "contango":"CONTANGO","backwardation":"BACKWDTN",
+    "realized volatility":"REAL_VOL","vol of vol":"VOL_VOL",
+    "parkinson volatility":"PARK_VOL","garman klass":"GK_VOL",
 
-# ═══════════════════════════════════════════════════════════
-# EXIT CONDITIONS
-# ═══════════════════════════════════════════════════════════
-EXIT_CONDITIONS = {
-    # Fixed
+    # ── VOLUME ────────────────────────────────────────────
+    "vwap":"VWAP","vwap breakout":"VWAP_BO","vwap bounce":"VWAP_BNC",
+    "vwap rejection":"VWAP_REJ","vwap reclaim":"VWAP_RCL",
+    "obv":"OBV","obv divergence":"OBV_DIV","volume surge":"VOL_SURGE",
+    "high volume":"HIGH_VOL","low volume":"LOW_VOL",
+    "volume breakout":"VOL_BO","volume climax":"VOL_CLIMAX",
+    "accumulation":"ACCUM","distribution":"DISTRIB",
+    "volume profile":"VOL_PROFILE","poc":"POC","point of control":"POC",
+    "value area high":"VAH","value area low":"VAL","value area":"VA",
+    "hvn":"HVN","lvn":"LVN","high volume node":"HVN","low volume node":"LVN",
+    "volume delta":"VOL_DELTA","buy volume":"BUY_VOL","sell volume":"SELL_VOL",
+    "cvd":"CVD","cumulative volume delta":"CVD",
+
+    # ── PRICE ACTION ──────────────────────────────────────
+    "support":"SUPPORT","resistance":"RESISTANCE","key level":"KEY_LVL",
+    "breakout":"BREAKOUT","breakdown":"BREAKDOWN","fakeout":"FAKEOUT",
+    "reversal":"REVERSAL","bounce":"BOUNCE","rejection":"REJECTION",
+    "higher high":"HH","lower low":"LL","higher low":"HL","lower high":"LH",
+    "swing high":"SWING_H","swing low":"SWING_L",
+    "double top":"DOUBLE_TOP","double bottom":"DOUBLE_BOTTOM",
+    "triple top":"TRIPLE_TOP","triple bottom":"TRIPLE_BOTTOM",
+    "head and shoulder":"HEAD_SHOULDER","inverse head shoulder":"INV_HS",
+    "cup and handle":"CUP_HANDLE","rounding bottom":"ROUND_BTM",
+    "flag":"FLAG","bull flag":"BULL_FLAG","bear flag":"BEAR_FLAG",
+    "pennant":"PENNANT","wedge":"WEDGE","rising wedge":"RISE_WEDGE",
+    "falling wedge":"FALL_WEDGE","ascending triangle":"ASC_TRI",
+    "descending triangle":"DESC_TRI","symmetrical triangle":"SYM_TRI",
+    "gap up":"GAP_UP","gap down":"GAP_DOWN","gap fill":"GAP_FILL",
+    "island reversal":"ISLAND_REV","exhaustion gap":"EXHAUS_GAP",
+    "measured move":"MEAS_MOVE","thrust":"THRUST",
+
+    # ── CANDLESTICK ───────────────────────────────────────
+    "doji":"DOJI","dragonfly doji":"DRAG_DOJI","gravestone doji":"GRAVE_DOJI",
+    "hammer":"HAMMER","inverted hammer":"INV_HAMMER",
+    "shooting star":"SHOOT_STAR","hanging man":"HANG_MAN",
+    "engulfing":"ENGULF","bullish engulfing":"BULL_ENGULF",
+    "bearish engulfing":"BEAR_ENGULF","harami":"HARAMI",
+    "morning star":"MORN_STAR","evening star":"EVE_STAR",
+    "three white soldiers":"THREE_WS","three black crows":"THREE_BC",
+    "spinning top":"SPIN_TOP","marubozu":"MARUBOZU",
+    "tweezer top":"TWEEZ_TOP","tweezer bottom":"TWEEZ_BTM",
+    "dark cloud cover":"DARK_CLOUD","piercing line":"PIERC_LINE",
+    "inside bar":"INSIDE_BAR","outside bar":"OUT_BAR","nr7":"NR7","nr4":"NR4",
+    "pin bar":"PIN_BAR","fakey":"FAKEY",
+
+    # ── FIBONACCI ─────────────────────────────────────────
+    "fibonacci":"FIB","fib retracement":"FIB_RET","fib extension":"FIB_EXT",
+    "fib 38":"FIB_38","fib 50":"FIB_50","fib 61":"FIB_61","fib 78":"FIB_78",
+    "fib 127":"FIB_127","fib 161":"FIB_161","fib 261":"FIB_261",
+    "golden ratio":"GOLDEN_RATIO","fib fan":"FIB_FAN","fib arc":"FIB_ARC",
+    "fib time":"FIB_TIME","fib cluster":"FIB_CLUSTER",
+
+    # ── SMART MONEY CONCEPTS ──────────────────────────────
+    "order block":"ORDER_BLOCK","bullish order block":"BULL_OB",
+    "bearish order block":"BEAR_OB","breaker block":"BREAKER",
+    "mitigation block":"MITIG_BLK","rejection block":"REJ_BLK",
+    "fair value gap":"FVG","fvg":"FVG","imbalance":"IMBALANCE",
+    "liquidity":"LIQUIDITY","buy side liquidity":"BSL",
+    "sell side liquidity":"SSL","liquidity sweep":"LIQ_SWEEP",
+    "liquidity grab":"LIQ_GRAB","stop hunt":"STOP_HUNT",
+    "inducement":"INDUCEMENT","change of character":"CHOCH",
+    "choch":"CHOCH","break of structure":"BOS","bos":"BOS",
+    "market structure shift":"MSS","premium zone":"PREMIUM",
+    "discount zone":"DISCOUNT","equilibrium":"EQ","50% level":"EQ",
+    "smart money":"SMART_MONEY","institutional buying":"INST_BUY",
+    "institutional selling":"INST_SELL",
+
+    # ── WYCKOFF ───────────────────────────────────────────
+    "wyckoff":"WYCKOFF","accumulation phase":"ACCUM_PHASE",
+    "distribution phase":"DISTRIB_PHASE","reaccumulation":"REACCUM",
+    "redistribution":"REDISTRIB","spring":"SPRING","upthrust":"UPTHRUST",
+    "selling climax":"SC","buying climax":"BC","automatic rally":"AR",
+    "secondary test":"ST_WYCK","last point of support":"LPS",
+    "last point of supply":"LPSY","sign of strength":"SOS",
+    "sign of weakness":"SOW","cause and effect":"CAUSE_EFF",
+    "composite man":"COMP_MAN",
+
+    # ── ELLIOTT WAVE ──────────────────────────────────────
+    "elliott wave":"ELLIOTT","wave 1":"WAVE1","wave 2":"WAVE2",
+    "wave 3":"WAVE3","wave 4":"WAVE4","wave 5":"WAVE5",
+    "wave a":"WAVE_A","wave b":"WAVE_B","wave c":"WAVE_C",
+    "impulse wave":"IMPULSE","corrective wave":"CORRECTIVE",
+    "zigzag correction":"ZZ_CORR","flat correction":"FLAT_CORR",
+    "triangle correction":"TRI_CORR","wave count":"WAVE_CNT",
+    "extended wave":"EXT_WAVE","truncation":"TRUNC",
+
+    # ── OPTIONS SPECIFIC ──────────────────────────────────
+    "open interest":"OI","oi buildup":"OI_BUILD","oi unwinding":"OI_UNWIND",
+    "long buildup":"LONG_BUILD","short buildup":"SHORT_BUILD",
+    "long unwinding":"LONG_UNWIND","short covering":"SHORT_COV",
+    "pcr":"PCR","put call ratio":"PCR","pcr high":"PCR_HIGH",
+    "pcr low":"PCR_LOW","pcr rising":"PCR_RISE","pcr falling":"PCR_FALL",
+    "max pain":"MAX_PAIN","pain point":"MAX_PAIN",
+    "gamma exposure":"GEX","positive gex":"POS_GEX","negative gex":"NEG_GEX",
+    "dealer gamma":"DEALER_GAMMA","gamma flip":"GAMMA_FLIP",
+    "theta decay":"THETA_DECAY","theta positive":"THETA_POS",
+    "vanna":"VANNA","charm":"CHARM","speed":"SPEED","color":"COLOR",
+    "delta neutral":"DELTA_NEUT","delta hedge":"DELTA_HDG",
+    "gamma scalping":"GAMMA_SCALP","pin risk":"PIN_RISK",
+    "options chain":"OPT_CHAIN","unusual activity":"UNUSUAL_ACT",
+    "dark pool":"DARK_POOL","block trade":"BLOCK_TRADE",
+    "sweep":"SWEEP","large order":"LARGE_ORDER",
+    "call writing":"CALL_WRITE","put writing":"PUT_WRITE",
+    "roll over":"ROLLOVER","rollover":"ROLLOVER",
+
+    # ── MARKET MICROSTRUCTURE ─────────────────────────────
+    "order flow":"ORDER_FLOW","tape reading":"TAPE_READ",
+    "bid ask spread":"BID_ASK","market depth":"MKT_DEPTH",
+    "level 2":"LEVEL2","dom":"DOM","depth of market":"DOM",
+    "time and sales":"T_AND_S","tick data":"TICK_DATA",
+    "absorption":"ABSORPTION","exhaustion":"EXHAUSTION",
+    "aggressive buyer":"AGG_BUY","aggressive seller":"AGG_SELL",
+    "market maker":"MKT_MAKER","spoofing":"SPOOFING",
+    "iceberg order":"ICEBERG","hidden order":"HIDDEN_ORD",
+    "footprint chart":"FOOTPRINT","delta divergence":"DELTA_DIV",
+    "imbalance ratio":"IMBAL_RATIO",
+
+    # ── INTERMARKET & MACRO ───────────────────────────────
+    "fii buying":"FII_BUY","fii selling":"FII_SELL",
+    "dii buying":"DII_BUY","dii selling":"DII_SELL",
+    "fii data":"FII_DATA","dii data":"DII_DATA",
+    "foreign inflow":"FOR_INFLOW","foreign outflow":"FOR_OUTFLOW",
+    "dollar index":"DXY","dxy":"DXY","dollar strong":"DXY_STRONG",
+    "dollar weak":"DXY_WEAK","usd strength":"USD_STR",
+    "us market":"US_MKT","dow jones":"DOW","nasdaq":"NASDAQ",
+    "sp500":"SP500","s&p":"SP500","sgx nifty":"SGX_NIFTY",
+    "gift nifty":"GIFT_NIFTY","global cues":"GLOBAL_CUE",
+    "asian market":"ASIAN_MKT","european market":"EUR_MKT",
+    "crude oil":"CRUDE","brent":"BRENT","wti":"WTI",
+    "gold price":"GOLD_PRICE","bond yield":"BOND_YIELD",
+    "10 year yield":"YIELD_10Y","us yield":"US_YIELD",
+    "rbi policy":"RBI","fed meeting":"FED","ecb":"ECB",
+    "inflation":"INFLATION","cpi":"CPI","gdp":"GDP",
+    "employment data":"EMPLOY","nonfarm payroll":"NFP",
+    "earnings":"EARNINGS","results season":"RESULTS",
+    "budget":"BUDGET","elections":"ELECTION",
+    "geopolitical":"GEO_POL","risk on":"RISK_ON","risk off":"RISK_OFF",
+    "correlation":"CORREL","beta":"BETA","sector rotation":"SECT_ROT",
+
+    # ── STATISTICAL / QUANTITATIVE ────────────────────────
+    "mean reversion":"MEAN_REV","momentum factor":"MOM_FACTOR",
+    "z score":"ZSCORE","standard deviation":"STD_DEV",
+    "regression":"REGRESSION","cointegration":"COINTEG",
+    "pairs trade":"PAIRS","spread trade":"SPREAD_TRD",
+    "statistical arbitrage":"STAT_ARB","market neutral":"MKT_NEUTRAL",
+    "sharpe ratio":"SHARPE","sortino":"SORTINO","calmar":"CALMAR",
+    "drawdown":"DRAWDOWN","max drawdown":"MAX_DD","var":"VAR",
+    "value at risk":"VAR","expected shortfall":"ES",
+    "monte carlo":"MONTE_CARLO","backtested":"BACKTEST",
+
+    # ── MARKET REGIME ─────────────────────────────────────
+    "trending market":"TRENDING","sideways market":"SIDEWAYS",
+    "rangebound":"RANGEBOUND","range bound":"RANGEBOUND",
+    "consolidating":"CONSOLIDATING","volatile market":"VOLATILE",
+    "low volatility regime":"LOW_VOL_REG","high volatility":"HIGH_VOL",
+    "bull market":"BULL_MKT","bear market":"BEAR_MKT",
+    "accumulation zone":"ACCUM_ZONE","distribution zone":"DISTRIB_ZONE",
+    "overbought":"OVERBOUGHT","oversold":"OVERSOLD",
+    "euphoria":"EUPHORIA","panic":"PANIC","capitulation":"CAPITULATION",
+
+    # ── RISK MANAGEMENT ───────────────────────────────────
     "stop loss":"STOPLOSS","sl":"STOPLOSS","stoploss":"STOPLOSS",
     "target":"TARGET","tp":"TARGET","take profit":"TARGET",
     "trailing stop":"TRAIL_SL","trailing sl":"TRAIL_SL",
-    "trailing stop loss":"TRAIL_SL",
     "break even":"BREAKEVEN","be":"BREAKEVEN",
-    # P&L Based
     "max loss":"MAX_LOSS","max profit":"MAX_PROFIT",
-    "daily loss limit":"DAILY_LOSS","profit target":"PROFIT_TGT",
-    "book partial":"PARTIAL_EXIT","partial exit":"PARTIAL_EXIT",
-    "50% exit":"HALF_EXIT","half exit":"HALF_EXIT",
-    # Time Based
-    "eod exit":"EOD_EXIT","end of day exit":"EOD_EXIT",
-    "15 min before expiry":"PRE_EXPIRY","before expiry":"PRE_EXPIRY",
-    "time stop":"TIME_STOP",
-    # Technical Based
-    "reverse signal":"REV_SIGNAL","signal reversal":"REV_SIGNAL",
-    "target achieved":"TGT_HIT","sl hit":"SL_HIT",
-    "resistance hit":"RES_HIT","support broken":"SUP_BRK",
-    # Options Specific
-    "theta exit":"THETA_EXIT","delta exit":"DELTA_EXIT",
-    "iv exit":"IV_EXIT","premium target":"PREM_TGT",
-    "50% premium":"HALF_PREM","premium stop":"PREM_SL",
-    # Hinglish
-    "nikal lo":"EXIT_NOW","bahar niklo":"EXIT_NOW",
-    "profit book karo":"BOOK_PROFIT","loss cut karo":"CUT_LOSS",
-    "nikalna hai":"EXIT_SIGNAL",
-    # Hindi
-    "बाहर":"EXIT_NOW","निकलो":"EXIT_NOW","मुनाफा":"BOOK_PROFIT",
+    "daily loss limit":"DAILY_LOSS","weekly loss limit":"WEEK_LOSS",
+    "position sizing":"POS_SIZE","kelly criterion":"KELLY",
+    "risk reward":"RR","rr":"RR","1:2":"RR_1_2","1:3":"RR_1_3",
+    "partial exit":"PART_EXIT","scale out":"SCALE_OUT",
+    "scale in":"SCALE_IN","pyramid":"PYRAMID",
+    "hedging":"HEDGE","portfolio hedge":"PORT_HEDGE",
+    "correlation hedge":"CORR_HEDGE","tail risk":"TAIL_RISK",
+
+    # ── TIME BASED ────────────────────────────────────────
+    "first 15 min":"FIRST_15","opening range":"ORB",
+    "orb breakout":"ORB_BO","opening range breakout":"ORB_BO",
+    "power hour":"POWER_HOUR","last hour":"LAST_HOUR",
+    "pre expiry":"PRE_EXPIRY","expiry day":"EXPIRY_DAY",
+    "monthly expiry":"MONTH_EXP","weekly expiry":"WEEK_EXP",
+    "rollover week":"ROLL_WEEK","settlement":"SETTLEMENT",
+    "eod":"EOD","end of day":"EOD","intraday":"INTRADAY",
+    "positional":"POSITIONAL","btst":"BTST","stbt":"STBT",
+    "swing trade":"SWING","delivery":"DELIVERY",
 }
 
-# ═══════════════════════════════════════════════════════════
-# STRIKE SELECTION
-# ═══════════════════════════════════════════════════════════
+# EXIT CONDITIONS
+EXIT_CONDITIONS = {
+    "stop loss":"STOPLOSS","sl":"STOPLOSS","target":"TARGET","tp":"TARGET",
+    "trailing stop":"TRAIL_SL","trailing sl":"TRAIL_SL",
+    "break even":"BREAKEVEN","partial exit":"PART_EXIT",
+    "50% exit":"HALF_EXIT","half exit":"HALF_EXIT","scale out":"SCALE_OUT",
+    "eod exit":"EOD_EXIT","time stop":"TIME_STOP",
+    "reverse signal":"REV_SIG","signal reversal":"REV_SIG",
+    "50% premium":"HALF_PREM","premium stop":"PREM_SL",
+    "theta exit":"THETA_EXIT","delta exit":"DELTA_EXIT",
+    "iv exit":"IV_EXIT","profit target":"PROFIT_TGT",
+    "loss limit":"LOSS_LIM","daily stop":"DAILY_STOP",
+    "nikal lo":"EXIT_NOW","profit book karo":"BOOK_PROFIT",
+    "bahar niklo":"EXIT_NOW","बाहर":"EXIT_NOW","निकलो":"EXIT_NOW",
+}
+
 STRIKE_SELECTION = {
-    # Moneyness
-    "atm":"ATM","at the money":"ATM",
-    "itm":"ITM","in the money":"ITM",
-    "otm":"OTM","out of the money":"OTM",
-    "deep itm":"DEEP_ITM","deep otm":"DEEP_OTM",
-    "slight otm":"SLIGHT_OTM","slight itm":"SLIGHT_ITM",
-    # Relative Strikes
+    "atm":"ATM","at the money":"ATM","itm":"ITM","in the money":"ITM",
+    "otm":"OTM","out of the money":"OTM","deep itm":"DEEP_ITM","deep otm":"DEEP_OTM",
     "1 strike otm":"OTM_1","2 strike otm":"OTM_2","3 strike otm":"OTM_3",
     "1 strike itm":"ITM_1","2 strike itm":"ITM_2",
-    "next strike":"NEXT_STRIKE","previous strike":"PREV_STRIKE",
-    # Delta Based
-    "delta 50":"DELTA_50","50 delta":"DELTA_50",
-    "delta 25":"DELTA_25","25 delta":"DELTA_25",
-    "delta 16":"DELTA_16","16 delta":"DELTA_16",
-    "delta 10":"DELTA_10","10 delta":"DELTA_10",
-    # Premium Based
-    "100 premium":"PREM_100","200 premium":"PREM_200",
-    "500 premium":"PREM_500","cheap option":"CHEAP_OPT",
-    # Strategy Specific
-    "same strike":"SAME_STRIKE","equidistant":"EQUIDIST",
-    "symmetric":"SYMMETRIC","asymmetric":"ASYMMETRIC",
+    "delta 50":"D50","50 delta":"D50","delta 25":"D25","25 delta":"D25",
+    "delta 16":"D16","16 delta":"D16","delta 10":"D10","10 delta":"D10",
+    "100 premium":"P100","200 premium":"P200","500 premium":"P500",
+    "equidistant":"EQUIDIST","symmetric":"SYMMETRIC",
+    "same strike":"SAME","next strike":"NEXT","previous strike":"PREV",
 }
 
-# ═══════════════════════════════════════════════════════════
-# TIME
-# ═══════════════════════════════════════════════════════════
 TIME_MAP = {
-    "pre market":"09:00","premarket":"09:00",
-    "market open":"09:15","opening":"09:15","open":"09:15",
-    "morning":"09:20","early morning":"09:20","subah":"09:20",
-    "subah subah":"09:15","सुबह":"09:20",
-    "9:15":"09:15","9:20":"09:20","9:30":"09:30",
-    "mid day":"12:00","midday":"12:00","noon":"12:00",
-    "dopahar":"12:00","दोपहर":"12:00",
-    "afternoon":"14:00","post noon":"14:00",
-    "closing":"15:15","market close":"15:15","close":"15:15",
-    "shaam":"15:00","शाम":"15:00","बाजार बंद":"15:15",
-    "eod":"15:20","end of day":"15:20",
-    "expiry time":"15:25","last 30 min":"15:00",
+    "pre market":"09:00","market open":"09:15","opening":"09:15",
+    "morning":"09:20","subah":"09:20","सुबह":"09:20",
+    "first 15 minutes":"09:30","orb":"09:30",
+    "mid day":"12:00","noon":"12:00","dopahar":"12:00","दोपहर":"12:00",
+    "afternoon":"14:00","power hour":"14:00",
+    "closing":"15:15","market close":"15:15","shaam":"15:00","शाम":"15:00",
+    "eod":"15:20","expiry time":"15:25","last 30 min":"15:00",
 }
 
-# ═══════════════════════════════════════════════════════════
-# EXPIRY
-# ═══════════════════════════════════════════════════════════
 EXPIRY_MAP = {
     "weekly":"WEEKLY","week":"WEEKLY","this week":"WEEKLY",
-    "next week":"NEXT_WEEKLY","weekly expiry":"WEEKLY",
-    "monthly":"MONTHLY","month":"MONTHLY","this month":"MONTHLY",
-    "next month":"NEXT_MONTHLY","monthly expiry":"MONTHLY",
+    "next week":"NEXT_WEEKLY","monthly":"MONTHLY","month":"MONTHLY",
+    "this month":"MONTHLY","next month":"NEXT_MONTHLY",
     "current expiry":"CURRENT","near month":"NEAR_MONTH",
-    "far month":"FAR_MONTH","quarterly":"QUARTERLY",
-    "is hafte":"WEEKLY","agle hafte":"NEXT_WEEKLY",
-    "mahina":"MONTHLY","is mahine":"MONTHLY",
+    "quarterly":"QUARTERLY","is hafte":"WEEKLY","mahina":"MONTHLY",
 }
 
-# ═══════════════════════════════════════════════════════════
-# HELPER FUNCTIONS
-# ═══════════════════════════════════════════════════════════
-def extract_instrument(text):
+def extract_instrument(t):
     for k,v in sorted(INSTRUMENTS.items(),key=lambda x:-len(x[0])):
-        if k in text: return v
+        if k in t: return v
     return "NIFTY"
 
-def extract_action(text):
-    s=sum(1 for w in SELL_WORDS if w in text)
-    b=sum(1 for w in BUY_WORDS if w in text)
+def extract_action(t):
+    s=sum(1 for w in SELL_WORDS if w in t)
+    b=sum(1 for w in BUY_WORDS if w in t)
     return "SELL" if s>b else "BUY"
 
-def extract_strike(text):
-    nums=re.findall(r'\b(\d{4,6})\b',text)
+def extract_strike(t):
+    nums=re.findall(r'\b(\d{4,6})\b',t)
     if not nums: return None
     return [int(x) for x in nums] if len(nums)>1 else int(nums[0])
 
-def extract_option_type(text):
+def extract_option_type(t):
     for k,v in OPTION_TYPES.items():
-        if re.search(r'\b'+re.escape(k)+r'\b',text): return v
+        if re.search(r'\b'+re.escape(k)+r'\b',t): return v
     return None
 
-def extract_strategy(text):
+def extract_strategy(t):
     for k,v in sorted(STRATEGIES.items(),key=lambda x:-len(x[0])):
-        if k in text: return v
+        if k in t: return v
     return None
 
-def extract_entry_conditions(text):
+def extract_all_conditions(t):
     found={}
-    for k,v in sorted(ENTRY_CONDITIONS.items(),key=lambda x:-len(x[0])):
-        if k in text:
+    for k,v in sorted(ALL_CONDITIONS.items(),key=lambda x:-len(x[0])):
+        if k in t:
             p=rf'{re.escape(k)}\s*([<>=!]+)?\s*(\d+\.?\d*)?'
-            m=re.search(p,text)
+            m=re.search(p,t)
             if m and m.group(2):
-                found[v]={"operator":m.group(1) or "=","value":float(m.group(2))}
+                found[v]={"op":m.group(1) or "=","val":float(m.group(2))}
             else:
                 found[v]=True
     return found if found else None
 
-def extract_exit_conditions(text):
+def extract_exit(t):
     found={}
     for k,v in sorted(EXIT_CONDITIONS.items(),key=lambda x:-len(x[0])):
-        if k in text:
-            p=rf'{re.escape(k)}\s*([<>=]?)\s*(\d+\.?\d*)?'
-            m=re.search(p,text)
-            if m and m.group(2):
-                found[v]=float(m.group(2))
-            else:
-                found[v]=True
+        if k in t:
+            m=re.search(rf'{re.escape(k)}\s*[=:@]?\s*(\d+\.?\d*)?',t)
+            found[v]=float(m.group(1)) if m and m.group(1) else True
+    sl=re.search(r'(?:sl|stop loss|stoploss)\s*[=:@]?\s*(\d+)',t)
+    tgt=re.search(r'(?:target|tp)\s*[=:@]?\s*(\d+)',t)
+    trail=re.search(r'trailing\s*(?:sl|stop)?\s*[=:@]?\s*(\d+)',t)
+    rr=re.search(r'(?:rr|risk reward)\s*[=:@]?\s*(\d+)[:/](\d+)',t)
+    if sl: found["STOPLOSS"]=int(sl.group(1))
+    if tgt: found["TARGET"]=int(tgt.group(1))
+    if trail: found["TRAIL_SL"]=int(trail.group(1))
+    if rr: found["RR"]=f"{rr.group(1)}:{rr.group(2)}"
     return found if found else None
 
-def extract_strike_selection(text):
+def extract_strike_sel(t):
     for k,v in sorted(STRIKE_SELECTION.items(),key=lambda x:-len(x[0])):
-        if k in text: return v
+        if k in t: return v
     return None
 
-def extract_time(text):
+def extract_time(t):
     for k,v in sorted(TIME_MAP.items(),key=lambda x:-len(x[0])):
-        if k in text: return v
-    m=re.search(r'\b(\d{1,2}):(\d{2})\s*(am|pm)?\b',text)
+        if k in t: return v
+    m=re.search(r'\b(\d{1,2}):(\d{2})\s*(am|pm)?\b',t)
     if m:
         h,mn=int(m.group(1)),int(m.group(2))
         if m.group(3)=='pm' and h!=12: h+=12
         return f"{h:02d}:{mn:02d}"
     return None
 
-def extract_quantity(text):
-    m=re.search(r'(\d+)\s*(?:lot|lots|लॉट)',text)
+def extract_qty(t):
+    m=re.search(r'(\d+)\s*(?:lot|lots|लॉट)',t)
     return int(m.group(1)) if m else 1
 
-def extract_expiry(text):
+def extract_expiry(t):
     for k,v in sorted(EXPIRY_MAP.items(),key=lambda x:-len(x[0])):
-        if k in text: return v
+        if k in t: return v
     return "WEEKLY"
 
-def extract_sl_target(text):
-    result={}
-    sl=re.search(r'(?:sl|stop loss|stoploss)\s*[=:@]?\s*(\d+)',text)
-    tgt=re.search(r'(?:target|tp|take profit)\s*[=:@]?\s*(\d+)',text)
-    trail=re.search(r'trailing\s*(?:sl|stop)?\s*[=:@]?\s*(\d+)',text)
-    rr=re.search(r'(?:rr|risk reward)\s*[=:@]?\s*(\d+)[:/](\d+)',text)
-    if sl: result["stoploss"]=int(sl.group(1))
-    if tgt: result["target"]=int(tgt.group(1))
-    if trail: result["trailing_sl"]=int(trail.group(1))
-    if rr: result["risk_reward"]=f"{rr.group(1)}:{rr.group(2)}"
-    return result if result else None
-
-def detect_language(text):
-    hindi=len(re.findall(r'[\u0900-\u097F]',text))
-    if hindi>3: return "HINDI"
-    hw=["kharido","becho","lo","niklo","subah","shaam","lagao","banao","hai","karo"]
-    if any(w in text for w in hw): return "HINGLISH"
+def detect_lang(t):
+    if len(re.findall(r'[\u0900-\u097F]',t))>3: return "HINDI"
+    if any(w in t for w in ["kharido","becho","lo","niklo","subah","shaam","lagao"]): return "HINGLISH"
     return "ENGLISH"
 
-def calculate_confidence(result):
-    score=0.65
-    if result.get("instrument"): score+=0.05
-    if result.get("option_type"): score+=0.05
-    if result.get("strategy"): score+=0.05
-    if result.get("strike"): score+=0.05
-    if result.get("strike_selection"): score+=0.03
-    if result.get("entry_conditions"): score+=0.05
-    if result.get("exit_conditions"): score+=0.04
-    if result.get("sl_target"): score+=0.03
-    if result.get("execution_time"): score+=0.02
-    if result.get("expiry"): score+=0.02
-    return min(round(score,2),0.99)
+def calc_confidence(r):
+    s=0.65
+    s+=0.05 if r.get("instrument") else 0
+    s+=0.05 if r.get("option_type") else 0
+    s+=0.05 if r.get("strategy") else 0
+    s+=0.04 if r.get("strike") else 0
+    s+=0.03 if r.get("strike_selection") else 0
+    s+=0.05 if r.get("conditions") else 0
+    s+=0.04 if r.get("exit") else 0
+    s+=0.02 if r.get("time") else 0
+    return min(round(s,2),0.99)
 
-# ═══════════════════════════════════════════════════════════
-# API ENDPOINTS
-# ═══════════════════════════════════════════════════════════
 @app.get("/")
 def root():
     return {
-        "status":"running","version":"12.3","nlp":"complete_v3",
-        "capabilities":["entry","exit","strike_selection","options",
-                        "strategies","hindi","hinglish","greeks",
-                        "risk_management","time_based","condition_based"]
+        "status":"running","version":"12.3","nlp":"institutional_v4",
+        "total_conditions":len(ALL_CONDITIONS),
+        "categories":["momentum","trend","volatility","volume","price_action",
+                      "candlestick","fibonacci","smart_money","wyckoff",
+                      "elliott_wave","options","microstructure","intermarket",
+                      "macro","statistical","regime","risk","time_based"]
     }
 
 @app.post("/strategy")
-def parse_strategy(payload: dict):
+def parse(payload: dict):
     raw=payload.get("text","")
-    text=raw.lower().strip()
+    t=raw.lower().strip()
+    instrument=extract_instrument(t)
+    action=extract_action(t)
+    strike=extract_strike(t)
+    option_type=extract_option_type(t)
+    strategy=extract_strategy(t)
+    conditions=extract_all_conditions(t)
+    exit=extract_exit(t)
+    strike_sel=extract_strike_sel(t)
+    exec_time=extract_time(t)
+    qty=extract_qty(t)
+    expiry=extract_expiry(t)
+    lang=detect_lang(t)
 
-    instrument=extract_instrument(text)
-    action=extract_action(text)
-    strike=extract_strike(text)
-    option_type=extract_option_type(text)
-    strategy=extract_strategy(text)
-    entry_conditions=extract_entry_conditions(text)
-    exit_conditions=extract_exit_conditions(text)
-    strike_selection=extract_strike_selection(text)
-    exec_time=extract_time(text)
-    quantity=extract_quantity(text)
-    expiry=extract_expiry(text)
-    sl_target=extract_sl_target(text)
-    language=detect_language(text)
-
-    result={
-        "instrument":instrument,
-        "action":action,
-        "language":language,
-        "expiry":expiry,
-        "quantity":quantity,
-    }
-
-    if option_type: result["option_type"]=option_type
-    if strike: result["strike"]=strike
-    if strike_selection: result["strike_selection"]=strike_selection
-    if strategy: result["strategy"]=strategy
-    if entry_conditions: result["entry_conditions"]=entry_conditions
-    if exit_conditions: result["exit_conditions"]=exit_conditions
-    if sl_target: result["sl_target"]=sl_target
-    if exec_time: result["execution_time"]=exec_time
-
-    result["confidence"]=calculate_confidence(result)
-    result["raw_input"]=raw
-    result["parsed_at"]=time.strftime("%H:%M:%S")
-
-    return result
+    r={"instrument":instrument,"action":action,"language":lang,
+       "expiry":expiry,"quantity":qty}
+    if option_type: r["option_type"]=option_type
+    if strike: r["strike"]=strike
+    if strike_sel: r["strike_selection"]=strike_sel
+    if strategy: r["strategy"]=strategy
+    if conditions: r["conditions"]=conditions
+    if exit: r["exit"]=exit
+    if exec_time: r["time"]=exec_time
+    r["confidence"]=calc_confidence(r)
+    r["parsed_at"]=time.strftime("%H:%M:%S")
+    return r
 
 @app.post("/trade")
-def execute_trade(strategy: dict):
-    conf=strategy.get("confidence",0)
-    if conf<0.50:
-        return {"status":"REJECTED","reason":"Confidence too low","confidence":conf}
-    if conf<0.70:
-        return {"status":"REVIEW","reason":"Manual review needed","confidence":conf}
-    return {
-        "status":"EXECUTED","result":strategy,
-        "order_id":f"ORD{int(time.time()*1000)%1000000:06d}",
-        "executed_at":time.strftime("%H:%M:%S")
-    }
+def trade(s: dict):
+    c=s.get("confidence",0)
+    if c<0.50: return {"status":"REJECTED","reason":"Low confidence","confidence":c}
+    if c<0.70: return {"status":"REVIEW","reason":"Manual review needed","confidence":c}
+    return {"status":"EXECUTED","result":s,
+            "order_id":f"ORD{int(time.time()*1000)%1000000:06d}",
+            "executed_at":time.strftime("%H:%M:%S")}
 
-@app.get("/nlp/capabilities")
-def get_capabilities():
+@app.get("/capabilities")
+def caps():
     return {
-        "instruments":list(set(INSTRUMENTS.values())),
-        "strategies":list(set(STRATEGIES.values())),
-        "entry_conditions":list(set(ENTRY_CONDITIONS.values())),
-        "exit_conditions":list(set(EXIT_CONDITIONS.values())),
-        "strike_selection":list(set(STRIKE_SELECTION.values())),
-        "languages":["ENGLISH","HINDI","HINGLISH"],
-        "example_inputs":[
-            "buy nifty 22500 call weekly if RSI < 30 stop loss 100 target 300",
-            "sell banknifty atm straddle if vix > 15 at market open",
-            "nifty iron condor otm 2 strike if sideways trailing sl 50",
-            "kharido nifty 50 delta call if ema crossover subah",
-            "बेचो बैंकनिफ्टी पुट if rsi overbought stop loss 200",
-            "bull call spread nifty if breakout with target 500",
-            "buy banknifty 1 strike otm call if macd bullish eod exit",
+        "total_conditions":len(ALL_CONDITIONS),
+        "total_strategies":len(STRATEGIES),
+        "categories":{
+            "momentum":["RSI","MACD","Stochastic","CCI","Williams_R","MFI","AO"],
+            "trend":["EMA","SMA","Supertrend","ADX","Ichimoku","Golden_Cross"],
+            "volatility":["Bollinger","ATR","VIX","IV_Rank","Vol_Skew","Term_Structure"],
+            "volume":["VWAP","OBV","Volume_Profile","POC","CVD","Footprint"],
+            "price_action":["Support","Resistance","Breakout","SMC","Order_Block","FVG"],
+            "candlestick":["Doji","Hammer","Engulfing","Morning_Star","Pin_Bar"],
+            "fibonacci":["Retracement","Extension","FIB_61","FIB_161"],
+            "smart_money":["Order_Block","FVG","BOS","CHOCH","Liquidity_Sweep"],
+            "wyckoff":["Accumulation","Distribution","Spring","Upthrust"],
+            "elliott_wave":["Wave_1_5","Impulse","Corrective","ABC"],
+            "options":["OI","PCR","GEX","IV_Crush","Dark_Pool","Unusual_Activity"],
+            "microstructure":["Order_Flow","Tape_Reading","DOM","CVD","Absorption"],
+            "intermarket":["FII_DII","DXY","SGX_Nifty","Crude","Bond_Yield"],
+            "macro":["RBI","Fed","Earnings","Budget","Geopolitical"],
+            "statistical":["Mean_Reversion","Z_Score","Cointegration","Pairs_Trade"],
+            "regime":["Trending","Sideways","Bull_Market","Bear_Market","Volatile"],
+        },
+        "examples":[
+            "buy nifty atm straddle if vix > 15 and iv rank > 50",
+            "sell banknifty iron condor if rangebound and theta positive",
+            "buy nifty 22500 call if fii buying and ema crossover breakout",
+            "short banknifty if order block resistance and overbought",
+            "buy nifty if wyckoff spring and volume surge stop loss 100",
+            "sell nifty if dark pool activity and unusual put buying",
+            "buy if golden cross and fii inflow and gift nifty positive",
+            "iron condor nifty if vix crush and iv rank < 30 weekly",
+            "kharido banknifty if oi buildup and pcr bullish subah",
+            "बेचो निफ्टी if head and shoulder and volume distribution",
         ]
     }
