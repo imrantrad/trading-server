@@ -1279,3 +1279,156 @@ def compare_strategies(capital: float = 100000, months: int = 3):
     results.sort(key=lambda x: -x["total_pnl"])
     return {"capital": capital, "months": months,
             "comparison": results, "best_strategy": results[0]["strategy"]}
+
+# ═══════════════════════════════════════
+# SUBSCRIPTIONS + PAPER STRATEGY + EMAIL
+# ═══════════════════════════════════════
+class SubscribePayload(BaseModel):
+    user_id: str; plan: str; payment_id: str = ""
+
+class PaperTradePayload(BaseModel):
+    user_id: str; strategy_id: str
+    instrument: str = "NIFTY"; action: str = "BUY"
+    option_type: str = "CE"; strike: int = 0
+    quantity: int = 1; lot_size: int = 50
+    entry_price: float = 100; stoploss: float = 0; target: float = 0
+
+class ClosePaperTrade(BaseModel):
+    trade_id: str; exit_price: float; reason: str = "MANUAL"
+
+class StrategyNLPPayload(BaseModel):
+    user_id: str; nlp_text: str
+    name: str = ""; description: str = ""
+    tags: List[str] = []; is_public: bool = False
+
+@app.get("/subscriptions/plans")
+def get_plans():
+    if not USER_SYSTEM: return {"plans":{}}
+    return {"plans": user_db.PLANS,
+            "recommended": "PRO",
+            "note": "All prices in INR/month"}
+
+@app.post("/subscriptions/upgrade")
+def upgrade_plan(payload: SubscribePayload):
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    return user_db.upgrade_subscription(payload.user_id, payload.plan, payload.payment_id)
+
+@app.get("/subscriptions/{user_id}")
+def get_user_subscription(user_id: str):
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    return user_db.get_subscription(user_id)
+
+@app.get("/users/verify/{token}")
+def verify_email(token: str):
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    ok = user_db.verify_email(token)
+    return {"verified": ok, "message": "Email verified! You can now login." if ok else "Invalid token"}
+
+@app.post("/strategies/from_nlp")
+def strategy_from_nlp(payload: StrategyNLPPayload):
+    """Parse NLP and auto-create strategy"""
+    # 1. Parse NLP
+    import re
+    t = payload.nlp_text.lower().strip()
+    qty_m = re.search(r'(\d+)\s*(?:lot|lots)',t)
+    qty = int(qty_m.group(1)) if qty_m else 1
+    # Reuse existing NLP parser
+    instr = ei(t)
+    action = ea(t)
+    strat = next((v for k,v in sorted(STRATEGIES.items(),key=lambda x:-len(x[0])) if k in t), None)
+    conds = ef(CONDITIONS,t)
+    exit_c = ef(EXIT_CONDS,t)
+    risk_m = esl(t)
+    opt_m = {k:v for k,v in OPTION_TYPES.items() if re.search(r'\b'+re.escape(k)+r'\b',t)}
+    opt = list(opt_m.values())[0] if opt_m else "CE"
+    expiry = next((v for k,v in sorted(EXPIRY_MAP.items(),key=lambda x:-len(x[0])) if k in t),"WEEKLY")
+    ss = next((v for k,v in sorted(STRIKE_SEL.items(),key=lambda x:-len(x[0])) if k in t),None)
+    et = next((v for k,v in sorted(TIME_MAP.items(),key=lambda x:-len(x[0])) if k in t),None)
+
+    parsed = {
+        "instrument": instr, "action": action, "option_type": opt,
+        "expiry": expiry, "quantity": qty,
+        "strategy": strat, "strike_selection": ss, "execution_time": et,
+        "conditions": conds, "exit": exit_c, "risk_metrics": risk_m,
+    }
+
+    # 2. Build entry/exit condition arrays
+    entry_conditions = []
+    exit_conditions = []
+    if conds:
+        for k,v in list(conds.items())[:5]:
+            if isinstance(v, dict): entry_conditions.append(f"{k} {v.get('op','>')} {v.get('val','')}")
+            else: entry_conditions.append(k)
+    if exit_c:
+        for k,v in exit_c.items():
+            if isinstance(v, dict): exit_conditions.append(f"{k} {v.get('op','>')} {v.get('val','')}")
+            else: exit_conditions.append(k)
+    if risk_m:
+        if risk_m.get("stoploss_points"): exit_conditions.append(f"stop loss {risk_m['stoploss_points']} pts")
+        if risk_m.get("target_points"): exit_conditions.append(f"target {risk_m['target_points']} pts")
+
+    # 3. Auto-fill strategy fields
+    strategy_data = {
+        "name": payload.name or f"{action} {instr} {opt} - {strat or 'Custom'}",
+        "description": payload.description or f"Auto-generated from: {payload.nlp_text[:100]}",
+        "instrument": instr,
+        "option_type": opt,
+        "timeframe": "15MIN",
+        "entry_conditions": entry_conditions,
+        "exit_conditions": exit_conditions,
+        "sl_value": risk_m.get("stoploss_points",100) if risk_m else 100,
+        "target_value": risk_m.get("target_points",200) if risk_m else 200,
+        "trailing_sl": risk_m.get("trailing_sl",0) if risk_m else 0,
+        "quantity": qty,
+        "tags": payload.tags or [instr.lower(), action.lower(), (strat or "custom").lower()],
+        "is_public": payload.is_public,
+        "nlp_input": payload.nlp_text,
+        "parsed_nlp": parsed,
+    }
+
+    # 4. Save if user provided
+    sid = None
+    if payload.user_id and USER_SYSTEM:
+        sid = user_db.save_strategy(payload.user_id, strategy_data)
+
+    return {
+        "parsed": parsed,
+        "strategy": strategy_data,
+        "strategy_id": sid,
+        "message": f"Strategy auto-created from NLP input",
+    }
+
+# ── PAPER STRATEGY TRADING ──────────────────────────────
+@app.post("/paper_strategy/open")
+def open_paper_strategy_trade(payload: PaperTradePayload):
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    tid = user_db.open_paper_trade(payload.user_id, payload.strategy_id, payload.dict())
+    return {"trade_id": tid, "status": "OPEN", "strategy_id": payload.strategy_id}
+
+@app.post("/paper_strategy/close")
+def close_paper_strategy_trade(payload: ClosePaperTrade):
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    result = user_db.close_paper_trade(payload.trade_id, payload.exit_price, payload.reason)
+    return result
+
+@app.get("/paper_strategy/trades/{user_id}")
+def get_paper_strategy_trades(user_id: str, strategy_id: str = None):
+    if not USER_SYSTEM: return {"trades":[]}
+    trades = user_db.get_paper_trades(user_id, strategy_id)
+    return {"trades": trades, "count": len(trades)}
+
+@app.get("/paper_strategy/performance/{strategy_id}")
+def strategy_performance(strategy_id: str):
+    if not USER_SYSTEM: return {}
+    return user_db.get_strategy_performance(strategy_id)
+
+# ── NOTIFICATIONS ───────────────────────────────────────
+@app.get("/users/{user_id}/notifications")
+def get_user_notifs(user_id: str, unread: bool = False):
+    if not USER_SYSTEM: return {"notifications":[]}
+    return {"notifications": user_db.get_notifications(user_id, unread)}
+
+@app.post("/users/{user_id}/notifications/read")
+def mark_read(user_id: str):
+    if USER_SYSTEM: user_db.mark_notifications_read(user_id)
+    return {"marked_read": True}
