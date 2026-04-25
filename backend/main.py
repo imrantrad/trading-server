@@ -1128,3 +1128,154 @@ def live_options_chain(symbol: str, dte: int = 7):
         "spot_timestamp": time.strftime("%H:%M:%S"),
         "note": "Spot price: REAL | IV: Simulated (add NSE API for real IV)"
     }
+
+# ═══════════════════════════════════════
+# USER PROFILES + STRATEGIES + ADVANCED BACKTEST
+# ═══════════════════════════════════════
+try:
+    from database.user_db import user_db, UserDB
+    from backtest.strategies import BUILTIN_STRATEGIES_V2
+    from backtest.advanced_backtest import run_advanced_backtest
+    USER_SYSTEM = True
+except Exception as e:
+    print(f"User system: {e}")
+    USER_SYSTEM = False
+
+# ── USER MANAGEMENT ────────────────────────────────────
+class UserCreate(BaseModel):
+    username: str; email: str = ""; password: str = "demo123"
+    full_name: str = ""; capital: float = 500000
+
+class UserLogin(BaseModel):
+    username: str; password: str
+
+class UserUpdate(BaseModel):
+    full_name: str = None; email: str = None; phone: str = None
+    broker: str = None; capital: float = None; risk_per_trade: float = None
+    max_daily_loss: float = None; preferred_instruments: str = None
+    theme: str = None; telegram_chat_id: str = None
+
+@app.post("/users/register")
+def register(payload: UserCreate):
+    if not USER_SYSTEM: return {"error":"User system not loaded"}
+    result = user_db.create_user(
+        payload.username, payload.email, payload.password,
+        payload.full_name, payload.capital)
+    return result
+
+@app.post("/users/login")
+def login(payload: UserLogin):
+    if not USER_SYSTEM: return {"error":"User system not loaded"}
+    result = user_db.login(payload.username, payload.password)
+    if not result:
+        return {"error": "Invalid username or password"}
+    return result
+
+@app.get("/users/{user_id}")
+def get_user(user_id: str):
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    user = user_db.get_user(user_id)
+    return user if user else {"error":"User not found"}
+
+@app.put("/users/{user_id}")
+def update_user(user_id: str, payload: UserUpdate):
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    updates = {k:v for k,v in payload.dict().items() if v is not None}
+    user_db.update_profile(user_id, updates)
+    return {"updated": True, "fields": list(updates.keys())}
+
+@app.get("/users")
+def list_users():
+    if not USER_SYSTEM: return {"users":[]}
+    return {"users": user_db.get_all_users()}
+
+# ── USER STRATEGIES ────────────────────────────────────
+class StrategySave(BaseModel):
+    user_id: str; name: str; description: str = ""
+    instrument: str = "NIFTY"; timeframe: str = "15MIN"
+    entry_conditions: List[str] = []; exit_conditions: List[str] = []
+    sl_type: str = "FIXED"; sl_value: float = 100
+    target_type: str = "FIXED"; target_value: float = 200
+    quantity: int = 1; risk_per_trade: float = 1.0
+    tags: List[str] = []; is_public: bool = False
+
+@app.post("/strategies/save")
+def save_user_strategy(payload: StrategySave):
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    sid = user_db.save_strategy(payload.user_id, payload.dict())
+    return {"strategy_id": sid, "status": "saved", "name": payload.name}
+
+@app.get("/strategies/user/{user_id}")
+def get_user_strategies(user_id: str):
+    if not USER_SYSTEM: return {"strategies":[], "builtin": BUILTIN_STRATEGIES_V2 if USER_SYSTEM else []}
+    return {
+        "user_strategies": user_db.get_strategies(user_id),
+        "builtin": BUILTIN_STRATEGIES_V2,
+        "total": len(user_db.get_strategies(user_id)),
+    }
+
+@app.get("/strategies/public")
+def get_public_strategies():
+    if not USER_SYSTEM: return {"strategies": BUILTIN_STRATEGIES_V2}
+    custom = user_db.get_strategies(public_only=True)
+    return {"builtin": BUILTIN_STRATEGIES_V2, "community": custom,
+            "total_builtin": len(BUILTIN_STRATEGIES_V2)}
+
+@app.delete("/strategies/{strategy_id}")
+def delete_strategy(strategy_id: str, user_id: str):
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    user_db.delete_strategy(strategy_id, user_id)
+    return {"deleted": strategy_id}
+
+@app.get("/strategies/builtin")
+def builtin_strategies():
+    strategies = BUILTIN_STRATEGIES_V2 if USER_SYSTEM else []
+    return {"strategies": strategies, "count": len(strategies)}
+
+# ── ADVANCED BACKTEST ──────────────────────────────────
+class AdvancedBacktestPayload(BaseModel):
+    strategy: str = "STR_ORB"
+    capital: float = 100000
+    months: int = 3
+    quantity: int = 1
+    sl_pct: float = 1.0
+    target_pct: float = 2.0
+
+@app.post("/backtest/advanced")
+def advanced_backtest(payload: AdvancedBacktestPayload):
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    result = run_advanced_backtest(
+        payload.strategy, payload.capital, payload.months,
+        payload.quantity, payload.sl_pct, payload.target_pct)
+    return result
+
+@app.get("/backtest/strategies/all")
+def all_backtest_strategies():
+    builtin = ["EMA_CROSS","RSI_MEAN_REVERSION","BOLLINGER_BREAKOUT","EMA_RSI_COMBO","SUPERTREND_LIKE"]
+    advanced = [s["id"] for s in (BUILTIN_STRATEGIES_V2 if USER_SYSTEM else [])]
+    return {"classic": builtin, "advanced": advanced,
+            "all": builtin + advanced, "details": BUILTIN_STRATEGIES_V2 if USER_SYSTEM else []}
+
+@app.get("/backtest/compare")
+def compare_strategies(capital: float = 100000, months: int = 3):
+    """Compare all strategies side by side"""
+    if not USER_SYSTEM: return {"error":"Not loaded"}
+    results = []
+    key_strategies = ["STR_THETA_DECAY","STR_ORB","STR_IRON_CONDOR_WEEKLY",
+                      "STR_VWAP_PULLBACK","STR_GAP_FADE","STR_MAX_PAIN_EXPIRY"]
+    for strat in key_strategies:
+        r = run_advanced_backtest(strat, capital, months, 1, 1.0, 2.0)
+        results.append({
+            "strategy": strat,
+            "total_pnl": r["total_pnl"],
+            "total_pnl_pct": r["total_pnl_pct"],
+            "win_rate": r["win_rate"],
+            "max_drawdown": r["max_drawdown_pct"],
+            "sharpe": r["sharpe_ratio"],
+            "profit_factor": r["profit_factor"],
+            "profitable_days": r["profitable_days"],
+            "loss_days": r["loss_days"],
+        })
+    results.sort(key=lambda x: -x["total_pnl"])
+    return {"capital": capital, "months": months,
+            "comparison": results, "best_strategy": results[0]["strategy"]}
