@@ -1432,3 +1432,155 @@ def get_user_notifs(user_id: str, unread: bool = False):
 def mark_read(user_id: str):
     if USER_SYSTEM: user_db.mark_notifications_read(user_id)
     return {"marked_read": True}
+
+# ═══════════════════════════════════════════════
+# ENTERPRISE MODULES: Security, Billing, AI, Legal, Admin
+# ═══════════════════════════════════════════════
+try:
+    import sys; sys.path.insert(0, '/root/trading-server')
+    from security.security_module import security, ROLES
+    from billing.billing_engine import billing, PLANS
+    from ai_engine.ai_strategy_engine import ai_engine
+    from legal.legal_module import legal
+    from admin.admin_panel import admin
+    ENTERPRISE = True
+    print("✅ Enterprise modules loaded")
+except Exception as e:
+    ENTERPRISE = False
+    print(f"⚠️ Enterprise modules: {e}")
+
+# ── SECURITY / RBAC ─────────────────────────────────────
+@app.get("/security/audit/{user_id}")
+def get_audit(user_id: str, limit: int = 50):
+    if not ENTERPRISE: return {"logs":[]}
+    return {"logs": security.get_audit(user_id, limit), "total": len(security.get_audit(user_id, limit))}
+
+@app.get("/security/audit")
+def get_all_audit(limit: int = 100):
+    if not ENTERPRISE: return {"logs":[]}
+    return {"logs": security.get_audit(None, limit)}
+
+@app.post("/security/role/{user_id}")
+def assign_role(user_id: str, role: str, by: str = "ADMIN"):
+    if not ENTERPRISE: return {"error":"Not loaded"}
+    ok = security.assign_role(user_id, role, by)
+    return {"assigned": ok, "role": role}
+
+@app.get("/security/role/{user_id}")
+def get_role(user_id: str):
+    if not ENTERPRISE: return {"role":"FREE_USER"}
+    return {"user_id": user_id, "role": security.get_role(user_id), "available_roles": list(ROLES.keys())}
+
+@app.get("/security/stats")
+def security_stats():
+    if not ENTERPRISE: return {}
+    return security.admin_stats()
+
+@app.get("/security/mfa/{user_id}")
+def setup_mfa(user_id: str):
+    if not ENTERPRISE: return {}
+    secret = security.gen_mfa_secret(user_id)
+    return {"totp_secret": secret, "qr_url": f"otpauth://totp/TRD:{user_id}?secret={secret}&issuer=TRD_v12"}
+
+# ── BILLING ──────────────────────────────────────────────
+@app.get("/billing/plans")
+def get_billing_plans():
+    return {"plans": PLANS if ENTERPRISE else {}, "recommended": "PRO"}
+
+@app.post("/billing/upgrade")
+def billing_upgrade(user_id: str, plan: str, payment_id: str = "", order_id: str = ""):
+    if not ENTERPRISE: return {"error":"Not loaded"}
+    result = billing.upgrade(user_id, plan, payment_id, order_id)
+    if ENTERPRISE: security.audit(user_id, "PLAN_UPGRADED", f"plan:{plan}", details={"plan":plan,"payment":payment_id})
+    return result
+
+@app.get("/billing/subscription/{user_id}")
+def get_billing_sub(user_id: str):
+    if not ENTERPRISE: return {}
+    return billing.get_subscription(user_id)
+
+@app.get("/billing/invoices/{user_id}")
+def get_invoices(user_id: str):
+    if not ENTERPRISE: return {"invoices":[]}
+    return {"invoices": billing.get_invoices(user_id)}
+
+@app.post("/billing/razorpay/order")
+def create_razorpay_order(user_id: str, plan: str):
+    if not ENTERPRISE: return {}
+    return billing.create_razorpay_order(user_id, plan)
+
+@app.get("/billing/revenue")
+def revenue_stats():
+    if not ENTERPRISE: return {}
+    return billing.admin_revenue_stats()
+
+# ── AI ENGINE ────────────────────────────────────────────
+@app.get("/ai/status")
+def ai_status():
+    if not ENTERPRISE: return {"status":"NOT_LOADED"}
+    return ai_engine.engine_status()
+
+@app.post("/ai/evolve")
+def ai_evolve(generations: int = 5):
+    if not ENTERPRISE: return {"error":"Not loaded"}
+    strategies = ai_engine.evolve_strategies(generations)
+    return {"evolved": len(strategies), "strategies": strategies[:5], "message": f"Evolved {len(strategies)} strategies in {generations} generations"}
+
+@app.get("/ai/strategies")
+def ai_get_strategies(status: str = None, min_wr: float = 0):
+    if not ENTERPRISE: return {"strategies":[]}
+    return {"strategies": ai_engine.get_strategies(status, min_wr)}
+
+@app.get("/ai/strategies/approved")
+def ai_approved():
+    if not ENTERPRISE: return {"strategies":[]}
+    return {"strategies": ai_engine.get_approved_strategies()}
+
+@app.get("/ai/signal/{instrument}")
+def ai_signal(instrument: str = "NIFTY"):
+    if not ENTERPRISE: return {}
+    return ai_engine.generate_signal(instrument)
+
+@app.get("/ai/regime")
+def ai_regime(vix: float = 19.5):
+    if not ENTERPRISE: return {}
+    return ai_engine.detect_regime(vix)
+
+@app.post("/ai/paper_test/{strategy_id}")
+def advance_paper_test(strategy_id: str, days: int = 1):
+    if not ENTERPRISE: return {}
+    return ai_engine.advance_paper_test(strategy_id, days)
+
+# ── LEGAL ────────────────────────────────────────────────
+@app.get("/legal/{doc_type}")
+def get_legal_doc(doc_type: str):
+    if not ENTERPRISE: return {}
+    return legal.get_doc(doc_type)
+
+@app.post("/legal/consent")
+def record_consent(user_id: str, consent_type: str, version: str = "1.0"):
+    if not ENTERPRISE: return {}
+    result = legal.record_consent(user_id, consent_type, version)
+    if ENTERPRISE: security.audit(user_id, "CONSENT_GIVEN", consent_type, details={"version":version})
+    return result
+
+@app.get("/legal/consents/{user_id}")
+def get_consents(user_id: str):
+    if not ENTERPRISE: return {"consents":[]}
+    return {"consents": legal.get_consents(user_id), "risk_signed": legal.has_signed_risk_disclosure(user_id)}
+
+# ── ADMIN ────────────────────────────────────────────────
+@app.get("/admin/dashboard")
+def admin_dashboard():
+    if not ENTERPRISE: return {}
+    return admin.get_dashboard()
+
+@app.get("/admin/users")
+def admin_users(limit: int = 50):
+    if not ENTERPRISE: return {"users":[]}
+    return {"users": admin.get_user_list(limit)}
+
+@app.get("/admin/health")
+def admin_health():
+    if not ENTERPRISE: return {}
+    return admin.system_health()
