@@ -167,6 +167,9 @@ textarea{resize:none}
   <button class="tab" onclick="showTab('rep',this)">📊 REPORTS</button>
   <button class="tab" onclick="showTab('calc',this)">∑ CALC</button>
   <button class="tab" onclick="showTab('profile',this)">👤 PROFILE</button>
+  <button class="tab" onclick="showTab('ai',this)">🤖 AI ENGINE</button>
+  <button class="tab" onclick="showTab('admin',this)">⚡ ADMIN</button>
+  <button class="tab" onclick="showTab('legal',this)">📋 LEGAL</button>
 </div>
 
 <div class="main">
@@ -641,6 +644,117 @@ textarea{resize:none}
       <label style="display:flex;justify-content:space-between;align-items:center;background:var(--bg4);padding:8px;border-radius:4px;cursor:pointer"><span style="font-size:10px">Daily P&L Report</span><input type="checkbox" id="na-rp" checked></label>
       <button class="btn bmd bg" onclick="toast('Alert settings saved','success')" style="width:100%;margin-top:4px">✓ SAVE</button>
     </div>
+  </div>
+</div>
+
+
+<!-- ══ AI ENGINE ══ -->
+<div id="tab-ai" class="pnl">
+  <div class="g4">
+    <div class="stat"><div class="slbl">ENGINE STATUS</div><div class="sval" id="ai-st" style="color:var(--gr);font-size:11px">LOADING</div></div>
+    <div class="stat"><div class="slbl">SYNTHESIZED</div><div class="sval" id="ai-syn" style="color:var(--bl)">0</div></div>
+    <div class="stat"><div class="slbl">APPROVED</div><div class="sval" id="ai-apr" style="color:var(--gr)">0</div></div>
+    <div class="stat"><div class="slbl">SIGNALS TODAY</div><div class="sval" id="ai-sig" style="color:var(--am)">0</div></div>
+  </div>
+  <div class="card" style="border:1px solid var(--gr)20">
+    <div class="chdr" style="color:var(--gr)">🤖 AUTONOMOUS AI STRATEGY ENGINE — Genetic Algorithm + LSTM + RL (PPO)</div>
+    <div class="g2" style="gap:8px;margin-bottom:8px">
+      <div class="card">
+        <div style="font-size:9px;color:var(--mu);margin-bottom:6px">Architecture</div>
+        <div style="font-size:8px;display:flex;flex-direction:column;gap:3px">
+          <div><span style="color:var(--gr)">◆ </span>Genetic Algorithm — Strategy DNA Evolution</div>
+          <div><span style="color:var(--bl)">◆ </span>LSTM Neural Network — Pattern Discovery</div>
+          <div><span style="color:var(--pu)">◆ </span>RL (PPO/SAC) — Self-Optimization</div>
+          <div><span style="color:var(--am)">◆ </span>15-Day Paper Test Bridge mandatory</div>
+          <div><span style="color:var(--rd)">◆ </span>Circuit Breaker — Flash Crash Guard</div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:9px;color:var(--mu);margin-bottom:6px">Performance Gates</div>
+        <div style="font-size:8px;display:flex;flex-direction:column;gap:3px">
+          <div><span style="color:var(--gr)">✓ </span>Min Win Rate: 62% for approval</div>
+          <div><span style="color:var(--gr)">✓ </span>Min Profit Factor: 1.5×</div>
+          <div><span style="color:var(--gr)">✓ </span>15-day forward test required</div>
+          <div><span style="color:var(--am)">⚠ </span>Anti-overfit: penalizes Sharpe-only</div>
+          <div><span style="color:var(--rd)">■ </span>VIX > 35 = Circuit Breaker</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <button class="btn bmd bg" onclick="runAIEvolve()">🧬 EVOLVE STRATEGIES (Gen.5)</button>
+      <button class="btn bmd bb" onclick="getAISignal()">⚡ GET AI SIGNAL</button>
+      <button class="btn bmd ba" onclick="getAIRegime()">🔍 DETECT REGIME</button>
+      <button class="btn bmd bp" onclick="loadAIStrategies()">★ VIEW APPROVED</button>
+    </div>
+  </div>
+  <!-- AI Signal Output -->
+  <div id="ai-signal-box" style="display:none" class="card">
+    <div class="chdr" style="color:var(--gr)">⚡ AI SIGNAL</div>
+    <div id="ai-signal-content"></div>
+  </div>
+  <!-- AI Regime Box -->
+  <div id="ai-regime-box" style="display:none" class="card">
+    <div class="chdr" style="color:var(--pu)">🔍 HIDDEN MARKET REGIME</div>
+    <div id="ai-regime-content"></div>
+  </div>
+  <!-- AI Strategies List -->
+  <div id="ai-strats-list"></div>
+</div>
+
+<!-- ══ ADMIN ══ -->
+<div id="tab-admin" class="pnl">
+  <div style="margin-bottom:6px"><button class="btn bmd bg" onclick="loadAdminDash()">↻ REFRESH DASHBOARD</button></div>
+  <div class="g4" id="admin-stats">
+    <div class="stat"><div class="slbl">TOTAL USERS</div><div class="sval" id="adm-tu" style="color:var(--bl)">-</div></div>
+    <div class="stat"><div class="slbl">ACTIVE TODAY</div><div class="sval" id="adm-at" style="color:var(--gr)">-</div></div>
+    <div class="stat"><div class="slbl">TOTAL REVENUE</div><div class="sval" id="adm-rev" style="color:var(--am);font-size:13px">-</div></div>
+    <div class="stat"><div class="slbl">MRR</div><div class="sval" id="adm-mrr" style="color:var(--gr);font-size:13px">-</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="chdr">📊 FEATURE USAGE</div>
+      <div id="adm-features" style="font-size:9px;color:var(--mu)">Click Refresh</div>
+    </div>
+    <div class="card">
+      <div class="chdr">💳 PLAN DISTRIBUTION</div>
+      <div id="adm-plans" style="font-size:9px;color:var(--mu)">Click Refresh</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="chdr">🔐 SECURITY AUDIT LOG <button class="btn bsm bb" onclick="loadAudit()">LOAD</button></div>
+    <div id="adm-audit" style="font-size:9px;color:var(--mu);max-height:150px;overflow-y:auto">Click LOAD</div>
+  </div>
+  <div class="card">
+    <div class="chdr">👥 USER LIST <button class="btn bsm bg" onclick="loadUserList()">LOAD</button></div>
+    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>USERNAME</th><th>EMAIL</th><th>PLAN</th><th>CAPITAL</th><th>LOGINS</th><th>LAST LOGIN</th></tr></thead><tbody id="adm-users"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ══ LEGAL ══ -->
+<div id="tab-legal" class="pnl">
+  <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+    <button class="btn bmd bg" onclick="showLegal('tos')">📄 Terms of Service</button>
+    <button class="btn bmd bb" onclick="showLegal('privacy')">🔒 Privacy Policy</button>
+    <button class="btn bmd br" onclick="showLegal('risk_disclosure')">⚠ Risk Disclosure</button>
+    <button class="btn bmd ba" onclick="showLegal('kyc_info')">🪪 KYC Layout</button>
+  </div>
+  <div id="legal-content" class="card">
+    <div class="chdr">LEGAL DOCUMENTS</div>
+    <div style="color:var(--mu);font-size:10px">Select a document above to view</div>
+  </div>
+  <!-- Risk Disclosure Sign -->
+  <div class="card" id="risk-sign-card">
+    <div class="chdr" style="color:var(--rd)">⚠ RISK DISCLOSURE — DIGITAL SIGNATURE REQUIRED</div>
+    <div style="background:#1a0008;border:1px solid var(--rd);border-radius:4px;padding:10px;margin-bottom:10px;font-size:9px">
+      <div style="color:var(--rd);font-weight:700;margin-bottom:6px">You MUST accept all risks before trading:</div>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:4px;cursor:pointer"><input type="checkbox" id="ck1"><span>⚠️ I understand derivatives can result in TOTAL LOSS of capital</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:4px;cursor:pointer"><input type="checkbox" id="ck2"><span>⚠️ I am trading with capital I can afford to lose completely</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:4px;cursor:pointer"><input type="checkbox" id="ck3"><span>⚠️ I acknowledge TRD is a tool, NOT a SEBI-registered advisor</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:4px;cursor:pointer"><input type="checkbox" id="ck4"><span>⚠️ I accept full responsibility for all my trading decisions</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="ck5"><span>✓ I have read and accepted the Terms of Service and Privacy Policy</span></label>
+    </div>
+    <button class="btn bmd br" onclick="signRiskDisclosure()" style="width:100%">✍ DIGITALLY SIGN RISK DISCLOSURE</button>
+    <div id="sig-result" style="display:none;margin-top:8px;background:#001a0e;border:1px solid var(--gr);border-radius:3px;padding:8px;font-size:8px"></div>
   </div>
 </div>
 
