@@ -3,1866 +3,1065 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trading System v12.3</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#060608;--bg2:#0a0b0f;--bg3:#0f1018;--bg4:#141620;
-  --border:#1a1d2e;--border2:#252840;
-  --green:#00ff88;--red:#ff3355;--blue:#3b82f6;--amber:#f59e0b;
-  --purple:#8b5cf6;--cyan:#06b6d4;--text:#e2e8f0;--muted:#64748b;
-}
-/* THEMES */
-body.theme-midnight{--bg:#000010;--bg2:#050518;--bg3:#0a0a20;--bg4:#0f0f28;--border:#1a1a3e;--border2:#252555;--green:#00ffcc;--blue:#6060ff;--text:#dde8ff;--muted:#5060a0}
-body.theme-green{--bg:#000a04;--bg2:#041008;--bg3:#08180c;--bg4:#0c2010;--border:#1a3020;--green:#00ff44;--blue:#00cc88;--text:#ccffdd;--muted:#446655}
-body.theme-purple{--bg:#080412;--bg2:#100820;--bg3:#180c30;--bg4:#201040;--border:#2a1a4e;--green:#a855f7;--red:#f43f5e;--blue:#818cf8;--amber:#fb923c;--text:#ede9fe;--muted:#7c3aed}
-body.theme-light{--bg:#f8fafc;--bg2:#f1f5f9;--bg3:#e2e8f0;--bg4:#cbd5e1;--border:#94a3b8;--border2:#64748b;--green:#059669;--red:#dc2626;--blue:#2563eb;--amber:#d97706;--text:#1e293b;--muted:#64748b}
-body.theme-solarized{--bg:#002b36;--bg2:#073642;--bg3:#0d4654;--bg4:#125465;--border:#1a5a6e;--green:#859900;--red:#dc322f;--blue:#268bd2;--amber:#b58900;--text:#839496;--muted:#586e75}
+<title>TRD v12.3</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@900&display=swap" rel="stylesheet">
+<style id="ts">
+:root{--bg:#060608;--bg2:#0a0b0f;--bg3:#0f1018;--bg4:#141620;--bo:#1a1d2e;--bo2:#252840;--gr:#00ff88;--rd:#ff3355;--bl:#3b82f6;--am:#f59e0b;--pu:#8b5cf6;--cy:#06b6d4;--tx:#e2e8f0;--mu:#64748b}
+body.th-midnight{--bg:#000010;--bg2:#050518;--bg3:#0a0a20;--bg4:#0f0f28;--bo:#1a1a3e;--gr:#00ffcc;--bl:#6060ff;--tx:#dde8ff;--mu:#5060a0}
+body.th-matrix{--bg:#000a04;--bg2:#041008;--bg3:#08180c;--bg4:#0c2010;--bo:#1a3020;--gr:#00ff44;--bl:#00cc88;--tx:#ccffdd;--mu:#446655}
+body.th-purple{--bg:#080412;--bg2:#100820;--bg3:#180c30;--bg4:#201040;--bo:#2a1a4e;--gr:#a855f7;--rd:#f43f5e;--bl:#818cf8;--am:#fb923c;--tx:#ede9fe;--mu:#7c3aed}
+body.th-light{--bg:#f8fafc;--bg2:#f1f5f9;--bg3:#e2e8f0;--bg4:#cbd5e1;--bo:#94a3b8;--bo2:#64748b;--gr:#059669;--rd:#dc2626;--bl:#2563eb;--am:#d97706;--tx:#1e293b;--mu:#64748b}
+body.th-solar{--bg:#002b36;--bg2:#073642;--bg3:#0d4654;--bg4:#125465;--bo:#1a5a6e;--gr:#859900;--rd:#dc322f;--bl:#268bd2;--am:#b58900;--tx:#839496;--mu:#586e75}
 *{margin:0;padding:0;box-sizing:border-box}
-::-webkit-scrollbar{width:3px;height:3px}
-::-webkit-scrollbar-thumb{background:#1a1d2e}
-body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow:hidden;height:100vh;display:flex;flex-direction:column}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:var(--bo2)}
+body{background:var(--bg);color:var(--tx);font-family:'JetBrains Mono',monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden;transition:background .3s,color .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.header{background:var(--bg2);border-bottom:1px solid var(--border);height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;flex-shrink:0}
-.brand{font-family:'Orbitron',monospace;font-size:10px;font-weight:900;color:var(--green);letter-spacing:2px}
-.badge{font-size:8px;padding:2px 5px;border-radius:2px;letter-spacing:1px;font-weight:700}
-.dot{width:6px;height:6px;border-radius:50%;display:inline-block;animation:pulse 2s infinite}
-.ticker{background:var(--bg2);border-bottom:1px solid var(--border);height:22px;overflow:hidden;display:flex;align-items:center;flex-shrink:0}
-.ticker-inner{display:flex;gap:24px;animation:scroll 35s linear infinite;white-space:nowrap;padding-left:100%;font-size:9px}
-.tabs{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;flex-shrink:0;overflow-x:auto}
-.tab{padding:7px 12px;font-size:8px;letter-spacing:1px;cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
-.tab:hover{color:var(--text)}
-.tab.active{color:var(--green);border-bottom-color:var(--green)}
-.main{flex:1;overflow:hidden;display:flex}
-.panel{flex:1;overflow-y:auto;padding:10px;display:none;animation:fadeIn 0.2s ease;gap:8px;flex-direction:column}
-.panel.active{display:flex}
-.card{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px}
-.card-hdr{font-size:8px;color:var(--muted);letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* OVERLAY */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:999;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--bg2);border:1px solid var(--bo2);border-radius:8px;padding:24px;width:92%;max-width:440px;animation:fadeIn .25s}
+/* HEADER */
+.hdr{height:42px;background:var(--bg2);border-bottom:1px solid var(--bo);display:flex;align-items:center;justify-content:space-between;padding:0 12px;flex-shrink:0}
+.brand{font-family:'Orbitron';font-size:11px;color:var(--gr);font-weight:900;letter-spacing:2px}
+/* TICKER */
+.tkr{height:22px;background:var(--bg2);border-bottom:1px solid var(--bo);overflow:hidden;flex-shrink:0}
+.tkr-in{display:flex;gap:24px;animation:scroll 40s linear infinite;white-space:nowrap;padding-left:100%;font-size:9px;align-items:center;height:22px}
+/* TABS */
+.tabs{background:var(--bg2);border-bottom:1px solid var(--bo);display:flex;overflow-x:auto;flex-shrink:0}
+.tab{padding:8px 14px;font-size:8px;letter-spacing:1px;cursor:pointer;border:none;background:none;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-weight:500}
+.tab:hover{color:var(--tx)}.tab.active{color:var(--gr);border-bottom-color:var(--gr)}
+/* PANELS */
+.main{flex:1;overflow:hidden}
+.pnl{display:none;height:100%;overflow-y:auto;padding:10px;flex-direction:column;gap:8px;animation:fadeIn .2s}
+.pnl.active{display:flex}
+/* CARDS */
+.card{background:var(--bg3);border:1px solid var(--bo);border-radius:6px;padding:12px}
+.chdr{font-size:8px;color:var(--mu);letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+/* GRID */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.stat{background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:8px}
-.slbl{font-size:8px;color:var(--muted);letter-spacing:1px}
-.sval{font-size:17px;font-weight:700;margin-top:3px}
-.ssub{font-size:8px;color:var(--muted);margin-top:1px}
-.btn{font-family:'JetBrains Mono',monospace;cursor:pointer;border-radius:3px;font-size:9px;letter-spacing:1px;border:1px solid;transition:all 0.15s}
-.btn:hover{filter:brightness(1.3)}
-.btn:active{transform:scale(0.97)}
-.bg{background:#001a0e;color:var(--green);border-color:var(--green)}
-.br{background:#1a0008;color:var(--red);border-color:var(--red)}
-.bb{background:#0a1628;color:var(--blue);border-color:var(--blue)}
-.ba{background:#1a0e00;color:var(--amber);border-color:var(--amber)}
-.bp{background:#160a28;color:var(--purple);border-color:var(--purple)}
-.bsm{padding:3px 8px}
-.bmd{padding:7px 14px}
-.blg{padding:11px 0;width:100%;font-size:11px;font-weight:700}
-.tog{padding:5px 8px;font-size:9px;font-family:'JetBrains Mono',monospace;background:var(--bg4);border:1px solid var(--border);color:var(--muted);cursor:pointer;border-radius:3px;letter-spacing:1px}
-.tg{background:#001a0e;border-color:var(--green);color:var(--green)}
-.tr{background:#1a0008;border-color:var(--red);color:var(--red)}
-.tb{background:#0a1628;border-color:var(--blue);color:var(--blue)}
-.ta{background:#1a0e00;border-color:var(--amber);color:var(--amber)}
-input,select,textarea{background:var(--bg4);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;border-radius:3px;padding:5px 8px;outline:none;width:100%}
-input:focus,select:focus,textarea:focus{border-color:var(--green)}
+/* STATS */
+.stat{background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:10px}
+.slbl{font-size:8px;color:var(--mu);letter-spacing:1px}
+.sval{font-size:18px;font-weight:700;margin-top:4px;line-height:1}
+.ssub{font-size:8px;color:var(--mu);margin-top:3px}
+/* BUTTONS */
+.btn{font-family:'JetBrains Mono',monospace;cursor:pointer;border-radius:4px;font-size:9px;letter-spacing:1px;border:1px solid;font-weight:500;transition:filter .15s,transform .1s}
+.btn:hover{filter:brightness(1.3)}.btn:active{transform:scale(.97)}
+.bg{background:#001a0e;color:var(--gr);border-color:var(--gr)}
+.br{background:#1a0008;color:var(--rd);border-color:var(--rd)}
+.bb{background:#0a1628;color:var(--bl);border-color:var(--bl)}
+.ba{background:#1a0e00;color:var(--am);border-color:var(--am)}
+.bp{background:#160a28;color:var(--pu);border-color:var(--pu)}
+.bsm{padding:3px 8px}.bmd{padding:7px 14px}.blg{padding:11px 0;width:100%;font-size:11px;font-weight:700}
+/* TOGGLE BUTTONS */
+.tog{padding:5px 8px;font-size:9px;font-family:'JetBrains Mono',monospace;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);cursor:pointer;border-radius:3px;letter-spacing:1px}
+.tg{background:#001a0e;border-color:var(--gr);color:var(--gr)}
+.tr{background:#1a0008;border-color:var(--rd);color:var(--rd)}
+.tb{background:#0a1628;border-color:var(--bl);color:var(--bl)}
+.ta{background:#1a0e00;border-color:var(--am);color:var(--am)}
+/* INPUTS */
+input,select,textarea{background:var(--bg4);border:1px solid var(--bo2);color:var(--tx);font-family:'JetBrains Mono',monospace;font-size:11px;border-radius:4px;padding:7px 10px;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--gr)}
 textarea{resize:none}
-.ilbl{font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:3px}
+.ilbl{font-size:8px;color:var(--mu);letter-spacing:1px;margin-bottom:3px}
+/* TABLE */
 .tbl{width:100%;font-size:9px;border-collapse:collapse}
-.tbl th{color:var(--muted);font-size:7px;letter-spacing:1px;padding:5px 6px;text-align:left;border-bottom:1px solid var(--border)}
-.tbl td{padding:6px;border-bottom:1px solid var(--border)}
-.tbl tr:hover td{background:rgba(255,255,255,0.02)}
-.log-line{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid rgba(26,29,46,0.4);font-size:9px;animation:fadeIn 0.2s}
+.tbl th{color:var(--mu);font-size:7px;letter-spacing:1px;padding:6px;border-bottom:1px solid var(--bo);text-align:left}
+.tbl td{padding:6px;border-bottom:1px solid var(--bo)}
+/* PROGRESS */
 .pb{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-top:3px}
-.pf{height:100%;border-radius:2px;transition:width 0.5s}
-.sb{overflow-y:auto}
-.src-badge{font-size:7px;padding:1px 4px;border-radius:2px;background:#001428;color:var(--blue);border:1px solid #1e3a5f}
-@media(max-width:480px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}}
+.pf{height:100%;border-radius:2px;transition:width .5s}
+/* BADGE */
+.bdg{font-size:8px;padding:2px 6px;border-radius:2px;font-weight:700}
+/* DOT */
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;animation:pulse 2s infinite}
+/* LOG */
+.lg{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid rgba(26,29,46,.4);font-size:9px;animation:fadeIn .2s}
+/* AVATAR */
+.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer}
+/* PLAN CARD */
+.plnc{background:var(--bg4);border:2px solid var(--bo);border-radius:8px;padding:14px;cursor:pointer;text-align:center;transition:border-color .2s,transform .2s}
+.plnc:hover{transform:translateY(-2px)}.plnc.sel{border-color:var(--gr);background:#001a0e}
+/* THEME CARD */
+.thc{background:var(--bg4);border:2px solid var(--bo);border-radius:6px;padding:12px;cursor:pointer;text-align:center;transition:border-color .2s}
+.thc:hover,.thc.sel{border-color:var(--gr)}
+/* CALENDAR CELL */
+.ccl{width:34px;height:34px;border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:7px;border:1px solid transparent;transition:filter .15s}
+.ccl:hover{filter:brightness(1.5)}
+/* TOAST */
+#toast{position:fixed;top:48px;right:12px;z-index:2000;background:var(--bg2);border:1px solid var(--gr);border-radius:4px;padding:10px 14px;font-size:10px;display:none;animation:fadeIn .2s;max-width:280px}
+@media(max-width:500px){.g4{grid-template-columns:1fr 1fr}}
 </style>
 </head>
-<body>
+<body id="body">
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- AUTH MODAL -->
+<div class="ov" id="auth-ov">
+<div class="modal">
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-family:'Orbitron';font-size:20px;color:var(--gr);font-weight:900">▶ TRD v12.3</div>
+    <div style="font-size:9px;color:var(--mu);margin-top:4px">Institutional Derivative Trading</div>
+  </div>
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--bo);margin-bottom:14px">
+    <button class="tab active" id="at-l" onclick="swAuth('l')">LOGIN</button>
+    <button class="tab" id="at-r" onclick="swAuth('r')">SIGN UP</button>
+    <button class="tab" onclick="guest()">GUEST →</button>
+  </div>
+  <!-- LOGIN -->
+  <div id="af-l">
+    <div style="margin-bottom:10px"><div class="ilbl">USERNAME OR EMAIL</div><input id="al-u" placeholder="imrantrad" onkeypress="if(event.key==='Enter')doLogin()"></div>
+    <div style="margin-bottom:14px"><div class="ilbl">PASSWORD</div><input type="password" id="al-p" placeholder="password" onkeypress="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn blg bg" onclick="doLogin()">→ LOGIN</button>
+    <div style="margin-top:10px;text-align:center;font-size:9px;color:var(--mu)">Demo: <b style="color:var(--tx)">demo</b> / <b style="color:var(--tx)">demo123</b></div>
+  </div>
+  <!-- REGISTER -->
+  <div id="af-r" style="display:none">
+    <div class="g2" style="gap:8px;margin-bottom:8px">
+      <div><div class="ilbl">USERNAME</div><input id="ar-u" placeholder="yourname"></div>
+      <div><div class="ilbl">FULL NAME</div><input id="ar-n" placeholder="Your Name"></div>
+    </div>
+    <div style="margin-bottom:8px"><div class="ilbl">EMAIL (for alerts & verification)</div><input type="email" id="ar-e" placeholder="email@example.com"></div>
+    <div style="margin-bottom:14px"><div class="ilbl">PASSWORD (min 6 chars)</div><input type="password" id="ar-p" placeholder="password"></div>
+    <button class="btn blg bg" onclick="doRegister()">✓ CREATE FREE ACCOUNT</button>
+  </div>
+</div>
+</div>
 
 <!-- HEADER -->
-<div class="header">
-  <div style="display:flex;align-items:center;gap:10px">
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:8px">
     <span class="brand">▶ TRD v12.3</span>
-    <span class="badge" id="mode-badge" style="background:#0a1628;color:var(--blue);border:1px solid var(--blue)">PAPER</span>
-    <span class="badge" id="broker-badge" style="background:#001428;color:var(--blue);border:1px solid #3b82f6">ZERODHA</span>
+    <span class="bdg" id="mode-bdg" style="background:#0a1628;color:var(--bl);border:1px solid var(--bl)">PAPER</span>
+    <span class="bdg" id="plan-bdg" style="background:#160a28;color:var(--pu);border:1px solid var(--pu)">FREE</span>
   </div>
-  <div style="display:flex;align-items:center;gap:10px">
-    <span style="font-size:8px;color:var(--muted)" id="clock"></span>
-    <span class="src-badge" id="data-src">CONNECTING</span>
-    <div style="display:flex;align-items:center;gap:4px">
-      <span class="dot" id="api-dot" style="background:var(--amber)"></span>
-      <span style="font-size:8px" id="api-txt">ONLINE</span>
-    </div>
-    <button class="btn bsm br" id="kill-btn" onclick="toggleKill()">■ KILL</button>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:8px;color:var(--mu)" id="clk"></span>
+    <span class="bdg" id="src-bdg" style="background:#001a0e;color:var(--gr);border:1px solid var(--gr)20;font-size:7px">LIVE</span>
+    <span class="dot" id="api-dot" style="background:var(--am)"></span>
+    <span style="font-size:8px;color:var(--mu)" id="api-lbl">...</span>
+    <button class="btn bsm br" onclick="toggleKill()">■ KILL</button>
+    <div class="av" id="hdr-av" style="background:var(--gr);color:#000" onclick="showTab('profile',null)">?</div>
+    <span style="font-size:9px;color:var(--mu)" id="hdr-nm">Guest</span>
   </div>
 </div>
 
 <!-- TICKER -->
-<div class="ticker"><div class="ticker-inner" id="ticker"></div></div>
+<div class="tkr"><div class="tkr-in" id="tkr"></div></div>
 
 <!-- TABS -->
 <div class="tabs">
   <button class="tab active" onclick="showTab('trade',this)">◈ TRADE</button>
-  <button class="tab" onclick="showTab('positions',this)">◉ POSITIONS</button>
+  <button class="tab" onclick="showTab('pos',this)">◉ POSITIONS</button>
   <button class="tab" onclick="showTab('risk',this)">⚡ RISK</button>
-  <button class="tab" onclick="showTab('scanner',this)">◎ SCANNER</button>
-  <button class="tab" onclick="showTab('options',this)">◆ OPTIONS</button>
-  <button class="tab" onclick="showTab('backtest',this)">∞ BACKTEST</button>
-  <button class="tab" onclick="showTab('journal',this)">✎ JOURNAL</button>
-  <button class="tab" onclick="showTab('reports',this)">📊 REPORTS</button>
+  <button class="tab" onclick="showTab('scan',this)">◎ SCANNER</button>
+  <button class="tab" onclick="showTab('opts',this)">◆ OPTIONS</button>
+  <button class="tab" onclick="showTab('bt',this)">∞ BACKTEST</button>
+  <button class="tab" onclick="showTab('strats',this)">★ STRATEGIES</button>
+  <button class="tab" onclick="showTab('jnl',this)">✎ JOURNAL</button>
+  <button class="tab" onclick="showTab('rep',this)">📊 REPORTS</button>
   <button class="tab" onclick="showTab('calc',this)">∑ CALC</button>
-  <button class="tab" onclick="showTab('strategies',this)">★ STRATEGIES</button>
   <button class="tab" onclick="showTab('profile',this)">👤 PROFILE</button>
 </div>
 
 <div class="main">
 
-<!-- ═══ TRADE ═══ -->
-<div id="tab-trade" class="panel active">
+<!-- ══ TRADE ══ -->
+<div id="tab-trade" class="pnl active">
   <div class="g4">
-    <div class="stat"><div class="slbl">TOTAL P&L</div><div class="sval" id="s-pnl" style="color:var(--green)">₹0</div><div class="ssub" id="s-pnl-p">0.00%</div></div>
-    <div class="stat"><div class="slbl">TODAY P&L</div><div class="sval" id="s-dpnl" style="color:var(--green)">₹0</div><div class="ssub" id="s-trd">0 trades</div></div>
-    <div class="stat"><div class="slbl">WIN RATE</div><div class="sval" id="s-wr" style="color:var(--green)">0%</div><div class="ssub" id="s-wl">0W/0L</div></div>
-    <div class="stat"><div class="slbl">CAPITAL</div><div class="sval" id="s-cap" style="color:var(--blue);font-size:14px">₹5L</div><div class="ssub" id="s-dd">DD:0%</div></div>
+    <div class="stat"><div class="slbl">TOTAL P&L</div><div class="sval" id="s-pnl" style="color:var(--gr)">₹0</div><div class="ssub" id="s-pp">0%</div></div>
+    <div class="stat"><div class="slbl">TODAY P&L</div><div class="sval" id="s-dp" style="color:var(--gr)">₹0</div><div class="ssub" id="s-tc">0 trades</div></div>
+    <div class="stat"><div class="slbl">WIN RATE</div><div class="sval" id="s-wr" style="color:var(--gr)">0%</div><div class="ssub" id="s-wl">0W/0L</div></div>
+    <div class="stat"><div class="slbl">CAPITAL</div><div class="sval" id="s-cp" style="color:var(--bl);font-size:14px">₹5L</div><div class="ssub" id="s-dd">DD:0%</div></div>
   </div>
   <div class="g2">
     <div class="card">
-      <div class="card-hdr">ORDER ENTRY</div>
+      <div class="chdr">ORDER ENTRY</div>
       <div style="margin-bottom:6px"><div class="ilbl">MODE</div>
-        <div style="display:flex;gap:4px">
-          <button class="tog tb" onclick="setMode('PAPER',this)">PAPER</button>
-          <button class="tog" onclick="setMode('LIVE',this)">LIVE</button>
-          <button class="tog" onclick="setMode('BACKTEST',this)">BACKTEST</button>
-        </div></div>
-      <div style="margin-bottom:6px"><div class="ilbl">BROKER</div>
-        <div style="display:flex;gap:4px">
-          <button class="tog tb" onclick="setBroker('ZERODHA',this)">ZERODHA</button>
-          <button class="tog" onclick="setBroker('ANGEL',this)">ANGEL</button>
-          <button class="tog" onclick="setBroker('FYERS',this)">FYERS</button>
-        </div></div>
+        <div style="display:flex;gap:4px"><button class="tog tb" onclick="setM('PAPER',this)">PAPER</button><button class="tog" onclick="setM('LIVE',this)">LIVE</button><button class="tog" onclick="setM('BACKTEST',this)">BACKTEST</button></div>
+      </div>
       <div style="margin-bottom:6px"><div class="ilbl">INSTRUMENT</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          <button class="tog ta" id="i-NIFTY" onclick="setInst('NIFTY',this)">NIFTY</button>
-          <button class="tog" id="i-BANKNIFTY" onclick="setInst('BANKNIFTY',this)">BANKNIFTY</button>
-          <button class="tog" id="i-FINNIFTY" onclick="setInst('FINNIFTY',this)">FINNIFTY</button>
-          <button class="tog" id="i-SENSEX" onclick="setInst('SENSEX',this)">SENSEX</button>
-        </div></div>
-      <div class="g2" style="gap:4px;margin-bottom:6px">
-        <div><div class="ilbl">ACTION</div>
-          <div style="display:flex;gap:4px">
-            <button class="tog tg" id="a-BUY" onclick="setAction('BUY')">BUY</button>
-            <button class="tog" id="a-SELL" onclick="setAction('SELL')">SELL</button>
-          </div></div>
-        <div><div class="ilbl">TYPE</div>
-          <div style="display:flex;gap:4px">
-            <button class="tog tb" id="t-CE" onclick="setType('CE')">CE</button>
-            <button class="tog" id="t-PE" onclick="setType('PE')">PE</button>
-            <button class="tog" id="t-FUT" onclick="setType('FUT')">FUT</button>
-          </div></div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="tog ta" id="bi-NIFTY" onclick="setI('NIFTY',this)">NIFTY</button>
+          <button class="tog" id="bi-BANKNIFTY" onclick="setI('BANKNIFTY',this)">BANKNIFTY</button>
+          <button class="tog" id="bi-FINNIFTY" onclick="setI('FINNIFTY',this)">FINNIFTY</button>
+          <button class="tog" id="bi-SENSEX" onclick="setI('SENSEX',this)">SENSEX</button>
+        </div>
       </div>
       <div class="g2" style="gap:4px;margin-bottom:6px">
-        <div><div class="ilbl">STRIKE</div><input type="number" id="i-strike" placeholder="23900"></div>
+        <div><div class="ilbl">ACTION</div><div style="display:flex;gap:4px"><button class="tog tg" id="ba-BUY" onclick="setA('BUY')">BUY</button><button class="tog" id="ba-SELL" onclick="setA('SELL')">SELL</button></div></div>
+        <div><div class="ilbl">TYPE</div><div style="display:flex;gap:4px"><button class="tog tb" id="bt-CE" onclick="setT('CE')">CE</button><button class="tog" id="bt-PE" onclick="setT('PE')">PE</button><button class="tog" id="bt-FUT" onclick="setT('FUT')">FUT</button></div></div>
+      </div>
+      <div class="g2" style="gap:4px;margin-bottom:6px">
+        <div><div class="ilbl">STRIKE</div><input type="number" id="i-strk" placeholder="23900"></div>
         <div><div class="ilbl">LOTS</div><input type="number" id="i-lots" value="1" min="1"></div>
       </div>
       <div class="g2" style="gap:4px;margin-bottom:6px">
-        <div><div class="ilbl">ENTRY PRICE</div><input type="number" id="i-price" placeholder="Premium"></div>
-        <div><div class="ilbl">EXPIRY</div>
-          <select id="i-expiry"><option>WEEKLY</option><option>NEXT_WEEKLY</option><option>MONTHLY</option></select>
-        </div>
+        <div><div class="ilbl">ENTRY PRICE</div><input type="number" id="i-px" placeholder="100"></div>
+        <div><div class="ilbl">EXPIRY</div><select id="i-exp"><option>WEEKLY</option><option>NEXT_WEEKLY</option><option>MONTHLY</option></select></div>
       </div>
       <div class="g2" style="gap:4px;margin-bottom:6px">
-        <div><div class="ilbl">SL (pts)</div><input type="number" id="i-sl" placeholder="100"></div>
+        <div><div class="ilbl">STOP LOSS (pts)</div><input type="number" id="i-sl" placeholder="100"></div>
         <div><div class="ilbl">TARGET (pts)</div><input type="number" id="i-tgt" placeholder="200"></div>
       </div>
-      <div style="margin-bottom:8px"><div class="ilbl">TRAILING SL (pts)</div><input type="number" id="i-trail" placeholder="optional"></div>
-      <button class="btn blg bg" id="exec-btn" onclick="executeTrade()">▶ EXECUTE BUY NIFTY CE</button>
+      <div style="margin-bottom:8px"><div class="ilbl">TRAILING SL</div><input type="number" id="i-trail" placeholder="0 = disabled"></div>
+      <button class="btn blg bg" id="exec-btn" onclick="exec()">▶ EXECUTE BUY NIFTY CE</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div class="card">
-        <div class="card-hdr">NLP STRATEGY</div>
-        <textarea id="nlp-in" rows="3" placeholder="buy nifty atm call if rsi < 30 stop loss 100&#10;sell banknifty iron condor if vix > 15&#10;kharido nifty subah trailing sl 50"></textarea>
+        <div class="chdr">NLP QUICK TRADE</div>
+        <textarea id="nlp-q" rows="3" placeholder="buy nifty atm call if rsi < 30 stop loss 100 target 300&#10;sell banknifty iron condor if vix > 15&#10;kharido nifty subah trailing sl 50"></textarea>
         <div style="display:flex;gap:4px;margin-top:6px">
-          <button class="btn bmd bb" style="flex:1" onclick="parseNLP()">◆ PARSE</button>
-          <button class="btn bmd bg" style="flex:1" onclick="parseAndExec()">▶ PARSE+EXEC</button>
+          <button class="btn bmd bb" style="flex:1" onclick="parseQ()">◆ PARSE</button>
+          <button class="btn bmd bg" style="flex:1" onclick="parseExec()">▶ EXEC</button>
         </div>
-        <div id="nlp-result" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:6px;font-size:8px;max-height:100px;overflow-y:auto"></div>
-      </div>
-      <div class="card" style="flex:1">
-        <div class="card-hdr">SYSTEM LOGS <button class="btn bsm ba" onclick="clearLogs()">CLEAR</button></div>
-        <div class="sb" id="log-box" style="max-height:120px"></div>
+        <div id="nlp-res" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:3px;padding:6px;font-size:8px;max-height:80px;overflow-y:auto"></div>
       </div>
       <div class="card">
-        <div class="card-hdr">MARKET WATCH <span class="src-badge" id="mkt-src">LOADING</span></div>
-        <div id="mkt-grid" style="display:flex"></div>
+        <div class="chdr">MARKET WATCH <span id="mkt-src" style="font-size:7px;color:var(--gr)">LOADING</span></div>
+        <div id="mkt-grd" style="display:flex"></div>
+      </div>
+      <div class="card">
+        <div class="chdr">LOG <button class="btn bsm ba" onclick="document.getElementById('log').innerHTML=''">CLR</button></div>
+        <div id="log" style="max-height:100px;overflow-y:auto"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══ POSITIONS ═══ -->
-<div id="tab-positions" class="panel">
+<!-- ══ POSITIONS ══ -->
+<div id="tab-pos" class="pnl">
   <div class="g3">
-    <div class="stat"><div class="slbl">OPEN</div><div class="sval" id="p-count" style="color:var(--blue)">0</div></div>
-    <div class="stat"><div class="slbl">UNREALIZED P&L</div><div class="sval" id="p-upnl" style="color:var(--green)">₹0</div></div>
-    <div class="stat"><div class="slbl">REALIZED P&L</div><div class="sval" id="p-rpnl" style="color:var(--green)">₹0</div></div>
+    <div class="stat"><div class="slbl">OPEN</div><div class="sval" id="p-cnt" style="color:var(--bl)">0</div></div>
+    <div class="stat"><div class="slbl">UNREALIZED</div><div class="sval" id="p-up" style="color:var(--gr)">₹0</div></div>
+    <div class="stat"><div class="slbl">REALIZED</div><div class="sval" id="p-rp" style="color:var(--gr)">₹0</div></div>
   </div>
   <div class="card">
-    <div class="card-hdr">OPEN POSITIONS
-      <div style="display:flex;gap:4px">
-        <button class="btn bsm ba" onclick="refreshPos()">↻</button>
-        <button class="btn bsm br" onclick="closeAll()">✕ ALL</button>
-      </div>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="tbl"><thead><tr>
-        <th>ID</th><th>INST</th><th>TYPE</th><th>STRIKE</th><th>QTY</th>
-        <th>ENTRY</th><th>LTP</th><th>SL</th><th>TGT</th><th>P&L</th><th>ACTION</th>
-      </tr></thead><tbody id="pos-tbl"></tbody></table>
-    </div>
+    <div class="chdr">OPEN POSITIONS <div style="display:flex;gap:4px"><button class="btn bsm ba" onclick="rfPos()">↻</button><button class="btn bsm br" onclick="closeAll()">✕ ALL</button></div></div>
+    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>ID</th><th>INST</th><th>TYPE</th><th>STRIKE</th><th>QTY</th><th>ENTRY</th><th>LTP</th><th>SL</th><th>TGT</th><th>P&L</th><th></th></tr></thead><tbody id="pos-tb"></tbody></table></div>
   </div>
 </div>
 
-<!-- ═══ RISK ═══ -->
-<div id="tab-risk" class="panel">
+<!-- ══ RISK ══ -->
+<div id="tab-risk" class="pnl">
   <div class="g4">
-    <div class="stat"><div class="slbl">RISK STATUS</div><div class="sval" id="r-status" style="color:var(--green);font-size:13px">GREEN</div></div>
-    <div class="stat"><div class="slbl">DAILY LOSS</div><div class="sval" id="r-dl" style="color:var(--green)">₹0</div><div class="ssub" id="r-dlp">0% used</div></div>
-    <div class="stat"><div class="slbl">DRAWDOWN</div><div class="sval" id="r-dd" style="color:var(--green)">0%</div></div>
-    <div class="stat"><div class="slbl">CONSEC LOSSES</div><div class="sval" id="r-cl" style="color:var(--amber)">0</div></div>
+    <div class="stat"><div class="slbl">STATUS</div><div class="sval" id="r-st" style="color:var(--gr);font-size:13px">GREEN</div></div>
+    <div class="stat"><div class="slbl">DAILY LOSS</div><div class="sval" id="r-dl" style="color:var(--gr)">₹0</div><div class="ssub" id="r-dlp">0%</div></div>
+    <div class="stat"><div class="slbl">DRAWDOWN</div><div class="sval" id="r-dd" style="color:var(--gr)">0%</div></div>
+    <div class="stat"><div class="slbl">CONSEC LOSS</div><div class="sval" id="r-cl" style="color:var(--am)">0</div></div>
   </div>
   <div class="g2">
     <div class="card">
-      <div class="card-hdr">RISK METERS</div>
+      <div class="chdr">RISK METERS</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <div><div style="display:flex;justify-content:space-between"><span style="font-size:8px;color:var(--muted)">DAILY LOSS LIMIT</span><span style="font-size:8px" id="rm-dl">0%</span></div><div class="pb"><div class="pf" id="pb-dl" style="width:0%;background:var(--green)"></div></div></div>
-        <div><div style="display:flex;justify-content:space-between"><span style="font-size:8px;color:var(--muted)">DRAWDOWN</span><span style="font-size:8px" id="rm-dd">0%</span></div><div class="pb"><div class="pf" id="pb-dd" style="width:0%;background:var(--blue)"></div></div></div>
-        <div><div style="display:flex;justify-content:space-between"><span style="font-size:8px;color:var(--muted)">POSITIONS</span><span style="font-size:8px" id="rm-pos">0/5</span></div><div class="pb"><div class="pf" id="pb-pos" style="width:0%;background:var(--amber)"></div></div></div>
-        <div><div style="display:flex;justify-content:space-between"><span style="font-size:8px;color:var(--muted)">TRADES TODAY</span><span style="font-size:8px" id="rm-trd">0/10</span></div><div class="pb"><div class="pf" id="pb-trd" style="width:0%;background:var(--purple)"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between"><span style="font-size:8px;color:var(--mu)">DAILY LOSS</span><span style="font-size:8px" id="rm-dl">0%</span></div><div class="pb"><div class="pf" id="pb-dl" style="width:0%;background:var(--gr)"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between"><span style="font-size:8px;color:var(--mu)">DRAWDOWN</span><span style="font-size:8px" id="rm-dd">0%</span></div><div class="pb"><div class="pf" id="pb-dd" style="width:0%;background:var(--bl)"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between"><span style="font-size:8px;color:var(--mu)">POSITIONS</span><span style="font-size:8px" id="rm-ps">0/5</span></div><div class="pb"><div class="pf" id="pb-ps" style="width:0%;background:var(--am)"></div></div></div>
       </div>
     </div>
     <div class="card">
-      <div class="card-hdr">POSITION SIZER</div>
+      <div class="chdr">POSITION SIZER</div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">CAPITAL</div><input type="number" id="ps-cap" value="500000"></div>
-          <div><div class="ilbl">RISK %</div><input type="number" id="ps-risk" value="1" step="0.5"></div>
-        </div>
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">SL PTS</div><input type="number" id="ps-sl" value="100"></div>
-          <div><div class="ilbl">TGT PTS</div><input type="number" id="ps-tgt" value="200"></div>
-        </div>
-        <div><div class="ilbl">LOT SIZE</div><input type="number" id="ps-lot" value="50"></div>
-        <button class="btn bmd bb" onclick="calcPS()" style="width:100%">∑ CALCULATE</button>
-        <div id="ps-result" style="display:none;background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:8px;font-size:9px"></div>
+        <div class="g2" style="gap:4px"><div><div class="ilbl">CAPITAL</div><input type="number" id="ps-c" value="500000"></div><div><div class="ilbl">RISK %</div><input type="number" id="ps-r" value="1" step=".5"></div></div>
+        <div class="g2" style="gap:4px"><div><div class="ilbl">SL PTS</div><input type="number" id="ps-s" value="100"></div><div><div class="ilbl">TGT PTS</div><input type="number" id="ps-t" value="200"></div></div>
+        <input type="number" id="ps-ls" value="50" placeholder="Lot size">
+        <button class="btn bmd bb" onclick="calcPS()" style="width:100%">∑ CALC LOTS</button>
+        <div id="ps-res" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:3px;padding:8px;font-size:9px"></div>
       </div>
     </div>
   </div>
   <div class="card">
-    <div class="card-hdr">EMERGENCY CONTROLS</div>
+    <div class="chdr">EMERGENCY</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn bmd br" onclick="killSwitch(true)">■ KILL SWITCH</button>
-      <button class="btn bmd bg" onclick="killSwitch(false)">▶ RESUME</button>
-      <button class="btn bmd ba" onclick="resetPaper()">↺ RESET PAPER</button>
+      <button class="btn bmd br" onclick="killSw(true)">■ KILL SWITCH</button>
+      <button class="btn bmd bg" onclick="killSw(false)">▶ RESUME</button>
+      <button class="btn bmd ba" onclick="rstPaper()">↺ RESET PAPER</button>
     </div>
   </div>
 </div>
 
-<!-- ═══ SCANNER ═══ -->
-<div id="tab-scanner" class="panel">
-  <div class="card">
-    <div class="card-hdr">MARKET SCANNER
-      <button class="btn bmd bg" onclick="runScanner()">◎ SCAN NOW</button>
-    </div>
-    <div id="scanner-results" style="min-height:100px;font-size:9px">
-      <div style="color:var(--muted);padding:20px;text-align:center">Click SCAN NOW to find opportunities</div>
-    </div>
-  </div>
+<!-- ══ SCANNER ══ -->
+<div id="tab-scan" class="pnl">
+  <div class="card"><div class="chdr">MARKET SCANNER <button class="btn bmd bg" onclick="runScan()">◎ SCAN NOW</button></div><div id="scan-res" style="min-height:60px;font-size:9px"><div style="color:var(--mu);padding:16px;text-align:center">Click SCAN NOW</div></div></div>
   <div class="g2">
-    <div class="card">
-      <div class="card-hdr">IV RANK</div>
+    <div class="card"><div class="chdr">IV RANK</div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        <div><div class="ilbl">INSTRUMENT</div>
-          <select id="iv-inst"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option></select>
-        </div>
-        <div><div class="ilbl">CURRENT IV (%)</div><input type="number" id="iv-val" value="15" step="0.5"></div>
-        <button class="btn bmd bb" onclick="getIVRank()" style="width:100%">GET IV RANK</button>
-        <div id="iv-result" style="display:none;background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:8px;font-size:9px"></div>
+        <select id="iv-i"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option></select>
+        <div><div class="ilbl">CURRENT IV %</div><input type="number" id="iv-v" value="15" step=".5"></div>
+        <button class="btn bmd bb" onclick="getIV()" style="width:100%">GET IV RANK</button>
+        <div id="iv-res" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:3px;padding:8px;font-size:9px"></div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-hdr">MARKET REGIME</div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <div><div class="ilbl">INSTRUMENT</div>
-          <select id="reg-inst"><option>NIFTY</option><option>BANKNIFTY</option></select>
-        </div>
-        <div><div class="ilbl">VIX</div><input type="number" id="reg-vix" value="15" step="0.5"></div>
-        <button class="btn bmd bp" onclick="getRegime()" style="width:100%">DETECT REGIME</button>
-        <div id="reg-result" style="display:none;background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:8px;font-size:9px"></div>
-      </div>
-    </div>
-  </div>
-  <div class="g2">
-    <div class="card">
-      <div class="card-hdr">FII / DII DATA</div>
-      <button class="btn bmd bb" onclick="getFIIDII()" style="width:100%;margin-bottom:6px">FETCH FII/DII</button>
-      <div id="fii-result" style="font-size:9px;color:var(--muted)">Click to load</div>
-    </div>
-    <div class="card">
-      <div class="card-hdr">EXPIRY CALENDAR</div>
-      <button class="btn bmd ba" onclick="getExpiry()" style="width:100%;margin-bottom:6px">GET EXPIRY DATES</button>
-      <div id="exp-result" style="font-size:9px;color:var(--muted)">Click to load</div>
+    <div class="card"><div class="chdr">FII/DII + EXPIRY</div>
+      <button class="btn bmd bb" onclick="getFII()" style="width:100%;margin-bottom:6px">FETCH FII/DII</button>
+      <div id="fii-res" style="font-size:9px;color:var(--mu);margin-bottom:8px">Click to load</div>
+      <button class="btn bmd ba" onclick="getExp()" style="width:100%">GET EXPIRY</button>
+      <div id="exp-res" style="font-size:9px;color:var(--mu);margin-top:6px">Click to load</div>
     </div>
   </div>
 </div>
 
-<!-- ═══ OPTIONS ═══ -->
-<div id="tab-options" class="panel">
+<!-- ══ OPTIONS ══ -->
+<div id="tab-opts" class="pnl">
   <div class="card">
-    <div class="card-hdr">OPTIONS CHAIN (LIVE SPOT)
-      <button class="btn bmd bg" onclick="loadChain()">◆ LOAD CHAIN</button>
-    </div>
+    <div class="chdr">OPTIONS CHAIN <button class="btn bmd bg" onclick="loadChain()">◆ LOAD</button></div>
     <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-      <div style="flex:1;min-width:80px"><div class="ilbl">INSTRUMENT</div>
-        <select id="ch-inst"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option></select>
-      </div>
-      <div style="flex:1;min-width:60px"><div class="ilbl">DTE</div><input type="number" id="ch-dte" value="7" min="1"></div>
-      <div style="flex:1;min-width:60px"><div class="ilbl">IV %</div><input type="number" id="ch-iv" value="15" step="0.5"></div>
+      <div style="flex:1;min-width:80px"><div class="ilbl">INST</div><select id="ch-i"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option></select></div>
+      <div style="flex:1;min-width:60px"><div class="ilbl">DTE</div><input type="number" id="ch-d" value="7"></div>
     </div>
-    <div style="overflow-x:auto">
-      <table class="tbl" id="chain-tbl">
-        <thead><tr>
-          <th>CE OI</th><th>CE VOL</th><th>CE LTP</th><th>CE Δ</th><th>CE θ</th>
-          <th style="background:var(--bg4)">STRIKE</th>
-          <th>PE θ</th><th>PE Δ</th><th>PE LTP</th><th>PE VOL</th><th>PE OI</th>
-        </tr></thead>
-        <tbody id="chain-body"></tbody>
-      </table>
-    </div>
+    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>CE OI</th><th>CE LTP</th><th>CE Δ</th><th style="background:var(--bg4)">STRIKE</th><th>PE Δ</th><th>PE LTP</th><th>PE OI</th></tr></thead><tbody id="ch-tb"></tbody></table></div>
   </div>
   <div class="g2">
-    <div class="card">
-      <div class="card-hdr">GREEKS CALCULATOR</div>
+    <div class="card"><div class="chdr">BLACK-SCHOLES GREEKS</div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">SPOT</div><input type="number" id="g-spot" placeholder="23900"></div>
-          <div><div class="ilbl">STRIKE</div><input type="number" id="g-strike" placeholder="24000"></div>
-        </div>
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">DTE</div><input type="number" id="g-dte" value="7"></div>
-          <div><div class="ilbl">IV %</div><input type="number" id="g-iv" value="15" step="0.5"></div>
-        </div>
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">TYPE</div><select id="g-type"><option>CE</option><option>PE</option></select></div>
-          <div><div class="ilbl">RATE %</div><input type="number" id="g-rate" value="6.5" step="0.1"></div>
-        </div>
-        <button class="btn bmd bg" onclick="calcGreeks()" style="width:100%">◆ CALC GREEKS</button>
-        <div id="greeks-result" style="display:none;background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:8px"></div>
+        <div class="g2" style="gap:4px"><div><div class="ilbl">SPOT</div><input type="number" id="g-s" placeholder="23900"></div><div><div class="ilbl">STRIKE</div><input type="number" id="g-k" placeholder="24000"></div></div>
+        <div class="g2" style="gap:4px"><div><div class="ilbl">DTE</div><input type="number" id="g-d" value="7"></div><div><div class="ilbl">IV %</div><input type="number" id="g-v" value="15"></div></div>
+        <div class="g2" style="gap:4px"><div><div class="ilbl">TYPE</div><select id="g-t"><option>CE</option><option>PE</option></select></div><div><div class="ilbl">RATE %</div><input type="number" id="g-r" value="6.5"></div></div>
+        <button class="btn bmd bg" onclick="calcG()" style="width:100%">◆ CALC GREEKS</button>
+        <div id="g-res" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:3px;padding:8px"></div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-hdr">MARGIN CALCULATOR</div>
+    <div class="card"><div class="chdr">MARGIN CALCULATOR</div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        <div><div class="ilbl">INSTRUMENT</div><select id="m-inst"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option></select></div>
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">LOTS</div><input type="number" id="m-lots" value="1"></div>
-          <div><div class="ilbl">PRICE</div><input type="number" id="m-price" placeholder="100"></div>
-        </div>
-        <div><div class="ilbl">TYPE</div><select id="m-type"><option>OPTIONS</option><option>FUTURES</option></select></div>
-        <button class="btn bmd bb" onclick="calcMargin()" style="width:100%">∑ CALC MARGIN</button>
-        <div id="margin-result" style="display:none;background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:8px;font-size:9px"></div>
+        <select id="m-i"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option></select>
+        <div class="g2" style="gap:4px"><div><div class="ilbl">LOTS</div><input type="number" id="m-l" value="1"></div><div><div class="ilbl">PRICE</div><input type="number" id="m-p" placeholder="100"></div></div>
+        <select id="m-t"><option>OPTIONS</option><option>FUTURES</option></select>
+        <button class="btn bmd bb" onclick="calcMrg()" style="width:100%">∑ CALC MARGIN</button>
+        <div id="m-res" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:3px;padding:8px;font-size:9px"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══ BACKTEST ═══ -->
-<div id="tab-backtest" class="panel">
+<!-- ══ BACKTEST ══ -->
+<div id="tab-bt" class="pnl">
   <div class="card">
-    <div class="card-hdr">STRATEGY BACKTESTER</div>
+    <div class="chdr">ADVANCED BACKTEST — DATE-WISE P&L CALENDAR</div>
     <div class="g2" style="gap:8px;margin-bottom:8px">
-      <div>
-        <div class="ilbl">STRATEGY</div>
-        <select id="bt-strat">
-          <option value="EMA_CROSS">EMA Crossover</option>
-          <option value="RSI_MEAN_REVERSION">RSI Mean Reversion</option>
-          <option value="BOLLINGER_BREAKOUT">Bollinger Breakout</option>
-          <option value="EMA_RSI_COMBO">EMA + RSI Combo</option>
-          <option value="SUPERTREND_LIKE">Supertrend</option>
-        </select>
-      </div>
-      <div>
-        <div class="ilbl">BARS (days)</div>
-        <input type="number" id="bt-bars" value="252" min="50">
-      </div>
-    </div>
-    <div class="g2" style="gap:8px;margin-bottom:8px">
-      <div><div class="ilbl">SL %</div><input type="number" id="bt-sl" value="1" step="0.5"></div>
-      <div><div class="ilbl">TARGET %</div><input type="number" id="bt-tgt" value="2" step="0.5"></div>
-    </div>
-    <button class="btn blg bg" id="bt-btn" onclick="runBacktest()">∞ RUN BACKTEST + MONTE CARLO</button>
-    <div id="bt-result" style="display:none;margin-top:8px"></div>
-  </div>
-</div>
-
-<!-- ═══ JOURNAL ═══ -->
-<div id="tab-journal" class="panel">
-  <div class="g4">
-    <div class="stat"><div class="slbl">PROFIT FACTOR</div><div class="sval" id="j-pf" style="color:var(--green)">0</div></div>
-    <div class="stat"><div class="slbl">AVG WIN</div><div class="sval" id="j-aw" style="color:var(--green)">₹0</div></div>
-    <div class="stat"><div class="slbl">AVG LOSS</div><div class="sval" id="j-al" style="color:var(--red)">₹0</div></div>
-    <div class="stat"><div class="slbl">EXPECTANCY</div><div class="sval" id="j-exp" style="color:var(--blue)">₹0</div></div>
-  </div>
-  <div class="card">
-    <div class="card-hdr">ADD JOURNAL ENTRY</div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="ilbl">INSTRUMENT</div><input type="text" id="jn-inst" placeholder="NIFTY"></div>
-      <div><div class="ilbl">P&L</div><input type="number" id="jn-pnl" placeholder="500"></div>
-    </div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="ilbl">EMOTION</div>
-        <select id="jn-emotion"><option>CALM</option><option>FOMO</option><option>GREEDY</option><option>FEARFUL</option><option>DISCIPLINED</option><option>REVENGE</option></select>
-      </div>
-      <div><div class="ilbl">RATING (1-10)</div><input type="number" id="jn-rating" value="7" min="1" max="10"></div>
-    </div>
-    <div style="margin-bottom:6px"><div class="ilbl">MISTAKES</div><textarea id="jn-mistakes" rows="2" placeholder="What went wrong?"></textarea></div>
-    <div style="margin-bottom:6px"><div class="ilbl">LESSONS</div><textarea id="jn-lessons" rows="2" placeholder="What did I learn?"></textarea></div>
-    <div style="margin-bottom:8px"><div class="ilbl">NOTES</div><textarea id="jn-notes" rows="2" placeholder="General observations..."></textarea></div>
-    <button class="btn bmd bg" onclick="saveJournal()" style="width:100%">✎ SAVE ENTRY</button>
-  </div>
-  <div class="card">
-    <div class="card-hdr">TRADE HISTORY <button class="btn bsm bb" onclick="refreshTrades()">↻</button></div>
-    <div style="overflow-x:auto">
-      <table class="tbl"><thead><tr>
-        <th>ID</th><th>INST</th><th>ACTION</th><th>ENTRY</th><th>EXIT</th><th>REASON</th><th>GROSS</th><th>NET P&L</th>
-      </tr></thead><tbody id="trade-tbl"></tbody></table>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ REPORTS ═══ -->
-<div id="tab-reports" class="panel">
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-    <button class="btn bmd bg" onclick="getDailyReport()">📊 DAILY REPORT</button>
-    <button class="btn bmd bb" onclick="getWeeklyReport()">📈 WEEKLY REPORT</button>
-    <button class="btn bmd ba" onclick="getPerfReport()">∑ PERFORMANCE</button>
-    <button class="btn bmd bp" onclick="getExpCal()">📅 EXPIRY CALENDAR</button>
-  </div>
-  <div class="card">
-    <div class="card-hdr" id="rep-hdr">REPORTS</div>
-    <div id="rep-content" style="font-size:9px;min-height:100px;color:var(--muted)">
-      Select a report above to view
-    </div>
-  </div>
-</div>
-
-<!-- ═══ CALCULATOR ═══ -->
-<div id="tab-calc" class="panel">
-  <div class="g2">
-    <div class="card">
-      <div class="card-hdr">RISK/REWARD CALCULATOR</div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">ENTRY</div><input type="number" id="c-entry" placeholder="23900"></div>
-          <div><div class="ilbl">STOP LOSS</div><input type="number" id="c-sl" placeholder="23800"></div>
-        </div>
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">TARGET</div><input type="number" id="c-tgt" placeholder="24100"></div>
-          <div><div class="ilbl">LOTS</div><input type="number" id="c-lots" value="1"></div>
-        </div>
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">LOT SIZE</div><input type="number" id="c-lotsize" value="50"></div>
-          <div><div class="ilbl">CAPITAL</div><input type="number" id="c-capital" value="500000"></div>
-        </div>
-        <button class="btn bmd bb" onclick="calcRR()" style="width:100%">∑ CALCULATE</button>
-        <div id="rr-result" style="display:none;background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:8px"></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-hdr">BLACK-SCHOLES PRICING</div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">SPOT</div><input type="number" id="bs-spot" placeholder="23900"></div>
-          <div><div class="ilbl">STRIKE</div><input type="number" id="bs-k" placeholder="24000"></div>
-        </div>
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">DTE</div><input type="number" id="bs-dte" value="7"></div>
-          <div><div class="ilbl">IV %</div><input type="number" id="bs-iv" value="15" step="0.5"></div>
-        </div>
-        <div class="g2" style="gap:4px">
-          <div><div class="ilbl">TYPE</div><select id="bs-type"><option>CE</option><option>PE</option></select></div>
-          <div><div class="ilbl">RATE %</div><input type="number" id="bs-rate" value="6.5" step="0.1"></div>
-        </div>
-        <button class="btn bmd bg" onclick="calcBSM()" style="width:100%">◆ BLACK-SCHOLES</button>
-        <div id="bsm-result" style="display:none;background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:8px"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ═══ STRATEGIES ═══ -->
-<div id="tab-strategies" class="panel">
-  <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-    <button class="btn bmd bg" onclick="loadBuiltinStrats()">★ BUILT-IN (10)</button>
-    <button class="btn bmd bb" onclick="loadMyStrats()">MY STRATEGIES</button>
-    <button class="btn bmd ba" onclick="showSaveStrat()">+ SAVE NEW</button>
-  </div>
-
-  <!-- Save Strategy Form -->
-  <div id="save-strat-form" style="display:none" class="card">
-    <div class="card-hdr">SAVE MY STRATEGY</div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="ilbl">NAME</div><input id="ns-name" placeholder="My EMA Strategy"></div>
-      <div><div class="ilbl">INSTRUMENT</div>
-        <select id="ns-inst"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option></select>
-      </div>
-    </div>
-    <div style="margin-bottom:6px"><div class="ilbl">DESCRIPTION</div><input id="ns-desc" placeholder="Describe your strategy..."></div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="ilbl">ENTRY CONDITIONS</div><textarea id="ns-entry" rows="2" placeholder="ema9 > ema21&#10;rsi < 60&#10;vwap bounce"></textarea></div>
-      <div><div class="ilbl">EXIT CONDITIONS</div><textarea id="ns-exit" rows="2" placeholder="stop loss 100&#10;target 200&#10;eod exit"></textarea></div>
-    </div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="ilbl">SL POINTS</div><input type="number" id="ns-sl" value="100"></div>
-      <div><div class="ilbl">TARGET POINTS</div><input type="number" id="ns-tgt" value="200"></div>
-    </div>
-    <div class="g2" style="gap:6px;margin-bottom:8px">
-      <div><div class="ilbl">TIMEFRAME</div>
-        <select id="ns-tf"><option>5MIN</option><option>15MIN</option><option>1HOUR</option><option>DAILY</option><option>WEEKLY</option></select>
-      </div>
-      <div><div class="ilbl">TAGS (comma sep)</div><input id="ns-tags" placeholder="momentum,ema,intraday"></div>
-    </div>
-    <div style="display:flex;gap:6px">
-      <button class="btn bmd bg" onclick="saveMyStrat()" style="flex:1">✓ SAVE STRATEGY</button>
-      <button class="btn bmd br" onclick="document.getElementById('save-strat-form').style.display='none'" style="flex:1">✕ CANCEL</button>
-    </div>
-  </div>
-
-  <div id="strat-list" style="display:flex;flex-direction:column;gap:6px">
-    <div style="color:var(--muted);padding:20px;text-align:center">Click BUILT-IN or MY STRATEGIES to load</div>
-  </div>
-</div>
-
-<!-- ═══ PROFILE ═══ -->
-<div id="tab-profile" class="panel">
-  <!-- Login/Register -->
-  <div id="profile-auth" class="card">
-    <div class="card-hdr">USER ACCOUNT</div>
-    <div id="auth-form">
-      <div class="g2" style="gap:6px;margin-bottom:6px">
-        <div><div class="ilbl">USERNAME</div><input id="p-uname" placeholder="imrantrad"></div>
-        <div><div class="ilbl">PASSWORD</div><input type="password" id="p-pass" placeholder="password"></div>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="btn bmd bg" onclick="loginUser()" style="flex:1">LOGIN</button>
-        <button class="btn bmd bb" onclick="registerUser()" style="flex:1">REGISTER</button>
-      </div>
-    </div>
-    <div id="profile-info" style="display:none"></div>
-  </div>
-
-  <div id="profile-settings" style="display:none" class="card">
-    <div class="card-hdr">MY SETTINGS</div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="ilbl">FULL NAME</div><input id="pr-name" placeholder="Your name"></div>
-      <div><div class="ilbl">EMAIL</div><input id="pr-email" placeholder="email@example.com"></div>
-    </div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="ilbl">CAPITAL (₹)</div><input type="number" id="pr-cap" value="500000"></div>
-      <div><div class="ilbl">RISK PER TRADE %</div><input type="number" id="pr-risk" value="1" step="0.5"></div>
-    </div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="ilbl">MAX DAILY LOSS %</div><input type="number" id="pr-dloss" value="3" step="0.5"></div>
-      <div><div class="ilbl">PREFERRED BROKER</div>
-        <select id="pr-broker"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option></select>
-      </div>
-    </div>
-    <div style="margin-bottom:8px"><div class="ilbl">TELEGRAM CHAT ID (for alerts)</div><input id="pr-tg" placeholder="123456789"></div>
-    <button class="btn bmd bg" onclick="updateProfile()" style="width:100%">✓ SAVE SETTINGS</button>
-  </div>
-
-  <!-- Backtest Advanced -->
-  <div class="card">
-    <div class="card-hdr">ADVANCED BACKTEST — LAST 3 MONTHS</div>
-    <div class="g2" style="gap:6px;margin-bottom:8px">
-      <div>
-        <div class="ilbl">STRATEGY</div>
-        <select id="adv-strat">
-          <optgroup label="── HIGH WIN-RATE ──">
+      <div><div class="ilbl">STRATEGY</div>
+        <select id="bt-s">
+          <optgroup label="HIGH WIN-RATE">
             <option value="STR_THETA_DECAY">Weekly Theta Decay (72% WR)</option>
-            <option value="STR_ORB">Opening Range Breakout (68% WR)</option>
-            <option value="STR_IRON_CONDOR_WEEKLY">Weekly Iron Condor (78% WR)</option>
-            <option value="STR_VWAP_PULLBACK">VWAP Pullback (65% WR)</option>
-            <option value="STR_GAP_FADE">Gap Fade (74% WR)</option>
-            <option value="STR_SUPERTREND_EMA">Supertrend+EMA (63% WR)</option>
-            <option value="STR_PCR_REVERSAL">PCR Reversal (71% WR)</option>
-            <option value="STR_BANKNIFTY_SCALP">BankNifty Scalp (62% WR)</option>
-            <option value="STR_MAX_PAIN_EXPIRY">Max Pain Expiry (76% WR)</option>
-            <option value="STR_FII_MOMENTUM">FII Momentum (69% WR)</option>
+            <option value="STR_ORB">Opening Range Breakout (68%)</option>
+            <option value="STR_IRON_CONDOR_WEEKLY">Weekly Iron Condor (78%)</option>
+            <option value="STR_VWAP_PULLBACK">VWAP Pullback (65%)</option>
+            <option value="STR_GAP_FADE">Gap Fade (74%)</option>
+            <option value="STR_SUPERTREND_EMA">Supertrend+EMA (63%)</option>
+            <option value="STR_PCR_REVERSAL">PCR Reversal (71%)</option>
+            <option value="STR_BANKNIFTY_SCALP">BankNifty Scalp (62%)</option>
+            <option value="STR_MAX_PAIN_EXPIRY">Max Pain Expiry (76%)</option>
+            <option value="STR_FII_MOMENTUM">FII Momentum (69%)</option>
           </optgroup>
-          <optgroup label="── CLASSIC ──">
+          <optgroup label="CLASSIC">
             <option value="EMA_CROSS">EMA Crossover</option>
             <option value="RSI_MEAN_REVERSION">RSI Mean Reversion</option>
             <option value="BOLLINGER_BREAKOUT">Bollinger Breakout</option>
           </optgroup>
         </select>
       </div>
-      <div>
-        <div class="ilbl">CAPITAL AMOUNT (₹)</div>
-        <input type="number" id="adv-cap" value="100000" placeholder="Enter your amount">
-      </div>
+      <div><div class="ilbl">YOUR CAPITAL (₹)</div><input type="number" id="bt-c" value="100000" placeholder="e.g. 100000"></div>
+    </div>
+    <div class="g2" style="gap:8px;margin-bottom:8px">
+      <div><div class="ilbl">PERIOD</div><select id="bt-m"><option value="1">1 Month</option><option value="3" selected>3 Months</option><option value="6">6 Months</option></select></div>
+      <div><div class="ilbl">LOTS</div><input type="number" id="bt-q" value="1" min="1"></div>
+    </div>
+    <button class="btn blg bg" id="bt-btn" onclick="runBT()">∞ RUN BACKTEST + DATE-WISE CALENDAR</button>
+    <div id="bt-res" style="display:none;margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ══ STRATEGIES ══ -->
+<div id="tab-strats" class="pnl">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+    <button class="btn bmd bg" onclick="loadBuiltin()">★ 10 BUILT-IN</button>
+    <button class="btn bmd bb" onclick="loadMine()">MY STRATEGIES</button>
+    <button class="btn bmd ba" onclick="togNLP()">◆ NLP BUILDER</button>
+  </div>
+
+  <!-- NLP BUILDER -->
+  <div id="nlp-bld" class="card" style="display:none;border:1px solid var(--gr)">
+    <div class="chdr" style="color:var(--gr)">◆ NLP STRATEGY BUILDER — TYPE IN ANY LANGUAGE</div>
+    <div style="margin-bottom:8px">
+      <div class="ilbl">DESCRIBE YOUR STRATEGY (English / Hindi / Hinglish)</div>
+      <textarea id="sb-nlp" rows="3" placeholder="buy nifty atm call if rsi < 30 and ema crossover stop loss 100 target 300 weekly&#10;sell banknifty iron condor if vix > 15 rangebound&#10;kharido nifty subah 2 lots if fii buying trailing sl 50"></textarea>
+    </div>
+    <button class="btn bmd bg" onclick="parseNLPS()" style="width:100%;margin-bottom:8px">◆ PARSE → AUTO-FILL ALL COLUMNS</button>
+    <div id="nlps-parsed" style="display:none;background:#001a0e;border:1px solid var(--gr)30;border-radius:3px;padding:8px;font-size:8px;margin-bottom:8px;color:var(--gr)"></div>
+    <!-- AUTO-FILLED FORM -->
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">STRATEGY NAME</div><input id="sb-nm" placeholder="Auto-filled from NLP"></div>
+      <div><div class="ilbl">INSTRUMENT</div><select id="sb-inst"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option><option>SENSEX</option></select></div>
+    </div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">ENTRY CONDITIONS (1 per line)</div><textarea id="sb-en" rows="3" placeholder="Auto-filled"></textarea></div>
+      <div><div class="ilbl">EXIT CONDITIONS (1 per line)</div><textarea id="sb-ex" rows="3" placeholder="Auto-filled"></textarea></div>
+    </div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">SL POINTS</div><input type="number" id="sb-sl" value="100"></div>
+      <div><div class="ilbl">TARGET POINTS</div><input type="number" id="sb-tg" value="200"></div>
+    </div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">TIMEFRAME</div><select id="sb-tf"><option>5MIN</option><option selected>15MIN</option><option>1HOUR</option><option>DAILY</option><option>WEEKLY</option></select></div>
+      <div><div class="ilbl">TRAILING SL</div><input type="number" id="sb-tr" value="0"></div>
     </div>
     <div class="g2" style="gap:6px;margin-bottom:8px">
-      <div><div class="ilbl">MONTHS</div>
-        <select id="adv-months"><option value="1">1 Month</option><option value="3" selected>3 Months</option><option value="6">6 Months</option></select>
-      </div>
-      <div><div class="ilbl">LOTS</div><input type="number" id="adv-qty" value="1" min="1"></div>
+      <div><div class="ilbl">LOTS</div><input type="number" id="sb-qt" value="1"></div>
+      <div><div class="ilbl">TAGS (comma separated)</div><input id="sb-tgs" placeholder="momentum,ema,intraday"></div>
     </div>
-    <button class="btn blg bg" id="adv-btn" onclick="runAdvBacktest()">∞ RUN ADVANCED BACKTEST</button>
-    <div id="adv-result" style="display:none;margin-top:8px"></div>
+    <div style="display:flex;gap:6px">
+      <button class="btn bmd bg" onclick="saveNLPS()" style="flex:1">✓ SAVE STRATEGY</button>
+      <button class="btn bmd ba" onclick="btNLPS()" style="flex:1">∞ BACKTEST</button>
+      <button class="btn bmd bb" onclick="togNLP()" style="flex:0">✕</button>
+    </div>
+  </div>
+
+  <div id="strat-lst"></div>
+</div>
+
+<!-- ══ JOURNAL ══ -->
+<div id="tab-jnl" class="pnl">
+  <div class="g4">
+    <div class="stat"><div class="slbl">PROFIT FACTOR</div><div class="sval" id="j-pf" style="color:var(--gr)">0</div></div>
+    <div class="stat"><div class="slbl">AVG WIN</div><div class="sval" id="j-aw" style="color:var(--gr)">₹0</div></div>
+    <div class="stat"><div class="slbl">AVG LOSS</div><div class="sval" id="j-al" style="color:var(--rd)">₹0</div></div>
+    <div class="stat"><div class="slbl">EXPECTANCY</div><div class="sval" id="j-ex" style="color:var(--bl)">₹0</div></div>
+  </div>
+  <div class="card">
+    <div class="chdr">ADD JOURNAL ENTRY</div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">INSTRUMENT</div><input id="jn-i" placeholder="NIFTY"></div>
+      <div><div class="ilbl">P&L</div><input type="number" id="jn-p" placeholder="500"></div>
+    </div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">EMOTION</div><select id="jn-em"><option>CALM</option><option>FOMO</option><option>GREEDY</option><option>FEARFUL</option><option>DISCIPLINED</option><option>REVENGE</option></select></div>
+      <div><div class="ilbl">RATING (1-10)</div><input type="number" id="jn-r" value="7" min="1" max="10"></div>
+    </div>
+    <div style="margin-bottom:6px"><div class="ilbl">MISTAKES</div><textarea id="jn-m" rows="2" placeholder="What went wrong?"></textarea></div>
+    <div style="margin-bottom:6px"><div class="ilbl">LESSONS</div><textarea id="jn-l" rows="2" placeholder="What did I learn?"></textarea></div>
+    <button class="btn bmd bg" onclick="saveJnl()" style="width:100%">✎ SAVE</button>
+  </div>
+  <div class="card">
+    <div class="chdr">TRADE HISTORY <button class="btn bsm bb" onclick="rfTrades()">↻</button></div>
+    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>ID</th><th>INST</th><th>ACTION</th><th>ENTRY</th><th>EXIT</th><th>REASON</th><th>NET P&L</th></tr></thead><tbody id="tr-tb"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ══ REPORTS ══ -->
+<div id="tab-rep" class="pnl">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+    <button class="btn bmd bg" onclick="getRep('daily')">📊 DAILY</button>
+    <button class="btn bmd bb" onclick="getRep('weekly')">📈 WEEKLY</button>
+    <button class="btn bmd ba" onclick="getRep('performance')">∑ PERFORMANCE</button>
+    <button class="btn bmd bp" onclick="getExpiry()">📅 EXPIRY</button>
+  </div>
+  <div class="card"><div class="chdr" id="rep-hdr">REPORTS</div><div id="rep-body" style="font-size:9px;min-height:100px;color:var(--mu)">Select a report above</div></div>
+</div>
+
+<!-- ══ CALC ══ -->
+<div id="tab-calc" class="pnl">
+  <div class="g2">
+    <div class="card"><div class="chdr">RISK/REWARD CALCULATOR</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="g2" style="gap:4px"><div><div class="ilbl">ENTRY</div><input type="number" id="rr-en"></div><div><div class="ilbl">STOP LOSS</div><input type="number" id="rr-sl"></div></div>
+        <div class="g2" style="gap:4px"><div><div class="ilbl">TARGET</div><input type="number" id="rr-tg"></div><div><div class="ilbl">LOTS</div><input type="number" id="rr-l" value="1"></div></div>
+        <div class="g2" style="gap:4px"><div><div class="ilbl">LOT SIZE</div><input type="number" id="rr-ls" value="50"></div><div><div class="ilbl">CAPITAL</div><input type="number" id="rr-c" value="500000"></div></div>
+        <button class="btn bmd bb" onclick="calcRR()" style="width:100%">∑ CALCULATE</button>
+        <div id="rr-res" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:3px;padding:8px"></div>
+      </div>
+    </div>
+    <div class="card"><div class="chdr">BLACK-SCHOLES PRICER</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="g2" style="gap:4px"><div><div class="ilbl">SPOT</div><input type="number" id="bs-s" placeholder="23900"></div><div><div class="ilbl">STRIKE</div><input type="number" id="bs-k" placeholder="24000"></div></div>
+        <div class="g2" style="gap:4px"><div><div class="ilbl">DTE</div><input type="number" id="bs-d" value="7"></div><div><div class="ilbl">IV %</div><input type="number" id="bs-v" value="15"></div></div>
+        <div class="g2" style="gap:4px"><div><div class="ilbl">TYPE</div><select id="bs-t"><option>CE</option><option>PE</option></select></div><div><div class="ilbl">RATE %</div><input type="number" id="bs-r" value="6.5"></div></div>
+        <button class="btn bmd bg" onclick="calcBS()" style="width:100%">◆ BS PRICE + GREEKS</button>
+        <div id="bs-res" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:3px;padding:8px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PROFILE ══ -->
+<div id="tab-profile" class="pnl">
+  <!-- HERO -->
+  <div class="card" style="background:linear-gradient(135deg,var(--bg3),var(--bg4));border:1px solid var(--gr)20">
+    <div style="display:flex;gap:14px;align-items:center">
+      <div id="pr-av" class="av" style="width:56px;height:56px;font-size:22px;background:var(--gr);color:#000;border-radius:50%">?</div>
+      <div style="flex:1">
+        <div id="pr-nm" style="font-size:16px;font-weight:700">Guest User</div>
+        <div id="pr-em" style="font-size:9px;color:var(--mu);margin-top:2px">Not logged in</div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          <span id="pr-pl" class="bdg" style="background:#160a28;color:var(--pu);border:1px solid var(--pu)">FREE</span>
+          <span id="pr-br" class="bdg" style="background:#0a1628;color:var(--bl);border:1px solid var(--bl)">ZERODHA</span>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--mu)">Capital</div>
+        <div id="pr-cp" style="font-size:20px;font-weight:700;color:var(--gr)">₹5L</div>
+        <div style="font-size:9px;color:var(--mu)" id="pr-lc">0 logins</div>
+      </div>
+    </div>
+    <div class="g4" style="gap:6px;margin-top:12px">
+      <div class="stat"><div class="slbl">STRATEGIES</div><div class="sval" id="pr-sc" style="color:var(--bl)">0</div></div>
+      <div class="stat"><div class="slbl">TRADES</div><div class="sval" id="pr-tc" style="color:var(--am)">0</div></div>
+      <div class="stat"><div class="slbl">P&L</div><div class="sval" id="pr-pn" style="color:var(--gr)">₹0</div></div>
+      <div class="stat"><div class="slbl">WIN RATE</div><div class="sval" id="pr-wr" style="color:var(--gr)">0%</div></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn bsm br" onclick="doLogout()">LOGOUT</button>
+      <button class="btn bsm bg" onclick="rfProfile()">↻ REFRESH</button>
+    </div>
+  </div>
+
+  <!-- SUB TABS -->
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--bo)">
+    <button class="tab active" onclick="swProf('settings',this)">⚙ SETTINGS</button>
+    <button class="tab" onclick="swProf('sub',this)">💳 PLANS</button>
+    <button class="tab" onclick="swProf('themes',this)">🎨 THEMES</button>
+    <button class="tab" onclick="swProf('notifs',this)">🔔 ALERTS</button>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="prs-settings" class="card">
+    <div class="g2" style="gap:8px;margin-bottom:8px">
+      <div><div class="ilbl">FULL NAME</div><input id="pf-nm" placeholder="Your name"></div>
+      <div><div class="ilbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div>
+    </div>
+    <div class="g2" style="gap:8px;margin-bottom:8px">
+      <div><div class="ilbl">CAPITAL (₹)</div><input type="number" id="pf-cp" value="500000"></div>
+      <div><div class="ilbl">RISK PER TRADE %</div><input type="number" id="pf-rk" value="1" step=".5"></div>
+    </div>
+    <div class="g2" style="gap:8px;margin-bottom:8px">
+      <div><div class="ilbl">MAX DAILY LOSS %</div><input type="number" id="pf-dl" value="3"></div>
+      <div><div class="ilbl">BROKER</div><select id="pf-br"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option></select></div>
+    </div>
+    <div style="margin-bottom:8px"><div class="ilbl">TELEGRAM CHAT ID (for alerts)</div><input id="pf-tg" placeholder="123456789"></div>
+    <div style="margin-bottom:8px"><div class="ilbl">BIO</div><textarea id="pf-bio" rows="2" placeholder="About yourself..."></textarea></div>
+    <button class="btn bmd bg" onclick="saveProfile()" style="width:100%">✓ SAVE SETTINGS</button>
+  </div>
+
+  <!-- SUBSCRIPTION -->
+  <div id="prs-sub" class="card" style="display:none">
+    <div class="chdr">CHOOSE YOUR PLAN</div>
+    <div class="g2" style="gap:8px;margin-bottom:12px">
+      <div class="plnc" id="pl-FREE" onclick="selPlan('FREE')">
+        <div style="font-weight:700">FREE</div>
+        <div style="font-size:22px;font-weight:700;color:var(--gr);margin:6px 0">₹0</div>
+        <div style="font-size:8px;color:var(--mu);text-align:left">✓ 3 Strategies<br>✓ 1 Month Backtest<br>✓ Paper Trading<br>✗ Scanner<br>✗ Advanced NLP</div>
+      </div>
+      <div class="plnc" id="pl-BASIC" onclick="selPlan('BASIC')">
+        <div style="font-weight:700;color:var(--bl)">BASIC</div>
+        <div style="font-size:22px;font-weight:700;color:var(--gr);margin:6px 0">₹499</div>
+        <div style="font-size:8px;color:var(--mu);text-align:left">✓ 20 Strategies<br>✓ 6 Month Backtest<br>✓ Market Scanner<br>✓ 50 Alerts/mo<br>✗ Live API</div>
+      </div>
+      <div class="plnc sel" id="pl-PRO" onclick="selPlan('PRO')">
+        <div style="font-weight:700;color:var(--gr)">PRO ★</div>
+        <div style="font-size:22px;font-weight:700;color:var(--gr);margin:6px 0">₹1499</div>
+        <div style="font-size:8px;color:var(--mu);text-align:left">✓ Unlimited<br>✓ 12 Month BT<br>✓ Live API<br>✓ Unlimited Alerts<br>✓ Priority Support</div>
+        <div style="margin-top:6px;background:var(--gr);color:#000;font-size:8px;border-radius:2px;padding:2px">RECOMMENDED</div>
+      </div>
+      <div class="plnc" id="pl-INSTITUTIONAL" onclick="selPlan('INSTITUTIONAL')">
+        <div style="font-weight:700;color:var(--am)">INST</div>
+        <div style="font-size:22px;font-weight:700;color:var(--am);margin:6px 0">₹4999</div>
+        <div style="font-size:8px;color:var(--mu);text-align:left">✓ 5yr Backtest<br>✓ Multi-user<br>✓ White Label<br>✓ Custom Dev<br>✓ Dedicated</div>
+      </div>
+    </div>
+    <button class="btn blg bg" onclick="doPlanUpgrade()">💳 UPGRADE PLAN</button>
+  </div>
+
+  <!-- THEMES -->
+  <div id="prs-themes" class="card" style="display:none">
+    <div class="chdr">🎨 CHOOSE THEME — APPLIED INSTANTLY</div>
+    <div class="g2" style="gap:8px">
+      <div class="thc sel" id="th-dark" onclick="applyTh('dark',this)">
+        <div style="display:flex;gap:4px;justify-content:center;margin-bottom:8px">
+          <div style="width:16px;height:16px;border-radius:50%;background:#00ff88"></div>
+          <div style="width:16px;height:16px;border-radius:50%;background:#ff3355"></div>
+          <div style="width:16px;height:16px;border-radius:50%;background:#3b82f6"></div>
+        </div>
+        <div style="font-weight:700;font-size:11px">DARK</div>
+        <div style="font-size:8px;color:var(--mu)">Default</div>
+      </div>
+      <div class="thc" id="th-midnight" onclick="applyTh('midnight',this)">
+        <div style="display:flex;gap:4px;justify-content:center;margin-bottom:8px">
+          <div style="width:16px;height:16px;border-radius:50%;background:#00ffcc"></div>
+          <div style="width:16px;height:16px;border-radius:50%;background:#6060ff"></div>
+        </div>
+        <div style="font-weight:700;font-size:11px">MIDNIGHT</div>
+        <div style="font-size:8px;color:var(--mu)">Blue tones</div>
+      </div>
+      <div class="thc" id="th-matrix" onclick="applyTh('matrix',this)">
+        <div style="display:flex;gap:4px;justify-content:center;margin-bottom:8px">
+          <div style="width:16px;height:16px;border-radius:50%;background:#00ff44"></div>
+          <div style="width:16px;height:16px;border-radius:50%;background:#00cc88"></div>
+        </div>
+        <div style="font-weight:700;font-size:11px">MATRIX</div>
+        <div style="font-size:8px;color:var(--mu)">Green terminal</div>
+      </div>
+      <div class="thc" id="th-purple" onclick="applyTh('purple',this)">
+        <div style="display:flex;gap:4px;justify-content:center;margin-bottom:8px">
+          <div style="width:16px;height:16px;border-radius:50%;background:#a855f7"></div>
+          <div style="width:16px;height:16px;border-radius:50%;background:#e879f9"></div>
+        </div>
+        <div style="font-weight:700;font-size:11px">COSMIC</div>
+        <div style="font-size:8px;color:var(--mu)">Purple galaxy</div>
+      </div>
+      <div class="thc" id="th-solar" onclick="applyTh('solar',this)">
+        <div style="display:flex;gap:4px;justify-content:center;margin-bottom:8px">
+          <div style="width:16px;height:16px;border-radius:50%;background:#859900"></div>
+          <div style="width:16px;height:16px;border-radius:50%;background:#268bd2"></div>
+        </div>
+        <div style="font-weight:700;font-size:11px">SOLARIZED</div>
+        <div style="font-size:8px;color:var(--mu)">Classic dark</div>
+      </div>
+      <div class="thc" id="th-light" onclick="applyTh('light',this)">
+        <div style="display:flex;gap:4px;justify-content:center;margin-bottom:8px">
+          <div style="width:16px;height:16px;border-radius:50%;background:#059669"></div>
+          <div style="width:16px;height:16px;border-radius:50%;background:#2563eb"></div>
+        </div>
+        <div style="font-weight:700;font-size:11px;color:#1e293b">LIGHT</div>
+        <div style="font-size:8px;color:#64748b">Clean white</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTS -->
+  <div id="prs-notifs" class="card" style="display:none">
+    <div class="chdr">🔔 ALERT PREFERENCES</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label style="display:flex;justify-content:space-between;align-items:center;background:var(--bg4);padding:8px;border-radius:4px;cursor:pointer"><span style="font-size:10px">Trade Executed</span><input type="checkbox" id="na-tr" checked></label>
+      <label style="display:flex;justify-content:space-between;align-items:center;background:var(--bg4);padding:8px;border-radius:4px;cursor:pointer"><span style="font-size:10px">SL Hit</span><input type="checkbox" id="na-sl" checked></label>
+      <label style="display:flex;justify-content:space-between;align-items:center;background:var(--bg4);padding:8px;border-radius:4px;cursor:pointer"><span style="font-size:10px">Target Hit</span><input type="checkbox" id="na-tg" checked></label>
+      <label style="display:flex;justify-content:space-between;align-items:center;background:var(--bg4);padding:8px;border-radius:4px;cursor:pointer"><span style="font-size:10px">Scanner Signals</span><input type="checkbox" id="na-sc"></label>
+      <label style="display:flex;justify-content:space-between;align-items:center;background:var(--bg4);padding:8px;border-radius:4px;cursor:pointer"><span style="font-size:10px">Daily P&L Report</span><input type="checkbox" id="na-rp" checked></label>
+      <button class="btn bmd bg" onclick="toast('Alert settings saved','success')" style="width:100%;margin-top:4px">✓ SAVE</button>
+    </div>
   </div>
 </div>
 
 </div><!-- /main -->
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────
-const API = 'https://relative-introduces-strange-asbestos.trycloudflare.com';
-let mode='PAPER',broker='ZERODHA',instrument='NIFTY',action='BUY',optType='CE';
-let killActive=false;
+const API='https://relative-introduces-strange-asbestos.trycloudflare.com';
+let mode='PAPER',inst='NIFTY',act='BUY',typ='CE',kl=false;
+let uid=localStorage.getItem('uid')||null;
+let selPlanV='PRO';
+let px={NIFTY:23897,BANKNIFTY:56089,FINNIFTY:26141,SENSEX:76664,VIX:19.71,USDINR:94.2};
+let chg={NIFTY:-1.14,BANKNIFTY:-.38,FINNIFTY:-.4,SENSEX:-1.29,VIX:6.04,USDINR:.14};
 
-// Real market data storage
-let prices={NIFTY:23897,BANKNIFTY:56089,FINNIFTY:26141,SENSEX:76664,USDINR:94.2,VIX:19.71};
-let priceChanges={NIFTY:-1.14,BANKNIFTY:-0.38,FINNIFTY:-0.4,SENSEX:-1.29,USDINR:0.14,VIX:6.04};
-let dataSource='LOADING';
-
-// ── UTILS ────────────────────────────────────────────────
-const fmtRs=n=>`₹${n>=0?'+':''}${Math.round(n).toLocaleString('en-IN')}`;
-const now=()=>new Date().toLocaleTimeString('en-IN',{hour12:false});
+// UTILS
+const rs=n=>`₹${n>=0?'+':''}${Math.round(n).toLocaleString('en-IN')}`;
 const r2=n=>Math.round(n*100)/100;
-
-function addLog(type,msg){
-  const box=document.getElementById('log-box');
-  const colors={SUCCESS:'var(--green)',ERROR:'var(--red)',INFO:'var(--amber)',SYSTEM:'var(--blue)',WARN:'var(--purple)'};
-  const d=document.createElement('div');d.className='log-line';
-  d.innerHTML=`<span style="color:var(--muted);min-width:50px">${now()}</span><span style="color:${colors[type]||'var(--muted)'};min-width:65px">[${type}]</span><span>${msg}</span>`;
-  box.appendChild(d);box.scrollTop=box.scrollHeight;
+const tm=()=>new Date().toLocaleTimeString('en-IN',{hour12:false});
+function toast(msg,type='info'){
+  const t=document.getElementById('toast'),c={success:'var(--gr)',error:'var(--rd)',info:'var(--bl)',warn:'var(--am)'};
+  t.style.display='block';t.style.borderColor=c[type]||c.info;t.textContent=msg;
+  setTimeout(()=>t.style.display='none',3000);
 }
-function clearLogs(){document.getElementById('log-box').innerHTML=''}
+function log(type,msg){
+  const b=document.getElementById('log');if(!b)return;
+  const c={SUCCESS:'var(--gr)',ERROR:'var(--rd)',INFO:'var(--am)',SYSTEM:'var(--bl)'};
+  const d=document.createElement('div');d.className='lg';
+  d.innerHTML=`<span style="color:var(--mu);min-width:50px">${tm()}</span><span style="color:${c[type]||'var(--mu)'};min-width:60px">[${type}]</span><span>${msg}</span>`;
+  b.appendChild(d);b.scrollTop=b.scrollHeight;
+}
 
-// ── API ──────────────────────────────────────────────────
+// API
 async function api(url,method='GET',data=null){
   try{
-    const opts={method,headers:{'Content-Type':'application/json'}};
-    if(data) opts.body=JSON.stringify(data);
-    const r=await fetch(API+url,opts);
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const o={method,headers:{'Content-Type':'application/json'}};
+    if(data)o.body=JSON.stringify(data);
+    const r=await fetch(API+url,o);
+    if(!r.ok)throw new Error('HTTP '+r.status);
     return await r.json();
-  }catch(e){addLog('ERROR',`${url}: ${e.message}`);return null;}
+  }catch(e){log('ERROR',url+': '+e.message);return null;}
 }
 
-// ── REAL MARKET DATA ────────────────────────────────────
-async function fetchRealPrices(){
+// CLOCK
+setInterval(()=>{const el=document.getElementById('clk');if(el)el.textContent=tm()+' IST';},1000);
+
+// TICKER
+function rfTicker(){
+  const ks=['NIFTY','BANKNIFTY','SENSEX','FINNIFTY','USDINR','VIX'];
+  const html=[...ks,...ks].map(k=>`<span style="display:flex;gap:5px;align-items:center"><span style="color:var(--mu)">${k}</span><b>${(px[k]||0).toFixed(2)}</b><span style="color:${(chg[k]||0)>=0?'var(--gr)':'var(--rd)'}">${(chg[k]||0)>=0?'▲':'▼'}${Math.abs(chg[k]||0).toFixed(2)}%</span></span>`).join('');
+  document.getElementById('tkr').innerHTML=html;
+}
+
+// MARKET DATA
+async function rfMkt(){
   try{
-    const r=await fetch(API+'/market/all',{signal:AbortSignal.timeout?AbortSignal.timeout(8000):undefined});
-    if(!r.ok) throw new Error('offline');
+    const r=await fetch(API+'/market/all');if(!r.ok)throw new Error('off');
     const d=await r.json();
-    if(d.data && Object.keys(d.data).length>0){
-      let updated=false;
-      Object.keys(d.data).forEach(k=>{
-        if(d.data[k].price&&d.data[k].price>0){
-          prices[k]=d.data[k].price;
-          if(d.data[k].pChange!==undefined) priceChanges[k]=d.data[k].pChange;
-          updated=true;
-        }
-      });
-      if(updated){
-        dataSource='YAHOO_FINANCE';
-        document.getElementById('data-src').textContent='LIVE';
-        document.getElementById('data-src').style.background='#001a0e';
-        document.getElementById('data-src').style.color='var(--green)';
-        document.getElementById('mkt-src').textContent='YAHOO FINANCE';
-        renderTicker();renderMktWatch();
-        addLog('INFO',`Real data: NIFTY=${prices.NIFTY} BNF=${prices.BANKNIFTY}`);
-      }
-    }
-  }catch(e){
-    document.getElementById('data-src').textContent='SIMULATED';
-    // small random movement as fallback
-    Object.keys(prices).forEach(k=>{prices[k]=parseFloat((prices[k]*(1+(Math.random()-0.5)*0.0001)).toFixed(2));});
-    renderTicker();renderMktWatch();
+    Object.keys(d.data||{}).forEach(k=>{if(d.data[k].price>0){px[k]=d.data[k].price;if(d.data[k].pChange!==undefined)chg[k]=d.data[k].pChange;}});
+    document.getElementById('src-bdg').textContent='LIVE';
+    document.getElementById('api-dot').style.background='var(--gr)';
+    document.getElementById('api-lbl').textContent='ONLINE';
+  }catch{
+    document.getElementById('api-dot').style.background='var(--rd)';
+    document.getElementById('api-lbl').textContent='OFFLINE';
+    Object.keys(px).forEach(k=>px[k]=parseFloat((px[k]*(1+(Math.random()-.5)*.0001)).toFixed(2)));
   }
+  rfTicker();rfMktGrid();
 }
-fetchRealPrices();
-setInterval(fetchRealPrices,60000);
-
-// ── CLOCK ────────────────────────────────────────────────
-setInterval(()=>document.getElementById('clock').textContent=now()+' IST',1000);
-
-// ── TICKER ───────────────────────────────────────────────
-function renderTicker(){
-  const items=[
-    {n:'NIFTY',v:prices.NIFTY,c:priceChanges.NIFTY||0},
-    {n:'BANKNIFTY',v:prices.BANKNIFTY,c:priceChanges.BANKNIFTY||0},
-    {n:'SENSEX',v:prices.SENSEX,c:priceChanges.SENSEX||0},
-    {n:'FINNIFTY',v:prices.FINNIFTY,c:priceChanges.FINNIFTY||0},
-    {n:'USDINR',v:prices.USDINR,c:priceChanges.USDINR||0},
-    {n:'VIX',v:prices.VIX,c:priceChanges.VIX||0},
-  ];
-  const all=[...items,...items];
-  document.getElementById('ticker').innerHTML=all.map(x=>
-    `<span style="display:flex;gap:5px;align-items:center">
-      <span style="color:var(--muted)">${x.n}</span>
-      <strong style="color:var(--text)">${x.v.toFixed(2)}</strong>
-      <span style="color:${x.c>=0?'var(--green)':'var(--red)'}">${x.c>=0?'▲':'▼'}${Math.abs(x.c).toFixed(2)}%</span>
-    </span>`).join('');
+function rfMktGrid(){
+  const ks=['NIFTY','BANKNIFTY','FINNIFTY','SENSEX','USDINR','VIX'];
+  const el=document.getElementById('mkt-grd');if(!el)return;
+  el.innerHTML=ks.map((k,i)=>`<div style="flex:1;text-align:center;padding:4px 2px;${i<ks.length-1?'border-right:1px solid var(--bo)':''}"><div style="font-size:7px;color:var(--mu)">${k}</div><div style="font-size:11px;font-weight:700">${(px[k]||0).toFixed(2)}</div><div style="font-size:7px;color:${(chg[k]||0)>=0?'var(--gr)':'var(--rd)'}">${(chg[k]||0)>=0?'▲':'▼'}${Math.abs(chg[k]||0).toFixed(2)}%</div></div>`).join('');
+  const ms=document.getElementById('mkt-src');if(ms)ms.textContent='YAHOO FINANCE';
 }
+rfMkt();setInterval(rfMkt,60000);
 
-function renderMktWatch(){
-  const items=['NIFTY','BANKNIFTY','FINNIFTY','SENSEX','USDINR','VIX'];
-  document.getElementById('mkt-grid').innerHTML=items.map((k,i)=>`
-    <div style="flex:1;text-align:center;padding:5px 3px;${i<items.length-1?'border-right:1px solid var(--border)':''}">
-      <div style="font-size:7px;color:var(--muted)">${k}</div>
-      <div style="font-size:11px;font-weight:700">${prices[k].toFixed(2)}</div>
-      <div style="font-size:7px;color:${(priceChanges[k]||0)>=0?'var(--green)':'var(--red)'}">${(priceChanges[k]||0)>=0?'▲':'▼'}${Math.abs(priceChanges[k]||0).toFixed(2)}%</div>
-    </div>`).join('');
-}
-
-// ── TABS ─────────────────────────────────────────────────
-function showTab(name,btn){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+// TABS
+function showTab(nm,btn){
+  document.querySelectorAll('.pnl').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
-  if(btn) btn.classList.add('active');
-  if(name==='positions') refreshPos();
-  if(name==='journal'){refreshTrades();refreshJStats();}
-  if(name==='risk') refreshRisk();
+  const pnl=document.getElementById('tab-'+nm);if(pnl)pnl.classList.add('active');
+  if(btn&&btn.classList)btn.classList.add('active');
+  if(nm==='pos')rfPos();
+  if(nm==='jnl'){rfTrades();rfJStats();}
+  if(nm==='risk')rfRisk();
+  if(nm==='profile')rfProfile();
 }
 
-// ── SETTERS ──────────────────────────────────────────────
-function setMode(m,btn){
-  mode=m;
-  document.getElementById('mode-badge').textContent=m;
-  document.getElementById('mode-badge').style.background=m==='LIVE'?'#1a0008':m==='BACKTEST'?'#1a0e00':'#0a1628';
-  document.getElementById('mode-badge').style.color=m==='LIVE'?'var(--red)':m==='BACKTEST'?'var(--amber)':'var(--blue)';
-  document.querySelectorAll('#tab-trade .tog').forEach(b=>b.classList.remove('tg','tr','ta','tb'));
-  btn.className=`tog ${m==='LIVE'?'tr':m==='BACKTEST'?'ta':'tb'}`;
-  addLog('SYSTEM','Mode: '+m); updateExecBtn();
+// AUTH
+function swAuth(t){
+  document.getElementById('af-l').style.display=t==='l'?'block':'none';
+  document.getElementById('af-r').style.display=t==='r'?'block':'none';
+  document.getElementById('at-l').classList.toggle('active',t==='l');
+  document.getElementById('at-r').classList.toggle('active',t==='r');
 }
-function setBroker(b,btn){
-  broker=b; document.getElementById('broker-badge').textContent=b;
-  addLog('INFO','Broker: '+b);
+async function doLogin(){
+  const u=document.getElementById('al-u').value.trim();const p=document.getElementById('al-p').value;
+  if(!u||!p){toast('Fill all fields','error');return;}
+  const d=await api('/users/login','POST',{username:u,password:p});
+  if(d&&d.user){setUser(d.user);document.getElementById('auth-ov').style.display='none';toast('Welcome '+d.user.username,'success');}
+  else toast(d?.error||'Login failed','error');
 }
-function setInst(ins,btn){
-  instrument=ins;
-  document.querySelectorAll('[id^="i-"]').forEach(b=>b.className='tog');
-  btn.className='tog ta'; updateExecBtn();
+async function doRegister(){
+  const u=document.getElementById('ar-u').value.trim();const p=document.getElementById('ar-p').value;const e=document.getElementById('ar-e').value.trim();const n=document.getElementById('ar-n').value.trim();
+  if(!u||!p){toast('Username & password required','error');return;}
+  if(p.length<6){toast('Password min 6 chars','error');return;}
+  const d=await api('/users/register','POST',{username:u,email:e,password:p,full_name:n,capital:500000});
+  if(d&&d.status==='created'){toast(d.message||'Account created! Login now','success');swAuth('l');document.getElementById('al-u').value=u;}
+  else toast(d?.error||'Registration failed','error');
 }
-function setAction(a){
-  action=a;
-  document.getElementById('a-BUY').className=`tog ${a==='BUY'?'tg':''}`;
-  document.getElementById('a-SELL').className=`tog ${a==='SELL'?'tr':''}`;
-  updateExecBtn();
+function guest(){document.getElementById('auth-ov').style.display='none';toast('Continuing as guest','info');}
+
+function setUser(u){
+  uid=u.id;localStorage.setItem('uid',u.id);
+  const av=(u.full_name||u.username||'?')[0].toUpperCase();
+  const e1=document.getElementById('hdr-av');if(e1)e1.textContent=av;
+  const e2=document.getElementById('hdr-nm');if(e2)e2.textContent=u.username;
+  const e3=document.getElementById('plan-bdg');if(e3)e3.textContent=u.subscription_plan||'FREE';
+  updateProfileUI(u);
+  if(u.theme)applyTh(u.theme.toLowerCase(),null);
 }
-function setType(t){
-  optType=t;
-  ['CE','PE','FUT'].forEach(x=>document.getElementById('t-'+x).className=`tog ${x===t?'tb':''}`);
-  updateExecBtn();
+function updateProfileUI(u){
+  const av=(u.full_name||u.username||'?')[0].toUpperCase();
+  const s={'pr-av':av,'pr-nm':u.full_name||u.username,'pr-em':u.email||'No email'};
+  Object.entries(s).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.textContent=v;});
+  const pl=document.getElementById('pr-pl');if(pl)pl.textContent=u.subscription_plan||'FREE';
+  const br=document.getElementById('pr-br');if(br)br.textContent=u.broker||'ZERODHA';
+  const cp=document.getElementById('pr-cp');if(cp)cp.textContent='₹'+((u.capital||500000)/100000).toFixed(1)+'L';
+  const lc=document.getElementById('pr-lc');if(lc)lc.textContent=(u.login_count||0)+' logins';
+  const sc=document.getElementById('pr-sc');if(sc)sc.textContent=u.strategy_count||0;
+  // Fill form
+  if(u.full_name){const el=document.getElementById('pf-nm');if(el)el.value=u.full_name;}
+  if(u.capital){const el=document.getElementById('pf-cp');if(el)el.value=u.capital;}
+  if(u.risk_per_trade){const el=document.getElementById('pf-rk');if(el)el.value=u.risk_per_trade;}
+  if(u.broker){const el=document.getElementById('pf-br');if(el)el.value=u.broker;}
+  if(u.telegram_chat_id){const el=document.getElementById('pf-tg');if(el)el.value=u.telegram_chat_id;}
 }
-function updateExecBtn(){
-  const btn=document.getElementById('exec-btn');
-  btn.textContent=`▶ EXECUTE ${action} ${instrument} ${optType}`;
-  btn.className=`btn blg ${action==='BUY'?'bg':'br'}`;
+function doLogout(){uid=null;localStorage.removeItem('uid');location.reload();}
+async function rfProfile(){
+  const d=await api('/stats');if(!d)return;
+  const p=d.performance||{};
+  const tc=document.getElementById('pr-tc');if(tc)tc.textContent=p.total_trades||0;
+  const pn=document.getElementById('pr-pn');if(pn){pn.textContent=rs(p.total_pnl||0);pn.style.color=(p.total_pnl||0)>=0?'var(--gr)':'var(--rd)';}
+  const wr=document.getElementById('pr-wr');if(wr)wr.textContent=(p.win_rate||0)+'%';
 }
 
-// ── EXECUTE TRADE ────────────────────────────────────────
-async function executeTrade(){
-  const price=parseFloat(document.getElementById('i-price').value)||100;
-  const qty=parseInt(document.getElementById('i-lots').value)||1;
+// Auto-login
+if(uid){api('/users/'+uid).then(u=>{if(u&&u.username)setUser(u);});}
+
+// PROFILE SUB-TABS
+function swProf(tab,btn){
+  ['settings','sub','themes','notifs'].forEach(t=>{const el=document.getElementById('prs-'+t);if(el)el.style.display=t===tab?'block':'none';});
+  document.querySelectorAll('#tab-profile .tab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+}
+
+// THEMES
+function applyTh(nm,btn){
+  document.getElementById('body').className='th-'+nm;
+  localStorage.setItem('theme',nm);
+  document.querySelectorAll('.thc').forEach(c=>{c.classList.remove('sel');if(c.id==='th-'+nm)c.classList.add('sel');});
+  toast('Theme: '+nm.toUpperCase(),'success');
+  if(uid)api('/users/'+uid,'PUT',{theme:nm.toUpperCase()});
+}
+const sth=localStorage.getItem('theme');if(sth&&sth!=='dark')setTimeout(()=>applyTh(sth,null),50);
+
+// PLANS
+function selPlan(p){
+  selPlanV=p;
+  document.querySelectorAll('.plnc').forEach(c=>{c.classList.remove('sel');if(c.id==='pl-'+p)c.classList.add('sel');});
+}
+async function doPlanUpgrade(){
+  if(!uid){toast('Login required to upgrade','error');return;}
+  const d=await api('/subscriptions/upgrade','POST',{user_id:uid,plan:selPlanV,payment_id:'SIM_'+Date.now()});
+  if(d&&d.upgraded){toast('Upgraded to '+selPlanV,'success');const pl=document.getElementById('pr-pl');if(pl)pl.textContent=selPlanV;}
+}
+
+// SAVE PROFILE
+async function saveProfile(){
+  if(!uid){toast('Login required','error');return;}
+  const updates={
+    full_name:document.getElementById('pf-nm')?.value,
+    capital:parseFloat(document.getElementById('pf-cp')?.value)||500000,
+    risk_per_trade:parseFloat(document.getElementById('pf-rk')?.value)||1,
+    max_daily_loss:parseFloat(document.getElementById('pf-dl')?.value)||3,
+    broker:document.getElementById('pf-br')?.value,
+    telegram_chat_id:document.getElementById('pf-tg')?.value,
+    bio:document.getElementById('pf-bio')?.value,
+  };
+  const d=await api('/users/'+uid,'PUT',updates);
+  if(d&&d.updated)toast('Profile saved!','success');
+}
+
+// ORDER ENTRY
+function setM(m,btn){mode=m;document.getElementById('mode-bdg').textContent=m;updExec();}
+function setI(i,btn){inst=i;document.querySelectorAll('[id^="bi-"]').forEach(b=>b.className='tog');btn.className='tog ta';updExec();}
+function setA(a){act=a;document.getElementById('ba-BUY').className='tog'+(a==='BUY'?' tg':'');document.getElementById('ba-SELL').className='tog'+(a==='SELL'?' tr':'');updExec();}
+function setT(t){typ=t;['CE','PE','FUT'].forEach(x=>document.getElementById('bt-'+x).className='tog'+(x===t?' tb':''));updExec();}
+function updExec(){const b=document.getElementById('exec-btn');b.textContent='▶ EXECUTE '+act+' '+inst+' '+typ;b.className='btn blg '+(act==='BUY'?'bg':'br');}
+
+async function exec(){
+  const px2=parseFloat(document.getElementById('i-px').value)||100;
+  const lots=parseInt(document.getElementById('i-lots').value)||1;
   const sl=parseFloat(document.getElementById('i-sl').value)||null;
   const tgt=parseFloat(document.getElementById('i-tgt').value)||null;
   const trail=parseFloat(document.getElementById('i-trail').value)||null;
-  const strike=parseInt(document.getElementById('i-strike').value)||null;
-  const expiry=document.getElementById('i-expiry').value;
-  const risk_metrics={};
-  if(sl) risk_metrics.stoploss_points=sl;
-  if(tgt) risk_metrics.target_points=tgt;
-  if(trail) risk_metrics.trailing_sl=trail;
-  const order={instrument,action,option_type:optType,strike,expiry,quantity:qty,
-    entry_price:price,confidence:0.92,risk_metrics,broker,mode};
-  addLog('INFO',`Sending ${action} ${instrument} ${optType}@${price}...`);
-  const result=await api('/trade','POST',order);
-  if(result){
-    if(result.status==='EXECUTED'){
-      addLog('SUCCESS',`EXECUTED → ${result.position_id} SL:${result.stoploss||'-'} TGT:${result.target||'-'}`);
-      refreshStats();
-    } else addLog('ERROR','REJECTED: '+result.reason);
+  const strk=parseInt(document.getElementById('i-strk').value)||null;
+  const rm={};if(sl)rm.stoploss_points=sl;if(tgt)rm.target_points=tgt;if(trail)rm.trailing_sl=trail;
+  const order={instrument:inst,action:act,option_type:typ,strike:strk,expiry:document.getElementById('i-exp').value,quantity:lots,entry_price:px2,confidence:.92,risk_metrics:rm,broker:'ZERODHA',mode};
+  log('INFO',`Sending ${act} ${inst} ${typ}@${px2}`);
+  const r=await api('/trade','POST',order);
+  if(r){if(r.status==='EXECUTED'){log('SUCCESS','EXECUTED → '+r.position_id);rfStats();toast(act+' '+inst+' executed','success');}
+  else{log('ERROR','REJECTED: '+r.reason);toast('Rejected: '+r.reason,'error');}}
+}
+
+// NLP
+async function parseQ(){
+  const text=document.getElementById('nlp-q').value.trim();if(!text)return;
+  const r=await api('/strategy','POST',{text});
+  if(r){
+    const box=document.getElementById('nlp-res');box.style.display='block';
+    box.innerHTML=Object.entries(r).filter(([k,v])=>v&&k!=='timestamp').slice(0,8).map(([k,v])=>`<span style="margin-right:8px;color:var(--mu)">${k}:<b style="color:var(--tx)">${typeof v==='object'?JSON.stringify(v):v}</b></span>`).join('');
+    if(r.instrument)setI(r.instrument,document.getElementById('bi-'+r.instrument)||document.createElement('div'));
+    if(r.action)setA(r.action);
+    if(r.option_type)setT(r.option_type);
+    if(r.risk_metrics){if(r.risk_metrics.stoploss_points)document.getElementById('i-sl').value=r.risk_metrics.stoploss_points;if(r.risk_metrics.target_points)document.getElementById('i-tgt').value=r.risk_metrics.target_points;}
+    log('SUCCESS',r.instrument+' '+r.action+' conf:'+r.confidence);
   }
 }
+async function parseExec(){await parseQ();await exec();}
 
-// ── NLP ──────────────────────────────────────────────────
-async function parseNLP(){
-  const text=document.getElementById('nlp-in').value.trim();
-  if(!text) return;
-  addLog('INFO','Parsing NLP...');
-  const result=await api('/strategy','POST',{text});
-  if(result){
-    const box=document.getElementById('nlp-result');
-    box.style.display='block';
-    const fields=['instrument','action','option_type','strategy','strike','strike_selection','conditions','exit','hedge','risk_metrics','time','confidence'];
-    box.innerHTML=fields.filter(f=>result[f]).map(f=>{
-      const colors={instrument:'var(--amber)',action:result[f]==='BUY'?'var(--green)':'var(--red)',
-        strategy:'var(--purple)',conditions:'var(--cyan)',confidence:'var(--green)',hedge:'var(--blue)'};
-      return `<div><span style="color:var(--muted)">${f}: </span><span style="color:${colors[f]||'var(--text)'}">${typeof result[f]==='object'?JSON.stringify(result[f]):result[f]}</span></div>`;
-    }).join('');
-    if(result.instrument) setInst(result.instrument, document.getElementById('i-'+result.instrument)||document.createElement('div'));
-    if(result.action) setAction(result.action);
-    if(result.option_type) setType(result.option_type);
-    if(result.strike&&!Array.isArray(result.strike)) document.getElementById('i-strike').value=result.strike;
-    if(result.risk_metrics){
-      if(result.risk_metrics.stoploss_points) document.getElementById('i-sl').value=result.risk_metrics.stoploss_points;
-      if(result.risk_metrics.target_points) document.getElementById('i-tgt').value=result.risk_metrics.target_points;
-    }
-    addLog('SUCCESS',`${result.instrument} ${result.action} conf:${result.confidence} ${result.language}`);
-  }
+// POSITIONS
+async function rfPos(){
+  const d=await api('/positions');if(!d)return;
+  const tb=document.getElementById('pos-tb');
+  tb.innerHTML=d.positions.length?d.positions.map(p=>{const c=p.pnl>=0?'var(--gr)':'var(--rd)';return `<tr><td style="color:var(--mu)">${p.id.slice(-6)}</td><td>${p.instrument}</td><td style="color:var(--bl)">${p.option_type}</td><td>${p.strike||'-'}</td><td>${p.quantity}</td><td>${p.entry_price}</td><td>${p.current_price}</td><td style="color:var(--rd)">${p.stoploss||'-'}</td><td style="color:var(--gr)">${p.target||'-'}</td><td style="color:${c};font-weight:700">${rs(p.pnl)}</td><td><button class="btn bsm br" onclick="closePos('${p.id}')">✕</button></td></tr>`;}).join(''):`<tr><td colspan="11" style="text-align:center;color:var(--mu);padding:20px">No open positions</td></tr>`;
+  document.getElementById('p-cnt').textContent=d.count||0;
+  const up=d.positions.reduce((s,p)=>s+p.pnl,0);
+  const el=document.getElementById('p-up');el.textContent=rs(up);el.style.color=up>=0?'var(--gr)':'var(--rd)';
 }
-async function parseAndExec(){await parseNLP();await executeTrade();}
+async function closePos(id){const px2=parseFloat(prompt('Exit price?')||0);if(!px2)return;const r=await api('/trade/close','POST',{position_id:id,exit_price:px2,reason:'MANUAL'});if(r){log(r.status==='CLOSED'?'SUCCESS':'ERROR','Close: '+rs(r.net_pnl||0));rfPos();rfStats();}}
+async function closeAll(){if(!confirm('Close ALL positions?'))return;const d=await api('/positions');if(!d)return;for(const p of d.positions)await api('/trade/close','POST',{position_id:p.id,exit_price:p.current_price,reason:'CLOSE_ALL'});rfPos();rfStats();}
 
-// ── POSITIONS ────────────────────────────────────────────
-async function refreshPos(){
-  const d=await api('/positions');
-  if(!d) return;
-  const tb=document.getElementById('pos-tbl');
-  if(!d.positions.length){
-    tb.innerHTML=`<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">No open positions</td></tr>`;
-  } else {
-    tb.innerHTML=d.positions.map(p=>{
-      const c=p.pnl>=0?'var(--green)':'var(--red)';
-      return `<tr>
-        <td style="color:var(--muted)">${p.id}</td><td>${p.instrument}</td>
-        <td style="color:var(--blue)">${p.option_type}</td><td>${p.strike||'-'}</td>
-        <td>${p.quantity}</td><td>${p.entry_price}</td><td>${p.current_price}</td>
-        <td style="color:var(--red)">${p.stoploss||'-'}</td><td style="color:var(--green)">${p.target||'-'}</td>
-        <td style="color:${c};font-weight:700">${fmtRs(p.pnl)}</td>
-        <td><button class="btn bsm br" onclick="closePos('${p.id}')">✕</button></td>
-      </tr>`;}).join('');
-  }
-  document.getElementById('p-count').textContent=d.count;
-  const upnl=d.positions.reduce((s,p)=>s+p.pnl,0);
-  document.getElementById('p-upnl').textContent=fmtRs(upnl);
-  document.getElementById('p-upnl').style.color=upnl>=0?'var(--green)':'var(--red)';
+// STATS
+async function rfStats(){
+  const d=await api('/stats');if(!d||!d.performance)return;const p=d.performance;
+  const sets={'s-pnl':[rs(p.total_pnl||0),(p.total_pnl||0)>=0?'var(--gr)':'var(--rd)'],'s-pp':[p.total_pnl_pct+'%',null],'s-dp':[rs(p.daily_pnl||0),(p.daily_pnl||0)>=0?'var(--gr)':'var(--rd)'],'s-tc':[p.total_trades+' trades',null],'s-wr':[p.win_rate+'%',(p.win_rate||0)>=60?'var(--gr)':(p.win_rate||0)>=40?'var(--am)':'var(--rd)'],'s-wl':[p.winning_trades+'W/'+p.losing_trades+'L',null],'s-cp':['₹'+((p.capital||500000)/100000).toFixed(1)+'L','var(--bl)'],'s-dd':['DD:'+p.max_drawdown_pct+'%',null],'p-rp':[rs(p.total_pnl||0),null]};
+  Object.entries(sets).forEach(([k,[v,c]])=>{const el=document.getElementById(k);if(!el)return;el.textContent=v;if(c)el.style.color=c;});
 }
 
-async function closePos(id){
-  const price=parseFloat(prompt('Exit price?')||'0');
-  if(!price) return;
-  const r=await api('/trade/close','POST',{position_id:id,exit_price:price,reason:'MANUAL'});
-  if(r){addLog(r.status==='CLOSED'?'SUCCESS':'ERROR',`Close ${id}: ₹${Math.round(r.net_pnl||0)}`);refreshPos();refreshStats();}
-}
-async function closeAll(){
-  if(!confirm('Close ALL?')) return;
-  const d=await api('/positions');
-  if(!d) return;
-  for(const p of d.positions) await api('/trade/close','POST',{position_id:p.id,exit_price:p.current_price,reason:'CLOSE_ALL'});
-  refreshPos();refreshStats();addLog('SYSTEM','All positions closed');
-}
-
-// ── STATS ────────────────────────────────────────────────
-async function refreshStats(){
-  const d=await api('/stats');
-  if(!d||!d.performance) return;
-  const p=d.performance;
-  document.getElementById('s-pnl').textContent=fmtRs(p.total_pnl||0);
-  document.getElementById('s-pnl').style.color=(p.total_pnl||0)>=0?'var(--green)':'var(--red)';
-  document.getElementById('s-pnl-p').textContent=`${p.total_pnl_pct||0}%`;
-  document.getElementById('s-dpnl').textContent=fmtRs(p.daily_pnl||0);
-  document.getElementById('s-dpnl').style.color=(p.daily_pnl||0)>=0?'var(--green)':'var(--red)';
-  document.getElementById('s-trd').textContent=`${p.total_trades||0} trades`;
-  const wr=p.win_rate||0;
-  document.getElementById('s-wr').textContent=`${wr}%`;
-  document.getElementById('s-wr').style.color=wr>=60?'var(--green)':wr>=40?'var(--amber)':'var(--red)';
-  document.getElementById('s-wl').textContent=`${p.winning_trades||0}W/${p.losing_trades||0}L`;
-  document.getElementById('s-cap').textContent=`₹${((p.capital||500000)/100000).toFixed(1)}L`;
-  document.getElementById('s-dd').textContent=`DD:${p.max_drawdown_pct||0}%`;
-}
-
-// ── RISK ─────────────────────────────────────────────────
-async function refreshRisk(){
-  const d=await api('/stats');
-  if(!d) return;
-  const r=d.risk;const p=d.performance;
-  document.getElementById('r-status').textContent=r.risk_status||'GREEN';
-  document.getElementById('r-status').style.color=r.risk_status==='GREEN'?'var(--green)':'var(--red)';
-  document.getElementById('r-dl').textContent=fmtRs(r.daily_loss||0);
-  document.getElementById('r-dlp').textContent=`${r.daily_loss_used_pct||0}% used`;
-  document.getElementById('r-dd').textContent=`${r.current_drawdown_pct||0}%`;
-  document.getElementById('r-cl').textContent=r.consecutive_losses||0;
+// RISK
+async function rfRisk(){
+  const d=await api('/stats');if(!d)return;const r=d.risk||{};
+  const st=document.getElementById('r-st');if(st){st.textContent=r.risk_status||'GREEN';st.style.color=r.risk_status==='GREEN'?'var(--gr)':'var(--rd)';}
   const dl=Math.min(r.daily_loss_used_pct||0,100);
-  document.getElementById('pb-dl').style.width=dl+'%';
-  document.getElementById('pb-dl').style.background=dl>70?'var(--red)':dl>40?'var(--amber)':'var(--green)';
-  document.getElementById('rm-dl').textContent=dl.toFixed(1)+'%';
-  const dd=Math.min((r.current_drawdown_pct||0)/10*100,100);
-  document.getElementById('pb-dd').style.width=dd+'%';document.getElementById('rm-dd').textContent=(r.current_drawdown_pct||0)+'%';
-  const pp=((r.open_positions||0)/5)*100;
-  document.getElementById('pb-pos').style.width=pp+'%';document.getElementById('rm-pos').textContent=`${r.open_positions||0}/5`;
-  const tp=((r.trades_today||0)/10)*100;
-  document.getElementById('pb-trd').style.width=tp+'%';document.getElementById('rm-trd').textContent=`${r.trades_today||0}/10`;
-  document.getElementById('p-rpnl').textContent=fmtRs(p.total_pnl||0);
-  if(p){
-    document.getElementById('j-pf').textContent=p.profit_factor||'0';
-    document.getElementById('j-aw').textContent=fmtRs(p.avg_win||0);
-    document.getElementById('j-al').textContent=fmtRs(p.avg_loss||0);
-    document.getElementById('j-exp').textContent=fmtRs(p.expectancy||0);
-  }
+  const pb=document.getElementById('pb-dl');if(pb){pb.style.width=dl+'%';pb.style.background=dl>70?'var(--rd)':dl>40?'var(--am)':'var(--gr)';}
+  const rm=document.getElementById('rm-dl');if(rm)rm.textContent=dl.toFixed(1)+'%';
 }
 
+// KILL
+function toggleKill(){if(kl)killSw(false);else killSw(true);}
+async function killSw(a){if(a&&!confirm('Activate KILL SWITCH?'))return;await api('/risk/kill_switch?active='+a,'POST');kl=a;toast(a?'KILL SWITCH ON':'Trading resumed',a?'error':'success');}
+async function rstPaper(){if(!confirm('Reset paper engine?'))return;const c=parseFloat(prompt('Capital?','500000'))||500000;await api('/paper/reset?capital='+c,'POST');toast('Paper reset ₹'+c.toLocaleString('en-IN'),'success');rfStats();}
+
+// POSITION SIZER
 function calcPS(){
-  const cap=parseFloat(document.getElementById('ps-cap').value)||500000;
-  const rp=parseFloat(document.getElementById('ps-risk').value)||1;
-  const sl=parseFloat(document.getElementById('ps-sl').value)||100;
-  const tgt=parseFloat(document.getElementById('ps-tgt').value)||200;
-  const lot=parseInt(document.getElementById('ps-lot').value)||50;
-  const ra=cap*rp/100; const lots=Math.max(1,Math.floor(ra/(sl*lot)));
-  const risk=lots*sl*lot; const reward=lots*tgt*lot;
-  const rr=r2(tgt/sl); const minWR=r2(sl/(sl+tgt)*100);
-  const box=document.getElementById('ps-result');
-  box.style.display='block';
-  box.innerHTML=`<div class="g2" style="gap:6px">
-    <div><span style="color:var(--muted)">LOTS: </span><span style="color:var(--green);font-size:16px;font-weight:700">${lots}</span></div>
-    <div><span style="color:var(--muted)">RISK: </span><span style="color:var(--red)">${fmtRs(-risk)}</span></div>
-    <div><span style="color:var(--muted)">REWARD: </span><span style="color:var(--green)">${fmtRs(reward)}</span></div>
-    <div><span style="color:var(--muted)">R:R: </span><span style="color:var(--blue)">1:${rr}</span></div>
-    <div><span style="color:var(--muted)">MIN WIN%: </span><span style="color:var(--amber)">${minWR}%</span></div>
-    <div><span style="color:var(--muted)">EXPECTANCY: </span><span style="color:var(--purple)">${fmtRs(0.5*reward-0.5*risk)}</span></div>
-  </div>`;
+  const c=parseFloat(document.getElementById('ps-c').value)||500000;const rp=parseFloat(document.getElementById('ps-r').value)||1;const sl=parseFloat(document.getElementById('ps-s').value)||100;const tgt=parseFloat(document.getElementById('ps-t').value)||200;const ls=parseInt(document.getElementById('ps-ls').value)||50;
+  const lots=Math.max(1,Math.floor(c*rp/100/(sl*ls)));const risk=lots*sl*ls;const reward=lots*tgt*ls;
+  const box=document.getElementById('ps-res');box.style.display='block';
+  box.innerHTML=`<div class="g2" style="gap:6px"><div><span style="color:var(--mu)">LOTS: </span><span style="color:var(--gr);font-size:16px;font-weight:700">${lots}</span></div><div><span style="color:var(--mu)">RISK: </span><span style="color:var(--rd)">${rs(-risk)}</span></div><div><span style="color:var(--mu)">REWARD: </span><span style="color:var(--gr)">${rs(reward)}</span></div><div><span style="color:var(--mu)">R:R: </span><span style="color:var(--bl)">1:${r2(tgt/sl)}</span></div></div>`;
 }
 
-async function killSwitch(active){
-  if(active&&!confirm('Activate KILL SWITCH?')) return;
-  await api(`/risk/kill_switch?active=${active}`,'POST');
-  killActive=active;
-  addLog(active?'ERROR':'SYSTEM',active?'⚠ KILL SWITCH ACTIVATED':'Trading resumed');
+// SCANNER
+async function runScan(){
+  document.getElementById('scan-res').innerHTML='<div style="color:var(--am);padding:10px">Scanning markets...</div>';
+  const d=await api('/scanner/run');if(!d||!d.opportunities.length){document.getElementById('scan-res').innerHTML='<div style="color:var(--mu);padding:10px">No strong signals found</div>';return;}
+  document.getElementById('scan-res').innerHTML=d.opportunities.slice(0,8).map(o=>`<div style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid var(--bo);font-size:9px"><span style="color:var(--am);min-width:90px;font-weight:700">${o.instrument}</span><span style="color:${o.action==='BUY'?'var(--gr)':'var(--rd)';};min-width:30px">${o.action}</span><span style="color:var(--mu);flex:1">${o.strategy}</span><span style="color:var(--bl)">${(o.confidence*100).toFixed(0)}%</span><button class="btn bsm ${o.action==='BUY'?'bg':'br'}" onclick="setI('${o.instrument}',document.getElementById('bi-${o.instrument}')||document.createElement('div'));setA('${o.action}');showTab('trade',null)">USE</button></div>`).join('');
 }
-function toggleKill(){if(killActive)killSwitch(false);else killSwitch(true);}
-async function resetPaper(){
-  if(!confirm('Reset paper engine?')) return;
-  const cap=parseFloat(prompt('Capital?','500000'))||500000;
-  await api(`/paper/reset?capital=${cap}`,'POST');
-  addLog('SYSTEM',`Paper reset ₹${cap.toLocaleString('en-IN')}`);
-  refreshStats();
-}
+async function getIV(){const i=document.getElementById('iv-i').value;const v=parseFloat(document.getElementById('iv-v').value)||15;const d=await api('/iv/rank/'+i+'?current_iv='+v);if(d){const box=document.getElementById('iv-res');box.style.display='block';const c=d.iv_rank>70?'var(--rd)':d.iv_rank<30?'var(--gr)':'var(--am)';box.innerHTML=`<div style="font-size:14px;font-weight:700;color:${c}">${d.regime}</div><div>IV Rank: <span style="color:${c}">${d.iv_rank}%</span></div><div style="color:var(--bl)">→ ${d.recommendation}</div>`;}}
+async function getFII(){const d=await api('/fii_dii');if(d){const b=document.getElementById('fii-res');b.innerHTML=`FII: <span style="color:${d.fii.activity==='BUYING'?'var(--gr)':'var(--rd)'}">${d.fii.activity}</span> | DII: <span style="color:${d.dii.activity==='BUYING'?'var(--gr)':'var(--rd)'}">${d.dii.activity}</span><br>${d.market_impact}`;}}
+async function getExp(){const d=await api('/reports/expiry_calendar');if(d){const b=document.getElementById('exp-res');b.innerHTML=`Weekly: <b>${d.nifty_weekly_expiry}</b> (${d.days_to_weekly}d) | Monthly: <b>${d.nifty_monthly_expiry}</b> (${d.days_to_monthly}d)`;}}
 
-// ── SCANNER ──────────────────────────────────────────────
-async function runScanner(){
-  document.getElementById('scanner-results').innerHTML='<div style="color:var(--amber);padding:10px">Scanning markets...</div>';
-  const d=await api('/scanner/run');
-  if(!d||!d.opportunities.length){
-    document.getElementById('scanner-results').innerHTML='<div style="color:var(--muted);padding:10px">No strong opportunities found</div>';
-    return;
-  }
-  document.getElementById('scanner-results').innerHTML=d.opportunities.slice(0,10).map(o=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid var(--border);font-size:9px">
-      <span style="color:var(--amber);min-width:80px;font-weight:700">${o.instrument}</span>
-      <span style="color:${o.action==='BUY'?'var(--green)':'var(--red)'};min-width:30px">${o.action}</span>
-      <span style="color:var(--muted);flex:1">${o.strategy}</span>
-      <span style="color:var(--purple)">${o.signal}</span>
-      <span style="color:var(--blue)">${(o.confidence*100).toFixed(0)}%</span>
-      <button class="btn bsm ${o.action==='BUY'?'bg':'br'}" onclick="quickTrade('${o.instrument}','${o.action}')">TRADE</button>
-    </div>`).join('');
-}
-function quickTrade(inst,act){setInst(inst,document.getElementById('i-'+inst)||document.createElement('div'));setAction(act);showTab('trade',document.querySelector('.tab'));}
-
-async function getIVRank(){
-  const inst=document.getElementById('iv-inst').value;
-  const iv=parseFloat(document.getElementById('iv-val').value)||15;
-  const d=await api(`/iv/rank/${inst}?current_iv=${iv}`);
-  if(d){
-    const box=document.getElementById('iv-result');
-    box.style.display='block';
-    const c=d.iv_rank>70?'var(--red)':d.iv_rank<30?'var(--green)':'var(--amber)';
-    box.innerHTML=`
-      <div style="font-size:14px;font-weight:700;color:${c}">${d.regime}</div>
-      <div><span style="color:var(--muted)">IV Rank: </span><span style="color:${c}">${d.iv_rank}%</span></div>
-      <div><span style="color:var(--muted)">IV Percentile: </span>${d.iv_percentile}%</div>
-      <div><span style="color:var(--muted)">52W: </span>${d.iv_52w_low} - ${d.iv_52w_high}</div>
-      <div style="color:var(--green);margin-top:4px">→ ${d.recommendation}</div>
-      <div style="color:var(--blue)">Strategy: ${d.signal}</div>`;
-  }
-}
-
-async function getRegime(){
-  const inst=document.getElementById('reg-inst').value;
-  const vix=parseFloat(document.getElementById('reg-vix').value)||15;
-  const d=await api(`/regime/${inst}?vix=${vix}`);
-  if(d){
-    const box=document.getElementById('reg-result');
-    box.style.display='block';
-    const c=d.regime==='TRENDING'?'var(--green)':d.regime==='VOLATILE'?'var(--red)':'var(--amber)';
-    box.innerHTML=`
-      <div style="font-size:14px;font-weight:700;color:${c}">${d.regime}</div>
-      <div><span style="color:var(--muted)">Volatility: </span>${d.volatility_annualized}%</div>
-      <div><span style="color:var(--muted)">Trend: </span>${d.trend_strength_pct}%</div>
-      <div style="color:var(--green);margin-top:4px">→ ${d.recommended_strategy}</div>
-      <div style="color:var(--red)">Avoid: ${d.avoid}</div>`;
-  }
-}
-
-async function getFIIDII(){
-  const d=await api('/fii_dii');
-  if(d){
-    const box=document.getElementById('fii-result');
-    const fc=d.fii.activity==='BUYING'?'var(--green)':'var(--red)';
-    const dc=d.dii.activity==='BUYING'?'var(--green)':'var(--red)';
-    box.innerHTML=`
-      <div style="margin-bottom:4px"><span style="color:var(--muted)">FII: </span><span style="color:${fc}">${d.fii.activity} ₹${Math.abs(d.fii.net).toLocaleString('en-IN')}Cr</span></div>
-      <div style="margin-bottom:4px"><span style="color:var(--muted)">DII: </span><span style="color:${dc}">${d.dii.activity} ₹${Math.abs(d.dii.net).toLocaleString('en-IN')}Cr</span></div>
-      <div style="color:${d.market_impact==='POSITIVE'?'var(--green)':'var(--red)'}">Impact: ${d.market_impact}</div>`;
-  }
-}
-
-async function getExpiry(){
-  const d=await api('/reports/expiry_calendar');
-  if(d){
-    const box=document.getElementById('exp-result');
-    const wc=d.days_to_weekly<=2?'var(--red)':d.days_to_weekly<=5?'var(--amber)':'var(--green)';
-    box.innerHTML=`
-      <div><span style="color:var(--muted)">Weekly: </span><span style="color:${wc}">${d.nifty_weekly_expiry} (${d.days_to_weekly}d)</span></div>
-      <div><span style="color:var(--muted)">Monthly: </span>${d.nifty_monthly_expiry} (${d.days_to_monthly}d)</div>
-      <div style="color:${wc};margin-top:4px">${d.theta_warning}</div>`;
-  }
-}
-
-// ── OPTIONS CHAIN ────────────────────────────────────────
+// OPTIONS CHAIN
 async function loadChain(){
-  const inst=document.getElementById('ch-inst').value;
-  const dte=parseInt(document.getElementById('ch-dte').value)||7;
-  const iv=parseFloat(document.getElementById('ch-iv').value)||15;
-  const d=await api(`/market/options_chain_live/${inst}?dte=${dte}`);
-  if(!d||!d.chain) return;
-  const tb=document.getElementById('chain-body');
-  tb.innerHTML=d.chain.map(s=>{
-    const isATM=s.moneyness==='ATM';
-    const bg=isATM?'background:rgba(245,158,11,0.1);':'';
-    return `<tr style="${bg}">
-      <td style="color:var(--muted)">${(s.CE.oi/1000).toFixed(0)}K</td>
-      <td style="color:var(--muted)">${(s.CE.volume/100).toFixed(0)}K</td>
-      <td style="color:var(--green);font-weight:${isATM?'700':'400'}">${s.CE.price}</td>
-      <td style="color:var(--blue)">${s.CE.delta}</td>
-      <td style="color:var(--red)">${s.CE.theta}</td>
-      <td style="background:var(--bg4);text-align:center;font-weight:700;color:${isATM?'var(--amber)':'var(--text)'}">${s.strike}</td>
-      <td style="color:var(--red)">${s.PE.theta}</td>
-      <td style="color:var(--blue)">${s.PE.delta}</td>
-      <td style="color:var(--red);font-weight:${isATM?'700':'400'}">${s.PE.price}</td>
-      <td style="color:var(--muted)">${(s.PE.volume/100).toFixed(0)}K</td>
-      <td style="color:var(--muted)">${(s.PE.oi/1000).toFixed(0)}K</td>
-    </tr>`;
-  }).join('');
-  addLog('INFO',`Chain: Spot=${d.spot} ATM=${d.atm} MaxPain=${d.max_pain} PCR=${d.pcr}`);
+  const i=document.getElementById('ch-i').value;const dte=parseInt(document.getElementById('ch-d').value)||7;
+  const d=await api('/market/options_chain_live/'+i+'?dte='+dte);if(!d||!d.chain)return;
+  document.getElementById('ch-tb').innerHTML=d.chain.map(s=>{const atm=s.moneyness==='ATM';return `<tr style="${atm?'background:rgba(245,158,11,.08);':''}"><td style="color:var(--mu)">${(s.CE.oi/1000).toFixed(0)}K</td><td style="color:var(--gr);font-weight:${atm?700:400}">${s.CE.price}</td><td style="color:var(--bl)">${s.CE.delta}</td><td style="${atm?'background:var(--bg4);font-weight:700;color:var(--am)':'background:var(--bg4)'}text-align:center">${s.strike}</td><td style="color:var(--bl)">${s.PE.delta}</td><td style="color:var(--rd);font-weight:${atm?700:400}">${s.PE.price}</td><td style="color:var(--mu)">${(s.PE.oi/1000).toFixed(0)}K</td></tr>`;}).join('');
 }
 
-// ── GREEKS ───────────────────────────────────────────────
-function normCDF(x){const t=1/(1+0.2316419*Math.abs(x));const d=0.3989423*Math.exp(-x*x/2);const p=d*t*(0.3193815+t*(-0.3565638+t*(1.7814779+t*(-1.8212560+t*1.3302744))));return x>0?1-p:p;}
-function calcGreeks(){
-  const S=parseFloat(document.getElementById('g-spot').value)||23900;
-  const K=parseFloat(document.getElementById('g-strike').value)||24000;
-  const T=parseFloat(document.getElementById('g-dte').value)||7;
-  const v=parseFloat(document.getElementById('g-iv').value)||15;
-  const r=parseFloat(document.getElementById('g-rate').value)||6.5;
-  const type=document.getElementById('g-type').value;
-  const t=T/365,sigma=v/100,rf=r/100;
-  const d1=(Math.log(S/K)+(rf+sigma*sigma/2)*t)/(sigma*Math.sqrt(t));
-  const d2=d1-sigma*Math.sqrt(t);
-  let price,delta;
-  if(type==='CE'){price=S*normCDF(d1)-K*Math.exp(-rf*t)*normCDF(d2);delta=normCDF(d1);}
-  else{price=K*Math.exp(-rf*t)*normCDF(-d2)-S*normCDF(-d1);delta=normCDF(d1)-1;}
-  const gamma=Math.exp(-d1*d1/2)/(S*sigma*Math.sqrt(2*Math.PI*t));
-  const theta=(-(S*sigma*Math.exp(-d1*d1/2))/(2*Math.sqrt(2*Math.PI*t))-rf*K*Math.exp(-rf*t)*(type==='CE'?normCDF(d2):normCDF(-d2)))/365;
-  const vega=S*Math.sqrt(t)*Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI)/100;
-  const intrinsic=Math.max(0,type==='CE'?S-K:K-S);
-  const box=document.getElementById('greeks-result');
-  box.style.display='block';
-  box.innerHTML=`
-    <div style="font-size:16px;font-weight:700;color:var(--green);margin-bottom:8px">₹${price.toFixed(2)}</div>
-    <div class="g2" style="gap:6px;font-size:9px">
-      <div><span style="color:var(--muted)">Δ Delta: </span><span style="color:var(--blue)">${delta.toFixed(4)}</span></div>
-      <div><span style="color:var(--muted)">Γ Gamma: </span><span style="color:var(--purple)">${gamma.toFixed(6)}</span></div>
-      <div><span style="color:var(--muted)">θ Theta/day: </span><span style="color:var(--red)">₹${(theta*100).toFixed(2)}</span></div>
-      <div><span style="color:var(--muted)">ν Vega/1%: </span><span style="color:var(--cyan)">₹${(vega*100).toFixed(2)}</span></div>
-      <div><span style="color:var(--muted)">Intrinsic: </span>₹${intrinsic.toFixed(2)}</div>
-      <div><span style="color:var(--muted)">Time Value: </span>₹${(price-intrinsic).toFixed(2)}</div>
-    </div>`;
+// GREEKS
+function normCDF(x){const t=1/(1+.2316419*Math.abs(x));const d=.3989423*Math.exp(-x*x/2);const p=d*t*(.3193815+t*(-.3565638+t*(1.7814779+t*(-1.821256+t*1.3302744))));return x>0?1-p:p;}
+function calcG(){
+  const S=parseFloat(document.getElementById('g-s').value)||23900;const K=parseFloat(document.getElementById('g-k').value)||24000;const T=parseFloat(document.getElementById('g-d').value)||7;const v=parseFloat(document.getElementById('g-v').value)||15;const r=parseFloat(document.getElementById('g-r').value)||6.5;const type=document.getElementById('g-t').value;
+  const t=T/365,sig=v/100,rf=r/100;const d1=(Math.log(S/K)+(rf+sig*sig/2)*t)/(sig*Math.sqrt(t));const d2=d1-sig*Math.sqrt(t);
+  let price,delta;if(type==='CE'){price=S*normCDF(d1)-K*Math.exp(-rf*t)*normCDF(d2);delta=normCDF(d1);}else{price=K*Math.exp(-rf*t)*normCDF(-d2)-S*normCDF(-d1);delta=normCDF(d1)-1;}
+  const gamma=Math.exp(-d1*d1/2)/(S*sig*Math.sqrt(2*Math.PI*t));const theta=(-(S*sig*Math.exp(-d1*d1/2))/(2*Math.sqrt(2*Math.PI*t))-rf*K*Math.exp(-rf*t)*(type==='CE'?normCDF(d2):normCDF(-d2)))/365;const vega=S*Math.sqrt(t)*Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI)/100;
+  const box=document.getElementById('g-res');box.style.display='block';
+  box.innerHTML=`<div style="font-size:18px;font-weight:700;color:var(--gr);margin-bottom:6px">₹${price.toFixed(2)}</div><div class="g2" style="gap:6px;font-size:9px"><div><span style="color:var(--mu)">Δ: </span><span style="color:var(--bl)">${delta.toFixed(4)}</span></div><div><span style="color:var(--mu)">Γ: </span><span style="color:var(--pu)">${gamma.toFixed(6)}</span></div><div><span style="color:var(--mu)">θ/day: </span><span style="color:var(--rd)">₹${(theta*100).toFixed(2)}</span></div><div><span style="color:var(--mu)">ν/1%: </span><span style="color:var(--cy)">₹${(vega*100).toFixed(2)}</span></div></div>`;
 }
+async function calcMrg(){const d=await api('/margin/calculate?instrument='+document.getElementById('m-i').value+'&quantity='+document.getElementById('m-l').value+'&position_type='+document.getElementById('m-t').value+'&price='+(document.getElementById('m-p').value||100));if(d){const b=document.getElementById('m-res');b.style.display='block';b.innerHTML=`Required: <span style="color:var(--rd);font-size:14px;font-weight:700">₹${d.margin_required?.toLocaleString('en-IN')}</span><br>Max lots ₹5L: <span style="color:var(--gr)">${d.max_lots_with_5L}</span>`;}}
 
-async function calcMargin(){
-  const inst=document.getElementById('m-inst').value;
-  const lots=parseInt(document.getElementById('m-lots').value)||1;
-  const price=parseFloat(document.getElementById('m-price').value)||100;
-  const type=document.getElementById('m-type').value;
-  const d=await api(`/margin/calculate?instrument=${inst}&quantity=${lots}&position_type=${type}&price=${price}`);
-  if(d){
-    const box=document.getElementById('margin-result');
-    box.style.display='block';
-    box.innerHTML=`
-      <div><span style="color:var(--muted)">Margin Required: </span><span style="color:var(--red);font-size:14px;font-weight:700">₹${d.margin_required.toLocaleString('en-IN')}</span></div>
-      <div><span style="color:var(--muted)">Contract Value: </span>₹${d.total_lots_value.toLocaleString('en-IN')}</div>
-      <div><span style="color:var(--muted)">Margin %: </span>${d.margin_pct}%</div>
-      <div><span style="color:var(--muted)">Max lots with ₹5L: </span><span style="color:var(--green)">${d.max_lots_with_5L}</span></div>`;
-  }
-}
-
-// ── BACKTEST ─────────────────────────────────────────────
-async function runBacktest(){
-  const btn=document.getElementById('bt-btn');
-  btn.textContent='⏳ Running...';btn.disabled=true;
-  const d=await api('/backtest/run','POST',{
-    strategy:document.getElementById('bt-strat').value,
-    bars:parseInt(document.getElementById('bt-bars').value)||252,
-    sl_pct:parseFloat(document.getElementById('bt-sl').value)||1,
-    target_pct:parseFloat(document.getElementById('bt-tgt').value)||2,
-    run_monte_carlo:true,run_walk_forward:true,
-  });
-  btn.textContent='∞ RUN BACKTEST + MONTE CARLO';btn.disabled=false;
-  if(!d) return;
-  const box=document.getElementById('bt-result');
-  box.style.display='block';
-  const pnlc=d.total_pnl>=0?'var(--green)':'var(--red)';
-  const wfc=d.walk_forward?.verdict==='ROBUST'?'var(--green)':'var(--red)';
-  box.innerHTML=`
-    <div class="g4" style="gap:6px;margin-bottom:8px">
-      <div class="stat"><div class="slbl">TOTAL P&L</div><div class="sval" style="color:${pnlc};font-size:14px">₹${d.total_pnl?.toLocaleString('en-IN')}</div></div>
-      <div class="stat"><div class="slbl">WIN RATE</div><div class="sval" style="color:var(--amber)">${d.win_rate}%</div><div class="ssub">${d.winning_trades}W/${d.losing_trades}L</div></div>
-      <div class="stat"><div class="slbl">PROFIT FACTOR</div><div class="sval" style="color:${d.profit_factor>=1?'var(--green)':'var(--red)'}">${d.profit_factor}</div></div>
-      <div class="stat"><div class="slbl">MAX DD</div><div class="sval" style="color:var(--red)">${d.max_drawdown_pct}%</div></div>
-      <div class="stat"><div class="slbl">SHARPE</div><div class="sval" style="color:var(--blue)">${d.sharpe_ratio}</div></div>
-      <div class="stat"><div class="slbl">EXPECTANCY</div><div class="sval" style="font-size:13px">₹${d.expectancy}</div></div>
-      <div class="stat"><div class="slbl">TRADES</div><div class="sval" style="color:var(--amber)">${d.total_trades}</div></div>
-      <div class="stat"><div class="slbl">VERDICT</div><div class="sval" style="color:${pnlc};font-size:11px">${d.verdict}</div></div>
-    </div>
-    ${d.monte_carlo?`<div class="card" style="margin-bottom:8px">
-      <div class="card-hdr">MONTE CARLO (${d.monte_carlo.simulations} simulations)</div>
-      <div class="g4" style="gap:6px;font-size:9px">
-        <div><span style="color:var(--muted)">P10: </span><span style="color:var(--red)">₹${d.monte_carlo.p10_pnl}</span></div>
-        <div><span style="color:var(--muted)">P50: </span>₹${d.monte_carlo.p50_pnl}</div>
-        <div><span style="color:var(--muted)">P90: </span><span style="color:var(--green)">₹${d.monte_carlo.p90_pnl}</span></div>
-        <div><span style="color:var(--muted)">Win Prob: </span><span style="color:var(--green)">${d.monte_carlo.probability_profit}%</span></div>
-      </div>
-    </div>`:''}
-    ${d.walk_forward?`<div class="card">
-      <div class="card-hdr">WALK-FORWARD ANALYSIS</div>
-      <div style="font-size:9px">
-        <div><span style="color:var(--muted)">Train P&L: </span>₹${d.walk_forward.train_pnl}</div>
-        <div><span style="color:var(--muted)">Test P&L: </span>₹${d.walk_forward.test_pnl}</div>
-        <div style="margin-top:4px;color:${wfc};font-weight:700">VERDICT: ${d.walk_forward.verdict}</div>
-      </div>
-    </div>`:''}`;
-}
-
-// ── JOURNAL ──────────────────────────────────────────────
-async function saveJournal(){
-  const entry={
-    instrument:document.getElementById('jn-inst').value,
-    pnl:parseFloat(document.getElementById('jn-pnl').value)||0,
-    emotion:document.getElementById('jn-emotion').value,
-    rating:parseInt(document.getElementById('jn-rating').value)||7,
-    mistakes:document.getElementById('jn-mistakes').value,
-    lessons:document.getElementById('jn-lessons').value,
-    notes:document.getElementById('jn-notes').value,
-  };
-  const d=await api('/journal/add','POST',entry);
-  if(d&&d.id){
-    addLog('SUCCESS','Journal entry saved #'+d.id);
-    ['jn-mistakes','jn-lessons','jn-notes'].forEach(id=>document.getElementById(id).value='');
-  }
-}
-
-async function refreshTrades(){
-  const d=await api('/trades');
-  if(!d) return;
-  const tb=document.getElementById('trade-tbl');
-  if(!d.trades.length){
-    tb.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No trades yet</td></tr>`;
-    return;
-  }
-  tb.innerHTML=[...d.trades].reverse().map(t=>{
-    const c=t.net_pnl>=0?'var(--green)':'var(--red)';
-    return `<tr>
-      <td style="color:var(--muted)">${t.id}</td><td>${t.instrument}</td>
-      <td style="color:${t.action==='BUY'?'var(--green)':'var(--red)'}">${t.action}</td>
-      <td>${t.entry_price}</td><td>${t.exit_price}</td>
-      <td style="color:var(--amber)">${t.exit_reason}</td>
-      <td>${fmtRs(t.gross_pnl)}</td>
-      <td style="color:${c};font-weight:700">${fmtRs(t.net_pnl)}</td>
-    </tr>`;}).join('');
-}
-
-async function refreshJStats(){
-  const d=await api('/stats');
-  if(!d||!d.performance) return;
-  const p=d.performance;
-  document.getElementById('j-pf').textContent=p.profit_factor||'0';
-  document.getElementById('j-aw').textContent=fmtRs(p.avg_win||0);
-  document.getElementById('j-al').textContent=fmtRs(p.avg_loss||0);
-  document.getElementById('j-exp').textContent=fmtRs(p.expectancy||0);
-}
-
-// ── REPORTS ──────────────────────────────────────────────
-async function getDailyReport(){
-  const d=await api('/reports/daily');
-  if(!d) return;
-  document.getElementById('rep-hdr').textContent='DAILY P&L REPORT — '+d.date;
-  const s=d.summary;
-  document.getElementById('rep-content').innerHTML=`
-    <div class="g4" style="gap:6px;margin-bottom:8px">
-      <div class="stat"><div class="slbl">TRADES</div><div class="sval" style="color:var(--amber)">${s.total_trades}</div></div>
-      <div class="stat"><div class="slbl">WIN RATE</div><div class="sval" style="color:var(--green)">${s.win_rate}%</div></div>
-      <div class="stat"><div class="slbl">NET P&L</div><div class="sval" style="color:${s.net_pnl>=0?'var(--green)':'var(--red)'}">${fmtRs(s.net_pnl)}</div></div>
-      <div class="stat"><div class="slbl">BROKERAGE</div><div class="sval" style="color:var(--red);font-size:13px">₹${s.brokerage}</div></div>
-    </div>
-    <div style="font-size:9px;color:var(--muted)">Best: ${fmtRs(s.best_trade)} | Worst: ${fmtRs(s.worst_trade)}</div>`;
-}
-
-async function getWeeklyReport(){
-  const d=await api('/reports/weekly');
-  if(!d) return;
-  document.getElementById('rep-hdr').textContent='WEEKLY REPORT';
-  document.getElementById('rep-content').innerHTML=`
-    <div class="g4" style="gap:6px">
-      <div class="stat"><div class="slbl">TRADES</div><div class="sval" style="color:var(--amber)">${d.total_trades}</div></div>
-      <div class="stat"><div class="slbl">WIN RATE</div><div class="sval" style="color:var(--green)">${d.win_rate}%</div></div>
-      <div class="stat"><div class="slbl">NET P&L</div><div class="sval" style="color:${d.net_pnl>=0?'var(--green)':'var(--red)'}">${fmtRs(d.net_pnl)}</div></div>
-      <div class="stat"><div class="slbl">PROFIT FACTOR</div><div class="sval" style="color:var(--blue)">${d.profit_factor}</div></div>
-    </div>`;
-}
-
-async function getPerfReport(){
-  const d=await api('/reports/performance');
-  if(!d) return;
-  document.getElementById('rep-hdr').textContent='PERFORMANCE REPORT';
-  document.getElementById('rep-content').innerHTML=`
-    <div class="g4" style="gap:6px">
-      <div class="stat"><div class="slbl">TOTAL P&L</div><div class="sval" style="color:${d.total_pnl>=0?'var(--green)':'var(--red)'}">${fmtRs(d.total_pnl)}</div></div>
-      <div class="stat"><div class="slbl">SHARPE</div><div class="sval" style="color:var(--blue)">${d.sharpe_ratio}</div></div>
-      <div class="stat"><div class="slbl">MAX DD</div><div class="sval" style="color:var(--red)">${d.max_drawdown_pct}%</div></div>
-      <div class="stat"><div class="slbl">EXPECTANCY</div><div class="sval" style="font-size:13px">${fmtRs(d.expectancy_per_trade)}</div></div>
-      <div class="stat"><div class="slbl">PROFIT FACTOR</div><div class="sval" style="color:var(--green)">${d.profit_factor}</div></div>
-      <div class="stat"><div class="slbl">WIN RATE</div><div class="sval" style="color:var(--amber)">${d.win_rate}%</div></div>
-      <div class="stat"><div class="slbl">BEST TRADE</div><div class="sval" style="color:var(--green);font-size:12px">${fmtRs(d.best_trade)}</div></div>
-      <div class="stat"><div class="slbl">WORST TRADE</div><div class="sval" style="color:var(--red);font-size:12px">${fmtRs(d.worst_trade)}</div></div>
-    </div>`;
-}
-
-async function getExpCal(){
-  const d=await api('/reports/expiry_calendar');
-  if(!d) return;
-  document.getElementById('rep-hdr').textContent='EXPIRY CALENDAR';
-  const wc=d.days_to_weekly<=2?'var(--red)':d.days_to_weekly<=5?'var(--amber)':'var(--green)';
-  document.getElementById('rep-content').innerHTML=`
-    <div class="g2" style="gap:8px">
-      <div class="stat"><div class="slbl">WEEKLY EXPIRY</div><div class="sval" style="color:${wc};font-size:13px">${d.nifty_weekly_expiry}</div><div class="ssub">${d.days_to_weekly} days left</div></div>
-      <div class="stat"><div class="slbl">MONTHLY EXPIRY</div><div class="sval" style="color:var(--blue);font-size:13px">${d.nifty_monthly_expiry}</div><div class="ssub">${d.days_to_monthly} days left</div></div>
-    </div>
-    <div style="margin-top:8px;padding:8px;background:var(--bg4);border-radius:3px;color:${wc};font-size:10px;font-weight:700">${d.theta_warning}</div>`;
-}
-
-// ── CALCULATOR ───────────────────────────────────────────
-function calcRR(){
-  const entry=parseFloat(document.getElementById('c-entry').value)||0;
-  const sl=parseFloat(document.getElementById('c-sl').value)||0;
-  const tgt=parseFloat(document.getElementById('c-tgt').value)||0;
-  const lots=parseInt(document.getElementById('c-lots').value)||1;
-  const ls=parseInt(document.getElementById('c-lotsize').value)||50;
-  const cap=parseFloat(document.getElementById('c-capital').value)||500000;
-  if(!entry||!sl||!tgt){alert('Fill all fields');return;}
-  const slPts=Math.abs(entry-sl),tgtPts=Math.abs(tgt-entry);
-  const risk=slPts*lots*ls,reward=tgtPts*lots*ls;
-  const rr=r2(tgtPts/slPts),minWR=r2(slPts/(slPts+tgtPts)*100),rPct=r2(risk/cap*100);
-  const box=document.getElementById('rr-result');
-  box.style.display='block';
-  box.innerHTML=`<div class="g2" style="gap:8px">
-    <div><div class="slbl">SL POINTS</div><div style="font-size:16px;color:var(--red);font-weight:700">${slPts}</div></div>
-    <div><div class="slbl">TARGET POINTS</div><div style="font-size:16px;color:var(--green);font-weight:700">${tgtPts}</div></div>
-    <div><div class="slbl">RISK ₹</div><div style="color:var(--red)">${fmtRs(-risk)}</div></div>
-    <div><div class="slbl">REWARD ₹</div><div style="color:var(--green)">${fmtRs(reward)}</div></div>
-    <div><div class="slbl">RISK:REWARD</div><div style="color:var(--blue);font-size:14px">1:${rr}</div></div>
-    <div><div class="slbl">CAPITAL RISK</div><div style="color:var(--amber)">${rPct}%</div></div>
-    <div><div class="slbl">MIN WIN RATE</div><div style="color:var(--amber)">${minWR}%</div></div>
-    <div><div class="slbl">EXPECTANCY</div><div style="color:${0.5*reward-0.5*risk>=0?'var(--green)':'var(--red)'}">${fmtRs(0.5*reward-0.5*risk)}</div></div>
+// BACKTEST
+async function runBT(){
+  const btn=document.getElementById('bt-btn');btn.textContent='⏳ Running...';btn.disabled=true;
+  const d=await api('/backtest/advanced','POST',{strategy:document.getElementById('bt-s').value,capital:parseFloat(document.getElementById('bt-c').value)||100000,months:parseInt(document.getElementById('bt-m').value)||3,quantity:parseInt(document.getElementById('bt-q').value)||1,sl_pct:1,target_pct:2});
+  btn.textContent='∞ RUN BACKTEST + DATE-WISE CALENDAR';btn.disabled=false;
+  if(!d||d.error)return;
+  const cap=d.capital_invested;const pc=d.total_pnl>=0?'var(--gr)':'var(--rd)';
+  const box=document.getElementById('bt-res');box.style.display='block';
+  let html=`<div class="g4" style="gap:6px;margin-bottom:10px">
+    <div class="stat"><div class="slbl">TOTAL P&L</div><div class="sval" style="color:${pc};font-size:13px">₹${d.total_pnl?.toLocaleString('en-IN')}</div><div class="ssub">${d.total_pnl_pct}%</div></div>
+    <div class="stat"><div class="slbl">FINAL CAPITAL</div><div class="sval" style="color:var(--bl);font-size:12px">₹${d.final_capital?.toLocaleString('en-IN')}</div></div>
+    <div class="stat"><div class="slbl">WIN RATE</div><div class="sval" style="color:var(--am)">${d.win_rate}%</div><div class="ssub">${d.winning_trades}W/${d.losing_trades}L</div></div>
+    <div class="stat"><div class="slbl">MAX DRAWDOWN</div><div class="sval" style="color:var(--rd)">${d.max_drawdown_pct}%</div></div>
+    <div class="stat"><div class="slbl">PROFIT DAYS</div><div class="sval" style="color:var(--gr)">${d.profitable_days}</div></div>
+    <div class="stat"><div class="slbl">LOSS DAYS</div><div class="sval" style="color:var(--rd)">${d.loss_days}</div></div>
+    <div class="stat"><div class="slbl">PROFIT FACTOR</div><div class="sval" style="color:var(--bl)">${d.profit_factor}</div></div>
+    <div class="stat"><div class="slbl">SHARPE</div><div class="sval" style="color:var(--pu)">${d.sharpe_ratio}</div></div>
   </div>`;
-}
-
-function calcBSM(){
-  const S=parseFloat(document.getElementById('bs-spot').value)||23900;
-  const K=parseFloat(document.getElementById('bs-k').value)||24000;
-  const T=parseFloat(document.getElementById('bs-dte').value)||7;
-  const v=parseFloat(document.getElementById('bs-iv').value)||15;
-  const r=parseFloat(document.getElementById('bs-rate').value)||6.5;
-  const type=document.getElementById('bs-type').value;
-  const t=T/365,sigma=v/100,rf=r/100;
-  const d1=(Math.log(S/K)+(rf+sigma*sigma/2)*t)/(sigma*Math.sqrt(t));
-  const d2=d1-sigma*Math.sqrt(t);
-  let price,delta;
-  if(type==='CE'){price=S*normCDF(d1)-K*Math.exp(-rf*t)*normCDF(d2);delta=normCDF(d1);}
-  else{price=K*Math.exp(-rf*t)*normCDF(-d2)-S*normCDF(-d1);delta=normCDF(d1)-1;}
-  const gamma=Math.exp(-d1*d1/2)/(S*sigma*Math.sqrt(2*Math.PI*t));
-  const theta=(-(S*sigma*Math.exp(-d1*d1/2))/(2*Math.sqrt(2*Math.PI*t))-rf*K*Math.exp(-rf*t)*(type==='CE'?normCDF(d2):normCDF(-d2)))/365;
-  const vega=S*Math.sqrt(t)*Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI)/100;
-  const intrinsic=Math.max(0,type==='CE'?S-K:K-S);
-  const box=document.getElementById('bsm-result');
-  box.style.display='block';
-  box.innerHTML=`<div style="font-size:18px;font-weight:700;color:var(--green);margin-bottom:8px">₹${price.toFixed(2)}</div>
-    <div class="g2" style="gap:6px;font-size:9px">
-      <div><span style="color:var(--muted)">Δ Delta: </span><span style="color:var(--blue)">${delta.toFixed(4)}</span></div>
-      <div><span style="color:var(--muted)">Γ Gamma: </span><span style="color:var(--purple)">${gamma.toFixed(6)}</span></div>
-      <div><span style="color:var(--muted)">θ Theta/day: </span><span style="color:var(--red)">₹${(theta*100).toFixed(2)}</span></div>
-      <div><span style="color:var(--muted)">ν Vega/1%: </span><span style="color:var(--cyan)">₹${(vega*100).toFixed(2)}</span></div>
-      <div><span style="color:var(--muted)">Intrinsic: </span>₹${intrinsic.toFixed(2)}</div>
-      <div><span style="color:var(--muted)">Time Value: </span>₹${(price-intrinsic).toFixed(2)}</div>
-    </div>`;
-}
-
-
-// ── STRATEGY BUILDER NLP ─────────────────────────────────
-function toggleNLPBuilder(){
-  const f=document.getElementById('nlp-builder');
-  f.style.display=f.style.display==='none'?'block':'none';
-}
-
-async function parseNLPForStrategy(){
-  const text=document.getElementById('sb-nlp').value.trim();
-  if(!text){showToast('Type a strategy description first','warn');return;}
-  const uid=localStorage.getItem('uid')||'guest';
-  const result=await api('/strategies/from_nlp','POST',{user_id:uid,nlp_text:text});
-  if(!result){return;}
-  const s=result.strategy;const p=result.parsed;
-  // Auto-fill
-  if(s.name) document.getElementById('sb-name').value=s.name;
-  if(p.instrument){const el=document.getElementById('sb-inst');if(el) el.value=p.instrument;}
-  if(s.entry_conditions) document.getElementById('sb-entry').value=s.entry_conditions.join('\n');
-  if(s.exit_conditions) document.getElementById('sb-exit').value=s.exit_conditions.join('\n');
-  if(s.sl_value) document.getElementById('sb-sl').value=s.sl_value;
-  if(s.target_value) document.getElementById('sb-tgt').value=s.target_value;
-  if(s.quantity) document.getElementById('sb-qty').value=s.quantity;
-  if(s.tags) document.getElementById('sb-tags').value=s.tags.join(',');
-  // Show parsed
-  const box=document.getElementById('sb-parsed');box.style.display='block';
-  box.innerHTML='◆ PARSED: '+Object.entries(p).filter(([k,v])=>v).slice(0,6).map(([k,v])=>`<span style="margin-right:8px">${k}:<b>${typeof v==='object'?JSON.stringify(v):v}</b></span>`).join('');
-  showToast('Form auto-filled from NLP!','success');
-}
-
-async function saveNLPStrategy(){
-  const uid=localStorage.getItem('uid')||'guest';
-  const entry=document.getElementById('sb-entry').value.split('\n').filter(l=>l.trim());
-  const exit_c=document.getElementById('sb-exit').value.split('\n').filter(l=>l.trim());
-  const tags=document.getElementById('sb-tags').value.split(',').map(t=>t.trim()).filter(t=>t);
-  const payload={
-    user_id:uid,
-    name:document.getElementById('sb-name').value||'My Strategy',
-    instrument:document.getElementById('sb-inst').value,
-    timeframe:document.getElementById('sb-tf').value,
-    entry_conditions:entry,exit_conditions:exit_c,
-    sl_value:parseFloat(document.getElementById('sb-sl').value)||100,
-    target_value:parseFloat(document.getElementById('sb-tgt').value)||200,
-    quantity:parseInt(document.getElementById('sb-qty').value)||1,
-    tags,nlp_input:document.getElementById('sb-nlp').value,
-  };
-  const d=await api('/strategies/save','POST',payload);
-  if(d&&d.strategy_id){showToast('Strategy saved: '+d.name,'success');document.getElementById('nlp-builder').style.display='none';loadMyStrats();}
-  else showToast('Login required to save strategies','error');
-}
-
-function backtestNLPStrat(){
-  const strat=document.getElementById('adv-strat');
-  if(strat) strat.value='EMA_CROSS';
-  showTab('backtest',document.querySelector('.tab'));
-  showToast('Run backtest on strategy','info');
-}
-function paperNLPStrat(){showToast('Paper test: Use EXECUTE on TRADE tab','info');showTab('trade',document.querySelector('.tab'));}
-
-// ── STRATEGY LIST ─────────────────────────────────────────
-async function loadBuiltinStrats(){
-  const d=await api('/strategies/builtin');
-  if(!d||!d.strategies) return;
-  document.getElementById('strat-list').innerHTML=d.strategies.map(s=>`
-    <div style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:6px;border-left:3px solid ${s.avg_win_rate>=70?'var(--green)':'var(--amber)'}">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-        <div><div style="font-size:11px;font-weight:700">${s.name}</div><div style="font-size:8px;color:var(--muted)">${s.instrument} | ${s.type}</div></div>
-        <div style="text-align:right"><div style="font-size:16px;font-weight:700;color:${s.avg_win_rate>=70?'var(--green)':'var(--amber)'}">${s.avg_win_rate}% WR</div><div style="font-size:8px;color:var(--blue)">${s.avg_monthly_return}%/mo</div></div>
-      </div>
-      <div style="font-size:9px;color:var(--muted);margin-bottom:6px">${s.description}</div>
-      <div style="margin-bottom:4px;font-size:8px"><span style="color:var(--muted)">ENTRY: </span>${(s.entry||[]).slice(0,2).map(e=>`<span style="background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:1px 5px;margin:1px;display:inline-block">${e}</span>`).join('')}</div>
-      <div style="font-size:8px;color:var(--amber);margin-top:6px">💡 ${s.notes||'Proven strategy'}</div>
-      <div style="display:flex;gap:4px;margin-top:8px">
-        <button class="btn bsm bg" onclick="document.getElementById('adv-strat').value='${s.id}';showTab('backtest',document.querySelector('.tab'))">∞ BACKTEST</button>
-        <button class="btn bsm bb" onclick="setInst('${s.instrument?.split('/')[0]}',document.getElementById('i-'+('${s.instrument?.split('/')[0]}')||document.createElement('div')));showTab('trade',document.querySelector('.tab'))">USE</button>
-      </div>
-    </div>`).join('');
-}
-
-async function loadMyStrats(){
-  const uid=localStorage.getItem('uid')||'guest';
-  const d=await api('/strategies/user/'+uid);
-  if(!d) return;
-  const strats=d.user_strategies||[];
-  if(!strats.length){
-    document.getElementById('strat-list').innerHTML=`<div style="text-align:center;padding:30px;color:var(--muted)">No saved strategies yet.<br><br><button class="btn bmd bg" onclick="toggleNLPBuilder()">◆ CREATE WITH NLP</button></div>`;
-    return;
-  }
-  document.getElementById('strat-list').innerHTML=strats.map(s=>`
-    <div style="background:var(--bg4);border:1px solid ${s.color||'var(--blue)'};border-radius:6px;padding:12px;margin-bottom:6px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-        <div style="font-size:11px;font-weight:700">${s.icon||'★'} ${s.name}</div>
-        <button class="btn bsm br" onclick="deleteMyStrat('${s.id}')">✕</button>
-      </div>
-      <div style="font-size:9px;color:var(--muted)">${s.instrument} | ${s.timeframe} | SL:${s.sl_value}pts → TGT:${s.target_value}pts</div>
-      ${s.nlp_input?`<div style="font-size:8px;color:var(--blue);margin-top:4px;font-style:italic">"${s.nlp_input.slice(0,70)}"</div>`:''}
-      ${s.entry_conditions?.length?`<div style="font-size:8px;margin-top:4px;color:var(--muted)">Entry: ${s.entry_conditions.slice(0,2).join(' | ')}</div>`:''}
-      <div style="display:flex;gap:4px;margin-top:8px">
-        <button class="btn bsm bg" onclick="document.getElementById('adv-strat').value='${s.id}';showTab('backtest',document.querySelector('.tab'))">∞ BT</button>
-        <button class="btn bsm bb" onclick="setInst('${s.instrument}',document.createElement('div'));showTab('trade',document.querySelector('.tab'))">USE</button>
-      </div>
-    </div>`).join('');
-}
-
-async function deleteMyStrat(sid){
-  if(!confirm('Delete strategy?')) return;
-  const uid=localStorage.getItem('uid')||'guest';
-  await api('/strategies/'+sid+'?user_id='+uid,'DELETE');
-  loadMyStrats();
-}
-
-// ── API HEALTH ───────────────────────────────────────────
-async function checkAPI(){
-  try{
-    const r=await fetch(API+'/',{mode:'cors'});
-    if(r.ok){
-      document.getElementById('api-dot').style.background='var(--green)';
-      document.getElementById('api-txt').textContent='ONLINE';
-      document.getElementById('api-txt').style.color='var(--green)';
-    }
-  }catch{
-    document.getElementById('api-dot').style.background='var(--red)';
-    document.getElementById('api-txt').textContent='OFFLINE';
-    document.getElementById('api-txt').style.color='var(--red)';
-  }
-}
-
-
-// ── THEME ────────────────────────────────────────────────
-function applyTheme(name){
-  document.body.className='theme-'+name;
-  localStorage.setItem('theme',name);
-  showToast('Theme: '+name.toUpperCase(),'success');
-}
-const savedTheme=localStorage.getItem('theme');
-if(savedTheme&&savedTheme!=='dark') setTimeout(()=>applyTheme(savedTheme),100);
-
-// ── SUBSCRIPTION ─────────────────────────────────────────
-let selectedPlan='';
-function selectPlan(plan){
-  selectedPlan=plan;
-  ['FREE','BASIC','PRO','INSTITUTIONAL'].forEach(p=>{
-    const el=document.getElementById('plan-'+p);
-    if(el) el.style.borderColor=p===plan?'var(--green)':'var(--border)';
-  });
-  showToast('Selected: '+plan,'info');
-}
-async function upgradePlan(){
-  if(!selectedPlan){showToast('Select a plan first','warn');return;}
-  const uid=localStorage.getItem('uid')||'guest';
-  const d=await api('/subscriptions/upgrade','POST',{user_id:uid,plan:selectedPlan,payment_id:'SIM_'+Date.now()});
-  if(d&&d.upgraded) showToast('Upgraded to '+selectedPlan,'success');
-  else showToast('Login required to upgrade','error');
-}
-
-// ── PROFILE STATS ────────────────────────────────────────
-function updateProfileUI(u){
-  if(!u) return;
-  const av=(u.full_name||u.username||'?')[0].toUpperCase();
-  const el=document.getElementById('prof-avatar');if(el) el.textContent=av;
-  const nm=document.getElementById('prof-name');if(nm) nm.textContent=u.full_name||u.username;
-  const em=document.getElementById('prof-email');if(em) em.textContent=u.email||'No email';
-  const pl=document.getElementById('prof-plan');if(pl) pl.textContent=u.subscription_plan||'FREE';
-  const cap=document.getElementById('prof-capital');if(cap) cap.textContent='₹'+((u.capital||500000)/100000).toFixed(1)+'L';
-  const pb=document.getElementById('plan-badge');if(pb) pb.textContent=u.subscription_plan||'FREE';
-  if(u.capital) {const el=document.getElementById('pr-cap');if(el) el.value=u.capital;}
-  if(u.risk_per_trade) {const el=document.getElementById('pr-risk');if(el) el.value=u.risk_per_trade;}
-  if(u.broker) {const el=document.getElementById('pr-broker');if(el) el.value=u.broker;}
-  if(u.telegram_chat_id) {const el=document.getElementById('pr-tg');if(el) el.value=u.telegram_chat_id;}
-  if(u.full_name) {const el=document.getElementById('pr-name');if(el) el.value=u.full_name;}
-  if(u.theme) applyTheme(u.theme.toLowerCase());
-}
-async function refreshProfileStats(){
-  const d=await api('/stats');if(!d) return;
-  const p=d.performance||{};
-  const el=document.getElementById('prof-trades');if(el) el.textContent=p.total_trades||0;
-  const pe=document.getElementById('prof-pnl');if(pe){pe.textContent=fmtRs(p.total_pnl||0);pe.style.color=(p.total_pnl||0)>=0?'var(--green)':'var(--red)';}
-  const wr=document.getElementById('prof-wr');if(wr) wr.textContent=(p.win_rate||0)+'%';
-}
-
-function logoutUser(){
-  localStorage.removeItem('uid');
-  showToast('Logged out','info');
-  location.reload();
-}
-async function updateProfile(){
-  const uid=localStorage.getItem('uid')||'guest';
-  if(uid==='guest'){showToast('Login required','error');return;}
-  const updates={
-    full_name:document.getElementById('pr-name')?.value,
-    capital:parseFloat(document.getElementById('pr-cap')?.value)||500000,
-    risk_per_trade:parseFloat(document.getElementById('pr-risk')?.value)||1,
-    max_daily_loss:parseFloat(document.getElementById('pr-dloss')?.value)||3,
-    broker:document.getElementById('pr-broker')?.value,
-    telegram_chat_id:document.getElementById('pr-tg')?.value,
-  };
-  const d=await api('/users/'+uid,'PUT',updates);
-  if(d&&d.updated) showToast('Profile saved!','success');
-}
-
-// ── AUTH MODAL ───────────────────────────────────────────
-let authMode='login';
-function showAuthModal(){document.getElementById('auth-modal').style.display='flex';}
-function hideAuthModal(){document.getElementById('auth-modal').style.display='none';}
-function switchAuth(tab){
-  authMode=tab;
-  document.getElementById('auth-login-form').style.display=tab==='login'?'block':'none';
-  document.getElementById('auth-register-form').style.display=tab==='register'?'block':'none';
-}
-async function doLogin(){
-  const u=document.getElementById('al-user')?.value?.trim();
-  const p=document.getElementById('al-pass')?.value;
-  if(!u||!p){showToast('Fill all fields','error');return;}
-  const d=await api('/users/login','POST',{username:u,password:p});
-  if(d&&d.user){
-    localStorage.setItem('uid',d.user.id);
-    updateProfileUI(d.user);
-    document.getElementById('hdr-avatar').textContent=(d.user.username||'?')[0].toUpperCase();
-    document.getElementById('hdr-name').textContent=d.user.username;
-    hideAuthModal();
-    showToast('Welcome '+d.user.username,'success');
-    if(d.user.theme) applyTheme(d.user.theme.toLowerCase());
-  } else showToast(d?.error||'Login failed','error');
-}
-async function doRegister(){
-  const u=document.getElementById('ar-user')?.value?.trim();
-  const p=document.getElementById('ar-pass')?.value;
-  const e=document.getElementById('ar-email')?.value?.trim();
-  const n=document.getElementById('ar-fname')?.value?.trim();
-  if(!u||!p){showToast('Username & password required','error');return;}
-  const d=await api('/users/register','POST',{username:u,email:e,password:p,full_name:n,capital:500000});
-  if(d&&d.status==='created'){
-    showToast(d.message,'success');
-    switchAuth('login');
-    if(document.getElementById('al-user')) document.getElementById('al-user').value=u;
-  } else showToast(d?.error||'Failed','error');
-}
-function continueAsGuest(){hideAuthModal();showToast('Continuing as guest','info');}
-// Auto-login if saved
-const savedUid=localStorage.getItem('uid');
-if(savedUid){
-  api('/users/'+savedUid).then(u=>{if(u&&u.username){updateProfileUI(u);document.getElementById('hdr-avatar').textContent=u.username[0].toUpperCase();document.getElementById('hdr-name').textContent=u.username;}});
-}
-
-// ── INIT ─────────────────────────────────────────────────
-checkAPI();setInterval(checkAPI,30000);
-setInterval(refreshStats,20000);
-renderTicker();renderMktWatch();
-addLog('SYSTEM','v12.3 Trading System initialized');
-addLog('INFO','Fetching real market data...');
-refreshStats();
-
-// ═══════════════════════════════════════
-// USER PROFILE SYSTEM
-// ═══════════════════════════════════════
-let currentUser = null;
-let currentUserId = localStorage.getItem('user_id') || 'demo_user';
-
-async function loginUser(){
-  const u=document.getElementById('p-uname').value.trim();
-  const p=document.getElementById('p-pass').value;
-  if(!u) return alert('Enter username');
-  const d=await api('/users/login','POST',{username:u,password:p});
-  if(d&&d.user){
-    currentUser=d.user; currentUserId=d.user.id;
-    localStorage.setItem('user_id',d.user.id);
-    localStorage.setItem('username',d.user.username);
-    showProfileInfo(d.user);
-    addLog('SUCCESS',`Logged in as ${d.user.username}`);
-  } else {
-    addLog('ERROR',d?.error||'Login failed');
-    alert(d?.error||'Login failed');
-  }
-}
-
-async function registerUser(){
-  const u=document.getElementById('p-uname').value.trim();
-  const p=document.getElementById('p-pass').value;
-  if(!u||!p) return alert('Fill username and password');
-  const d=await api('/users/register','POST',{username:u,password:p,capital:500000});
-  if(d&&d.status==='created'){
-    addLog('SUCCESS','Account created! Now login.');
-    alert('Account created! Now login.');
-  } else addLog('ERROR',d?.error||'Register failed');
-}
-
-function showProfileInfo(u){
-  document.getElementById('auth-form').style.display='none';
-  document.getElementById('profile-info').style.display='block';
-  document.getElementById('profile-settings').style.display='block';
-  document.getElementById('profile-info').innerHTML=`
-    <div style="display:flex;align-items:center;gap:12px;padding:8px 0">
-      <div style="width:40px;height:40px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#000">${(u.username||'?')[0].toUpperCase()}</div>
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text)">${u.full_name||u.username}</div>
-        <div style="font-size:9px;color:var(--muted)">${u.email||'No email'} | Capital: ₹${(u.capital||500000).toLocaleString('en-IN')}</div>
-        <div style="font-size:9px;color:var(--green)">● LOGGED IN</div>
-      </div>
-      <button class="btn bsm br" onclick="logoutUser()" style="margin-left:auto">LOGOUT</button>
-    </div>`;
-  if(u.capital) document.getElementById('pr-cap').value=u.capital;
-  if(u.risk_per_trade) document.getElementById('pr-risk').value=u.risk_per_trade;
-}
-
-function logoutUser(){
-  currentUser=null; currentUserId='demo_user';
-  localStorage.removeItem('user_id');
-  document.getElementById('auth-form').style.display='block';
-  document.getElementById('profile-info').innerHTML='';
-  document.getElementById('profile-info').style.display='none';
-  document.getElementById('profile-settings').style.display='none';
-  addLog('SYSTEM','Logged out');
-}
-
-async function updateProfile(){
-  const updates={
-    full_name:document.getElementById('pr-name').value,
-    email:document.getElementById('pr-email').value,
-    capital:parseFloat(document.getElementById('pr-cap').value)||500000,
-    risk_per_trade:parseFloat(document.getElementById('pr-risk').value)||1,
-    max_daily_loss:parseFloat(document.getElementById('pr-dloss').value)||3,
-    broker:document.getElementById('pr-broker').value,
-    telegram_chat_id:document.getElementById('pr-tg').value,
-  };
-  const d=await api('/users/'+currentUserId,'PUT',updates);
-  if(d&&d.updated) addLog('SUCCESS','Profile updated');
-}
-
-// ═══════════════════════════════════════
-// STRATEGY MANAGEMENT
-// ═══════════════════════════════════════
-function showSaveStrat(){
-  const f=document.getElementById('save-strat-form');
-  f.style.display=f.style.display==='none'?'block':'none';
-}
-
-async function saveMyStrat(){
-  const entry=document.getElementById('ns-entry').value.split('\n').filter(l=>l.trim());
-  const exit=document.getElementById('ns-exit').value.split('\n').filter(l=>l.trim());
-  const tags=document.getElementById('ns-tags').value.split(',').map(t=>t.trim()).filter(t=>t);
-  const payload={
-    user_id:currentUserId,
-    name:document.getElementById('ns-name').value.trim()||'My Strategy',
-    description:document.getElementById('ns-desc').value,
-    instrument:document.getElementById('ns-inst').value,
-    timeframe:document.getElementById('ns-tf').value,
-    entry_conditions:entry,exit_conditions:exit,
-    sl_value:parseFloat(document.getElementById('ns-sl').value)||100,
-    target_value:parseFloat(document.getElementById('ns-tgt').value)||200,
-    tags,quantity:1,risk_per_trade:1,is_public:false,
-  };
-  const d=await api('/strategies/save','POST',payload);
-  if(d&&d.strategy_id){
-    addLog('SUCCESS','Strategy saved: '+d.name);
-    document.getElementById('save-strat-form').style.display='none';
-    loadMyStrats();
-  }
-}
-
-async function loadBuiltinStrats(){
-  const d=await api('/strategies/builtin');
-  if(!d) return;
-  document.getElementById('strat-list').innerHTML=d.strategies.map(s=>`
-    <div class="card" style="border-left:3px solid var(--${s.avg_win_rate>=70?'green':s.avg_win_rate>=65?'amber':'red'})">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--text)">${s.name}</div>
-          <div style="font-size:8px;color:var(--muted)">${s.instrument} | ${s.timeframe} | ${s.type}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:14px;font-weight:700;color:var(--${s.avg_win_rate>=70?'green':'amber'})">${s.avg_win_rate}% WR</div>
-          <div style="font-size:8px;color:var(--blue)">${s.avg_monthly_return}% /month</div>
-        </div>
-      </div>
-      <div style="font-size:9px;color:var(--muted);margin-bottom:6px">${s.description}</div>
-      <div style="margin-bottom:4px">
-        <span style="font-size:8px;color:var(--muted)">ENTRY: </span>
-        ${s.entry.map(e=>`<span style="font-size:8px;background:var(--bg4);border:1px solid var(--border);border-radius:2px;padding:1px 4px;margin:1px;display:inline-block">${e}</span>`).join('')}
-      </div>
-      <div style="margin-bottom:6px">
-        <span style="font-size:8px;color:var(--muted)">EXIT: </span>
-        ${s.exit.map(e=>`<span style="font-size:8px;background:var(--bg4);border:1px solid #ff333533;border-radius:2px;padding:1px 4px;margin:1px;display:inline-block">${e}</span>`).join('')}
-      </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <span style="font-size:8px;color:var(--muted)">Risk: </span>
-        <span style="font-size:8px;color:${s.risk.includes('LOW')?'var(--green)':s.risk.includes('HIGH')?'var(--red)':'var(--amber)'}">${s.risk}</span>
-        <span style="font-size:8px;color:var(--muted)">MaxDD: ${s.max_drawdown}%</span>
-        <button class="btn bsm bg" onclick="backtestBuiltin('${s.id}')" style="margin-left:auto">BACKTEST</button>
-        <button class="btn bsm bb" onclick="useStrategy('${s.id}')" >USE</button>
-      </div>
-      ${s.notes?`<div style="font-size:8px;color:var(--amber);margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">💡 ${s.notes}</div>`:''}
-    </div>`).join('');
-}
-
-async function loadMyStrats(){
-  const d=await api('/strategies/user/'+currentUserId);
-  if(!d) return;
-  const strats=d.user_strategies||[];
-  if(!strats.length){
-    document.getElementById('strat-list').innerHTML=`<div style="color:var(--muted);padding:20px;text-align:center">No saved strategies yet.<br>Click + SAVE NEW to create one.</div>`;
-    return;
-  }
-  document.getElementById('strat-list').innerHTML=strats.map(s=>`
-    <div class="card" style="border-left:3px solid var(--blue)">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-        <div style="font-size:11px;font-weight:700">${s.name}</div>
-        <button class="btn bsm br" onclick="deleteStrat('${s.id}')">✕</button>
-      </div>
-      <div style="font-size:9px;color:var(--muted);margin-bottom:4px">${s.description||'No description'}</div>
-      <div style="font-size:8px;color:var(--muted)">${s.instrument} | ${s.timeframe} | SL:${s.sl_value} TGT:${s.target_value}</div>
-      ${s.entry_conditions?.length?`<div style="margin-top:4px;font-size:8px"><span style="color:var(--muted)">Entry: </span>${s.entry_conditions.join(' | ')}</div>`:''}
-      ${s.backtest_winrate?`<div style="margin-top:4px;font-size:9px;color:var(--green)">Backtest WR: ${s.backtest_winrate}%</div>`:''}
-      <div style="display:flex;gap:4px;margin-top:6px">
-        <button class="btn bsm bg" onclick="backtestBuiltin('${s.id}')">BACKTEST</button>
-        <button class="btn bsm bb" onclick="useStrategy('${s.id}')">USE</button>
-      </div>
-    </div>`).join('');
-}
-
-async function deleteStrat(sid){
-  if(!confirm('Delete strategy?')) return;
-  await api('/strategies/'+sid+'?user_id='+currentUserId,'DELETE');
-  loadMyStrats();
-}
-
-function backtestBuiltin(stratId){
-  document.getElementById('adv-strat').value=stratId;
-  showTab('profile',document.querySelector('.tab'));
-  document.getElementById('adv-result').style.display='none';
-  addLog('INFO','Selected strategy for backtest: '+stratId);
-}
-
-function useStrategy(stratId){
-  addLog('INFO','Strategy loaded: '+stratId);
-  showTab('trade',document.querySelector('.tab'));
-}
-
-// ═══════════════════════════════════════
-// ADVANCED BACKTEST WITH DATE-WISE P&L
-// ═══════════════════════════════════════
-async function runAdvBacktest(){
-  const btn=document.getElementById('adv-btn');
-  btn.textContent='⏳ Running backtest...';btn.disabled=true;
-  const capital=parseFloat(document.getElementById('adv-cap').value)||100000;
-  const months=parseInt(document.getElementById('adv-months').value)||3;
-  const strat=document.getElementById('adv-strat').value;
-  const qty=parseInt(document.getElementById('adv-qty').value)||1;
-  const d=await api('/backtest/advanced','POST',{strategy:strat,capital,months,quantity:qty,sl_pct:1,target_pct:2});
-  btn.textContent='∞ RUN ADVANCED BACKTEST';btn.disabled=false;
-  if(!d||d.error) return;
-
-  const pnlc=d.total_pnl>=0?'var(--green)':'var(--red)';
-  const box=document.getElementById('adv-result');
-  box.style.display='block';
-
-  // Summary stats
-  let html=`
-    <div class="g4" style="gap:6px;margin-bottom:10px">
-      <div class="stat"><div class="slbl">TOTAL P&L</div><div class="sval" style="color:${pnlc};font-size:13px">₹${d.total_pnl?.toLocaleString('en-IN')}</div><div class="ssub">${d.total_pnl_pct}%</div></div>
-      <div class="stat"><div class="slbl">FINAL CAPITAL</div><div class="sval" style="color:var(--blue);font-size:12px">₹${d.final_capital?.toLocaleString('en-IN')}</div></div>
-      <div class="stat"><div class="slbl">WIN RATE</div><div class="sval" style="color:var(--amber)">${d.win_rate}%</div><div class="ssub">${d.winning_trades}W/${d.losing_trades}L</div></div>
-      <div class="stat"><div class="slbl">MAX DRAWDOWN</div><div class="sval" style="color:var(--red)">${d.max_drawdown_pct}%</div></div>
-      <div class="stat"><div class="slbl">PROFITABLE DAYS</div><div class="sval" style="color:var(--green)">${d.profitable_days}</div></div>
-      <div class="stat"><div class="slbl">LOSS DAYS</div><div class="sval" style="color:var(--red)">${d.loss_days}</div></div>
-      <div class="stat"><div class="slbl">PROFIT FACTOR</div><div class="sval" style="color:var(--blue)">${d.profit_factor}</div></div>
-      <div class="stat"><div class="slbl">SHARPE RATIO</div><div class="sval" style="color:var(--purple)">${d.sharpe_ratio}</div></div>
-    </div>`;
-
-  // Monthly summary
-  html+=`<div class="card" style="margin-bottom:8px">
-    <div class="card-hdr">MONTHLY BREAKDOWN</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${(d.monthly_summary||[]).map(m=>`
-        <div style="flex:1;min-width:100px;background:var(--bg4);border:1px solid ${m.pnl>=0?'var(--green)':'var(--red)'};border-radius:3px;padding:8px;text-align:center">
-          <div style="font-size:9px;color:var(--muted)">${m.month}</div>
-          <div style="font-size:14px;font-weight:700;color:${m.pnl>=0?'var(--green)':'var(--red)'}">₹${m.pnl?.toLocaleString('en-IN')}</div>
-          <div style="font-size:8px;color:var(--muted)">${m.trades} trades | ${m.win_rate}% WR</div>
-        </div>`).join('')}
-    </div>
-  </div>`;
-
-  // Best/Worst days
-  html+=`<div class="g2" style="gap:8px;margin-bottom:8px">
-    <div class="card">
-      <div class="card-hdr" style="color:var(--green)">🏆 BEST DAYS</div>
-      ${(d.best_days||[]).reverse().map(day=>`
-        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:9px">
-          <span style="color:var(--muted)">${day.date}</span>
-          <span style="color:var(--green);font-weight:700">₹${day.pnl?.toLocaleString('en-IN')}</span>
-          <span style="color:var(--muted)">${day.trades} trades</span>
-        </div>`).join('')}
-    </div>
-    <div class="card">
-      <div class="card-hdr" style="color:var(--red)">📉 WORST DAYS</div>
-      ${(d.worst_days||[]).map(day=>`
-        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:9px">
-          <span style="color:var(--muted)">${day.date}</span>
-          <span style="color:var(--red);font-weight:700">₹${day.pnl?.toLocaleString('en-IN')}</span>
-          <span style="color:var(--muted)">${day.trades} trades</span>
-        </div>`).join('')}
-    </div>
-  </div>`;
-
-  // Date-wise calendar heatmap
-  html+=`<div class="card" style="margin-bottom:8px">
-    <div class="card-hdr">DATE-WISE P&L CALENDAR (₹${capital.toLocaleString('en-IN')} capital)</div>
-    <div style="display:flex;flex-wrap:wrap;gap:2px;max-height:200px;overflow-y:auto">
-      ${(d.daily_results||[]).map(r=>`
-        <div title="${r.date}: ₹${r.pnl} (${r.trades} trades)" style="
-          width:32px;height:32px;border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
-          background:${r.pnl>0?'rgba(0,255,136,0.15)':r.pnl<0?'rgba(255,51,85,0.15)':'var(--bg4)'};
-          border:1px solid ${r.pnl>0?'rgba(0,255,136,0.4)':r.pnl<0?'rgba(255,51,85,0.4)':'var(--border)'}"
-          onclick="showDayDetail('${r.date}',${r.pnl},${r.trades},${r.wins},${r.losses})">
-          <div style="font-size:7px;color:var(--muted)">${r.date.slice(5)}</div>
-          <div style="font-size:7px;font-weight:700;color:${r.pnl>0?'var(--green)':r.pnl<0?'var(--red)':'var(--muted)'}">
-            ${r.pnl>0?'+':''} ${Math.abs(r.pnl)>999?Math.round(r.pnl/1000)+'k':Math.round(r.pnl)}
-          </div>
-        </div>`).join('')}
-    </div>
-    <div style="display:flex;gap:12px;margin-top:6px;font-size:8px;color:var(--muted)">
-      <span>▪ <span style="color:var(--green)">Green = Profitable</span></span>
-      <span>▪ <span style="color:var(--red)">Red = Loss</span></span>
-      <span>▪ <span style="color:var(--muted)">Gray = No trade</span></span>
-    </div>
-  </div>`;
-
-  // Equity curve (simple text-based)
-  html+=`<div class="card">
-    <div class="card-hdr">EQUITY GROWTH (₹${capital.toLocaleString('en-IN')} → ₹${d.final_capital?.toLocaleString('en-IN')})</div>
-    <div style="font-size:9px;display:flex;flex-wrap:wrap;gap:4px;max-height:80px;overflow-y:auto">
-      ${(d.equity_curve||[]).slice(-20).map((e,i)=>`
-        <span style="color:${e.capital>=capital?'var(--green)':'var(--red)'}">${e.date?.slice(5)}: ₹${Math.round(e.capital/1000)}k</span>`).join(' → ')}
-    </div>
-  </div>`;
-
+  // Monthly
+  html+=`<div class="card" style="margin-bottom:8px"><div class="chdr">MONTHLY BREAKDOWN</div><div style="display:flex;gap:6px;flex-wrap:wrap">${(d.monthly_summary||[]).map(m=>`<div style="flex:1;min-width:90px;background:var(--bg4);border:2px solid ${m.pnl>=0?'var(--gr)':'var(--rd)'};border-radius:4px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--mu)">${m.month}</div><div style="font-size:15px;font-weight:700;color:${m.pnl>=0?'var(--gr)':'var(--rd)'}">₹${m.pnl?.toLocaleString('en-IN')}</div><div style="font-size:8px;color:var(--mu)">${m.trades}T | ${m.win_rate}%WR</div></div>`).join('')}</div></div>`;
+  // Best/Worst
+  html+=`<div class="g2" style="gap:8px;margin-bottom:8px"><div class="card"><div class="chdr" style="color:var(--gr)">🏆 BEST DAYS</div>${[...(d.best_days||[])].reverse().map(day=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bo);font-size:9px"><span style="color:var(--mu)">${day.date}</span><span style="color:var(--gr);font-weight:700">₹${day.pnl?.toLocaleString('en-IN')}</span></div>`).join('')}</div><div class="card"><div class="chdr" style="color:var(--rd)">📉 WORST DAYS</div>${(d.worst_days||[]).map(day=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bo);font-size:9px"><span style="color:var(--mu)">${day.date}</span><span style="color:var(--rd);font-weight:700">₹${day.pnl?.toLocaleString('en-IN')}</span></div>`).join('')}</div></div>`;
+  // Calendar
+  html+=`<div class="card"><div class="chdr">📅 DATE-WISE P&L — ₹${cap?.toLocaleString('en-IN')} capital</div><div style="display:flex;flex-wrap:wrap;gap:3px;max-height:220px;overflow-y:auto">${(d.daily_results||[]).map(r=>`<div class="ccl" style="background:${r.pnl>0?'rgba(0,255,136,.18)':r.pnl<0?'rgba(255,51,85,.18)':'var(--bg4)'};border-color:${r.pnl>0?'rgba(0,255,136,.4)':r.pnl<0?'rgba(255,51,85,.4)':'var(--bo)'}" title="${r.date}: ₹${r.pnl}" onclick="alert('${r.date}\nP&L: ₹${r.pnl}\nTrades: ${r.trades} (${r.wins}W/${r.losses}L)\nCumulative: ₹${r.cumulative}')"><div>${r.date?.slice(5)}</div><div style="font-weight:700;color:${r.pnl>0?'var(--gr)':r.pnl<0?'var(--rd)':'var(--mu)'}">${Math.abs(r.pnl)>999?Math.round(r.pnl/1000)+'k':Math.round(r.pnl)||'-'}</div></div>`).join('')}</div><div style="display:flex;gap:12px;margin-top:6px;font-size:8px;color:var(--mu)"><span>🟢 Profitable</span><span>🔴 Loss</span><span>⬛ No trade</span><span style="margin-left:auto">Click cell for details</span></div></div>`;
   box.innerHTML=html;
 }
 
-function showDayDetail(date,pnl,trades,wins,losses){
-  alert(`${date}\nP&L: ₹${pnl?.toLocaleString('en-IN')}\nTrades: ${trades} (${wins}W/${losses}L)`);
+// STRATEGIES
+function togNLP(){const el=document.getElementById('nlp-bld');el.style.display=el.style.display==='none'?'block':'none';}
+async function parseNLPS(){
+  const text=document.getElementById('sb-nlp').value.trim();if(!text){toast('Type a strategy first','warn');return;}
+  const r=await api('/strategies/from_nlp','POST',{user_id:uid||'guest',nlp_text:text});
+  if(!r)return;const s=r.strategy;const p=r.parsed;
+  if(s.name)document.getElementById('sb-nm').value=s.name;
+  if(p.instrument)document.getElementById('sb-inst').value=p.instrument;
+  if(s.entry_conditions)document.getElementById('sb-en').value=s.entry_conditions.join('
+');
+  if(s.exit_conditions)document.getElementById('sb-ex').value=s.exit_conditions.join('
+');
+  if(s.sl_value)document.getElementById('sb-sl').value=s.sl_value;
+  if(s.target_value)document.getElementById('sb-tg').value=s.target_value;
+  if(s.quantity)document.getElementById('sb-qt').value=s.quantity;
+  if(s.tags)document.getElementById('sb-tgs').value=s.tags.join(',');
+  const box=document.getElementById('nlps-parsed');box.style.display='block';
+  box.innerHTML='◆ PARSED: '+Object.entries(p).filter(([k,v])=>v).slice(0,6).map(([k,v])=>`<span style="margin-right:8px">${k}:<b>${typeof v==='object'?JSON.stringify(v):v}</b></span>`).join('');
+  toast('All columns auto-filled!','success');
+}
+async function saveNLPS(){
+  if(!uid){toast('Login required to save strategies','error');return;}
+  const entry=document.getElementById('sb-en').value.split('
+').filter(l=>l.trim());
+  const exit_c=document.getElementById('sb-ex').value.split('
+').filter(l=>l.trim());
+  const tags=document.getElementById('sb-tgs').value.split(',').map(t=>t.trim()).filter(t=>t);
+  const payload={user_id:uid,name:document.getElementById('sb-nm').value||'My Strategy',instrument:document.getElementById('sb-inst').value,timeframe:document.getElementById('sb-tf').value,entry_conditions:entry,exit_conditions:exit_c,sl_value:parseFloat(document.getElementById('sb-sl').value)||100,target_value:parseFloat(document.getElementById('sb-tg').value)||200,quantity:parseInt(document.getElementById('sb-qt').value)||1,tags,nlp_input:document.getElementById('sb-nlp').value};
+  const d=await api('/strategies/save','POST',payload);
+  if(d&&d.strategy_id){toast('Strategy saved: '+d.name,'success');document.getElementById('nlp-bld').style.display='none';loadMine();}
+}
+function btNLPS(){showTab('bt',null);toast('Select strategy in dropdown and run backtest','info');}
+
+async function loadBuiltin(){
+  const d=await api('/strategies/builtin');if(!d||!d.strategies)return;
+  document.getElementById('strat-lst').innerHTML=d.strategies.map(s=>`
+    <div style="background:var(--bg4);border:1px solid var(--bo);border-left:3px solid ${s.avg_win_rate>=70?'var(--gr)':'var(--am)'};border-radius:6px;padding:12px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><div><div style="font-size:11px;font-weight:700">${s.name}</div><div style="font-size:8px;color:var(--mu)">${s.instrument} | ${s.type}</div></div><div style="text-align:right"><div style="font-size:16px;font-weight:700;color:${s.avg_win_rate>=70?'var(--gr)':'var(--am)'}">${s.avg_win_rate}% WR</div><div style="font-size:8px;color:var(--bl)">${s.avg_monthly_return}%/mo | Max DD: ${s.max_drawdown}%</div></div></div>
+      <div style="font-size:9px;color:var(--mu);margin-bottom:6px">${s.description}</div>
+      <div style="font-size:8px;margin-bottom:4px"><span style="color:var(--mu)">ENTRY: </span>${(s.entry||[]).slice(0,2).map(e=>`<span style="background:var(--bg);border:1px solid var(--bo);border-radius:2px;padding:1px 5px;margin:1px;display:inline-block">${e}</span>`).join('')}</div>
+      ${s.notes?`<div style="font-size:8px;color:var(--am);margin-bottom:6px">💡 ${s.notes}</div>`:''}
+      <div style="display:flex;gap:4px"><button class="btn bsm bg" onclick="document.getElementById('bt-s').value='${s.id}';showTab('bt',null)">∞ BACKTEST</button><button class="btn bsm bb" onclick="setI('${s.instrument?.split('/')[0]}',document.createElement('div'));showTab('trade',null)">USE</button></div>
+    </div>`).join('');
+}
+async function loadMine(){
+  if(!uid){document.getElementById('strat-lst').innerHTML=`<div style="text-align:center;padding:30px;color:var(--mu)">Login to view saved strategies<br><br><button class="btn bmd bg" onclick="document.getElementById('auth-ov').style.display='flex'">LOGIN</button></div>`;return;}
+  const d=await api('/strategies/user/'+uid);if(!d)return;
+  const strats=d.user_strategies||[];
+  if(!strats.length){document.getElementById('strat-lst').innerHTML=`<div style="text-align:center;padding:30px;color:var(--mu)">No saved strategies yet<br><br><button class="btn bmd bg" onclick="togNLP()">◆ CREATE WITH NLP BUILDER</button></div>`;return;}
+  document.getElementById('strat-lst').innerHTML=strats.map(s=>`
+    <div style="background:var(--bg4);border:1px solid var(--bo);border-left:3px solid var(--bl);border-radius:6px;padding:12px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><div style="font-size:11px;font-weight:700">${s.icon||'★'} ${s.name}</div><button class="btn bsm br" onclick="delStrat('${s.id}')">✕</button></div>
+      <div style="font-size:9px;color:var(--mu)">${s.instrument} | ${s.timeframe} | SL:${s.sl_value}pts → TGT:${s.target_value}pts</div>
+      ${s.nlp_input?`<div style="font-size:8px;color:var(--bl);margin-top:4px;font-style:italic">"${s.nlp_input.slice(0,70)}"</div>`:''}
+      ${s.entry_conditions?.length?`<div style="font-size:8px;margin-top:4px;color:var(--mu)">Entry: ${s.entry_conditions.slice(0,2).join(' | ')}</div>`:''}
+      <div style="display:flex;gap:4px;margin-top:8px"><button class="btn bsm bg" onclick="document.getElementById('bt-s').value='${s.id}';showTab('bt',null)">∞ BT</button><button class="btn bsm bb" onclick="setI('${s.instrument}',document.createElement('div'));showTab('trade',null)">USE</button></div>
+    </div>`).join('');
+}
+async function delStrat(sid){if(!confirm('Delete?'))return;await api('/strategies/'+sid+'?user_id='+uid,'DELETE');loadMine();}
+
+// JOURNAL
+async function saveJnl(){const d=await api('/journal/add','POST',{instrument:document.getElementById('jn-i').value,pnl:parseFloat(document.getElementById('jn-p').value)||0,emotion:document.getElementById('jn-em').value,rating:parseInt(document.getElementById('jn-r').value)||7,mistakes:document.getElementById('jn-m').value,lessons:document.getElementById('jn-l').value,notes:''});if(d&&d.id){toast('Journal saved','success');['jn-m','jn-l'].forEach(id=>document.getElementById(id).value='');}}
+async function rfTrades(){const d=await api('/trades');if(!d)return;const tb=document.getElementById('tr-tb');tb.innerHTML=d.trades.length?[...d.trades].reverse().map(t=>{const c=t.net_pnl>=0?'var(--gr)':'var(--rd)';return `<tr><td style="color:var(--mu)">${t.id.slice(-6)}</td><td>${t.instrument}</td><td style="color:${t.action==='BUY'?'var(--gr)':'var(--rd)'}">${t.action}</td><td>${t.entry_price}</td><td>${t.exit_price}</td><td style="color:var(--am)">${t.exit_reason}</td><td style="color:${c};font-weight:700">${rs(t.net_pnl)}</td></tr>`;}).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:20px">No trades yet</td></tr>`;}
+async function rfJStats(){const d=await api('/stats');if(!d||!d.performance)return;const p=d.performance;['j-pf','j-aw','j-al','j-ex'].forEach((id,i)=>{const el=document.getElementById(id);const vals=[p.profit_factor,rs(p.avg_win||0),rs(p.avg_loss||0),rs(p.expectancy||0)];if(el)el.textContent=vals[i];});}
+
+// REPORTS
+async function getRep(type){
+  const d=await api('/reports/'+type);if(!d)return;
+  document.getElementById('rep-hdr').textContent=type.toUpperCase()+' REPORT';
+  const p=type==='daily'?d.summary:d;
+  document.getElementById('rep-body').innerHTML=`<div class="g4" style="gap:6px"><div class="stat"><div class="slbl">TRADES</div><div class="sval" style="color:var(--am)">${p.total_trades||0}</div></div><div class="stat"><div class="slbl">WIN RATE</div><div class="sval" style="color:var(--gr)">${p.win_rate||0}%</div></div><div class="stat"><div class="slbl">NET P&L</div><div class="sval" style="color:${(p.net_pnl||p.total_pnl||0)>=0?'var(--gr)':'var(--rd)'};">${rs(p.net_pnl||p.total_pnl||0)}</div></div><div class="stat"><div class="slbl">PROFIT FACTOR</div><div class="sval" style="color:var(--bl)">${p.profit_factor||0}</div></div></div>`;
+}
+async function getExpiry(){const d=await api('/reports/expiry_calendar');if(!d)return;document.getElementById('rep-hdr').textContent='EXPIRY CALENDAR';const wc=d.days_to_weekly<=2?'var(--rd)':d.days_to_weekly<=5?'var(--am)':'var(--gr)';document.getElementById('rep-body').innerHTML=`<div class="g2" style="gap:8px;margin-bottom:8px"><div class="stat"><div class="slbl">WEEKLY</div><div class="sval" style="color:${wc};font-size:13px">${d.nifty_weekly_expiry}</div><div class="ssub">${d.days_to_weekly} days left</div></div><div class="stat"><div class="slbl">MONTHLY</div><div class="sval" style="color:var(--bl);font-size:13px">${d.nifty_monthly_expiry}</div><div class="ssub">${d.days_to_monthly} days left</div></div></div><div style="padding:8px;background:var(--bg4);border-radius:3px;color:${wc};font-size:10px;font-weight:700">${d.theta_warning}</div>`;}
+
+// CALC
+function calcRR(){
+  const en=parseFloat(document.getElementById('rr-en').value)||0;const sl=parseFloat(document.getElementById('rr-sl').value)||0;const tg=parseFloat(document.getElementById('rr-tg').value)||0;const lots=parseInt(document.getElementById('rr-l').value)||1;const ls=parseInt(document.getElementById('rr-ls').value)||50;const cap=parseFloat(document.getElementById('rr-c').value)||500000;
+  if(!en||!sl||!tg){toast('Fill Entry, SL, Target','warn');return;}
+  const slp=Math.abs(en-sl),tgp=Math.abs(tg-en),risk=slp*lots*ls,reward=tgp*lots*ls;
+  const box=document.getElementById('rr-res');box.style.display='block';
+  box.innerHTML=`<div class="g2" style="gap:8px"><div><div class="slbl">SL POINTS</div><div style="font-size:16px;color:var(--rd);font-weight:700">${slp}</div></div><div><div class="slbl">TGT POINTS</div><div style="font-size:16px;color:var(--gr);font-weight:700">${tgp}</div></div><div><div class="slbl">MAX RISK ₹</div><div style="color:var(--rd)">${rs(-risk)}</div></div><div><div class="slbl">REWARD ₹</div><div style="color:var(--gr)">${rs(reward)}</div></div><div><div class="slbl">R:R</div><div style="color:var(--bl);font-size:14px">1:${r2(tgp/slp)}</div></div><div><div class="slbl">MIN WIN %</div><div style="color:var(--am)">${r2(slp/(slp+tgp)*100)}%</div></div><div><div class="slbl">CAPITAL RISK</div><div style="color:var(--am)">${r2(risk/cap*100)}%</div></div><div><div class="slbl">EXPECTANCY</div><div style="color:${.5*reward-.5*risk>=0?'var(--gr)':'var(--rd)'}">${rs(.5*reward-.5*risk)}</div></div></div>`;
+}
+function calcBS(){
+  const S=parseFloat(document.getElementById('bs-s').value)||23900;const K=parseFloat(document.getElementById('bs-k').value)||24000;const T=parseFloat(document.getElementById('bs-d').value)||7;const v=parseFloat(document.getElementById('bs-v').value)||15;const r=parseFloat(document.getElementById('bs-r').value)||6.5;const type=document.getElementById('bs-t').value;
+  const t=T/365,sig=v/100,rf=r/100;const d1=(Math.log(S/K)+(rf+sig*sig/2)*t)/(sig*Math.sqrt(t));const d2=d1-sig*Math.sqrt(t);
+  let price,delta;if(type==='CE'){price=S*normCDF(d1)-K*Math.exp(-rf*t)*normCDF(d2);delta=normCDF(d1);}else{price=K*Math.exp(-rf*t)*normCDF(-d2)-S*normCDF(-d1);delta=normCDF(d1)-1;}
+  const gamma=Math.exp(-d1*d1/2)/(S*sig*Math.sqrt(2*Math.PI*t));const theta=(-(S*sig*Math.exp(-d1*d1/2))/(2*Math.sqrt(2*Math.PI*t))-rf*K*Math.exp(-rf*t)*(type==='CE'?normCDF(d2):normCDF(-d2)))/365;const vega=S*Math.sqrt(t)*Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI)/100;
+  const box=document.getElementById('bs-res');box.style.display='block';
+  box.innerHTML=`<div style="font-size:18px;font-weight:700;color:var(--gr);margin-bottom:6px">₹${price.toFixed(2)}</div><div class="g2" style="gap:6px;font-size:9px"><div><span style="color:var(--mu)">Δ: </span><span style="color:var(--bl)">${delta.toFixed(4)}</span></div><div><span style="color:var(--mu)">Γ: </span><span style="color:var(--pu)">${gamma.toFixed(6)}</span></div><div><span style="color:var(--mu)">θ/day: </span><span style="color:var(--rd)">₹${(theta*100).toFixed(2)}</span></div><div><span style="color:var(--mu)">ν/1%IV: </span><span style="color:var(--cy)">₹${(vega*100).toFixed(2)}</span></div></div>`;
 }
 
+// INIT
+rfStats();setInterval(rfStats,20000);
+log('SYSTEM','TRD v12.3 initialized');
 </script>
 </body>
 </html>
