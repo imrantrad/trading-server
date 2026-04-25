@@ -107,6 +107,8 @@ textarea{resize:none}
   <button class="tab" onclick="showTab('journal',this)">✎ JOURNAL</button>
   <button class="tab" onclick="showTab('reports',this)">📊 REPORTS</button>
   <button class="tab" onclick="showTab('calc',this)">∑ CALC</button>
+  <button class="tab" onclick="showTab('strategies',this)">★ STRATEGIES</button>
+  <button class="tab" onclick="showTab('profile',this)">👤 PROFILE</button>
 </div>
 
 <div class="main">
@@ -490,6 +492,130 @@ textarea{resize:none}
         <div id="bsm-result" style="display:none;background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:8px"></div>
       </div>
     </div>
+  </div>
+</div>
+
+
+<!-- ═══ STRATEGIES ═══ -->
+<div id="tab-strategies" class="panel">
+  <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+    <button class="btn bmd bg" onclick="loadBuiltinStrats()">★ BUILT-IN (10)</button>
+    <button class="btn bmd bb" onclick="loadMyStrats()">MY STRATEGIES</button>
+    <button class="btn bmd ba" onclick="showSaveStrat()">+ SAVE NEW</button>
+  </div>
+
+  <!-- Save Strategy Form -->
+  <div id="save-strat-form" style="display:none" class="card">
+    <div class="card-hdr">SAVE MY STRATEGY</div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">NAME</div><input id="ns-name" placeholder="My EMA Strategy"></div>
+      <div><div class="ilbl">INSTRUMENT</div>
+        <select id="ns-inst"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option></select>
+      </div>
+    </div>
+    <div style="margin-bottom:6px"><div class="ilbl">DESCRIPTION</div><input id="ns-desc" placeholder="Describe your strategy..."></div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">ENTRY CONDITIONS</div><textarea id="ns-entry" rows="2" placeholder="ema9 > ema21&#10;rsi < 60&#10;vwap bounce"></textarea></div>
+      <div><div class="ilbl">EXIT CONDITIONS</div><textarea id="ns-exit" rows="2" placeholder="stop loss 100&#10;target 200&#10;eod exit"></textarea></div>
+    </div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">SL POINTS</div><input type="number" id="ns-sl" value="100"></div>
+      <div><div class="ilbl">TARGET POINTS</div><input type="number" id="ns-tgt" value="200"></div>
+    </div>
+    <div class="g2" style="gap:6px;margin-bottom:8px">
+      <div><div class="ilbl">TIMEFRAME</div>
+        <select id="ns-tf"><option>5MIN</option><option>15MIN</option><option>1HOUR</option><option>DAILY</option><option>WEEKLY</option></select>
+      </div>
+      <div><div class="ilbl">TAGS (comma sep)</div><input id="ns-tags" placeholder="momentum,ema,intraday"></div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn bmd bg" onclick="saveMyStrat()" style="flex:1">✓ SAVE STRATEGY</button>
+      <button class="btn bmd br" onclick="document.getElementById('save-strat-form').style.display='none'" style="flex:1">✕ CANCEL</button>
+    </div>
+  </div>
+
+  <div id="strat-list" style="display:flex;flex-direction:column;gap:6px">
+    <div style="color:var(--muted);padding:20px;text-align:center">Click BUILT-IN or MY STRATEGIES to load</div>
+  </div>
+</div>
+
+<!-- ═══ PROFILE ═══ -->
+<div id="tab-profile" class="panel">
+  <!-- Login/Register -->
+  <div id="profile-auth" class="card">
+    <div class="card-hdr">USER ACCOUNT</div>
+    <div id="auth-form">
+      <div class="g2" style="gap:6px;margin-bottom:6px">
+        <div><div class="ilbl">USERNAME</div><input id="p-uname" placeholder="imrantrad"></div>
+        <div><div class="ilbl">PASSWORD</div><input type="password" id="p-pass" placeholder="password"></div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn bmd bg" onclick="loginUser()" style="flex:1">LOGIN</button>
+        <button class="btn bmd bb" onclick="registerUser()" style="flex:1">REGISTER</button>
+      </div>
+    </div>
+    <div id="profile-info" style="display:none"></div>
+  </div>
+
+  <div id="profile-settings" style="display:none" class="card">
+    <div class="card-hdr">MY SETTINGS</div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">FULL NAME</div><input id="pr-name" placeholder="Your name"></div>
+      <div><div class="ilbl">EMAIL</div><input id="pr-email" placeholder="email@example.com"></div>
+    </div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">CAPITAL (₹)</div><input type="number" id="pr-cap" value="500000"></div>
+      <div><div class="ilbl">RISK PER TRADE %</div><input type="number" id="pr-risk" value="1" step="0.5"></div>
+    </div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="ilbl">MAX DAILY LOSS %</div><input type="number" id="pr-dloss" value="3" step="0.5"></div>
+      <div><div class="ilbl">PREFERRED BROKER</div>
+        <select id="pr-broker"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option></select>
+      </div>
+    </div>
+    <div style="margin-bottom:8px"><div class="ilbl">TELEGRAM CHAT ID (for alerts)</div><input id="pr-tg" placeholder="123456789"></div>
+    <button class="btn bmd bg" onclick="updateProfile()" style="width:100%">✓ SAVE SETTINGS</button>
+  </div>
+
+  <!-- Backtest Advanced -->
+  <div class="card">
+    <div class="card-hdr">ADVANCED BACKTEST — LAST 3 MONTHS</div>
+    <div class="g2" style="gap:6px;margin-bottom:8px">
+      <div>
+        <div class="ilbl">STRATEGY</div>
+        <select id="adv-strat">
+          <optgroup label="── HIGH WIN-RATE ──">
+            <option value="STR_THETA_DECAY">Weekly Theta Decay (72% WR)</option>
+            <option value="STR_ORB">Opening Range Breakout (68% WR)</option>
+            <option value="STR_IRON_CONDOR_WEEKLY">Weekly Iron Condor (78% WR)</option>
+            <option value="STR_VWAP_PULLBACK">VWAP Pullback (65% WR)</option>
+            <option value="STR_GAP_FADE">Gap Fade (74% WR)</option>
+            <option value="STR_SUPERTREND_EMA">Supertrend+EMA (63% WR)</option>
+            <option value="STR_PCR_REVERSAL">PCR Reversal (71% WR)</option>
+            <option value="STR_BANKNIFTY_SCALP">BankNifty Scalp (62% WR)</option>
+            <option value="STR_MAX_PAIN_EXPIRY">Max Pain Expiry (76% WR)</option>
+            <option value="STR_FII_MOMENTUM">FII Momentum (69% WR)</option>
+          </optgroup>
+          <optgroup label="── CLASSIC ──">
+            <option value="EMA_CROSS">EMA Crossover</option>
+            <option value="RSI_MEAN_REVERSION">RSI Mean Reversion</option>
+            <option value="BOLLINGER_BREAKOUT">Bollinger Breakout</option>
+          </optgroup>
+        </select>
+      </div>
+      <div>
+        <div class="ilbl">CAPITAL AMOUNT (₹)</div>
+        <input type="number" id="adv-cap" value="100000" placeholder="Enter your amount">
+      </div>
+    </div>
+    <div class="g2" style="gap:6px;margin-bottom:8px">
+      <div><div class="ilbl">MONTHS</div>
+        <select id="adv-months"><option value="1">1 Month</option><option value="3" selected>3 Months</option><option value="6">6 Months</option></select>
+      </div>
+      <div><div class="ilbl">LOTS</div><input type="number" id="adv-qty" value="1" min="1"></div>
+    </div>
+    <button class="btn blg bg" id="adv-btn" onclick="runAdvBacktest()">∞ RUN ADVANCED BACKTEST</button>
+    <div id="adv-result" style="display:none;margin-top:8px"></div>
   </div>
 </div>
 
@@ -1213,6 +1339,297 @@ renderTicker();renderMktWatch();
 addLog('SYSTEM','v12.3 Trading System initialized');
 addLog('INFO','Fetching real market data...');
 refreshStats();
+
+// ═══════════════════════════════════════
+// USER PROFILE SYSTEM
+// ═══════════════════════════════════════
+let currentUser = null;
+let currentUserId = localStorage.getItem('user_id') || 'demo_user';
+
+async function loginUser(){
+  const u=document.getElementById('p-uname').value.trim();
+  const p=document.getElementById('p-pass').value;
+  if(!u) return alert('Enter username');
+  const d=await api('/users/login','POST',{username:u,password:p});
+  if(d&&d.user){
+    currentUser=d.user; currentUserId=d.user.id;
+    localStorage.setItem('user_id',d.user.id);
+    localStorage.setItem('username',d.user.username);
+    showProfileInfo(d.user);
+    addLog('SUCCESS',`Logged in as ${d.user.username}`);
+  } else {
+    addLog('ERROR',d?.error||'Login failed');
+    alert(d?.error||'Login failed');
+  }
+}
+
+async function registerUser(){
+  const u=document.getElementById('p-uname').value.trim();
+  const p=document.getElementById('p-pass').value;
+  if(!u||!p) return alert('Fill username and password');
+  const d=await api('/users/register','POST',{username:u,password:p,capital:500000});
+  if(d&&d.status==='created'){
+    addLog('SUCCESS','Account created! Now login.');
+    alert('Account created! Now login.');
+  } else addLog('ERROR',d?.error||'Register failed');
+}
+
+function showProfileInfo(u){
+  document.getElementById('auth-form').style.display='none';
+  document.getElementById('profile-info').style.display='block';
+  document.getElementById('profile-settings').style.display='block';
+  document.getElementById('profile-info').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:8px 0">
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#000">${(u.username||'?')[0].toUpperCase()}</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${u.full_name||u.username}</div>
+        <div style="font-size:9px;color:var(--muted)">${u.email||'No email'} | Capital: ₹${(u.capital||500000).toLocaleString('en-IN')}</div>
+        <div style="font-size:9px;color:var(--green)">● LOGGED IN</div>
+      </div>
+      <button class="btn bsm br" onclick="logoutUser()" style="margin-left:auto">LOGOUT</button>
+    </div>`;
+  if(u.capital) document.getElementById('pr-cap').value=u.capital;
+  if(u.risk_per_trade) document.getElementById('pr-risk').value=u.risk_per_trade;
+}
+
+function logoutUser(){
+  currentUser=null; currentUserId='demo_user';
+  localStorage.removeItem('user_id');
+  document.getElementById('auth-form').style.display='block';
+  document.getElementById('profile-info').innerHTML='';
+  document.getElementById('profile-info').style.display='none';
+  document.getElementById('profile-settings').style.display='none';
+  addLog('SYSTEM','Logged out');
+}
+
+async function updateProfile(){
+  const updates={
+    full_name:document.getElementById('pr-name').value,
+    email:document.getElementById('pr-email').value,
+    capital:parseFloat(document.getElementById('pr-cap').value)||500000,
+    risk_per_trade:parseFloat(document.getElementById('pr-risk').value)||1,
+    max_daily_loss:parseFloat(document.getElementById('pr-dloss').value)||3,
+    broker:document.getElementById('pr-broker').value,
+    telegram_chat_id:document.getElementById('pr-tg').value,
+  };
+  const d=await api('/users/'+currentUserId,'PUT',updates);
+  if(d&&d.updated) addLog('SUCCESS','Profile updated');
+}
+
+// ═══════════════════════════════════════
+// STRATEGY MANAGEMENT
+// ═══════════════════════════════════════
+function showSaveStrat(){
+  const f=document.getElementById('save-strat-form');
+  f.style.display=f.style.display==='none'?'block':'none';
+}
+
+async function saveMyStrat(){
+  const entry=document.getElementById('ns-entry').value.split('\n').filter(l=>l.trim());
+  const exit=document.getElementById('ns-exit').value.split('\n').filter(l=>l.trim());
+  const tags=document.getElementById('ns-tags').value.split(',').map(t=>t.trim()).filter(t=>t);
+  const payload={
+    user_id:currentUserId,
+    name:document.getElementById('ns-name').value.trim()||'My Strategy',
+    description:document.getElementById('ns-desc').value,
+    instrument:document.getElementById('ns-inst').value,
+    timeframe:document.getElementById('ns-tf').value,
+    entry_conditions:entry,exit_conditions:exit,
+    sl_value:parseFloat(document.getElementById('ns-sl').value)||100,
+    target_value:parseFloat(document.getElementById('ns-tgt').value)||200,
+    tags,quantity:1,risk_per_trade:1,is_public:false,
+  };
+  const d=await api('/strategies/save','POST',payload);
+  if(d&&d.strategy_id){
+    addLog('SUCCESS','Strategy saved: '+d.name);
+    document.getElementById('save-strat-form').style.display='none';
+    loadMyStrats();
+  }
+}
+
+async function loadBuiltinStrats(){
+  const d=await api('/strategies/builtin');
+  if(!d) return;
+  document.getElementById('strat-list').innerHTML=d.strategies.map(s=>`
+    <div class="card" style="border-left:3px solid var(--${s.avg_win_rate>=70?'green':s.avg_win_rate>=65?'amber':'red'})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text)">${s.name}</div>
+          <div style="font-size:8px;color:var(--muted)">${s.instrument} | ${s.timeframe} | ${s.type}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:700;color:var(--${s.avg_win_rate>=70?'green':'amber'})">${s.avg_win_rate}% WR</div>
+          <div style="font-size:8px;color:var(--blue)">${s.avg_monthly_return}% /month</div>
+        </div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:6px">${s.description}</div>
+      <div style="margin-bottom:4px">
+        <span style="font-size:8px;color:var(--muted)">ENTRY: </span>
+        ${s.entry.map(e=>`<span style="font-size:8px;background:var(--bg4);border:1px solid var(--border);border-radius:2px;padding:1px 4px;margin:1px;display:inline-block">${e}</span>`).join('')}
+      </div>
+      <div style="margin-bottom:6px">
+        <span style="font-size:8px;color:var(--muted)">EXIT: </span>
+        ${s.exit.map(e=>`<span style="font-size:8px;background:var(--bg4);border:1px solid #ff333533;border-radius:2px;padding:1px 4px;margin:1px;display:inline-block">${e}</span>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:8px;color:var(--muted)">Risk: </span>
+        <span style="font-size:8px;color:${s.risk.includes('LOW')?'var(--green)':s.risk.includes('HIGH')?'var(--red)':'var(--amber)'}">${s.risk}</span>
+        <span style="font-size:8px;color:var(--muted)">MaxDD: ${s.max_drawdown}%</span>
+        <button class="btn bsm bg" onclick="backtestBuiltin('${s.id}')" style="margin-left:auto">BACKTEST</button>
+        <button class="btn bsm bb" onclick="useStrategy('${s.id}')" >USE</button>
+      </div>
+      ${s.notes?`<div style="font-size:8px;color:var(--amber);margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">💡 ${s.notes}</div>`:''}
+    </div>`).join('');
+}
+
+async function loadMyStrats(){
+  const d=await api('/strategies/user/'+currentUserId);
+  if(!d) return;
+  const strats=d.user_strategies||[];
+  if(!strats.length){
+    document.getElementById('strat-list').innerHTML=`<div style="color:var(--muted);padding:20px;text-align:center">No saved strategies yet.<br>Click + SAVE NEW to create one.</div>`;
+    return;
+  }
+  document.getElementById('strat-list').innerHTML=strats.map(s=>`
+    <div class="card" style="border-left:3px solid var(--blue)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:11px;font-weight:700">${s.name}</div>
+        <button class="btn bsm br" onclick="deleteStrat('${s.id}')">✕</button>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:4px">${s.description||'No description'}</div>
+      <div style="font-size:8px;color:var(--muted)">${s.instrument} | ${s.timeframe} | SL:${s.sl_value} TGT:${s.target_value}</div>
+      ${s.entry_conditions?.length?`<div style="margin-top:4px;font-size:8px"><span style="color:var(--muted)">Entry: </span>${s.entry_conditions.join(' | ')}</div>`:''}
+      ${s.backtest_winrate?`<div style="margin-top:4px;font-size:9px;color:var(--green)">Backtest WR: ${s.backtest_winrate}%</div>`:''}
+      <div style="display:flex;gap:4px;margin-top:6px">
+        <button class="btn bsm bg" onclick="backtestBuiltin('${s.id}')">BACKTEST</button>
+        <button class="btn bsm bb" onclick="useStrategy('${s.id}')">USE</button>
+      </div>
+    </div>`).join('');
+}
+
+async function deleteStrat(sid){
+  if(!confirm('Delete strategy?')) return;
+  await api('/strategies/'+sid+'?user_id='+currentUserId,'DELETE');
+  loadMyStrats();
+}
+
+function backtestBuiltin(stratId){
+  document.getElementById('adv-strat').value=stratId;
+  showTab('profile',document.querySelector('.tab'));
+  document.getElementById('adv-result').style.display='none';
+  addLog('INFO','Selected strategy for backtest: '+stratId);
+}
+
+function useStrategy(stratId){
+  addLog('INFO','Strategy loaded: '+stratId);
+  showTab('trade',document.querySelector('.tab'));
+}
+
+// ═══════════════════════════════════════
+// ADVANCED BACKTEST WITH DATE-WISE P&L
+// ═══════════════════════════════════════
+async function runAdvBacktest(){
+  const btn=document.getElementById('adv-btn');
+  btn.textContent='⏳ Running backtest...';btn.disabled=true;
+  const capital=parseFloat(document.getElementById('adv-cap').value)||100000;
+  const months=parseInt(document.getElementById('adv-months').value)||3;
+  const strat=document.getElementById('adv-strat').value;
+  const qty=parseInt(document.getElementById('adv-qty').value)||1;
+  const d=await api('/backtest/advanced','POST',{strategy:strat,capital,months,quantity:qty,sl_pct:1,target_pct:2});
+  btn.textContent='∞ RUN ADVANCED BACKTEST';btn.disabled=false;
+  if(!d||d.error) return;
+
+  const pnlc=d.total_pnl>=0?'var(--green)':'var(--red)';
+  const box=document.getElementById('adv-result');
+  box.style.display='block';
+
+  // Summary stats
+  let html=`
+    <div class="g4" style="gap:6px;margin-bottom:10px">
+      <div class="stat"><div class="slbl">TOTAL P&L</div><div class="sval" style="color:${pnlc};font-size:13px">₹${d.total_pnl?.toLocaleString('en-IN')}</div><div class="ssub">${d.total_pnl_pct}%</div></div>
+      <div class="stat"><div class="slbl">FINAL CAPITAL</div><div class="sval" style="color:var(--blue);font-size:12px">₹${d.final_capital?.toLocaleString('en-IN')}</div></div>
+      <div class="stat"><div class="slbl">WIN RATE</div><div class="sval" style="color:var(--amber)">${d.win_rate}%</div><div class="ssub">${d.winning_trades}W/${d.losing_trades}L</div></div>
+      <div class="stat"><div class="slbl">MAX DRAWDOWN</div><div class="sval" style="color:var(--red)">${d.max_drawdown_pct}%</div></div>
+      <div class="stat"><div class="slbl">PROFITABLE DAYS</div><div class="sval" style="color:var(--green)">${d.profitable_days}</div></div>
+      <div class="stat"><div class="slbl">LOSS DAYS</div><div class="sval" style="color:var(--red)">${d.loss_days}</div></div>
+      <div class="stat"><div class="slbl">PROFIT FACTOR</div><div class="sval" style="color:var(--blue)">${d.profit_factor}</div></div>
+      <div class="stat"><div class="slbl">SHARPE RATIO</div><div class="sval" style="color:var(--purple)">${d.sharpe_ratio}</div></div>
+    </div>`;
+
+  // Monthly summary
+  html+=`<div class="card" style="margin-bottom:8px">
+    <div class="card-hdr">MONTHLY BREAKDOWN</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${(d.monthly_summary||[]).map(m=>`
+        <div style="flex:1;min-width:100px;background:var(--bg4);border:1px solid ${m.pnl>=0?'var(--green)':'var(--red)'};border-radius:3px;padding:8px;text-align:center">
+          <div style="font-size:9px;color:var(--muted)">${m.month}</div>
+          <div style="font-size:14px;font-weight:700;color:${m.pnl>=0?'var(--green)':'var(--red)'}">₹${m.pnl?.toLocaleString('en-IN')}</div>
+          <div style="font-size:8px;color:var(--muted)">${m.trades} trades | ${m.win_rate}% WR</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+
+  // Best/Worst days
+  html+=`<div class="g2" style="gap:8px;margin-bottom:8px">
+    <div class="card">
+      <div class="card-hdr" style="color:var(--green)">🏆 BEST DAYS</div>
+      ${(d.best_days||[]).reverse().map(day=>`
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:9px">
+          <span style="color:var(--muted)">${day.date}</span>
+          <span style="color:var(--green);font-weight:700">₹${day.pnl?.toLocaleString('en-IN')}</span>
+          <span style="color:var(--muted)">${day.trades} trades</span>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-hdr" style="color:var(--red)">📉 WORST DAYS</div>
+      ${(d.worst_days||[]).map(day=>`
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:9px">
+          <span style="color:var(--muted)">${day.date}</span>
+          <span style="color:var(--red);font-weight:700">₹${day.pnl?.toLocaleString('en-IN')}</span>
+          <span style="color:var(--muted)">${day.trades} trades</span>
+        </div>`).join('')}
+    </div>
+  </div>`;
+
+  // Date-wise calendar heatmap
+  html+=`<div class="card" style="margin-bottom:8px">
+    <div class="card-hdr">DATE-WISE P&L CALENDAR (₹${capital.toLocaleString('en-IN')} capital)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:2px;max-height:200px;overflow-y:auto">
+      ${(d.daily_results||[]).map(r=>`
+        <div title="${r.date}: ₹${r.pnl} (${r.trades} trades)" style="
+          width:32px;height:32px;border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+          background:${r.pnl>0?'rgba(0,255,136,0.15)':r.pnl<0?'rgba(255,51,85,0.15)':'var(--bg4)'};
+          border:1px solid ${r.pnl>0?'rgba(0,255,136,0.4)':r.pnl<0?'rgba(255,51,85,0.4)':'var(--border)'}"
+          onclick="showDayDetail('${r.date}',${r.pnl},${r.trades},${r.wins},${r.losses})">
+          <div style="font-size:7px;color:var(--muted)">${r.date.slice(5)}</div>
+          <div style="font-size:7px;font-weight:700;color:${r.pnl>0?'var(--green)':r.pnl<0?'var(--red)':'var(--muted)'}">
+            ${r.pnl>0?'+':''} ${Math.abs(r.pnl)>999?Math.round(r.pnl/1000)+'k':Math.round(r.pnl)}
+          </div>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:12px;margin-top:6px;font-size:8px;color:var(--muted)">
+      <span>▪ <span style="color:var(--green)">Green = Profitable</span></span>
+      <span>▪ <span style="color:var(--red)">Red = Loss</span></span>
+      <span>▪ <span style="color:var(--muted)">Gray = No trade</span></span>
+    </div>
+  </div>`;
+
+  // Equity curve (simple text-based)
+  html+=`<div class="card">
+    <div class="card-hdr">EQUITY GROWTH (₹${capital.toLocaleString('en-IN')} → ₹${d.final_capital?.toLocaleString('en-IN')})</div>
+    <div style="font-size:9px;display:flex;flex-wrap:wrap;gap:4px;max-height:80px;overflow-y:auto">
+      ${(d.equity_curve||[]).slice(-20).map((e,i)=>`
+        <span style="color:${e.capital>=capital?'var(--green)':'var(--red)'}">${e.date?.slice(5)}: ₹${Math.round(e.capital/1000)}k</span>`).join(' → ')}
+    </div>
+  </div>`;
+
+  box.innerHTML=html;
+}
+
+function showDayDetail(date,pnl,trades,wins,losses){
+  alert(`${date}\nP&L: ₹${pnl?.toLocaleString('en-IN')}\nTrades: ${trades} (${wins}W/${losses}L)`);
+}
+
 </script>
 </body>
 </html>
