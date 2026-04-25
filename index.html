@@ -12,6 +12,12 @@
   --green:#00ff88;--red:#ff3355;--blue:#3b82f6;--amber:#f59e0b;
   --purple:#8b5cf6;--cyan:#06b6d4;--text:#e2e8f0;--muted:#64748b;
 }
+/* THEMES */
+body.theme-midnight{--bg:#000010;--bg2:#050518;--bg3:#0a0a20;--bg4:#0f0f28;--border:#1a1a3e;--border2:#252555;--green:#00ffcc;--blue:#6060ff;--text:#dde8ff;--muted:#5060a0}
+body.theme-green{--bg:#000a04;--bg2:#041008;--bg3:#08180c;--bg4:#0c2010;--border:#1a3020;--green:#00ff44;--blue:#00cc88;--text:#ccffdd;--muted:#446655}
+body.theme-purple{--bg:#080412;--bg2:#100820;--bg3:#180c30;--bg4:#201040;--border:#2a1a4e;--green:#a855f7;--red:#f43f5e;--blue:#818cf8;--amber:#fb923c;--text:#ede9fe;--muted:#7c3aed}
+body.theme-light{--bg:#f8fafc;--bg2:#f1f5f9;--bg3:#e2e8f0;--bg4:#cbd5e1;--border:#94a3b8;--border2:#64748b;--green:#059669;--red:#dc2626;--blue:#2563eb;--amber:#d97706;--text:#1e293b;--muted:#64748b}
+body.theme-solarized{--bg:#002b36;--bg2:#073642;--bg3:#0d4654;--bg4:#125465;--border:#1a5a6e;--green:#859900;--red:#dc322f;--blue:#268bd2;--amber:#b58900;--text:#839496;--muted:#586e75}
 *{margin:0;padding:0;box-sizing:border-box}
 ::-webkit-scrollbar{width:3px;height:3px}
 ::-webkit-scrollbar-thumb{background:#1a1d2e}
@@ -1316,6 +1322,116 @@ function calcBSM(){
     </div>`;
 }
 
+
+// ── STRATEGY BUILDER NLP ─────────────────────────────────
+function toggleNLPBuilder(){
+  const f=document.getElementById('nlp-builder');
+  f.style.display=f.style.display==='none'?'block':'none';
+}
+
+async function parseNLPForStrategy(){
+  const text=document.getElementById('sb-nlp').value.trim();
+  if(!text){showToast('Type a strategy description first','warn');return;}
+  const uid=localStorage.getItem('uid')||'guest';
+  const result=await api('/strategies/from_nlp','POST',{user_id:uid,nlp_text:text});
+  if(!result){return;}
+  const s=result.strategy;const p=result.parsed;
+  // Auto-fill
+  if(s.name) document.getElementById('sb-name').value=s.name;
+  if(p.instrument){const el=document.getElementById('sb-inst');if(el) el.value=p.instrument;}
+  if(s.entry_conditions) document.getElementById('sb-entry').value=s.entry_conditions.join('\n');
+  if(s.exit_conditions) document.getElementById('sb-exit').value=s.exit_conditions.join('\n');
+  if(s.sl_value) document.getElementById('sb-sl').value=s.sl_value;
+  if(s.target_value) document.getElementById('sb-tgt').value=s.target_value;
+  if(s.quantity) document.getElementById('sb-qty').value=s.quantity;
+  if(s.tags) document.getElementById('sb-tags').value=s.tags.join(',');
+  // Show parsed
+  const box=document.getElementById('sb-parsed');box.style.display='block';
+  box.innerHTML='◆ PARSED: '+Object.entries(p).filter(([k,v])=>v).slice(0,6).map(([k,v])=>`<span style="margin-right:8px">${k}:<b>${typeof v==='object'?JSON.stringify(v):v}</b></span>`).join('');
+  showToast('Form auto-filled from NLP!','success');
+}
+
+async function saveNLPStrategy(){
+  const uid=localStorage.getItem('uid')||'guest';
+  const entry=document.getElementById('sb-entry').value.split('\n').filter(l=>l.trim());
+  const exit_c=document.getElementById('sb-exit').value.split('\n').filter(l=>l.trim());
+  const tags=document.getElementById('sb-tags').value.split(',').map(t=>t.trim()).filter(t=>t);
+  const payload={
+    user_id:uid,
+    name:document.getElementById('sb-name').value||'My Strategy',
+    instrument:document.getElementById('sb-inst').value,
+    timeframe:document.getElementById('sb-tf').value,
+    entry_conditions:entry,exit_conditions:exit_c,
+    sl_value:parseFloat(document.getElementById('sb-sl').value)||100,
+    target_value:parseFloat(document.getElementById('sb-tgt').value)||200,
+    quantity:parseInt(document.getElementById('sb-qty').value)||1,
+    tags,nlp_input:document.getElementById('sb-nlp').value,
+  };
+  const d=await api('/strategies/save','POST',payload);
+  if(d&&d.strategy_id){showToast('Strategy saved: '+d.name,'success');document.getElementById('nlp-builder').style.display='none';loadMyStrats();}
+  else showToast('Login required to save strategies','error');
+}
+
+function backtestNLPStrat(){
+  const strat=document.getElementById('adv-strat');
+  if(strat) strat.value='EMA_CROSS';
+  showTab('backtest',document.querySelector('.tab'));
+  showToast('Run backtest on strategy','info');
+}
+function paperNLPStrat(){showToast('Paper test: Use EXECUTE on TRADE tab','info');showTab('trade',document.querySelector('.tab'));}
+
+// ── STRATEGY LIST ─────────────────────────────────────────
+async function loadBuiltinStrats(){
+  const d=await api('/strategies/builtin');
+  if(!d||!d.strategies) return;
+  document.getElementById('strat-list').innerHTML=d.strategies.map(s=>`
+    <div style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:6px;border-left:3px solid ${s.avg_win_rate>=70?'var(--green)':'var(--amber)'}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <div><div style="font-size:11px;font-weight:700">${s.name}</div><div style="font-size:8px;color:var(--muted)">${s.instrument} | ${s.type}</div></div>
+        <div style="text-align:right"><div style="font-size:16px;font-weight:700;color:${s.avg_win_rate>=70?'var(--green)':'var(--amber)'}">${s.avg_win_rate}% WR</div><div style="font-size:8px;color:var(--blue)">${s.avg_monthly_return}%/mo</div></div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:6px">${s.description}</div>
+      <div style="margin-bottom:4px;font-size:8px"><span style="color:var(--muted)">ENTRY: </span>${(s.entry||[]).slice(0,2).map(e=>`<span style="background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:1px 5px;margin:1px;display:inline-block">${e}</span>`).join('')}</div>
+      <div style="font-size:8px;color:var(--amber);margin-top:6px">💡 ${s.notes||'Proven strategy'}</div>
+      <div style="display:flex;gap:4px;margin-top:8px">
+        <button class="btn bsm bg" onclick="document.getElementById('adv-strat').value='${s.id}';showTab('backtest',document.querySelector('.tab'))">∞ BACKTEST</button>
+        <button class="btn bsm bb" onclick="setInst('${s.instrument?.split('/')[0]}',document.getElementById('i-'+('${s.instrument?.split('/')[0]}')||document.createElement('div')));showTab('trade',document.querySelector('.tab'))">USE</button>
+      </div>
+    </div>`).join('');
+}
+
+async function loadMyStrats(){
+  const uid=localStorage.getItem('uid')||'guest';
+  const d=await api('/strategies/user/'+uid);
+  if(!d) return;
+  const strats=d.user_strategies||[];
+  if(!strats.length){
+    document.getElementById('strat-list').innerHTML=`<div style="text-align:center;padding:30px;color:var(--muted)">No saved strategies yet.<br><br><button class="btn bmd bg" onclick="toggleNLPBuilder()">◆ CREATE WITH NLP</button></div>`;
+    return;
+  }
+  document.getElementById('strat-list').innerHTML=strats.map(s=>`
+    <div style="background:var(--bg4);border:1px solid ${s.color||'var(--blue)'};border-radius:6px;padding:12px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:11px;font-weight:700">${s.icon||'★'} ${s.name}</div>
+        <button class="btn bsm br" onclick="deleteMyStrat('${s.id}')">✕</button>
+      </div>
+      <div style="font-size:9px;color:var(--muted)">${s.instrument} | ${s.timeframe} | SL:${s.sl_value}pts → TGT:${s.target_value}pts</div>
+      ${s.nlp_input?`<div style="font-size:8px;color:var(--blue);margin-top:4px;font-style:italic">"${s.nlp_input.slice(0,70)}"</div>`:''}
+      ${s.entry_conditions?.length?`<div style="font-size:8px;margin-top:4px;color:var(--muted)">Entry: ${s.entry_conditions.slice(0,2).join(' | ')}</div>`:''}
+      <div style="display:flex;gap:4px;margin-top:8px">
+        <button class="btn bsm bg" onclick="document.getElementById('adv-strat').value='${s.id}';showTab('backtest',document.querySelector('.tab'))">∞ BT</button>
+        <button class="btn bsm bb" onclick="setInst('${s.instrument}',document.createElement('div'));showTab('trade',document.querySelector('.tab'))">USE</button>
+      </div>
+    </div>`).join('');
+}
+
+async function deleteMyStrat(sid){
+  if(!confirm('Delete strategy?')) return;
+  const uid=localStorage.getItem('uid')||'guest';
+  await api('/strategies/'+sid+'?user_id='+uid,'DELETE');
+  loadMyStrats();
+}
+
 // ── API HEALTH ───────────────────────────────────────────
 async function checkAPI(){
   try{
@@ -1330,6 +1446,123 @@ async function checkAPI(){
     document.getElementById('api-txt').textContent='OFFLINE';
     document.getElementById('api-txt').style.color='var(--red)';
   }
+}
+
+
+// ── THEME ────────────────────────────────────────────────
+function applyTheme(name){
+  document.body.className='theme-'+name;
+  localStorage.setItem('theme',name);
+  showToast('Theme: '+name.toUpperCase(),'success');
+}
+const savedTheme=localStorage.getItem('theme');
+if(savedTheme&&savedTheme!=='dark') setTimeout(()=>applyTheme(savedTheme),100);
+
+// ── SUBSCRIPTION ─────────────────────────────────────────
+let selectedPlan='';
+function selectPlan(plan){
+  selectedPlan=plan;
+  ['FREE','BASIC','PRO','INSTITUTIONAL'].forEach(p=>{
+    const el=document.getElementById('plan-'+p);
+    if(el) el.style.borderColor=p===plan?'var(--green)':'var(--border)';
+  });
+  showToast('Selected: '+plan,'info');
+}
+async function upgradePlan(){
+  if(!selectedPlan){showToast('Select a plan first','warn');return;}
+  const uid=localStorage.getItem('uid')||'guest';
+  const d=await api('/subscriptions/upgrade','POST',{user_id:uid,plan:selectedPlan,payment_id:'SIM_'+Date.now()});
+  if(d&&d.upgraded) showToast('Upgraded to '+selectedPlan,'success');
+  else showToast('Login required to upgrade','error');
+}
+
+// ── PROFILE STATS ────────────────────────────────────────
+function updateProfileUI(u){
+  if(!u) return;
+  const av=(u.full_name||u.username||'?')[0].toUpperCase();
+  const el=document.getElementById('prof-avatar');if(el) el.textContent=av;
+  const nm=document.getElementById('prof-name');if(nm) nm.textContent=u.full_name||u.username;
+  const em=document.getElementById('prof-email');if(em) em.textContent=u.email||'No email';
+  const pl=document.getElementById('prof-plan');if(pl) pl.textContent=u.subscription_plan||'FREE';
+  const cap=document.getElementById('prof-capital');if(cap) cap.textContent='₹'+((u.capital||500000)/100000).toFixed(1)+'L';
+  const pb=document.getElementById('plan-badge');if(pb) pb.textContent=u.subscription_plan||'FREE';
+  if(u.capital) {const el=document.getElementById('pr-cap');if(el) el.value=u.capital;}
+  if(u.risk_per_trade) {const el=document.getElementById('pr-risk');if(el) el.value=u.risk_per_trade;}
+  if(u.broker) {const el=document.getElementById('pr-broker');if(el) el.value=u.broker;}
+  if(u.telegram_chat_id) {const el=document.getElementById('pr-tg');if(el) el.value=u.telegram_chat_id;}
+  if(u.full_name) {const el=document.getElementById('pr-name');if(el) el.value=u.full_name;}
+  if(u.theme) applyTheme(u.theme.toLowerCase());
+}
+async function refreshProfileStats(){
+  const d=await api('/stats');if(!d) return;
+  const p=d.performance||{};
+  const el=document.getElementById('prof-trades');if(el) el.textContent=p.total_trades||0;
+  const pe=document.getElementById('prof-pnl');if(pe){pe.textContent=fmtRs(p.total_pnl||0);pe.style.color=(p.total_pnl||0)>=0?'var(--green)':'var(--red)';}
+  const wr=document.getElementById('prof-wr');if(wr) wr.textContent=(p.win_rate||0)+'%';
+}
+
+function logoutUser(){
+  localStorage.removeItem('uid');
+  showToast('Logged out','info');
+  location.reload();
+}
+async function updateProfile(){
+  const uid=localStorage.getItem('uid')||'guest';
+  if(uid==='guest'){showToast('Login required','error');return;}
+  const updates={
+    full_name:document.getElementById('pr-name')?.value,
+    capital:parseFloat(document.getElementById('pr-cap')?.value)||500000,
+    risk_per_trade:parseFloat(document.getElementById('pr-risk')?.value)||1,
+    max_daily_loss:parseFloat(document.getElementById('pr-dloss')?.value)||3,
+    broker:document.getElementById('pr-broker')?.value,
+    telegram_chat_id:document.getElementById('pr-tg')?.value,
+  };
+  const d=await api('/users/'+uid,'PUT',updates);
+  if(d&&d.updated) showToast('Profile saved!','success');
+}
+
+// ── AUTH MODAL ───────────────────────────────────────────
+let authMode='login';
+function showAuthModal(){document.getElementById('auth-modal').style.display='flex';}
+function hideAuthModal(){document.getElementById('auth-modal').style.display='none';}
+function switchAuth(tab){
+  authMode=tab;
+  document.getElementById('auth-login-form').style.display=tab==='login'?'block':'none';
+  document.getElementById('auth-register-form').style.display=tab==='register'?'block':'none';
+}
+async function doLogin(){
+  const u=document.getElementById('al-user')?.value?.trim();
+  const p=document.getElementById('al-pass')?.value;
+  if(!u||!p){showToast('Fill all fields','error');return;}
+  const d=await api('/users/login','POST',{username:u,password:p});
+  if(d&&d.user){
+    localStorage.setItem('uid',d.user.id);
+    updateProfileUI(d.user);
+    document.getElementById('hdr-avatar').textContent=(d.user.username||'?')[0].toUpperCase();
+    document.getElementById('hdr-name').textContent=d.user.username;
+    hideAuthModal();
+    showToast('Welcome '+d.user.username,'success');
+    if(d.user.theme) applyTheme(d.user.theme.toLowerCase());
+  } else showToast(d?.error||'Login failed','error');
+}
+async function doRegister(){
+  const u=document.getElementById('ar-user')?.value?.trim();
+  const p=document.getElementById('ar-pass')?.value;
+  const e=document.getElementById('ar-email')?.value?.trim();
+  const n=document.getElementById('ar-fname')?.value?.trim();
+  if(!u||!p){showToast('Username & password required','error');return;}
+  const d=await api('/users/register','POST',{username:u,email:e,password:p,full_name:n,capital:500000});
+  if(d&&d.status==='created'){
+    showToast(d.message,'success');
+    switchAuth('login');
+    if(document.getElementById('al-user')) document.getElementById('al-user').value=u;
+  } else showToast(d?.error||'Failed','error');
+}
+function continueAsGuest(){hideAuthModal();showToast('Continuing as guest','info');}
+// Auto-login if saved
+const savedUid=localStorage.getItem('uid');
+if(savedUid){
+  api('/users/'+savedUid).then(u=>{if(u&&u.username){updateProfileUI(u);document.getElementById('hdr-avatar').textContent=u.username[0].toUpperCase();document.getElementById('hdr-name').textContent=u.username;}});
 }
 
 // ── INIT ─────────────────────────────────────────────────
