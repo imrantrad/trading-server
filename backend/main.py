@@ -1591,3 +1591,168 @@ def admin_users(limit: int = 50):
 def admin_health():
     if not ENTERPRISE: return {}
     return admin.system_health()
+
+# ═══════════════════════════════════════════════
+# NOTIFICATIONS + AI CARE + PWA
+# ═══════════════════════════════════════════════
+try:
+    from notifications.notification_engine import notif_engine
+    from ai_care.ai_care import ai_care
+    CARE_SYSTEM = True
+    print("✅ Care system loaded")
+except Exception as e:
+    CARE_SYSTEM = False
+    print(f"⚠️ Care system: {e}")
+
+# NOTIFICATIONS
+@app.get("/notifications/{user_id}")
+def get_notifications(user_id: str, unread_only: bool = False, limit: int = 30):
+    if not CARE_SYSTEM: return {"notifications": [], "unread": 0}
+    notifs = notif_engine.get_all(user_id, unread_only, limit)
+    return {"notifications": notifs, "unread": notif_engine.unread_count(user_id)}
+
+@app.post("/notifications/{user_id}/read")
+def mark_notifications_read(user_id: str, notif_id: int = None):
+    if CARE_SYSTEM: notif_engine.mark_read(user_id, notif_id)
+    return {"marked": True}
+
+@app.get("/notifications/{user_id}/prefs")
+def get_notif_prefs(user_id: str):
+    if not CARE_SYSTEM: return {}
+    return notif_engine.get_prefs(user_id)
+
+@app.post("/notifications/{user_id}/prefs")
+def save_notif_prefs(user_id: str, prefs: dict):
+    if CARE_SYSTEM: notif_engine.save_prefs(user_id, prefs)
+    return {"saved": True}
+
+@app.post("/notifications/send")
+def send_notification(user_id: str, notif_type: str, title: str, message: str):
+    if not CARE_SYSTEM: return {"id": 0}
+    nid = notif_engine.send(user_id, notif_type, title, message)
+    return {"id": nid, "sent": True}
+
+# AI CUSTOMER CARE
+class ChatMessage(BaseModel):
+    user_id: str; message: str
+
+@app.post("/care/chat")
+def ai_chat(payload: ChatMessage):
+    if not CARE_SYSTEM: return {"response": "Support system loading..."}
+    return ai_care.chat(payload.user_id, payload.message)
+
+@app.get("/care/history/{user_id}")
+def chat_history(user_id: str, limit: int = 30):
+    if not CARE_SYSTEM: return {"history": []}
+    return {"history": ai_care.get_history(user_id, limit)}
+
+@app.post("/care/feedback")
+def care_feedback(user_id: str, message_id: int, helpful: bool):
+    if CARE_SYSTEM: ai_care.save_feedback(user_id, message_id, helpful)
+    return {"saved": True}
+
+# PWA manifest
+@app.get("/manifest.json")
+def pwa_manifest():
+    return {
+        "name": "TRD v12.3 — Institutional Trading",
+        "short_name": "TRD",
+        "description": "Professional Derivative Trading Platform",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#060608",
+        "theme_color": "#00ff88",
+        "icons": [
+            {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}
+        ],
+        "categories": ["finance", "trading"],
+        "screenshots": []
+    }
+
+# ═══════════════════════════════════════════════════════
+# AI CUSTOMER CARE + NOTIFICATIONS
+# ═══════════════════════════════════════════════════════
+try:
+    from ai_engine.customer_care import care
+    CARE_LOADED = True
+except Exception as e:
+    CARE_LOADED = False
+    print(f"Customer care: {e}")
+
+class ChatMessage(BaseModel):
+    user_id: str = "guest"
+    message: str
+    user_name: str = "Friend"
+
+@app.post("/support/chat")
+def customer_care_chat(payload: ChatMessage):
+    """AI Customer Care — Hybrid KB + NLP"""
+    if not CARE_LOADED:
+        return {
+            "response": "Support temporarily unavailable. Please try again shortly. 🙏",
+            "kb_hit": False,
+            "suggestions": ["Email: support@trd.app"]
+        }
+    result = care.chat(payload.user_id, payload.message, payload.user_name)
+    return result
+
+@app.get("/support/suggestions")
+def get_suggestions():
+    """Pre-loaded quick questions"""
+    return {
+        "categories": [
+            {
+                "name": "🚀 Getting Started",
+                "questions": ["How to place first trade?", "NLP trading kaise karein?", "Paper trading guide"]
+            },
+            {
+                "name": "💳 Subscription",
+                "questions": ["FREE vs PRO difference?", "Plan upgrade kaise karein?", "Refund policy?"]
+            },
+            {
+                "name": "🤖 AI Engine",
+                "questions": ["AI signals kaise kaam karte hain?", "Strategy evolve kaise karein?", "Circuit breaker kya hai?"]
+            },
+            {
+                "name": "⚡ Risk & Safety",
+                "questions": ["Kill switch kya hai?", "Position size calculator", "Daily loss limit set karna"]
+            },
+            {
+                "name": "📊 Strategies",
+                "questions": ["Best high win-rate strategy?", "NLP strategy builder guide", "Backtest kaise interpret karein?"]
+            },
+            {
+                "name": "🔧 Technical",
+                "questions": ["App offline hai?", "Login nahi ho raha", "Data refresh kaise karein?"]
+            }
+        ]
+    }
+
+# Notification endpoints
+class NotificationPayload(BaseModel):
+    user_id: str
+    title: str
+    body: str
+    type: str = "INFO"
+    url: str = "/"
+
+@app.post("/notifications/send")
+def send_notification(payload: NotificationPayload):
+    """Send push notification to user"""
+    # In production: integrate with FCM/APNs
+    return {
+        "sent": True,
+        "channel": "push",
+        "title": payload.title,
+        "body": payload.body,
+        "note": "FCM integration required for actual push delivery"
+    }
+
+@app.get("/notifications/config")
+def notification_config():
+    return {
+        "vapid_public_key": "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
+        "fcm_sender_id": "123456789",
+        "note": "Replace with actual VAPID keys for production push notifications"
+    }
