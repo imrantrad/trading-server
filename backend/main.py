@@ -25,7 +25,14 @@ except Exception as e:
     EVENT_DRIVEN = False
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 paper_engine = PaperTradingEngine(capital=500000)
 risk_manager = RiskManager()
