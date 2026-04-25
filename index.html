@@ -792,12 +792,25 @@ function log(type,msg){
 // API
 async function api(url,method='GET',data=null){
   try{
-    const o={method,headers:{'Content-Type':'application/json'}};
+    const o={
+      method,
+      headers:{
+        'Content-Type':'application/json',
+        'Accept':'application/json',
+        'ngrok-skip-browser-warning':'true',
+        'cf-access-skip':'true'
+      },
+      mode:'cors',
+      credentials:'omit'
+    };
     if(data)o.body=JSON.stringify(data);
     const r=await fetch(API+url,o);
     if(!r.ok)throw new Error('HTTP '+r.status);
     return await r.json();
-  }catch(e){log('ERROR',url+': '+e.message);return null;}
+  }catch(e){
+    log('ERROR',url+': '+e.message);
+    return null;
+  }
 }
 
 // CLOCK
