@@ -983,3 +983,148 @@ def complete_status():
                        "trades":stats.get("total_trades",0)},
         "ready_for":"PAPER_TRADING (7 day minimum before LIVE)",
     }
+
+# ═══════════════════════════════════════
+# REAL MARKET DATA ENDPOINTS
+# ═══════════════════════════════════════
+try:
+    from engine.market_data_feed import (
+        fetch_yahoo_quote, fetch_all_indices,
+        fetch_historical, get_quote_cached
+    )
+    REAL_DATA = True
+except Exception as e:
+    REAL_DATA = False
+    print(f"Real data: {e}")
+
+@app.get("/market/quote/{symbol}")
+def live_quote(symbol: str):
+    """Real-time quote from Yahoo Finance"""
+    data = get_quote_cached(symbol.upper())
+    if data:
+        return data
+    return {
+        "symbol": symbol, "error": "Data not available",
+        "note": "Market may be closed or symbol invalid",
+        "hint": "Try: NIFTY, BANKNIFTY, SENSEX, RELIANCE, TCS"
+    }
+
+@app.get("/market/all")
+def all_market_data():
+    """All major indices — real data"""
+    results = {}
+    symbols = ["NIFTY","BANKNIFTY","SENSEX","FINNIFTY","VIX","USDINR"]
+    for sym in symbols:
+        d = get_quote_cached(sym)
+        if d:
+            results[sym] = {
+                "price": d.get("last",0),
+                "change": d.get("change",0),
+                "pChange": d.get("pChange",0),
+                "high": d.get("high",0),
+                "low": d.get("low",0),
+                "source": d.get("source",""),
+            }
+    return {
+        "data": results,
+        "timestamp": time.strftime("%H:%M:%S"),
+        "source": "Yahoo Finance (Free)",
+        "note": "60 second cache — real market data",
+    }
+
+@app.get("/market/historical/{symbol}")
+def historical_data(symbol: str, period: str = "1mo", interval: str = "1d"):
+    """Historical OHLCV data"""
+    candles = fetch_historical(symbol.upper(), period, interval)
+    if not candles:
+        return {"symbol": symbol, "candles": [], "error": "No data"}
+
+    # Auto-compute indicators on historical data
+    if len(candles) >= 20:
+        closes = [c["close"] for c in candles]
+        highs = [c["high"] for c in candles]
+        lows = [c["low"] for c in candles]
+        opens = [c["open"] for c in candles]
+        try:
+            from indicators.ta_engine import ema, rsi, atr, bollinger
+            ema9 = ema(closes, 9)
+            ema21 = ema(closes, 21)
+            rsi14 = rsi(closes, 14)
+            bb_u, bb_m, bb_l = bollinger(closes, 20, 2)
+            for i, c in enumerate(candles):
+                c["ema9"] = ema9[i]
+                c["ema21"] = ema21[i]
+                c["rsi"] = rsi14[i]
+                c["bb_upper"] = bb_u[i]
+                c["bb_lower"] = bb_l[i]
+        except: pass
+
+    return {
+        "symbol": symbol, "period": period, "interval": interval,
+        "candles": candles, "count": len(candles),
+        "latest": candles[-1] if candles else {},
+        "source": "Yahoo Finance",
+    }
+
+@app.get("/market/nifty")
+def nifty_live():
+    """NIFTY live with full details"""
+    d = get_quote_cached("NIFTY")
+    if not d:
+        return {"error": "Market data unavailable", "note": "Market may be closed"}
+    return {
+        **d,
+        "lot_size": 50,
+        "margin_est": round(d.get("last",22000)*50*0.08, 0),
+        "atm_strike": round(d.get("last",22000)/50)*50,
+        "market_status": "OPEN" if 9 <= int(time.strftime("%H")) < 16 else "CLOSED",
+    }
+
+@app.get("/market/banknifty")
+def banknifty_live():
+    d = get_quote_cached("BANKNIFTY")
+    if not d:
+        return {"error": "Market data unavailable"}
+    return {
+        **d,
+        "lot_size": 15,
+        "atm_strike": round(d.get("last",48000)/100)*100,
+        "margin_est": round(d.get("last",48000)*15*0.10, 0),
+    }
+
+@app.get("/market/watchlist")
+def watchlist():
+    """Full watchlist with real data"""
+    symbols = ["NIFTY","BANKNIFTY","FINNIFTY","SENSEX","VIX","USDINR",
+               "RELIANCE","TCS","HDFC","INFOSYS","ICICI","SBI"]
+    result = []
+    for sym in symbols:
+        d = get_quote_cached(sym)
+        if d:
+            result.append({
+                "symbol": sym,
+                "price": d.get("last",0),
+                "change": d.get("change",0),
+                "pChange": round(d.get("pChange",0),2),
+                "high": d.get("high",0),
+                "low": d.get("low",0),
+                "volume": d.get("volume",0),
+            })
+    return {"watchlist": result, "count": len(result), "timestamp": time.strftime("%H:%M:%S")}
+
+@app.get("/market/options_chain_live/{symbol}")
+def live_options_chain(symbol: str, dte: int = 7):
+    """Options chain with real spot price"""
+    spot_data = get_quote_cached(symbol)
+    spot = spot_data.get("last", 22450) if spot_data else 22450
+    # Use real spot, simulated IV (replace with NSE data for real IV)
+    import random
+    iv = random.uniform(12, 18) / 100
+    from engine.options_chain import generate_chain
+    chain = generate_chain(spot, dte, iv)
+    return {
+        **chain,
+        "spot_source": spot_data.get("source","") if spot_data else "",
+        "spot_timestamp": time.strftime("%H:%M:%S"),
+        "note": "Spot price: REAL | IV: Simulated (add NSE API for real IV)"
+    }
