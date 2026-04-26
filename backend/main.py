@@ -841,7 +841,7 @@ function showPanel(name,btn){
 
 async function fetchMarketData(){
   try{
-    const r=await fetch(API+'/market/all',{credentials:'omit',headers:{'Accept':'application/json','bypass-tunnel-reminder':'1','User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(8000)});
+    const r=await fetch(API+'/market/all',{credentials:'omit',headers:{'Accept':'application/json'},signal:AbortSignal.timeout(8000)});
     if(!r.ok)throw new Error();
     const d=await r.json();
     Object.keys(d.data||{}).forEach(k=>{if(d.data[k]?.price>0){prices[k]=d.data[k].price;if(d.data[k].pChange!==undefined)changes[k]=d.data[k].pChange;}});
