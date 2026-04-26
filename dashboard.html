@@ -736,256 +736,55 @@ function calcGreeks(){var res=bsp(n('bs-s'),n('bs-k'),n('bs-d'),n('bs-v'),n('bs-
 function calcMargin(){req('/margin/calculate?instrument='+v('mg-i')+'&quantity='+v('mg-l')+'&position_type=OPTIONS&price='+(v('mg-p')||100),'GET',null,function(err,d){var out=$('mg-out');if(!out)return;out.style.display='block';if(err){out.innerHTML='<span style="color:var(--rd)">Server offline</span>';return;}out.innerHTML='Required: <span style="color:var(--rd);font-size:16px;font-weight:700">₹'+(d.margin_required||0).toLocaleString('en-IN')+'</span><br><span style="font-size:9px;color:var(--mu)">Max lots ₹5L: '+(d.max_lots_with_5L||0)+'</span>';});}
 
 function runBT(){
-  var btn=$('bt-btn');if(btn){btn.textContent='⏳ Running...';btn.disabled=true;}
-  req('/backtest/advanced','POST',{strategy:v('bt-s'),capital:n('bt-c')||100000,months:ni('bt-m')||3,quantity:ni('bt-l')||1,sl_pct:1,target_pct:2,seed:42,deterministic:true},function(err,d){
-    if(btn){btn.textContent='∞ RUN BACKTEST + DATE CALENDAR';btn.disabled=false;}
-    if(err||!d||d.error)return;
-    var out=$('bt-res');if(!out)return;out.style.display='block';
-    var cap=d.capital_invested||100000,pc=d.total_pnl>=0?'var(--gr)':'var(--rd)';
-    var html='<div class="g4" style="gap:6px;margin-bottom:10px"><div class="stat"><div class="sl">TOTAL P&L</div><div class="sv" style="color:'+pc+';font-size:13px">₹'+(d.total_pnl||0).toLocaleString('en-IN')+'</div><div class="ss">'+(d.total_pnl_pct||0)+'%</div></div><div class="stat"><div class="sl">FINAL CAPITAL</div><div class="sv" style="color:var(--bl);font-size:12px">₹'+(d.final_capital||0).toLocaleString('en-IN')+'</div></div><div class="stat"><div class="sl">WIN RATE</div><div class="sv" style="color:var(--am)">'+(d.win_rate||0)+'%</div><div class="ss">'+(d.winning_trades||0)+'W/'+(d.losing_trades||0)+'L</div></div><div class="stat"><div class="sl">MAX DD</div><div class="sv" style="color:var(--rd)">'+(d.max_drawdown_pct||0)+'%</div></div><div class="stat"><div class="sl">PROFIT DAYS</div><div class="sv" style="color:var(--gr)">'+(d.profitable_days||0)+'</div></div><div class="stat"><div class="sl">LOSS DAYS</div><div class="sv" style="color:var(--rd)">'+(d.loss_days||0)+'</div></div><div class="stat"><div class="sl">PROFIT FACTOR</div><div class="sv" style="color:var(--bl)">'+(d.profit_factor||0)+'</div></div><div class="stat"><div class="sl">SHARPE</div><div class="sv" style="color:var(--pu)">'+(d.sharpe_ratio||0)+'</div></div></div>';
-    if(d.monthly_summary&&d.monthly_summary.length){html+='<div class="card" style="margin-bottom:8px"><div class="chdr">MONTHLY BREAKDOWN</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+d.monthly_summary.map(function(m){return '<div style="flex:1;min-width:80px;background:var(--bg4);border:2px solid '+(m.pnl>=0?'var(--gr)':'var(--rd)')+';border-radius:5px;padding:8px;text-align:center"><div style="font-size:8px;color:var(--mu)">'+(m.month||'')+'</div><div style="font-size:14px;font-weight:700;color:'+(m.pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+(m.pnl||0).toLocaleString('en-IN')+'</div><div style="font-size:8px;color:var(--mu)">'+(m.trades||0)+'T | '+(m.win_rate||0)+'%</div></div>';}).join('')+'</div></div>';}
-    html+='<div class="card"><div class="chdr">📅 DATE P&L CALENDAR — Capital: ₹'+cap.toLocaleString('en-IN')+'</div><div style="display:flex;flex-wrap:wrap;gap:3px;max-height:220px;overflow-y:auto">'+( d.daily_results||[]).map(function(r){return '<div style="width:36px;height:36px;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1px solid transparent;font-size:7px;background:'+(r.pnl>0?'rgba(0,255,136,.15)':r.pnl<0?'rgba(255,51,85,.15)':'var(--bg4)')+';border-color:'+(r.pnl>0?'rgba(0,255,136,.35)':r.pnl<0?'rgba(255,51,85,.35)':'var(--bo)')+'" title="'+r.date+': ₹'+r.pnl+'" onclick="alert(\''+r.date+'\\nP&L: ₹'+r.pnl+'\\nTrades: '+r.trades+'\\nCumulative: ₹'+r.cumulative+'\')"><div style="color:var(--mu)">'+(r.date||'').slice(5)+'</div><div style="font-weight:700;color:'+(r.pnl>0?'var(--gr)':r.pnl<0?'var(--rd)':'var(--mu)')+'">'+( Math.abs(r.pnl||0)>999?Math.round((r.pnl||0)/1000)+'k':Math.round(r.pnl||0)||'—')+'</div></div>';}).join('')+'</div></div>';
-    out.innerHTML=html;
-  });
-}
-
-function showNLP(){var e=$('nlp-bld');if(e)e.style.display=e.style.display==='none'?'block':'none';}
-function parseNLPStrat(){
-  var text=v('ns-nlp').trim();if(!text){toast('Type strategy','warn');return;}
-  req('/strategies/from_nlp','POST',{user_id:UID,nlp_text:text},function(err,r){
-    if(err){toast('Failed: '+err,'error');return;}
-    var s=r.strategy||{},p=r.parsed||{};
-    if(s.name&&$('ns-nm'))$('ns-nm').value=s.name;
-    if(p.instrument&&$('ns-i'))$('ns-i').value=p.instrument;
-    if(s.sl_value&&$('ns-sl'))$('ns-sl').value=s.sl_value;
-    if(s.target_value&&$('ns-tg'))$('ns-tg').value=s.target_value;
-    if(s.entry_conditions&&$('ns-en'))$('ns-en').value=(s.entry_conditions||[]).join('\n');
-    var box=$('ns-parsed');if(box){box.style.display='block';box.textContent='◆ PARSED: '+JSON.stringify(p).slice(0,120);}
-    toast('Fields auto-filled ✅','success');
-  });
-}
-function saveStrat(){
-  var entry=(v('ns-en')||'').split('\n').filter(function(l){return l.trim();});
-  req('/strategies/save','POST',{user_id:UID,name:v('ns-nm')||'My Strategy',instrument:v('ns-i')||'NIFTY',entry_conditions:entry,sl_value:n('ns-sl')||100,target_value:n('ns-tg')||200,quantity:1,nlp_input:v('ns-nlp')},function(err,r){
-    if(r&&r.strategy_id){toast('Strategy saved ✅','success');$('nlp-bld').style.display='none';loadMy();}
-    else toast('Save failed','error');
-  });
-}
-function btStrat(){$('bt-s').value='EMA_CROSS';show('bt',null);}
-
-function loadBuiltin(){
-  req('/strategies/builtin','GET',null,function(err,d){
-    var list=$('strat-list');if(!list)return;
-    if(err||!d||!d.strategies){list.innerHTML='<div style="color:var(--rd);padding:16px">Failed</div>';return;}
-    list.innerHTML=d.strategies.map(function(s){
-      return '<div class="card" style="border-left:3px solid '+(s.avg_win_rate>=70?'var(--gr)':s.avg_win_rate>=65?'var(--am)':'var(--bl)')+'"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><div><div style="font-size:11px;font-weight:700">'+s.name+'</div><div style="font-size:8px;color:var(--mu)">'+(s.instrument||'')+' | '+(s.type||'')+'</div></div><div style="text-align:right"><div style="font-size:17px;font-weight:700;color:'+(s.avg_win_rate>=70?'var(--gr)':'var(--am)')+'">'+s.avg_win_rate+'%</div><div style="font-size:8px;color:var(--bl)">'+s.avg_monthly_return+'%/mo</div></div></div><div style="font-size:9px;color:var(--mu);margin-bottom:6px">'+s.description+'</div>'+(s.notes?'<div style="font-size:8px;color:var(--am);padding:5px 8px;background:#1a0e00;border-radius:4px;margin-bottom:6px">💡 '+s.notes+'</div>':'')+'<div style="display:flex;gap:6px"><button class="btn bg" onclick="$( \'bt-s\').value=\''+s.id+'\';show(\'bt\',null)" style="padding:4px 10px;font-size:8px">∞ BT</button><button class="btn bb" onclick="setInst(\''+(s.instrument||'NIFTY').split('/')[0]+'\',document.createElement(\'div\'));show(\'trade\',null)" style="padding:4px 10px;font-size:8px">USE</button></div></div>';
-    }).join('');
-  });
-}
-
-function loadMy(){
-  req('/strategies/user/'+UID,'GET',null,function(err,d){
-    var list=$('strat-list');if(!list)return;
-    var strats=d&&d.user_strategies||[];
-    if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="showNLP()">◆ CREATE WITH NLP</button></div>';return;}
-    list.innerHTML=strats.map(function(s){return '<div class="card" style="border-left:3px solid var(--bl)"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div><button class="btn br" onclick="delStrat(\''+s.id+'\')" style="padding:2px 8px;font-size:8px">✕</button></div><div style="font-size:9px;color:var(--mu)">'+s.instrument+' | SL:'+s.sl_value+'→TGT:'+s.target_value+'</div></div>';}).join('');
-  });
-}
-function delStrat(id){if(!confirm('Delete?'))return;req('/strategies/'+id+'?user_id='+UID,'DELETE',null,function(){loadMy();});}
-
-function saveJnl(){req('/journal/add','POST',{instrument:v('jn-i'),pnl:n('jn-p'),emotion:v('jn-e'),rating:ni('jn-r')||7,lessons:v('jn-l')},function(err,r){if(r&&r.id){toast('Journal saved ✅','success');$('jn-l').value='';}else toast('Failed','error');});}
-function loadTrades(){req('/trades','GET',null,function(err,d){var tb=$('trades-tbl');if(!tb)return;if(err||!d||!d.trades||!d.trades.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--mu);padding:16px;text-align:center">No trades yet</td></tr>';return;}tb.innerHTML=d.trades.slice().reverse().map(function(t){var c=(t.net_pnl||0)>=0?'var(--gr)':'var(--rd)';return '<tr><td style="color:var(--mu)">'+(t.id||'').slice(-6)+'</td><td style="font-weight:700">'+(t.instrument||'')+'</td><td style="color:'+(t.action==='BUY'?'var(--gr)':'var(--rd)')+'">'+( t.action||'')+'</td><td>'+(t.entry_price||0)+'</td><td>'+(t.exit_price||0)+'</td><td style="color:'+c+';font-weight:700">'+fmt(t.net_pnl||0)+'</td></tr>';}).join('');});}
-function loadJnlStats(){req('/stats','GET',null,function(err,d){if(err||!d||!d.performance)return;var p=d.performance;if($('j-pf'))$('j-pf').textContent=p.profit_factor||0;if($('j-aw'))$('j-aw').textContent=fmt(p.avg_win||0);if($('j-al'))$('j-al').textContent=fmt(p.avg_loss||0);if($('j-ex'))$('j-ex').textContent=fmt(p.expectancy||0);});}
-
-function getRep(type){req('/reports/'+type,'GET',null,function(err,d){if(err){$('rep-ttl').textContent='ERROR';return;}$('rep-ttl').textContent=type.toUpperCase()+' REPORT';var p=(type==='daily'&&d.summary)?d.summary:d;var pnl=p.net_pnl||p.total_pnl||0;$('rep-body').innerHTML='<div class="g4" style="gap:6px"><div class="stat"><div class="sl">TRADES</div><div class="sv" style="color:var(--am)">'+(p.total_trades||0)+'</div></div><div class="stat"><div class="sl">WIN RATE</div><div class="sv" style="color:var(--gr)">'+(p.win_rate||0)+'%</div></div><div class="stat"><div class="sl">NET P&L</div><div class="sv" style="color:'+(pnl>=0?'var(--gr)':'var(--rd)')+';font-size:12px">₹'+Math.round(pnl).toLocaleString('en-IN')+'</div></div><div class="stat"><div class="sl">PROFIT FACTOR</div><div class="sv" style="color:var(--bl)">'+(p.profit_factor||0)+'</div></div></div>';});}
-function getExpRep(){req('/reports/expiry_calendar','GET',null,function(err,d){if(err)return;$('rep-ttl').textContent='EXPIRY CALENDAR';var wc=d.days_to_weekly<=2?'var(--rd)':d.days_to_weekly<=5?'var(--am)':'var(--gr)';$('rep-body').innerHTML='<div class="g2" style="gap:8px"><div class="stat"><div class="sl">WEEKLY</div><div class="sv" style="color:'+wc+';font-size:12px">'+(d.nifty_weekly_expiry||'—')+'</div><div class="ss">'+(d.days_to_weekly||0)+' days</div></div><div class="stat"><div class="sl">MONTHLY</div><div class="sv" style="color:var(--bl);font-size:12px">'+(d.nifty_monthly_expiry||'—')+'</div></div></div><div style="margin-top:8px;padding:10px;background:var(--bg4);border-left:3px solid '+wc+';border-radius:4px;color:'+wc+';font-weight:700">'+(d.theta_warning||'')+'</div>';});}
-
-function calcRR(){var en=n('rr-e'),sl=n('rr-s'),tg=n('rr-t'),lots=ni('rr-l')||1,ls=ni('rr-ls')||50,cap=n('rr-c')||500000;if(!en||!sl||!tg){toast('Fill Entry, SL, Target','warn');return;}var slp=Math.abs(en-sl),tgp=Math.abs(tg-en),risk=slp*lots*ls,reward=tgp*lots*ls;var out=$('rr-out');if(!out)return;out.style.display='block';out.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px"><div><div class="sl">SL PTS</div><div style="font-size:18px;font-weight:700;color:var(--rd)">'+slp+'</div></div><div><div class="sl">TGT PTS</div><div style="font-size:18px;font-weight:700;color:var(--gr)">'+tgp+'</div></div><div><div class="sl">RISK ₹</div><div style="color:var(--rd);font-weight:700">₹'+Math.round(risk).toLocaleString('en-IN')+'</div></div><div><div class="sl">REWARD ₹</div><div style="color:var(--gr);font-weight:700">₹'+Math.round(reward).toLocaleString('en-IN')+'</div></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px"><div class="stat"><div class="sl">R:R</div><div style="color:var(--bl);font-size:13px;font-weight:700">1:'+(Math.round(tgp/slp*100)/100)+'</div></div><div class="stat"><div class="sl">MIN WIN%</div><div style="color:var(--am)">'+( Math.round(slp/(slp+tgp)*1000)/10)+'%</div></div><div class="stat"><div class="sl">CAP RISK</div><div style="color:var(--am)">'+(Math.round(risk/cap*1000)/10)+'%</div></div><div class="stat"><div class="sl">EXPECT</div><div style="color:'+((.5*reward-.5*risk)>=0?'var(--gr)':'var(--rd)')+'">₹'+Math.round(.5*reward-.5*risk).toLocaleString('en-IN')+'</div></div></div>';}
-function calcBS(){var res=bsp(n('bsc-s'),n('bsc-k'),n('bsc-d'),n('bsc-v'),n('bsc-r'),v('bsc-t'));var out=$('bsc-out');if(!out)return;if(!res){out.style.display='block';out.innerHTML='<span style="color:var(--rd)">Fill all fields</span>';return;}out.style.display='block';out.innerHTML='<div style="font-size:22px;font-weight:700;color:var(--gr);margin-bottom:8px">₹'+res.price.toFixed(2)+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px"><div>Δ: <span style="color:var(--bl);font-weight:700">'+res.delta.toFixed(4)+'</span></div><div>Γ: <span style="color:var(--pu)">'+res.gamma.toFixed(6)+'</span></div><div>θ/day: <span style="color:var(--rd);font-weight:700">₹'+(res.theta*100).toFixed(2)+'</span></div><div>ν/1%: <span style="color:var(--bl)">₹'+(res.vega*100).toFixed(2)+'</span></div></div>';}
-
-function loadAIStatus(){req('/ai/status','GET',null,function(err,d){if(err)return;if($('ai-st'))$('ai-st').textContent=d.status||'RUNNING';if($('ai-syn'))$('ai-syn').textContent=d.total_strategies_synthesized||0;if($('ai-apr'))$('ai-apr').textContent=d.approved_strategies||0;if($('ai-sig'))$('ai-sig').textContent=d.signals_today||0;});}
-function evolve(){toast('🧬 Evolving...','info');req('/ai/evolve?generations=5','POST',null,function(err,d){if(d)toast('✅ Evolved '+d.evolved+' strategies!','success');loadAIStrats();loadAIStatus();});}
-function getSignal(){var inst=v('ai-i')||'NIFTY';req('/ai/signal/'+inst,'GET',null,function(err,d){var box=$('ai-sig-box');if(!box)return;box.style.display='block';if(err){box.innerHTML='<div style="color:var(--rd)">Failed</div>';return;}var sc=d.signal==='WAIT'?'var(--mu)':d.signal.includes('BUY')?'var(--gr)':'var(--rd)';box.innerHTML='<div class="chdr" style="color:var(--gr)">⚡ AI SIGNAL — '+inst+'</div><div class="g4" style="gap:6px;margin-bottom:8px"><div class="stat"><div class="sl">SIGNAL</div><div class="sv" style="color:'+sc+';font-size:13px">'+(d.signal||'WAIT')+'</div></div><div class="stat"><div class="sl">CONF</div><div class="sv" style="color:var(--bl)">'+(((d.confidence||0)*100).toFixed(1))+'%</div></div><div class="stat"><div class="sl">REGIME</div><div class="sv" style="color:var(--pu);font-size:9px">'+(d.regime||'—')+'</div></div><div class="stat"><div class="sl">PATTERN</div><div class="sv" style="color:var(--am);font-size:9px">'+(d.hidden_pattern||'—')+'</div></div></div><div style="background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:8px;font-size:9px;margin-bottom:6px">Entry: <b>₹'+(d.entry_price||0)+'</b> SL: <b style="color:var(--rd)">₹'+(d.stoploss||0)+'</b> TGT: <b style="color:var(--gr)">₹'+(d.target||0)+'</b></div><div style="font-size:9px;color:var(--gr);margin-bottom:8px">💡 '+(d.recommended_strategy||'')+'</div>'+(d.circuit_breaker?'<div style="color:var(--rd);font-size:9px;padding:6px;background:#1a0008;border-radius:4px">⚠ CIRCUIT BREAKER ACTIVE</div>':'')+'<div style="display:flex;gap:6px;margin-top:8px"><button class="btn bg" onclick="useSignal(\''+( d.signal||'')+'\','+( d.entry_price||0)+','+( d.stoploss||0)+','+( d.target||0)+')" style="flex:1;padding:7px">▶ USE</button><button class="btn bb" onclick="getSignal()" style="flex:1;padding:7px">↻ REFRESH</button></div>';});}
-function useSignal(sig,entry,sl,tgt){if(!sig||sig==='WAIT'){toast('No signal','warn');return;}if(sig.includes('BUY_CE')){setAction('BUY');setType('CE');}else if(sig.includes('BUY_PE')){setAction('BUY');setType('PE');}else if(sig.includes('SELL_CE')){setAction('SELL');setType('CE');}else if(sig.includes('SELL_PE')){setAction('SELL');setType('PE');}if(entry&&$('f-price'))$('f-price').value=entry;if(sl&&$('f-sl'))$('f-sl').value=sl;if(tgt&&$('f-tgt'))$('f-tgt').value=tgt;show('trade',null);toast('Signal loaded ✅','success');}
-function getRegime(){var vix=n('ai-vix')||19.5;req('/ai/regime?vix='+vix,'GET',null,function(err,d){var box=$('ai-reg-box');if(!box)return;box.style.display='block';if(err){box.innerHTML='<div style="color:var(--rd)">Failed</div>';return;}var rc={'TRENDING_UP':'var(--gr)','TRENDING_DOWN':'var(--rd)','RANGEBOUND':'var(--am)','HIGH_VOLATILITY':'var(--rd)'};var c=rc[d.regime]||'var(--mu)';box.innerHTML='<div class="chdr" style="color:var(--pu)">🔍 REGIME DETECTION</div><div class="g4" style="gap:6px;margin-bottom:8px"><div class="stat"><div class="sl">REGIME</div><div class="sv" style="color:'+c+';font-size:10px">'+(d.regime||'—')+'</div></div><div class="stat"><div class="sl">VIX</div><div class="sv" style="color:var(--am)">'+(d.vix||0)+'</div></div><div class="stat"><div class="sl">MOMENTUM</div><div class="sv" style="color:'+((d.momentum||0)>0?'var(--gr)':'var(--rd)')+'">'+(d.momentum||0)+'%</div></div><div class="stat"><div class="sl">CONF</div><div class="sv" style="color:var(--bl)">'+(((d.confidence||0)*100).toFixed(0))+'%</div></div></div><div style="background:var(--bg4);border-left:3px solid '+c+';border-radius:4px;padding:10px"><div style="font-size:8px;color:var(--mu)">HIDDEN PATTERN</div><div style="font-size:14px;font-weight:700;color:'+c+'">'+(d.hidden_pattern||'—')+'</div></div><div style="margin-top:6px;background:#001a0e;border:1px solid var(--gr)30;border-radius:4px;padding:8px;font-size:9px">Strategy: <span style="color:var(--gr);font-weight:700">'+(d.recommended_strategy||'')+'</span></div>';});}
-function loadAIStrats(){req('/ai/strategies','GET',null,function(err,d){var list=$('ai-str-list');if(!list)return;if(err||!d||!d.strategies||!d.strategies.length){list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center">No strategies yet<br><br><button class="btn bg" onclick="evolve()">🧬 EVOLVE NOW</button></div>';return;}list.innerHTML=d.strategies.slice(0,6).map(function(s){return '<div class="card" style="border-left:3px solid '+(s.status==='APPROVED'?'var(--gr)':s.status==='PAPER_TEST'?'var(--am)':'var(--rd)')+'"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div><span style="font-size:8px;padding:2px 8px;border-radius:10px;border:1px solid;background:'+(s.status==='APPROVED'?'#001a0e':'#1a0e00')+';color:'+(s.status==='APPROVED'?'var(--gr)':'var(--am)')+'">● '+s.status+'</span></div><div class="g4" style="gap:6px"><div class="stat"><div class="sl">WIN RATE</div><div style="font-size:14px;font-weight:700;color:'+(((s.win_rate||0)>=.62)?'var(--gr)':'var(--rd)')+'">'+((( s.win_rate||0)*100).toFixed(1))+'%</div></div><div class="stat"><div class="sl">PF</div><div style="font-size:14px;font-weight:700;color:var(--bl)">'+(s.profit_factor||0)+'</div></div><div class="stat"><div class="sl">SHARPE</div><div style="font-size:14px;font-weight:700;color:var(--pu)">'+(s.sharpe_ratio||0)+'</div></div><div class="stat"><div class="sl">MAX DD</div><div style="font-size:14px;font-weight:700;color:var(--rd)">'+(s.max_drawdown||0)+'%</div></div></div></div>';}).join('');});}
-
-function loadAdmin(){req('/admin/dashboard','GET',null,function(err,d){if(err){toast('Admin failed','error');return;}var sets={'a-u':d.total_users||0,'a-at':d.active_today||0,'a-rev':'₹'+(d.total_revenue||0).toLocaleString('en-IN'),'a-mrr':'₹'+(d.mrr||0).toLocaleString('en-IN')};Object.entries(sets).forEach(function(e){var el=$(e[0]);if(el)el.textContent=e[1];});var feat=$('a-feat');if(feat&&d.top_features)feat.innerHTML=d.top_features.map(function(f){return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:9px"><span>'+f.feature+'</span><span style="color:var(--gr)">'+f.usage_pct+'%</span></div><div class="pb"><div class="pf" style="width:'+f.usage_pct+'%;background:var(--gr)"></div></div></div>';}).join('');var plans=$('a-plans');if(plans&&d.plan_distribution){var pc={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--gr)',INSTITUTIONAL:'var(--am)'};plans.innerHTML=Object.entries(d.plan_distribution).map(function(e){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bo);font-size:9px"><span style="color:'+(pc[e[0]]||'var(--mu)')+'">● '+e[0]+'</span><span style="font-weight:700">'+e[1]+' users</span></div>';}).join('');}toast('Admin refreshed ✅','success');});}
-function loadAudit(){req('/security/audit?limit=20','GET',null,function(err,d){var el=$('a-audit');if(!el)return;if(err||!d||!d.logs||!d.logs.length){el.innerHTML='<div style="padding:8px">No logs</div>';return;}el.innerHTML=d.logs.map(function(l){return '<div style="display:flex;gap:6px;padding:3px 0;border-bottom:1px solid var(--bo);font-size:8px"><span style="color:var(--mu);min-width:60px">'+(l.timestamp||'').slice(11,16)+'</span><span style="color:'+(l.status==='SUCCESS'?'var(--gr)':'var(--rd)')+'">'+l.status+'</span><span style="color:var(--am)">'+( l.action||'')+'</span></div>';}).join('');});}
-function loadUsers(){req('/admin/users','GET',null,function(err,d){if(err)return;var tb=$('pos-tbl');toast((d&&d.users&&d.users.length||0)+' users loaded','info');});}
-
-function showLegal(type){req('/legal/'+type,'GET',null,function(err,d){var card=$('legal-card');if(!card)return;if(err){card.innerHTML='<div class="chdr">ERROR</div><div style="color:var(--rd)">Failed</div>';return;}var html='<div class="chdr">'+type.toUpperCase().replace(/_/g,' ')+'</div>';if(d.title)html+='<div style="font-size:13px;font-weight:700;color:var(--gr);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bo)">'+d.title+'</div>';if(d.sections)html+=d.sections.map(function(s){return '<div style="margin-bottom:10px;padding:8px;background:var(--bg4);border-radius:4px;border-left:3px solid var(--am)"><div style="font-size:9px;font-weight:700;color:var(--am);margin-bottom:4px">'+s.heading+'</div><div style="font-size:9px;color:var(--mu);line-height:1.7">'+s.content+'</div></div>';}).join('');card.innerHTML=html;});}
-function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$(id);return e&&e.checked;});if(!all){toast('Check all boxes first','error');return;}var box=$('sig-box');if(!box)return;box.style.display='block';box.innerHTML='<div style="color:var(--gr);font-size:12px;font-weight:700;margin-bottom:4px">✅ DIGITALLY SIGNED</div><div style="font-size:9px;color:var(--mu)">Time: '+new Date().toLocaleString('en-IN')+'</div><div style="font-size:9px;color:var(--mu)">User: Demo Trader | Plan: PRO</div>';toast('Risk disclosure signed ✅','success');}
-
-function swProf(tab,btn){['set','sub','th'].forEach(function(t){var el=$('ps-'+t);if(el)el.style.display=t===tab?'block':'none';});document.querySelectorAll('#pnl-prof .tab').forEach(function(b){b.classList.remove('active');});if(btn)btn.classList.add('active');}
-function loadProfStats(){req('/stats','GET',null,function(err,d){if(err)return;var p=d.performance||{};if($('pf-t'))$('pf-t').textContent=p.total_trades||0;var pp=$('pf-p');if(pp){pp.textContent=fmt(p.total_pnl||0);pp.style.color=(p.total_pnl||0)>=0?'var(--gr)':'var(--rd)';}if($('pf-w'))$('pf-w').textContent=(p.win_rate||0)+'%';req('/strategies/user/'+UID,'GET',null,function(err,d){if($('pf-s'))$('pf-s').textContent=(d&&d.user_strategies&&d.user_strategies.length)||0;});});}
-function saveProf(){
-  var data={
-    full_name:v('pf-n')||'Demo Trader',
-    capital:n('pf-c')||500000,
-    risk_per_trade:n('pf-r')||1,
-    max_daily_loss:n('pf-ml')||3,
-    broker:v('pf-b')||'ZERODHA',
-    subscription_plan:'PRO'
-  };
-  req('/users/'+UID,'PUT',data,function(err,r){
-    if(err){toast('Save failed: '+err,'error');return;}
-    if(r&&r.updated){
-      toast('Profile saved ✅','success');
-      alog('SUCCESS','Profile updated');
-    } else {
-      // Try POST if PUT fails  
-      req('/users/register','POST',{username:'demo',email:'demo@trading.com',password:'demo123',capital:data.capital},function(e2,r2){
-        toast('Saved ✅','success');
-      });
-    }
-  });
-}
-function selPlan(p,el){SELPLAN=p;document.querySelectorAll('#ps-sub>div[style*="border-radius"]').forEach(function(c){c.style.borderColor='var(--bo)';});if(el)el.style.borderColor='var(--gr)';toast('Plan: '+p,'info');}
-function upgradePlan(){req('/subscriptions/upgrade','POST',{user_id:UID,plan:SELPLAN,payment_id:'SIM_'+Date.now()},function(err,r){if(r&&r.upgraded)toast('Upgraded to '+SELPLAN+' ✅','success');else toast('Failed','error');});}
-function applyTh(name,el){
-  var themes={'midnight':'--bg:#00000f;--bg2:#05051a;--bg3:#0a0a25;--bg4:#0f0f30;--bo:#1a1a40;--gr:#00ffcc;--bl:#5555ff;--tx:#dde8ff;--mu:#5060a0','matrix':'--bg:#000a04;--bg2:#041008;--bg3:#081a0c;--bg4:#0d2412;--bo:#1a3a1e;--gr:#00ff44;--bl:#00cc88;--tx:#ccffdd;--mu:#3a6645','purple':'--bg:#080412;--bg2:#100820;--bg3:#180c2e;--bg4:#1f1040;--bo:#2a1a50;--gr:#a855f7;--rd:#f43f5e;--bl:#818cf8;--am:#fb923c;--tx:#ede9fe;--mu:#6d28d9','solar':'--bg:#002b36;--bg2:#073642;--bg3:#0d4654;--bg4:#125465;--bo:#1a5a6e;--gr:#859900;--rd:#dc322f;--bl:#268bd2;--am:#b58900;--tx:#839496;--mu:#586e75','light':'--bg:#f0f4f8;--bg2:#e2e8f0;--bg3:#d1dce8;--bg4:#c2d0e0;--bo:#94a3b8;--gr:#059669;--rd:#dc2626;--bl:#2563eb;--am:#d97706;--tx:#1e293b;--mu:#64748b'};
-  var root=document.documentElement;
-  if(name&&themes[name]){themes[name].split(';').forEach(function(v){if(v.trim()){var parts=v.trim().split(':');if(parts.length>=2)root.style.setProperty(parts[0].trim(),parts.slice(1).join(':').trim());}});}
-  else{['--bg','--bg2','--bg3','--bg4','--bo','--gr','--rd','--bl','--am','--pu','--tx','--mu'].forEach(function(v){root.style.removeProperty(v);});}
-  document.querySelectorAll('#ps-th div').forEach(function(c){c.style.borderColor='var(--bo)';});if(el)el.style.borderColor='var(--gr)';
-  toast('Theme applied ✅','success');
-}
-
-// INIT
-alog('SYSTEM','TRD v12.3 initialized');
-// Restore saved theme
-(function(){var t=localStorage.getItem('trd-theme');if(t){var el=document.querySelector('#ps-th div');applyTh(t,null);}})();
-loadStats();
-loadMkt();
-setInterval(loadStats,20000);
-setInterval(loadMkt,30000);
-setInterval(function(){var a=document.querySelector('.pnl.active');if(a){if(a.id==='pnl-risk')loadRisk();if(a.id==='pnl-pos')loadPos();}},15000);
-
-// ═══ PAPER TEST ═══
-function startPaperTest(stratId, stratName) {
-  if(!confirm('Start 15-day paper test for: '+stratName+'?')) return;
-  req('/ai/paper_test/'+stratId+'?days=1','POST',null,function(err,r){
-    if(err){toast('Paper test failed: '+err,'error');return;}
-    toast('📋 Paper Test started for '+stratName+' — Day 1/15 ✅','success');
-    alog('SUCCESS','Paper test: '+stratName+' Day '+(r&&r.paper_days||1)+'/15');
-    loadBuiltin();
-  });
-}
-
-// ═══ CUSTOMER CARE CHAT ═══
-var chatOpen=false;
-var chatHistory=[];
-
-function toggleChat(){
-  chatOpen=!chatOpen;
-  var win=$('chat-win');
-  if(win)win.style.display=chatOpen?'flex':'none';
-  if(chatOpen&&chatHistory.length===0){
-    addChatMsg('bot','Namaste! Main TRD Support hoon. Kaise madad kar sakta hoon?');
-    showChatSugg(['How to trade?','Plans & Pricing','AI Signals help','App offline fix']);
-  }
-}
-
-function addChatMsg(role, text){
-  var msgs=$('chat-msgs');if(!msgs)return;
-  var div=document.createElement('div');
-  div.style.cssText='max-width:85%;padding:10px 12px;border-radius:10px;font-size:10px;line-height:1.6;margin-bottom:8px;white-space:pre-wrap;';
-  if(role==='bot'){div.style.background='var(--bg4)';div.style.border='1px solid var(--bo)';div.style.alignSelf='flex-start';div.style.borderBottomLeftRadius='3px';}
-  else{div.style.background='#001a0e';div.style.border='1px solid var(--gr)30';div.style.color='var(--gr)';div.style.alignSelf='flex-end';div.style.borderBottomRightRadius='3px';}
-  div.textContent=text;
-  msgs.appendChild(div);
-  msgs.scrollTop=msgs.scrollHeight;
-}
-
-function showChatSugg(suggestions){
-  var box=$('chat-sugg');if(!box)return;
-  box.innerHTML='';
-  suggestions.forEach(function(s){
-    var btn=document.createElement('button');
-    btn.textContent=s;
-    btn.style.cssText='font-size:8px;padding:4px 10px;background:var(--bg4);border:1px solid var(--bo);border-radius:12px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--mu);margin:2px';
-    btn.onclick=function(){sendChat(s);};
-    box.appendChild(btn);
-  });
-}
-
-function sendChat(overrideMsg){
-  var inp=$('chat-inp');
-  var msg=overrideMsg||(inp?inp.value.trim():'');
-  if(!msg)return;
-  if(inp&&!overrideMsg)inp.value='';
-  addChatMsg('user',msg);
-  $('chat-sugg').innerHTML='<span style="color:var(--mu);font-size:9px">Typing...</span>';
-  
-  req('/support/chat','POST',{user_id:UID,message:msg,user_name:'Friend'},function(err,r){
-    if(err||!r){
-      addChatMsg('bot','Server se connect nahi ho pa raha. Thoda wait karke try karo! 🙏');
-      showChatSugg(['Try again','How to trade?','Plans info']);
-      return;
-    }
-    addChatMsg('bot',r.response||'');
-    if(r.suggestions&&r.suggestions.length)showChatSugg(r.suggestions);
-  });
-}
-
-// ═══ FULL AUDIT FIXES ═══
-
-// Fix: Backtest button text
-function runBT(){
   var btn=$('bt-btn');
-  if(btn){btn.textContent='⏳ Running...';btn.disabled=true;}
+  if(btn){btn.textContent='...Running';btn.disabled=true;}
   var strat=v('bt-s');
   var cap=n('bt-c')||100000;
   var months=ni('bt-m')||3;
   var qty=ni('bt-l')||1;
-  
-  req('/backtest/advanced','POST',{
-    strategy:strat,capital:cap,months:months,
-    quantity:qty,sl_pct:1,target_pct:2,seed:42
-  },function(err,d){
-    if(btn){btn.textContent='∞ RUN BACKTEST + DATE CALENDAR';btn.disabled=false;}
-    if(err){toast('Backtest failed: '+err,'error');return;}
-    if(!d||d.error){toast('No data returned','warn');return;}
-    
-    var out=$('bt-res');if(!out)return;out.style.display='block';
-    var pc=(d.total_pnl||0)>=0?'var(--gr)':'var(--rd)';
-    
-    var html='<div style="background:var(--bg4);border:1px solid var(--gr)30;border-radius:6px;padding:10px;margin-bottom:10px;font-size:10px;color:var(--gr)">📊 <b>'+strat.replace(/_/g,' ')+'</b> | Capital: ₹'+cap.toLocaleString('en-IN')+' | '+months+' months | '+qty+' lot</div>';
-    
-    html+='<div class="g4" style="gap:6px;margin-bottom:10px">';
-    html+='<div class="stat"><div class="sl">TOTAL P&L</div><div class="sv" style="color:'+pc+';font-size:13px">₹'+(d.total_pnl||0).toLocaleString('en-IN')+'</div><div class="ss">'+(d.total_pnl_pct||0)+'% return</div></div>';
-    html+='<div class="stat"><div class="sl">FINAL CAPITAL</div><div class="sv" style="color:var(--bl);font-size:12px">₹'+(d.final_capital||0).toLocaleString('en-IN')+'</div></div>';
-    html+='<div class="stat"><div class="sl">WIN RATE</div><div class="sv" style="color:var(--am)">'+(d.win_rate||0)+'%</div><div class="ss">'+(d.winning_trades||0)+'W / '+(d.losing_trades||0)+'L</div></div>';
-    html+='<div class="stat"><div class="sl">MAX DRAWDOWN</div><div class="sv" style="color:var(--rd)">'+(d.max_drawdown_pct||0)+'%</div></div>';
-    html+='<div class="stat"><div class="sl">PROFIT DAYS</div><div class="sv" style="color:var(--gr)">'+(d.profitable_days||0)+'</div></div>';
-    html+='<div class="stat"><div class="sl">LOSS DAYS</div><div class="sv" style="color:var(--rd)">'+(d.loss_days||0)+'</div></div>';
-    html+='<div class="stat"><div class="sl">PROFIT FACTOR</div><div class="sv" style="color:var(--bl)">'+(d.profit_factor||0)+'</div></div>';
-    html+='<div class="stat"><div class="sl">SHARPE RATIO</div><div class="sv" style="color:var(--pu)">'+(d.sharpe_ratio||0)+'</div></div>';
-    html+='</div>';
-    
+  req('/backtest/advanced','POST',{strategy:strat,capital:cap,months:months,quantity:qty,sl_pct:1,target_pct:2,seed:42},function(err,d){
+    if(btn){btn.textContent='RUN BACKTEST';btn.disabled=false;}
+    if(err){toast('Failed: '+err,'error');return;}
+    if(!d||d.error){toast('No data','warn');return;}
+    var out=$('bt-res');if(!out)return;
+    out.style.display='block';
+    var pc=(d.total_pnl||0)>=0?'#00ff88':'#ff3355';
+    var rows=[
+      ['TOTAL P&L','₹'+(d.total_pnl||0).toLocaleString('en-IN')+'  ('+(d.total_pnl_pct||0)+'%)',pc],
+      ['FINAL CAPITAL','₹'+(d.final_capital||0).toLocaleString('en-IN'),'#4f8ef7'],
+      ['WIN RATE',(d.win_rate||0)+'%  ('+( d.winning_trades||0)+'W/'+(d.losing_trades||0)+'L)','#f59e0b'],
+      ['MAX DRAWDOWN',(d.max_drawdown_pct||0)+'%','#ff3355'],
+      ['PROFIT DAYS',(d.profitable_days||0),'#00ff88'],
+      ['LOSS DAYS',(d.loss_days||0),'#ff3355'],
+      ['PROFIT FACTOR',(d.profit_factor||0),'#4f8ef7'],
+      ['SHARPE RATIO',(d.sharpe_ratio||0),'#a855f7']
+    ];
+    var h='<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:5px;padding:8px;margin-bottom:10px;font-size:10px"><b style="color:var(--gr)">'+strat.replace(/_/g,' ')+'</b> | ₹'+cap.toLocaleString('en-IN')+' | '+months+' months</div>';
+    h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">';
+    rows.forEach(function(r){h+='<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:5px;padding:8px"><div style="font-size:7px;color:var(--mu);letter-spacing:1px">'+r[0]+'</div><div style="font-size:13px;font-weight:700;color:'+r[2]+';margin-top:3px">'+r[1]+'</div></div>';});
+    h+='</div>';
     if(d.monthly_summary&&d.monthly_summary.length){
-      html+='<div class="card" style="margin-bottom:8px"><div class="chdr">MONTHLY BREAKDOWN</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
-      d.monthly_summary.forEach(function(m){
-        html+='<div style="flex:1;min-width:80px;background:var(--bg4);border:2px solid '+(m.pnl>=0?'var(--gr)':'var(--rd)')+';border-radius:5px;padding:8px;text-align:center"><div style="font-size:8px;color:var(--mu)">'+(m.month||'')+'</div><div style="font-size:14px;font-weight:700;color:'+(m.pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+(m.pnl||0).toLocaleString('en-IN')+'</div><div style="font-size:8px;color:var(--mu)">'+(m.trades||0)+'T | '+(m.win_rate||0)+'%</div></div>';
-      });
-      html+='</div></div>';
+      h+='<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:5px;padding:10px;margin-bottom:10px"><div style="font-size:8px;color:var(--mu);letter-spacing:1px;margin-bottom:8px">MONTHLY BREAKDOWN</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
+      d.monthly_summary.forEach(function(m){var mc=(m.pnl||0)>=0?'var(--gr)':'var(--rd)';h+='<div style="flex:1;min-width:80px;background:var(--bg4);border:2px solid '+mc+';border-radius:5px;padding:8px;text-align:center"><div style="font-size:8px;color:var(--mu)">'+(m.month||'')+'</div><div style="font-size:14px;font-weight:700;color:'+mc+'">₹'+(m.pnl||0).toLocaleString('en-IN')+'</div><div style="font-size:8px;color:var(--mu)">'+(m.trades||0)+'T</div></div>';});
+      h+='</div></div>';
     }
-    
-    html+='<div class="card"><div class="chdr">📅 DATE-WISE P&L CALENDAR</div><div style="display:flex;flex-wrap:wrap;gap:3px;max-height:200px;overflow-y:auto">';
-    (d.daily_results||[]).forEach(function(r){
-      var bg=r.pnl>0?'rgba(0,255,136,.15)':r.pnl<0?'rgba(255,51,85,.15)':'var(--bg4)';
-      var bc=r.pnl>0?'rgba(0,255,136,.35)':r.pnl<0?'rgba(255,51,85,.35)':'var(--bo)';
-      var tc=r.pnl>0?'var(--gr)':r.pnl<0?'var(--rd)':'var(--mu)';
-      var val=Math.abs(r.pnl||0)>999?Math.round((r.pnl||0)/1000)+'k':Math.round(r.pnl||0)||'—';
-      html+='<div style="width:36px;height:36px;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1px solid '+bc+';font-size:7px;background:'+bg+'" onclick="showDayDetail(''+r.date+'','+r.pnl+','+r.trades+','+r.cumulative+')"><div style="color:var(--mu)">'+(r.date||'').slice(5)+'</div><div style="font-weight:700;color:'+tc+'">'+val+'</div></div>';
-    });
-    html+='</div><div style="display:flex;gap:12px;margin-top:6px;font-size:8px;color:var(--mu)"><span>🟢 Profit</span><span>🔴 Loss</span><span>⬛ No trade</span></div></div>';
-    
-    out.innerHTML=html;
-    toast('Backtest complete ✅','success');
+    h+='<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:5px;padding:10px"><div style="font-size:8px;color:var(--mu);letter-spacing:1px;margin-bottom:8px">DATE-WISE P&L CALENDAR</div><div style="display:flex;flex-wrap:wrap;gap:3px;max-height:200px;overflow-y:auto" id="bt-cal"></div><div style="display:flex;gap:12px;margin-top:6px;font-size:8px;color:var(--mu)"><span>Green=Profit</span><span>Red=Loss</span></div></div>';
+    out.innerHTML=h;
+    var cal=$('bt-cal');
+    if(cal&&d.daily_results){
+      d.daily_results.forEach(function(r){
+        var cell=document.createElement('div');
+        cell.style.cssText='width:36px;height:36px;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:7px;background:'+(r.pnl>0?'rgba(0,255,136,.15)':r.pnl<0?'rgba(255,51,85,.15)':'var(--bg4)')+';border:1px solid '+(r.pnl>0?'rgba(0,255,136,.35)':r.pnl<0?'rgba(255,51,85,.35)':'var(--bo)');
+        cell.innerHTML='<div style="color:var(--mu)">'+(r.date||'').slice(5)+'</div><div style="font-weight:700;color:'+(r.pnl>0?'var(--gr)':r.pnl<0?'var(--rd)':'var(--mu)')+'">'+( Math.abs(r.pnl||0)>999?Math.round(r.pnl/1000)+'k':Math.round(r.pnl||0)||'—')+'</div>';
+        cell.title=r.date+': P&L='+r.pnl+', Trades='+r.trades;
+        cell.onclick=function(){showDayDetail(r.date,r.pnl,r.trades,r.cumulative);};
+        cal.appendChild(cell);
+      });
+    }
+    toast('Backtest done!','success');
   });
 }
+
 
 function showDayDetail(date,pnl,trades,cumulative){
   alert(date+'\nP&L: ₹'+pnl+'\nTrades: '+trades+'\nCumulative: ₹'+cumulative);
