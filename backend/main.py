@@ -1214,10 +1214,36 @@ const origExecuteTrade = typeof executeTrade === 'function' ? executeTrade : nul
 
 // INIT
 (function(){const t=localStorage.getItem('theme');if(t&&t!=='default'){const b=document.getElementById('body');if(b)b.className='th-'+t;const tc=document.getElementById('th-'+t);if(tc){document.querySelectorAll('.th-card').forEach(c=>c.classList.remove('active'));tc.classList.add('active');}}})();
-addLog('SYSTEM','TRD v12.3 initialized');
-addLog('INFO','Connecting to API...');
-loadStats();renderTicker();
-setInterval(loadStats,20000);setInterval(fetchMarketData,30000);
+addLog('SYSTEM','TRD v12.3 initialized — http://13.53.175.88');
+addLog('INFO','Connecting to server...');
+
+// Immediate connect with retry
+async function connectWithRetry(){
+  let tries=0;
+  while(tries<10){
+    try{
+      const r=await fetch(API+'/stats',{signal:AbortSignal.timeout(5000)});
+      if(r.ok){
+        const d=await r.json();
+        const dot=$('api-dot');if(dot)dot.style.background='var(--gr)';
+        const lbl=$('api-lbl');if(lbl)lbl.textContent='ONLINE';
+        const sb=$('src-bdg');if(sb){sb.textContent='LIVE ●';sb.style.color='var(--gr)';}
+        addLog('SUCCESS','Connected! Server online');
+        loadStats();fetchMarketData();
+        return;
+      }
+    }catch(e){
+      tries++;
+      addLog('WARN','Retry '+tries+'/10...');
+      await new Promise(r=>setTimeout(r,2000));
+    }
+  }
+  addLog('ERROR','Cannot connect - check server');
+}
+
+connectWithRetry();
+setInterval(loadStats,20000);
+setInterval(fetchMarketData,30000);
 setInterval(()=>{const a=document.querySelector('.panel.active');if(a?.id==='panel-risk')loadRiskData();if(a?.id==='panel-positions')loadPositions();},15000);
 </script></body></html>
 """
