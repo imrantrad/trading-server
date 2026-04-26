@@ -49,6 +49,21 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+
+# Force disable Cloudflare browser integrity check via response headers
+@app.middleware("http")
+async def disable_cf_browser_check(request, call_next):
+    response = await call_next(request)
+    # These headers tell Cloudflare to skip browser check
+    response.headers["CF-Cache-Status"] = "DYNAMIC"
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Vary"] = "Accept-Encoding"
+    return response
+
 class NoCFCheckMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
