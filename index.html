@@ -3,30 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TRD v12.3 — Redirecting...</title>
+<title>TRD v12.3</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#060608;color:#e2e8f0;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px}
+body{background:#060608;color:#e2e8f0;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px}
 .logo{font-size:28px;font-weight:900;color:#00ff88;letter-spacing:3px}
-.sub{font-size:11px;color:#64748b;letter-spacing:2px}
-.bar{width:200px;height:3px;background:#1e2030;border-radius:2px;overflow:hidden;margin-top:8px}
-.fill{height:100%;background:#00ff88;border-radius:2px;animation:load 2s ease forwards}
+.sub{font-size:10px;color:#64748b;letter-spacing:2px}
+.bar{width:220px;height:3px;background:#1e2030;border-radius:2px;overflow:hidden}
+.fill{height:100%;background:#00ff88;animation:load 1.5s ease forwards}
 @keyframes load{from{width:0}to{width:100%}}
-.url{font-size:9px;color:#4f8ef7;margin-top:8px}
 </style>
 <script>
-// Direct tunnel URL - update this when URL changes
-const TUNNEL = 'https://ment-nextel-physiology-switched.trycloudflare.com';
-window.onload = function() {
-  setTimeout(() => { window.location.href = TUNNEL; }, 2000);
-};
+setTimeout(()=>window.location.href='https://convergence-monitoring-ranging-eye.trycloudflare.com',1500);
 </script>
 </head>
 <body>
 <div class="logo">▶ TRD v12.3</div>
 <div class="sub">INSTITUTIONAL TRADING PLATFORM</div>
 <div class="bar"><div class="fill"></div></div>
-<div class="url">Connecting to server...</div>
-<div style="font-size:9px;color:#64748b;margin-top:4px">Redirecting in 2 seconds...</div>
+<div style="font-size:9px;color:#4f8ef7;margin-top:4px">Loading dashboard...</div>
 </body>
 </html>
