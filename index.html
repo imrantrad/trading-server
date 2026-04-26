@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>TRD v12.3 — Institutional Trading</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TRD Pro">
+<meta name="theme-color" content="#00ff88">
+<meta name="msapplication-TileColor" content="#060608">
+<meta name="description" content="Institutional Derivative Trading Platform — AI-Powered, Professional">
+<link rel="manifest" href="/trading-server/manifest.json">
+<link rel="apple-touch-icon" href="/trading-server/icons/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="/trading-server/icons/icon-96.png">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#060608;--bg2:#0d0e14;--bg3:#12131c;--bg4:#181924;--bo:#1e2030;--bo2:#2a2d45;--gr:#00ff88;--rd:#ff3355;--bl:#4f8ef7;--am:#f59e0b;--pu:#a855f7;--cy:#06d6d6;--tx:#e2e8f0;--mu:#64748b}
@@ -75,6 +85,54 @@ textarea{resize:vertical;min-height:60px}
 .cal-cell{border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:filter .2s;border:1px solid transparent;width:36px;height:36px;font-size:7px}
 .cal-cell:hover{filter:brightness(1.5)}
 @media(max-width:600px){.g4{grid-template-columns:1fr 1fr}}
+
+/* ── MOBILE OPTIMIZATIONS ── */
+@media(max-width:768px){
+  .hdr{height:48px;padding:0 10px}
+  .tabs-bar{-webkit-overflow-scrolling:touch}
+  .tab-btn{padding:10px 12px;font-size:9px}
+  .panel{padding:8px}
+  .g4{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr}
+  .card{padding:10px}
+  .sval{font-size:16px}
+}
+/* INSTALL BANNER */
+#install-banner{display:none;position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#001a0e,#0a1628);border-top:1px solid var(--gr);padding:12px 16px;z-index:500;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+/* CHAT WIDGET */
+#chat-widget{position:fixed;bottom:80px;right:14px;z-index:998}
+#chat-btn{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3);transition:all .2s}
+#chat-btn:hover{transform:scale(1.1);box-shadow:0 6px 24px rgba(0,255,136,.5)}
+#chat-window{display:none;position:fixed;bottom:140px;right:14px;width:340px;height:500px;background:var(--bg2);border:1px solid var(--bo2);border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999;flex-direction:column;animation:fadeIn .25s ease}
+#chat-window.open{display:flex}
+@media(max-width:768px){#chat-window{width:calc(100vw - 20px);right:10px;height:420px;bottom:130px}}
+.chat-hdr{background:linear-gradient(135deg,#001a0e,#0a1628);padding:14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;border-bottom:1px solid var(--bo)}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.chat-msg{max-width:85%;padding:10px 12px;border-radius:10px;font-size:10px;line-height:1.6;animation:fadeIn .2s}
+.chat-msg.bot{background:var(--bg4);border:1px solid var(--bo);align-self:flex-start;border-bottom-left-radius:3px}
+.chat-msg.user{background:linear-gradient(135deg,#001a0e,#0a1628);border:1px solid var(--gr)30;color:var(--gr);align-self:flex-end;border-bottom-right-radius:3px}
+.chat-typing{font-size:9px;color:var(--mu);padding:6px 12px;animation:pulse 1s infinite}
+.chat-suggestions{display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border-top:1px solid var(--bo);flex-shrink:0;overflow-x:auto}
+.chat-sugg{font-size:8px;padding:4px 10px;background:var(--bg4);border:1px solid var(--bo2);border-radius:12px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--mu);transition:all .15s}
+.chat-sugg:hover{border-color:var(--gr);color:var(--gr)}
+.chat-inp-wrap{display:flex;gap:6px;padding:10px;border-top:1px solid var(--bo);flex-shrink:0}
+.chat-inp-wrap input{border-radius:20px;font-size:11px;padding:8px 14px}
+.chat-send{width:36px;height:36px;border-radius:50%;background:var(--gr);border:none;cursor:pointer;color:#000;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.chat-send:hover{background:var(--bl);}
+/* BOTTOM NAV (mobile) */
+#bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--bo);z-index:400;padding:6px 0;padding-bottom:env(safe-area-inset-bottom)}
+@media(max-width:600px){
+  #bottom-nav{display:flex;justify-content:space-around}
+  .tabs-bar{display:none}
+  .main{padding-bottom:60px}
+  #chat-widget{bottom:72px}
+}
+.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 8px;border-radius:6px;border:none;background:none;color:var(--mu);font-family:inherit;font-size:7px;letter-spacing:.5px;transition:color .2s;min-width:50px}
+.bnav-btn.active{color:var(--gr)}
+.bnav-btn span:first-child{font-size:18px}
+/* NOTIFICATION BADGE */
+.notif-badge{position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:var(--rd);border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
 </style></head>
 <body id="body">
 <div id="toast"></div>
@@ -594,6 +652,82 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </div>
 </div><!-- /main -->
+
+<!-- PWA INSTALL BANNER -->
+<div id="install-banner">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--gr),var(--bl));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#000">▶</div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gr)">Install TRD Pro App</div>
+        <div style="font-size:9px;color:var(--mu)">Fast access • Works offline • Push alerts</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('install-banner').style.display='none'" style="background:none;border:1px solid var(--bo);color:var(--mu);border-radius:4px;padding:6px 10px;cursor:pointer;font-size:9px;font-family:inherit">Later</button>
+      <button id="install-btn" onclick="installPWA()" class="btn bsm bg">⬇ INSTALL</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI CUSTOMER CARE CHAT -->
+<div id="chat-widget">
+  <div id="chat-window">
+    <!-- Chat Header -->
+    <div class="chat-hdr">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));display:flex;align-items:center;justify-content:center;font-size:16px">🤖</div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--gr)">TRD Support</div>
+          <div style="font-size:8px;color:var(--mu)"><span style="color:var(--gr)">●</span> Online — AI + Human hybrid</div>
+        </div>
+      </div>
+      <button onclick="toggleChat()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:18px;padding:4px">✕</button>
+    </div>
+    <!-- Messages -->
+    <div class="chat-msgs" id="chat-msgs">
+      <div class="chat-msg bot">
+        Namaste! 🙏 Main TRD Support hoon — aapki kaise madad kar sakta hoon?<br><br>
+        <span style="color:var(--mu);font-size:9px">Trading guide, AI engine, subscription, ya koi bhi sawaal poochein! 😊</span>
+      </div>
+    </div>
+    <!-- Typing indicator -->
+    <div class="chat-typing" id="chat-typing" style="display:none">🤖 Typing...</div>
+    <!-- Quick Suggestions -->
+    <div class="chat-suggestions" id="chat-suggestions">
+      <button class="chat-sugg" onclick="chatSend('How to place first trade?')">How to trade?</button>
+      <button class="chat-sugg" onclick="chatSend('Plans & pricing')">💳 Plans</button>
+      <button class="chat-sugg" onclick="chatSend('AI signals kaise kaam karte hain?')">🤖 AI Signals</button>
+      <button class="chat-sugg" onclick="chatSend('App offline hai')">🔧 Offline fix</button>
+    </div>
+    <!-- Input -->
+    <div class="chat-inp-wrap">
+      <input id="chat-inp" placeholder="Apna sawaal type karo..." onkeypress="if(event.key==='Enter')chatSend()">
+      <button class="chat-send" onclick="chatSend()">➤</button>
+    </div>
+  </div>
+  <button id="chat-btn" onclick="toggleChat()">💬</button>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<div id="bottom-nav">
+  <button class="bnav-btn active" id="bn-trade" onclick="showPanel('trade',this);updateBottomNav('trade')">
+    <span>◈</span><span>TRADE</span>
+  </button>
+  <button class="bnav-btn" id="bn-scanner" onclick="showPanel('scanner',this);updateBottomNav('scanner')">
+    <span>◎</span><span>SCAN</span>
+  </button>
+  <button class="bnav-btn" id="bn-ai" onclick="showPanel('ai',this);updateBottomNav('ai')">
+    <span>🤖</span><span>AI</span>
+  </button>
+  <button class="bnav-btn" id="bn-strategies" onclick="showPanel('strategies',this);updateBottomNav('strategies')">
+    <span>★</span><span>STRATS</span>
+  </button>
+  <button class="bnav-btn" id="bn-profile" onclick="showPanel('profile',this);updateBottomNav('profile')">
+    <span>👤</span><span>PROFILE</span>
+  </button>
+</div>
+
 <script>
 'use strict';
 const API='https://boxing-gage-bend-compared.trycloudflare.com';
@@ -835,6 +969,186 @@ async function saveProfileSettings(){const d=await api('/users/'+UID,'PUT',{full
 function selectPlan(p,el){SELPLAN=p;document.querySelectorAll('.plan-card').forEach(c=>{c.classList.remove('active');c.style.borderColor='var(--bo)';});if(el){el.classList.add('active');el.style.borderColor='var(--gr)';}toast('Plan: '+p,'info');}
 async function upgradePlan(){const d=await api('/subscriptions/upgrade','POST',{user_id:UID,plan:SELPLAN,payment_id:'SIM_'+Date.now()});if(d&&d.upgraded){toast('Upgraded to '+SELPLAN+' ✅','success');if($('prof-plan-badge'))$('prof-plan-badge').textContent=SELPLAN;if($('plan-bdg'))$('plan-bdg').textContent=SELPLAN;}else toast('Upgrade failed','error');}
 function applyTheme(name,btn){document.getElementById('body').className='th-'+name;localStorage.setItem('theme',name);document.querySelectorAll('.th-card').forEach(c=>c.classList.remove('active'));if(btn)btn.classList.add('active');toast('Theme: '+name.toUpperCase()+' ✅','success');}
+
+
+// ═══════════════════════════════════════════════════════
+// PWA — SERVICE WORKER + INSTALL
+// ═══════════════════════════════════════════════════════
+let deferredPrompt = null;
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/trading-server/sw.js').then(reg => {
+    addLog('SYSTEM', 'PWA Service Worker registered ✅');
+  }).catch(err => addLog('WARN', 'SW: ' + err.message));
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const banner = document.getElementById('install-banner');
+  if (banner) banner.style.display = 'block';
+});
+
+window.addEventListener('appinstalled', () => {
+  const banner = document.getElementById('install-banner');
+  if (banner) banner.style.display = 'none';
+  toast('TRD Pro installed! 🎉', 'success');
+  deferredPrompt = null;
+});
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(r => {
+      if (r.outcome === 'accepted') toast('Installing TRD Pro... 🚀', 'success');
+      deferredPrompt = null;
+      document.getElementById('install-banner').style.display = 'none';
+    });
+  } else {
+    toast('To install: Browser menu → Add to Home Screen', 'info');
+  }
+}
+
+// Push notification request
+async function requestNotifications() {
+  if ('Notification' in window) {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      toast('Notifications enabled ✅', 'success');
+      addLog('SYSTEM', 'Push notifications granted');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// AI CUSTOMER CARE CHAT
+// ═══════════════════════════════════════════════════════
+let chatOpen = false;
+let chatNotifCount = 0;
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const win = document.getElementById('chat-window');
+  if (win) {
+    if (chatOpen) win.classList.add('open');
+    else win.classList.remove('open');
+  }
+  chatNotifCount = 0;
+  updateChatBadge();
+}
+
+function updateChatBadge() {
+  const btn = document.getElementById('chat-btn');
+  if (!btn) return;
+  const existing = btn.querySelector('.notif-badge');
+  if (existing) existing.remove();
+  if (chatNotifCount > 0) {
+    const badge = document.createElement('div');
+    badge.className = 'notif-badge';
+    badge.style.position = 'absolute';
+    badge.textContent = chatNotifCount;
+    btn.style.position = 'relative';
+    btn.appendChild(badge);
+  }
+}
+
+function addChatMsg(text, role='bot') {
+  const msgs = document.getElementById('chat-msgs');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  // Format markdown-like text
+  const formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+    .replace(/\*(.*?)\*/g, '<i>$1</i>')
+    .replace(/
+/g, '<br>')
+    .replace(/\| (.*?) \| (.*?) \| (.*?) \|/g, '<div style="display:flex;gap:8px;font-size:8px;margin:2px 0"><span style="min-width:120px">$1</span><span style="min-width:60px">$2</span><span>$3</span></div>');
+  div.innerHTML = formatted;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function updateSuggestions(suggestions) {
+  const box = document.getElementById('chat-suggestions');
+  if (!box || !suggestions || !suggestions.length) return;
+  box.innerHTML = suggestions.map(s =>
+    `<button class="chat-sugg" onclick="chatSend('${s.replace(/'/g,"\'")}')">${s}</button>`
+  ).join('');
+}
+
+async function chatSend(overrideMsg) {
+  const inp = document.getElementById('chat-inp');
+  const msg = overrideMsg || (inp ? inp.value.trim() : '');
+  if (!msg) return;
+  if (inp && !overrideMsg) inp.value = '';
+  
+  addChatMsg(msg, 'user');
+  
+  const typing = document.getElementById('chat-typing');
+  if (typing) typing.style.display = 'block';
+  
+  // Small delay for natural feel
+  await new Promise(r => setTimeout(r, 400 + Math.random() * 600));
+  
+  const result = await api('/support/chat', 'POST', {
+    user_id: UID || 'guest',
+    message: msg,
+    user_name: 'Friend'
+  });
+  
+  if (typing) typing.style.display = 'none';
+  
+  if (result && result.response) {
+    addChatMsg(result.response, 'bot');
+    if (result.suggestions) updateSuggestions(result.suggestions);
+  } else {
+    addChatMsg('Abhi server se connect nahi ho pa raha. Thoda wait karke dobara try karo! 🙏', 'bot');
+  }
+  
+  if (!chatOpen) {
+    chatNotifCount++;
+    updateChatBadge();
+  }
+}
+
+// Auto greeting after 30 sec
+setTimeout(() => {
+  if (!chatOpen) {
+    chatNotifCount = 1;
+    updateChatBadge();
+  }
+}, 30000);
+
+// ═══════════════════════════════════════════════════════
+// MOBILE BOTTOM NAV
+// ═══════════════════════════════════════════════════════
+function updateBottomNav(active) {
+  document.querySelectorAll('.bnav-btn').forEach(b => {
+    b.classList.toggle('active', b.id === 'bn-' + active);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// SMART NOTIFICATIONS
+// ═══════════════════════════════════════════════════════
+function showSystemNotif(title, body, type='info') {
+  // In-app toast
+  toast(`<b>${title}</b><br><span style="font-size:9px">${body}</span>`, type);
+  // Browser notification if permitted
+  if (Notification.permission === 'granted') {
+    new Notification(title, {
+      body,
+      icon: '/trading-server/icons/icon-192.png',
+      badge: '/trading-server/icons/icon-72.png',
+      tag: 'trd-' + type,
+      vibrate: [200, 100, 200]
+    });
+  }
+}
+
+// Monitor for trade events and send notifications
+const origExecuteTrade = typeof executeTrade === 'function' ? executeTrade : null;
 
 // INIT
 (function(){const t=localStorage.getItem('theme');if(t&&t!=='default'){const b=document.getElementById('body');if(b)b.className='th-'+t;const tc=document.getElementById('th-'+t);if(tc){document.querySelectorAll('.th-card').forEach(c=>c.classList.remove('active'));tc.classList.add('active');}}})();
