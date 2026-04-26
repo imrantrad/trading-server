@@ -36,8 +36,14 @@ async def serve_dashboard():
     dashboard_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../dashboard.html")
     if os.path.exists(dashboard_path):
         with open(dashboard_path, "r") as f:
-            return HTMLResponse(content=f.read())
-    return HTMLResponse("<h1>TRD v12.3 API Running</h1><p>Dashboard not found</p>")
+            content_str = f.read()
+        headers = {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "X-Robots-Tag": "noindex",
+        }
+        return HTMLResponse(content=content_str, headers=headers)
+    return HTMLResponse("<h1>TRD v12.3 API Running</h1><p>Dashboard at /app</p>")
 
 @app.get("/app", response_class=HTMLResponse)  
 async def serve_app():
