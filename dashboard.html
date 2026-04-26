@@ -730,7 +730,7 @@ textarea{resize:vertical;min-height:60px}
 
 <script>
 'use strict';
-const API=window.location.origin;  // Same origin - no CORS!
+const API='';  // Same origin - no CORS needed!
 const UID='USR124535215';
 let MODE='PAPER',INST='NIFTY',ACTION='BUY',OPTTYPE='CE',KILL=false,SELPLAN='PRO';
 let prices={NIFTY:23897,BANKNIFTY:56089,FINNIFTY:26141,SENSEX:76664,VIX:19.71,USDINR:94.2};
@@ -779,7 +779,7 @@ function showPanel(name,btn){
 
 async function fetchMarketData(){
   try{
-    const r=await fetch(API+'/market/all',{mode:'cors',credentials:'omit',headers:{'cf-access-skip-browser-check':'1','Accept':'application/json'},signal:AbortSignal.timeout(8000)});
+    const r=await fetch(API+'/market/all',{mode:'same-origin',credentials:'omit',headers:{'Accept':'application/json'},signal:AbortSignal.timeout(8000)});
     if(!r.ok)throw new Error();
     const d=await r.json();
     Object.keys(d.data||{}).forEach(k=>{if(d.data[k]?.price>0){prices[k]=d.data[k].price;if(d.data[k].pChange!==undefined)changes[k]=d.data[k].pChange;}});
