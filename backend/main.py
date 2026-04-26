@@ -43,6 +43,22 @@ async def serve_dashboard():
 async def serve_app():
     return await serve_dashboard()
 
+
+# Disable Cloudflare browser integrity check
+from fastapi import Request
+from fastapi.responses import JSONResponse, HTMLResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class NoCFCheckMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        return response
+
+app.add_middleware(NoCFCheckMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
