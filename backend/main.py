@@ -1828,3 +1828,26 @@ async def cf_bypass_mw(request, call_next):
     response.headers["Access-Control-Allow-Origin"] = "*"
     return response
 # Force update Sun Apr 26 07:18:26 UTC 2026
+
+@app.get("/test", response_class=HTMLResponse)
+async def serve_test():
+    return HTMLResponse("""<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRD Test</title>
+<style>body{background:#060608;color:#e2e8f0;font-family:monospace;padding:20px}
+.ok{color:#00ff88}.err{color:#ff3355}</style></head>
+<body><h2 style="color:#00ff88">API Test</h2>
+<div id="s">Testing...</div><div id="l"></div>
+<script>
+var API='http://13.53.175.88';
+var l=document.getElementById('l');
+var s=document.getElementById('s');
+function add(m,c){l.innerHTML+='<div class="'+(c||'')+'">'+(new Date().toLocaleTimeString())+' '+m+'</div>';}
+fetch(API+'/stats').then(function(r){
+  if(r.ok){r.json().then(function(d){
+    add('SUCCESS /stats Capital:'+d.performance.capital,'ok');
+    s.innerHTML='<b class=ok>CONNECTED!</b>';
+  });}else{add('FAIL /stats status:'+r.status,'err');s.innerHTML='<b class=err>FAILED '+r.status+'</b>';}
+}).catch(function(e){add('ERROR: '+e.message,'err');s.innerHTML='<b class=err>'+e.message+'</b>';});
+</script></body></html>""")
+
