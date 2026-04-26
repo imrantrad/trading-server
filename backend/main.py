@@ -1774,3 +1774,18 @@ def notification_config():
         "fcm_sender_id": "123456789",
         "note": "Replace with actual VAPID keys for production push notifications"
     }
+
+
+# CF BYPASS MIDDLEWARE
+@app.middleware("http")  
+async def cf_bypass_mw(request, call_next):
+    if request.method == "OPTIONS":
+        from fastapi.responses import Response
+        return Response(headers={
+            "Access-Control-Allow-Origin":"*",
+            "Access-Control-Allow-Methods":"*",
+            "Access-Control-Allow-Headers":"*",
+        })
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
