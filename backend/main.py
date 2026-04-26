@@ -25,6 +25,24 @@ except Exception as e:
     EVENT_DRIVEN = False
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, FileResponse
+import os
+
+# Serve dashboard at root
+@app.get("/", response_class=HTMLResponse)
+async def serve_dashboard():
+    dashboard_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../dashboard.html")
+    if os.path.exists(dashboard_path):
+        with open(dashboard_path, "r") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h1>TRD v12.3 API Running</h1><p>Dashboard not found</p>")
+
+@app.get("/app", response_class=HTMLResponse)  
+async def serve_app():
+    return await serve_dashboard()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
