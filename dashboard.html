@@ -900,9 +900,14 @@ function addChatMsg(role, text){
 
 function showChatSugg(suggestions){
   var box=$('chat-sugg');if(!box)return;
-  box.innerHTML=suggestions.map(function(s){
-    return '<button onclick="sendChat(''+s+'')" style="font-size:8px;padding:4px 10px;background:var(--bg4);border:1px solid var(--bo);border-radius:12px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--mu)">'+s+'</button>';
-  }).join('');
+  box.innerHTML='';
+  suggestions.forEach(function(s){
+    var btn=document.createElement('button');
+    btn.textContent=s;
+    btn.style.cssText='font-size:8px;padding:4px 10px;background:var(--bg4);border:1px solid var(--bo);border-radius:12px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--mu);margin:2px';
+    btn.onclick=function(){sendChat(s);};
+    box.appendChild(btn);
+  });
 }
 
 function sendChat(overrideMsg){
