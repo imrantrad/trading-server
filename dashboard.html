@@ -881,16 +881,8 @@ function toggleChat(){
   chatOpen=!chatOpen;
   var win=$('chat-win');
   if(win)win.style.display=chatOpen?'flex':'none';
-  if(chatOpen && chatHistory.length===0){
-    addChatMsg('bot','Namaste! 🙏 Main TRD Support hoon.
-
-Aap pooch sakte hain:
-• Trading kaise karein
-• Plans & pricing
-• AI Engine guide
-• Technical issues
-
-Koi bhi sawaal type karo! 😊');
+  if(chatOpen&&chatHistory.length===0){
+    addChatMsg('bot','Namaste! Main TRD Support hoon. Kaise madad kar sakta hoon?');
     showChatSugg(['How to trade?','Plans & Pricing','AI Signals help','App offline fix']);
   }
 }
