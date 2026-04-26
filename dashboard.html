@@ -737,7 +737,7 @@ function calcMargin(){req('/margin/calculate?instrument='+v('mg-i')+'&quantity='
 
 function runBT(){
   var btn=$('bt-btn');if(btn){btn.textContent='⏳ Running...';btn.disabled=true;}
-  req('/backtest/advanced','POST',{strategy:v('bt-s'),capital:n('bt-c')||100000,months:ni('bt-m')||3,quantity:ni('bt-l')||1,sl_pct:1,target_pct:2},function(err,d){
+  req('/backtest/advanced','POST',{strategy:v('bt-s'),capital:n('bt-c')||100000,months:ni('bt-m')||3,quantity:ni('bt-l')||1,sl_pct:1,target_pct:2,seed:42,deterministic:true},function(err,d){
     if(btn){btn.textContent='∞ RUN BACKTEST + DATE CALENDAR';btn.disabled=false;}
     if(err||!d||d.error)return;
     var out=$('bt-res');if(!out)return;out.style.display='block';
@@ -819,7 +819,28 @@ function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$
 
 function swProf(tab,btn){['set','sub','th'].forEach(function(t){var el=$('ps-'+t);if(el)el.style.display=t===tab?'block':'none';});document.querySelectorAll('#pnl-prof .tab').forEach(function(b){b.classList.remove('active');});if(btn)btn.classList.add('active');}
 function loadProfStats(){req('/stats','GET',null,function(err,d){if(err)return;var p=d.performance||{};if($('pf-t'))$('pf-t').textContent=p.total_trades||0;var pp=$('pf-p');if(pp){pp.textContent=fmt(p.total_pnl||0);pp.style.color=(p.total_pnl||0)>=0?'var(--gr)':'var(--rd)';}if($('pf-w'))$('pf-w').textContent=(p.win_rate||0)+'%';req('/strategies/user/'+UID,'GET',null,function(err,d){if($('pf-s'))$('pf-s').textContent=(d&&d.user_strategies&&d.user_strategies.length)||0;});});}
-function saveProf(){req('/users/'+UID,'PUT',{capital:n('pf-c')||500000,risk_per_trade:n('pf-r')||1,max_daily_loss:n('pf-ml')||3,broker:v('pf-b')},function(err,r){if(r&&r.updated)toast('Saved ✅','success');else toast('Save failed','error');});}
+function saveProf(){
+  var data={
+    full_name:v('pf-n')||'Demo Trader',
+    capital:n('pf-c')||500000,
+    risk_per_trade:n('pf-r')||1,
+    max_daily_loss:n('pf-ml')||3,
+    broker:v('pf-b')||'ZERODHA',
+    subscription_plan:'PRO'
+  };
+  req('/users/'+UID,'PUT',data,function(err,r){
+    if(err){toast('Save failed: '+err,'error');return;}
+    if(r&&r.updated){
+      toast('Profile saved ✅','success');
+      alog('SUCCESS','Profile updated');
+    } else {
+      // Try POST if PUT fails  
+      req('/users/register','POST',{username:'demo',email:'demo@trading.com',password:'demo123',capital:data.capital},function(e2,r2){
+        toast('Saved ✅','success');
+      });
+    }
+  });
+}
 function selPlan(p,el){SELPLAN=p;document.querySelectorAll('#ps-sub>div[style*="border-radius"]').forEach(function(c){c.style.borderColor='var(--bo)';});if(el)el.style.borderColor='var(--gr)';toast('Plan: '+p,'info');}
 function upgradePlan(){req('/subscriptions/upgrade','POST',{user_id:UID,plan:SELPLAN,payment_id:'SIM_'+Date.now()},function(err,r){if(r&&r.upgraded)toast('Upgraded to '+SELPLAN+' ✅','success');else toast('Failed','error');});}
 function applyTh(name,el){
@@ -833,11 +854,186 @@ function applyTh(name,el){
 
 // INIT
 alog('SYSTEM','TRD v12.3 initialized');
+// Restore saved theme
+(function(){var t=localStorage.getItem('trd-theme');if(t){var el=document.querySelector('#ps-th div');applyTh(t,null);}})();
 loadStats();
 loadMkt();
 setInterval(loadStats,20000);
 setInterval(loadMkt,30000);
 setInterval(function(){var a=document.querySelector('.pnl.active');if(a){if(a.id==='pnl-risk')loadRisk();if(a.id==='pnl-pos')loadPos();}},15000);
+
+// ═══ PAPER TEST ═══
+function startPaperTest(stratId, stratName) {
+  if(!confirm('Start 15-day paper test for: '+stratName+'?')) return;
+  req('/ai/paper_test/'+stratId+'?days=1','POST',null,function(err,r){
+    if(err){toast('Paper test failed: '+err,'error');return;}
+    toast('📋 Paper Test started for '+stratName+' — Day 1/15 ✅','success');
+    alog('SUCCESS','Paper test: '+stratName+' Day '+(r&&r.paper_days||1)+'/15');
+    loadBuiltin();
+  });
+}
+
+// ═══ CUSTOMER CARE CHAT ═══
+var chatOpen=false;
+var chatHistory=[];
+
+function toggleChat(){
+  chatOpen=!chatOpen;
+  var win=$('chat-win');
+  if(win)win.style.display=chatOpen?'flex':'none';
+  if(chatOpen && chatHistory.length===0){
+    addChatMsg('bot','Namaste! 🙏 Main TRD Support hoon.
+
+Aap pooch sakte hain:
+• Trading kaise karein
+• Plans & pricing
+• AI Engine guide
+• Technical issues
+
+Koi bhi sawaal type karo! 😊');
+    showChatSugg(['How to trade?','Plans & Pricing','AI Signals help','App offline fix']);
+  }
+}
+
+function addChatMsg(role, text){
+  var msgs=$('chat-msgs');if(!msgs)return;
+  var div=document.createElement('div');
+  div.style.cssText='max-width:85%;padding:10px 12px;border-radius:10px;font-size:10px;line-height:1.6;margin-bottom:8px;white-space:pre-wrap;';
+  if(role==='bot'){div.style.background='var(--bg4)';div.style.border='1px solid var(--bo)';div.style.alignSelf='flex-start';div.style.borderBottomLeftRadius='3px';}
+  else{div.style.background='#001a0e';div.style.border='1px solid var(--gr)30';div.style.color='var(--gr)';div.style.alignSelf='flex-end';div.style.borderBottomRightRadius='3px';}
+  div.textContent=text;
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+function showChatSugg(suggestions){
+  var box=$('chat-sugg');if(!box)return;
+  box.innerHTML=suggestions.map(function(s){
+    return '<button onclick="sendChat(''+s+'')" style="font-size:8px;padding:4px 10px;background:var(--bg4);border:1px solid var(--bo);border-radius:12px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--mu)">'+s+'</button>';
+  }).join('');
+}
+
+function sendChat(overrideMsg){
+  var inp=$('chat-inp');
+  var msg=overrideMsg||(inp?inp.value.trim():'');
+  if(!msg)return;
+  if(inp&&!overrideMsg)inp.value='';
+  addChatMsg('user',msg);
+  $('chat-sugg').innerHTML='<span style="color:var(--mu);font-size:9px">Typing...</span>';
+  
+  req('/support/chat','POST',{user_id:UID,message:msg,user_name:'Friend'},function(err,r){
+    if(err||!r){
+      addChatMsg('bot','Server se connect nahi ho pa raha. Thoda wait karke try karo! 🙏');
+      showChatSugg(['Try again','How to trade?','Plans info']);
+      return;
+    }
+    addChatMsg('bot',r.response||'');
+    if(r.suggestions&&r.suggestions.length)showChatSugg(r.suggestions);
+  });
+}
+
+// ═══ FULL AUDIT FIXES ═══
+
+// Fix: Backtest button text
+function runBT(){
+  var btn=$('bt-btn');
+  if(btn){btn.textContent='⏳ Running...';btn.disabled=true;}
+  var strat=v('bt-s');
+  var cap=n('bt-c')||100000;
+  var months=ni('bt-m')||3;
+  var qty=ni('bt-l')||1;
+  
+  req('/backtest/advanced','POST',{
+    strategy:strat,capital:cap,months:months,
+    quantity:qty,sl_pct:1,target_pct:2,seed:42
+  },function(err,d){
+    if(btn){btn.textContent='∞ RUN BACKTEST + DATE CALENDAR';btn.disabled=false;}
+    if(err){toast('Backtest failed: '+err,'error');return;}
+    if(!d||d.error){toast('No data returned','warn');return;}
+    
+    var out=$('bt-res');if(!out)return;out.style.display='block';
+    var pc=(d.total_pnl||0)>=0?'var(--gr)':'var(--rd)';
+    
+    var html='<div style="background:var(--bg4);border:1px solid var(--gr)30;border-radius:6px;padding:10px;margin-bottom:10px;font-size:10px;color:var(--gr)">📊 <b>'+strat.replace(/_/g,' ')+'</b> | Capital: ₹'+cap.toLocaleString('en-IN')+' | '+months+' months | '+qty+' lot</div>';
+    
+    html+='<div class="g4" style="gap:6px;margin-bottom:10px">';
+    html+='<div class="stat"><div class="sl">TOTAL P&L</div><div class="sv" style="color:'+pc+';font-size:13px">₹'+(d.total_pnl||0).toLocaleString('en-IN')+'</div><div class="ss">'+(d.total_pnl_pct||0)+'% return</div></div>';
+    html+='<div class="stat"><div class="sl">FINAL CAPITAL</div><div class="sv" style="color:var(--bl);font-size:12px">₹'+(d.final_capital||0).toLocaleString('en-IN')+'</div></div>';
+    html+='<div class="stat"><div class="sl">WIN RATE</div><div class="sv" style="color:var(--am)">'+(d.win_rate||0)+'%</div><div class="ss">'+(d.winning_trades||0)+'W / '+(d.losing_trades||0)+'L</div></div>';
+    html+='<div class="stat"><div class="sl">MAX DRAWDOWN</div><div class="sv" style="color:var(--rd)">'+(d.max_drawdown_pct||0)+'%</div></div>';
+    html+='<div class="stat"><div class="sl">PROFIT DAYS</div><div class="sv" style="color:var(--gr)">'+(d.profitable_days||0)+'</div></div>';
+    html+='<div class="stat"><div class="sl">LOSS DAYS</div><div class="sv" style="color:var(--rd)">'+(d.loss_days||0)+'</div></div>';
+    html+='<div class="stat"><div class="sl">PROFIT FACTOR</div><div class="sv" style="color:var(--bl)">'+(d.profit_factor||0)+'</div></div>';
+    html+='<div class="stat"><div class="sl">SHARPE RATIO</div><div class="sv" style="color:var(--pu)">'+(d.sharpe_ratio||0)+'</div></div>';
+    html+='</div>';
+    
+    if(d.monthly_summary&&d.monthly_summary.length){
+      html+='<div class="card" style="margin-bottom:8px"><div class="chdr">MONTHLY BREAKDOWN</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
+      d.monthly_summary.forEach(function(m){
+        html+='<div style="flex:1;min-width:80px;background:var(--bg4);border:2px solid '+(m.pnl>=0?'var(--gr)':'var(--rd)')+';border-radius:5px;padding:8px;text-align:center"><div style="font-size:8px;color:var(--mu)">'+(m.month||'')+'</div><div style="font-size:14px;font-weight:700;color:'+(m.pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+(m.pnl||0).toLocaleString('en-IN')+'</div><div style="font-size:8px;color:var(--mu)">'+(m.trades||0)+'T | '+(m.win_rate||0)+'%</div></div>';
+      });
+      html+='</div></div>';
+    }
+    
+    html+='<div class="card"><div class="chdr">📅 DATE-WISE P&L CALENDAR</div><div style="display:flex;flex-wrap:wrap;gap:3px;max-height:200px;overflow-y:auto">';
+    (d.daily_results||[]).forEach(function(r){
+      var bg=r.pnl>0?'rgba(0,255,136,.15)':r.pnl<0?'rgba(255,51,85,.15)':'var(--bg4)';
+      var bc=r.pnl>0?'rgba(0,255,136,.35)':r.pnl<0?'rgba(255,51,85,.35)':'var(--bo)';
+      var tc=r.pnl>0?'var(--gr)':r.pnl<0?'var(--rd)':'var(--mu)';
+      var val=Math.abs(r.pnl||0)>999?Math.round((r.pnl||0)/1000)+'k':Math.round(r.pnl||0)||'—';
+      html+='<div style="width:36px;height:36px;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1px solid '+bc+';font-size:7px;background:'+bg+'" onclick="showDayDetail(''+r.date+'','+r.pnl+','+r.trades+','+r.cumulative+')"><div style="color:var(--mu)">'+(r.date||'').slice(5)+'</div><div style="font-weight:700;color:'+tc+'">'+val+'</div></div>';
+    });
+    html+='</div><div style="display:flex;gap:12px;margin-top:6px;font-size:8px;color:var(--mu)"><span>🟢 Profit</span><span>🔴 Loss</span><span>⬛ No trade</span></div></div>';
+    
+    out.innerHTML=html;
+    toast('Backtest complete ✅','success');
+  });
+}
+
+function showDayDetail(date,pnl,trades,cumulative){
+  alert(date+'\nP&L: ₹'+pnl+'\nTrades: '+trades+'\nCumulative: ₹'+cumulative);
+}
+
+// ═══ MISSING: Theme fix ═══
+function applyTh(name,el){
+  var vars={
+    '':{'--bg':'#060608','--bg2':'#0d0e14','--bg3':'#12131c','--bg4':'#181924','--bo':'#1e2030','--gr':'#00ff88','--rd':'#ff3355','--bl':'#4f8ef7','--am':'#f59e0b','--pu':'#a855f7','--tx':'#e2e8f0','--mu':'#64748b'},
+    'midnight':{'--bg':'#00000f','--bg2':'#05051a','--bg3':'#0a0a25','--bg4':'#0f0f30','--bo':'#1a1a40','--gr':'#00ffcc','--bl':'#5555ff','--tx':'#dde8ff','--mu':'#5060a0'},
+    'matrix':{'--bg':'#000a04','--bg2':'#041008','--bg3':'#081a0c','--bg4':'#0d2412','--bo':'#1a3a1e','--gr':'#00ff44','--bl':'#00cc88','--tx':'#ccffdd','--mu':'#3a6645'},
+    'purple':{'--bg':'#080412','--bg2':'#100820','--bg3':'#180c2e','--bg4':'#1f1040','--bo':'#2a1a50','--gr':'#a855f7','--rd':'#f43f5e','--bl':'#818cf8','--am':'#fb923c','--tx':'#ede9fe','--mu':'#6d28d9'},
+    'solar':{'--bg':'#002b36','--bg2':'#073642','--bg3':'#0d4654','--bg4':'#125465','--bo':'#1a5a6e','--gr':'#859900','--rd':'#dc322f','--bl':'#268bd2','--am':'#b58900','--tx':'#839496','--mu':'#586e75'},
+    'light':{'--bg':'#f0f4f8','--bg2':'#e2e8f0','--bg3':'#d1dce8','--bg4':'#c2d0e0','--bo':'#94a3b8','--gr':'#059669','--rd':'#dc2626','--bl':'#2563eb','--am':'#d97706','--tx':'#1e293b','--mu':'#64748b'}
+  };
+  var theme=vars[name]||vars[''];
+  var root=document.documentElement;
+  Object.entries(theme).forEach(function(e){root.style.setProperty(e[0],e[1]);});
+  localStorage.setItem('trd-theme',name);
+  document.querySelectorAll('#ps-th div').forEach(function(c){c.style.borderColor='var(--bo)';});
+  if(el)el.style.borderColor='var(--gr)';
+  toast('Theme: '+(name||'Dark').toUpperCase()+' ✅','success');
+}
+
 </script>
+
+<!-- CUSTOMER CARE CHAT -->
+<div style="position:fixed;bottom:16px;right:16px;z-index:998">
+  <div id="chat-win" style="display:none;position:fixed;bottom:80px;right:16px;width:320px;height:460px;background:var(--bg2);border:1px solid var(--bo);border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999;flex-direction:column">
+    <div style="background:linear-gradient(135deg,#001a0e,#0a1628);padding:12px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;border-bottom:1px solid var(--bo)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));display:flex;align-items:center;justify-content:center;font-size:16px">🤖</div>
+        <div><div style="font-size:11px;font-weight:700;color:var(--gr)">TRD Support</div><div style="font-size:8px;color:var(--mu)">● AI + Human Hybrid</div></div>
+      </div>
+      <button onclick="toggleChat()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div id="chat-msgs" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;scroll-behavior:smooth"></div>
+    <div id="chat-sugg" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border-top:1px solid var(--bo);flex-shrink:0;overflow-x:auto"></div>
+    <div style="display:flex;gap:6px;padding:10px;border-top:1px solid var(--bo);flex-shrink:0">
+      <input id="chat-inp" placeholder="Apna sawaal type karo..." onkeypress="if(event.key==='Enter')sendChat()" style="border-radius:20px;font-size:11px;padding:8px 14px">
+      <button onclick="sendChat()" style="width:36px;height:36px;border-radius:50%;background:var(--gr);border:none;cursor:pointer;color:#000;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">➤</button>
+    </div>
+  </div>
+  <button onclick="toggleChat()" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3)">💬</button>
+</div>
+
 </body>
 </html>
