@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TRD API Test</title>
+<style>
+body{background:#060608;color:#e2e8f0;font-family:monospace;padding:20px}
+.ok{color:#00ff88}.err{color:#ff3355}.warn{color:#f59e0b}
+#log{margin-top:10px;font-size:11px;line-height:1.8}
+</style>
+</head>
+<body>
+<h2 style="color:#00ff88">TRD v12.3 — API Test</h2>
+<div id="status">Testing...</div>
+<div id="log"></div>
+<script>
+const API = 'http://13.53.175.88';
+const log = document.getElementById('log');
+const st = document.getElementById('status');
+
+function add(msg, cls='') {
+  log.innerHTML += '<div class="'+cls+'">'+new Date().toLocaleTimeString()+' '+msg+'</div>';
+}
+
+async function test() {
+  add('Starting tests...');
+  
+  // Test 1: /stats
+  try {
+    const r = await fetch(API+'/stats', {method:'GET'});
+    if(r.ok) {
+      const d = await r.json();
+      add('✅ /stats OK — Capital: ₹'+d.performance.capital, 'ok');
+      st.innerHTML = '<span class="ok">✅ API CONNECTED!</span>';
+    } else {
+      add('❌ /stats HTTP '+r.status, 'err');
+    }
+  } catch(e) {
+    add('❌ /stats FAILED: '+e.message, 'err');
+  }
+  
+  // Test 2: /market/all
+  try {
+    const r = await fetch(API+'/market/all');
+    if(r.ok) {
+      const d = await r.json();
+      add('✅ /market/all OK — NIFTY: '+d.data?.NIFTY?.price, 'ok');
+    } else {
+      add('❌ /market/all HTTP '+r.status, 'err');  
+    }
+  } catch(e) {
+    add('❌ /market/all FAILED: '+e.message, 'err');
+  }
+  
+  // Test 3: /positions
+  try {
+    const r = await fetch(API+'/positions');
+    add(r.ok ? '✅ /positions OK' : '❌ /positions '+r.status, r.ok?'ok':'err');
+  } catch(e) {
+    add('❌ /positions: '+e.message, 'err');
+  }
+  
+  add('Tests complete!', 'warn');
+}
+
+test();
+</script>
+</body>
+</html>
