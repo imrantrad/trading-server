@@ -786,7 +786,30 @@ textarea{resize:vertical;min-height:60px}
 
 <script>
 'use strict';
-const API='http://13.53.175.88';  // localtunnel  // Same origin - no CORS needed!
+const API='http://13.53.175.88';
+
+// Self-test connection on load
+window.addEventListener('load', async()=>{
+  try{
+    const r = await fetch('http://13.53.175.88/stats', {
+      method:'GET',
+      mode:'cors', 
+      cache:'no-cache',
+      signal: AbortSignal.timeout(6000)
+    });
+    if(r.ok){
+      const dot=$('api-dot');if(dot){dot.style.background='var(--gr)';dot.className='dot';}
+      const lbl=$('api-lbl');if(lbl)lbl.textContent='ONLINE';
+      const sb=$('src-bdg');if(sb)sb.textContent='LIVE ●';
+      addLog('SUCCESS','✅ API Connected!');
+      loadStats();fetchMarketData();
+    }
+  }catch(ex){
+    addLog('ERROR','Connection failed: '+ex.message);
+    // Show IP for manual test
+    const lbl=$('api-lbl');if(lbl)lbl.textContent='ERROR';
+  }
+});  // localtunnel  // Same origin - no CORS needed!
 const UID='USR124535215';
 let MODE='PAPER',INST='NIFTY',ACTION='BUY',OPTTYPE='CE',KILL=false,SELPLAN='PRO';
 let prices={NIFTY:23897,BANKNIFTY:56089,FINNIFTY:26141,SENSEX:76664,VIX:19.71,USDINR:94.2};
