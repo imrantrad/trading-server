@@ -1741,17 +1741,6 @@ class ChatMessage(BaseModel):
     message: str
     user_name: str = "Friend"
 
-@app.post("/support/chat")
-def customer_care_chat(payload: ChatMessage):
-    """AI Customer Care — Hybrid KB + NLP"""
-    if not CARE_LOADED:
-        return {
-            "response": "Support temporarily unavailable. Please try again shortly. 🙏",
-            "kb_hit": False,
-            "suggestions": ["Email: support@trd.app"]
-        }
-    result = care.chat(payload.user_id, payload.message, payload.user_name)
-    return result
 
 @app.get("/support/suggestions")
 def get_suggestions():
