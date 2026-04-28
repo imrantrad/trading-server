@@ -61,6 +61,10 @@ textarea{resize:vertical;min-height:55px}
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <span style="font-size:9px;color:var(--mu)" id="clk"></span>
+    <div style="position:relative;cursor:pointer" onclick="toggleNotifPanel()">
+      <span style="font-size:18px">🔔</span>
+      <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:var(--rd);border-radius:50%;font-size:8px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">0</span>
+    </div>
     <div class="dot" id="api-dot" style="background:var(--am)"></div>
     <span style="font-size:8px;color:var(--mu)" id="api-lbl">CONNECTING</span>
     <button class="btn br" id="kill-btn" onclick="toggleKill()" style="padding:3px 8px">KILL</button>
@@ -210,7 +214,12 @@ textarea{resize:vertical;min-height:55px}
 </div>
 
 <div id="pnl-strats" class="pnl">
-  <div style="display:flex;gap:6px;margin-bottom:4px"><button class="btn bg" onclick="loadBuiltin()">BUILT-IN</button><button class="btn bb" onclick="loadMy()">MY STRATEGIES</button><button class="btn ba" onclick="toggleNLP()">NLP BUILDER</button></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+  <button class="btn bg" onclick="loadBuiltin()">★ BUILT-IN</button>
+  <button class="btn bb" onclick="loadMy()">MY STRATEGIES</button>
+  <button class="btn ba" onclick="toggleNLP()">◆ NLP BUILDER</button>
+  <button class="btn bg" style="border-color:var(--am);background:#1a0e00;color:var(--am)" onclick="loadAIApprovedStrats()">🤖 AI STRATEGIES</button>
+</div>
   <div id="nlp-bld" class="card" style="display:none;border-color:var(--gr)30">
     <div class="chdr" style="color:var(--gr)">NLP STRATEGY BUILDER</div>
     <textarea id="ns-nlp" rows="3" placeholder="buy nifty atm if rsi under 30 ema crossover sl 100 target 300"></textarea>
@@ -278,7 +287,35 @@ textarea{resize:vertical;min-height:55px}
       <div><div class="lbl">INSTRUMENT</div><select id="ai-i" style="width:120px"><option>NIFTY</option><option>BANKNIFTY</option></select></div>
       <div><div class="lbl">VIX</div><input type="number" id="ai-vix" value="19.5" style="width:80px"></div>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn bg" onclick="evolve()">EVOLVE</button><button class="btn bb" onclick="getSignal()">AI SIGNAL</button><button class="btn bp" onclick="getRegime()">REGIME</button><button class="btn ba" onclick="loadAIStrats()">VIEW ALL</button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+    <button class="btn bg" onclick="evolve()">🧬 EVOLVE</button>
+    <button class="btn bb" onclick="getSignal()">⚡ SIGNAL</button>
+    <button class="btn bp" onclick="getRegime()">🔍 REGIME</button>
+    <button class="btn ba" onclick="loadAIStrats()">★ ALL</button>
+    <button class="btn bg" onclick="loadApprovedStrats()">✅ APPROVED</button>
+  </div>
+  <!-- AUTO-EXECUTE CONFIG -->
+  <div style="background:var(--bg4);border:1px solid var(--gr)20;border-radius:6px;padding:10px;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:9px;font-weight:700;color:var(--gr)">⚡ AUTO-EXECUTE ENGINE</div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <span style="font-size:9px;color:var(--mu)">ENABLE</span>
+        <div id="ae-toggle-wrap" style="width:36px;height:20px;background:var(--bg3);border:1px solid var(--bo);border-radius:10px;position:relative;cursor:pointer" onclick="toggleAutoExec()">
+          <div id="ae-toggle-dot" style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--mu);transition:all .2s"></div>
+        </div>
+      </label>
+    </div>
+    <div class="g2" style="gap:6px">
+      <div><div class="lbl">MIN CONFIDENCE %</div><input type="number" id="ae-conf" value="75" min="60" max="95" style="width:100%"></div>
+      <div><div class="lbl">MAX LOTS</div><input type="number" id="ae-lots" value="1" min="1" max="5" style="width:100%"></div>
+    </div>
+    <div class="g2" style="gap:6px;margin-top:6px">
+      <div><div class="lbl">DAILY SIGNAL LIMIT</div><input type="number" id="ae-limit" value="3" min="1" max="10" style="width:100%"></div>
+      <div><div class="lbl">MODE</div><select id="ae-mode" style="width:100%"><option>PAPER</option><option>LIVE</option></select></div>
+    </div>
+    <button class="btn bg blg" onclick="saveAutoExec()" style="margin-top:8px">✓ SAVE AUTO-EXECUTE CONFIG</button>
+    <div style="font-size:8px;color:var(--rd);margin-top:6px">⚠️ Live mode mein sirf tab use karein jab aap confident ho. Circuit breaker always active!</div>
+  </div>
   </div>
   <div id="ai-sig-box" style="display:none" class="card"></div>
   <div id="ai-reg-box" style="display:none" class="card"></div>
@@ -319,7 +356,8 @@ textarea{resize:vertical;min-height:55px}
     </div>
     <div class="g4" style="margin-bottom:10px"><div class="stat"><div class="sl">TRADES</div><div class="sv" id="pf-t" style="color:var(--am)">0</div></div><div class="stat"><div class="sl">P&L</div><div class="sv" id="pf-p" style="color:var(--gr)">₹0</div></div><div class="stat"><div class="sl">WIN RATE</div><div class="sv" id="pf-w" style="color:var(--gr)">0%</div></div><div class="stat"><div class="sl">STRATS</div><div class="sv" id="pf-s" style="color:var(--bl)">0</div></div></div>
   </div>
-  <div style="display:flex;gap:0;border-bottom:1px solid var(--bo)"><button class="tab active" id="pt-set" onclick="swProf('set',this)">SETTINGS</button><button class="tab" id="pt-sub" onclick="swProf('sub',this)">PLANS</button><button class="tab" id="pt-th" onclick="swProf('th',this)">THEMES</button></div>
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--bo)"><button class="tab active" id="pt-set" onclick="swProf('set',this)">SETTINGS</button><button class="tab" id="pt-sub" onclick="swProf('sub',this)">PLANS</button><button class="tab" id="pt-th" onclick="swProf('th',this)">THEMES</button>
+<button class="tab" id="pt-dash" onclick="swProf('dash',this)">DASHBOARD</button></div>
   <div id="ps-set" class="card">
     <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">NAME</div><input id="pf-n" placeholder="Your name"></div><div><div class="lbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div></div>
     <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">CAPITAL</div><input type="number" id="pf-c" value="500000"></div><div><div class="lbl">RISK %</div><input type="number" id="pf-r" value="1"></div></div>
@@ -331,12 +369,37 @@ textarea{resize:vertical;min-height:55px}
     <div class="g2" style="gap:6px;margin-bottom:8px" id="plan-cards"></div>
     <button class="btn bg blg" onclick="upgradePlan()">UPGRADE PLAN</button>
   </div>
-  <div id="ps-th" class="card" style="display:none">
+  <div id="ps-dash" class="card" style="display:none">
+  <div class="chdr">🎛️ DASHBOARD SETTINGS — Show/Hide Tabs</div>
+  <div style="font-size:9px;color:var(--mu);margin-bottom:10px">Uncheck any tab to hide it from the dashboard. Settings are saved automatically.</div>
+  <div id="tab-visibility-list" style="display:flex;flex-direction:column;gap:6px"></div>
+  <div style="margin-top:10px;padding:8px;background:var(--bg4);border-radius:4px;font-size:8px;color:var(--mu)">
+    <b style="color:var(--am)">Plan-based access:</b> Your PRO plan allows all tabs. Upgrade to unlock restricted features.
+  </div>
+  <button class="btn bg blg" onclick="saveUIConfig()" style="margin-top:10px">✓ SAVE DASHBOARD SETTINGS</button>
+</div>
+
+<div id="ps-th" class="card" style="display:none">
     <div class="chdr">THEMES</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="theme-cards"></div>
   </div>
 </div>
 
+</div>
+
+
+<!-- NOTIFICATION PANEL -->
+<div id="notif-panel" style="display:none;position:fixed;top:50px;right:14px;width:320px;max-height:480px;background:var(--bg2);border:1px solid var(--bo);border-radius:10px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:997;flex-direction:column">
+  <div style="background:var(--bg3);padding:12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bo)">
+    <div style="font-size:11px;font-weight:700;color:var(--gr)">🔔 Notifications</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="markAllRead()" style="font-size:8px;background:none;border:1px solid var(--bo);color:var(--mu);cursor:pointer;padding:2px 8px;border-radius:4px;font-family:inherit">Mark all read</button>
+      <button onclick="toggleNotifPanel()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px">✕</button>
+    </div>
+  </div>
+  <div id="notif-list" style="flex:1;overflow-y:auto;max-height:380px;padding:8px;display:flex;flex-direction:column;gap:6px">
+    <div style="color:var(--mu);text-align:center;padding:20px;font-size:10px">No notifications yet</div>
+  </div>
 </div>
 
 <!-- CHAT WIDGET -->
@@ -704,3 +767,330 @@ function sendChat(override){var inp=$('chat-inp');var msg=override||(inp?inp.val
 </script>
 </body>
 </html>
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// FEATURE SET 2: Notifications + Auto-Execute + AI Strategies + Dynamic UI
+// ══════════════════════════════════════════════════════════════════════════════
+
+var notifPanelOpen = false;
+var autoExecEnabled = false;
+var uiConfig = { visible_tabs: [] };
+
+// ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
+function toggleNotifPanel() {
+  notifPanelOpen = !notifPanelOpen;
+  var p = $('notif-panel');
+  if (p) p.style.display = notifPanelOpen ? 'flex' : 'none';
+  if (notifPanelOpen) loadNotifications();
+}
+
+function loadNotifications() {
+  req('/notifications/' + UID + '?limit=20', 'GET', null, function(err, d) {
+    if (err || !d) return;
+    var list = $('notif-list');
+    if (!list) return;
+    if (!d.notifications || !d.notifications.length) {
+      list.innerHTML = '<div style="color:var(--mu);text-align:center;padding:20px;font-size:10px">No notifications yet</div>';
+      return;
+    }
+    // Update badge
+    updateNotifBadge(d.unread || 0);
+    var html = '';
+    d.notifications.forEach(function(n) {
+      var c = n.priority === 'critical' ? 'var(--rd)' : n.priority === 'high' ? 'var(--am)' : 'var(--bl)';
+      html += '<div style="background:' + (n.read ? 'var(--bg4)' : 'var(--bg3)') + ';border:1px solid ' + (n.read ? 'var(--bo)' : c) + ';border-radius:5px;padding:8px;cursor:pointer" onclick="markNotifRead(\'' + n.id + '\')">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
+        '<div style="font-size:10px;font-weight:700;color:' + c + '">' + (n.emoji || '') + ' ' + n.title + '</div>' +
+        '<span style="font-size:8px;color:var(--mu)">' + (n.timestamp || '').slice(11, 16) + '</span></div>' +
+        '<div style="font-size:9px;color:var(--mu);line-height:1.5">' + n.body + '</div>' +
+        '<div style="display:flex;gap:4px;margin-top:4px">' + (n.channels || []).map(function(ch) {
+          return '<span style="font-size:7px;padding:1px 5px;background:var(--bg);border:1px solid var(--bo);border-radius:8px;color:var(--mu)">' + ch + '</span>';
+        }).join('') + '</div></div>';
+    });
+    list.innerHTML = html;
+  });
+}
+
+function updateNotifBadge(count) {
+  var badge = $('notif-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.style.display = 'flex';
+    badge.textContent = count > 9 ? '9+' : count;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function markNotifRead(id) {
+  req('/notifications/' + UID + '/read?notif_id=' + id, 'POST', null, function(err, d) {
+    if (!err && d) updateNotifBadge(d.unread || 0);
+    loadNotifications();
+  });
+}
+
+function markAllRead() {
+  req('/notifications/' + UID + '/read', 'POST', null, function(err, d) {
+    if (!err && d) updateNotifBadge(0);
+    loadNotifications();
+  });
+}
+
+function sendTestNotif(type, data) {
+  req('/notifications/send', 'POST', {
+    user_id: UID,
+    notif_type: type || 'ai_signal',
+    data: data || {signal: 'BUY_CE', instrument: 'NIFTY', confidence: 82, regime: 'TRENDING_UP'}
+  }, function(err, d) {
+    if (!err && d && d.sent) {
+      toast('Notification sent! 🔔', 'success');
+      req('/notifications/' + UID + '/unread_count', 'GET', null, function(e, r) {
+        if (r) updateNotifBadge(r.count);
+      });
+    }
+  });
+}
+
+// ─── AUTO-EXECUTE ──────────────────────────────────────────────────────────
+function toggleAutoExec() {
+  autoExecEnabled = !autoExecEnabled;
+  var wrap = $('ae-toggle-wrap');
+  var dot = $('ae-toggle-dot');
+  if (wrap) wrap.style.background = autoExecEnabled ? '#001a0e' : 'var(--bg3)';
+  if (wrap) wrap.style.borderColor = autoExecEnabled ? 'var(--gr)' : 'var(--bo)';
+  if (dot) { dot.style.background = autoExecEnabled ? 'var(--gr)' : 'var(--mu)'; dot.style.left = autoExecEnabled ? '18px' : '2px'; }
+  if (autoExecEnabled) {
+    toast('⚡ Auto-Execute ENABLED — AI will trade when confidence > ' + ($('ae-conf') ? $('ae-conf').value : 75) + '%', 'warn');
+  }
+}
+
+function loadAutoExecConfig() {
+  req('/ai/auto_execute/config/' + UID, 'GET', null, function(err, d) {
+    if (err || !d) return;
+    autoExecEnabled = d.enabled || false;
+    if ($('ae-conf')) $('ae-conf').value = Math.round((d.min_confidence || 0.75) * 100);
+    if ($('ae-lots')) $('ae-lots').value = d.max_lots || 1;
+    if ($('ae-limit')) $('ae-limit').value = d.daily_signal_limit || 3;
+    if ($('ae-mode')) $('ae-mode').value = d.mode || 'PAPER';
+    // Update toggle UI
+    var wrap = $('ae-toggle-wrap');
+    var dot = $('ae-toggle-dot');
+    if (wrap) { wrap.style.background = autoExecEnabled ? '#001a0e' : 'var(--bg3)'; wrap.style.borderColor = autoExecEnabled ? 'var(--gr)' : 'var(--bo)'; }
+    if (dot) { dot.style.background = autoExecEnabled ? 'var(--gr)' : 'var(--mu)'; dot.style.left = autoExecEnabled ? '18px' : '2px'; }
+  });
+}
+
+function saveAutoExec() {
+  var conf = (parseFloat(($('ae-conf') || {}).value || 75)) / 100;
+  req('/ai/auto_execute/config', 'POST', {
+    user_id: UID,
+    enabled: autoExecEnabled,
+    min_confidence: conf,
+    max_lots: parseInt(($('ae-lots') || {}).value || 1),
+    daily_signal_limit: parseInt(($('ae-limit') || {}).value || 3),
+    mode: ($('ae-mode') || {}).value || 'PAPER',
+    instruments: ['NIFTY', 'BANKNIFTY']
+  }, function(err, d) {
+    if (!err && d && d.updated) toast('Auto-execute config saved! ✅', 'success');
+    else toast('Save failed', 'error');
+  });
+}
+
+// ─── AI APPROVED STRATEGIES ────────────────────────────────────────────────
+function loadApprovedStrats() {
+  req('/ai/strategies/approved', 'GET', null, function(err, d) {
+    var list = $('strat-list'); if (!list) return;
+    if (err || !d || !d.strategies || !d.strategies.length) {
+      list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--mu)">' +
+        '<div style="font-size:20px;margin-bottom:10px">🤖</div>' +
+        '<div style="font-size:12px;margin-bottom:8px">No AI-approved strategies yet</div>' +
+        '<div style="font-size:9px;margin-bottom:12px">Strategies must pass 15-day paper test with >62% WR + 1.5× PF</div>' +
+        '<button class="btn bg" onclick="evolve()">🧬 EVOLVE NOW</button>' +
+        '</div>';
+      return;
+    }
+    var qg = d.quality_gate || {};
+    var h = '<div style="background:#001a0e;border:1px solid var(--gr)30;border-radius:5px;padding:8px;margin-bottom:8px;font-size:8px;color:var(--gr)">' +
+      '✅ QUALITY GATE: Min ' + Math.round((qg.min_win_rate || 0.62) * 100) + '% WR + ' + (qg.min_profit_factor || 1.5) + '× PF + ' + (qg.required_paper_days || 15) + '-day paper test PASSED</div>';
+    list.innerHTML = h;
+    d.strategies.forEach(function(s) {
+      var div = document.createElement('div');
+      div.className = 'card';
+      div.style.borderLeft = '3px solid var(--gr)';
+      div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+        '<div style="font-size:11px;font-weight:700">' + s.name + '</div>' +
+        '<span style="font-size:8px;padding:2px 10px;border-radius:10px;background:#001a0e;border:1px solid var(--gr);color:var(--gr)">✅ APPROVED</span>' +
+        '</div><div class="g4" style="gap:6px;margin-bottom:8px">' +
+        '<div class="stat"><div class="sl">WIN RATE</div><div style="font-size:14px;font-weight:700;color:var(--gr)">' + ((s.win_rate || 0) * 100).toFixed(1) + '%</div></div>' +
+        '<div class="stat"><div class="sl">PROFIT FACTOR</div><div style="font-size:14px;font-weight:700;color:var(--bl)">' + (s.profit_factor || 0) + '</div></div>' +
+        '<div class="stat"><div class="sl">SHARPE</div><div style="font-size:14px;font-weight:700;color:var(--pu)">' + (s.sharpe_ratio || 0) + '</div></div>' +
+        '<div class="stat"><div class="sl">MAX DD</div><div style="font-size:14px;font-weight:700;color:var(--rd)">' + (s.max_drawdown || 0) + '%</div></div>' +
+        '</div><div style="font-size:8px;color:var(--mu);margin-bottom:8px">' + (s.notes || '') + '</div>';
+      var btns = document.createElement('div');
+      btns.style.cssText = 'display:flex;gap:6px';
+      var b1 = document.createElement('button'); b1.className = 'btn bg'; b1.style.cssText = 'flex:1;padding:7px'; b1.textContent = '▶ EXECUTE';
+      var sid = s.id;
+      b1.onclick = function() { show('trade', null); toast('Strategy loaded: ' + s.name, 'success'); };
+      var b2 = document.createElement('button'); b2.className = 'btn ba'; b2.style.cssText = 'flex:1;padding:7px'; b2.textContent = '∞ BACKTEST';
+      b2.onclick = function() { if ($('bt-s')) $('bt-s').value = sid; show('bt', null); };
+      btns.appendChild(b1); btns.appendChild(b2); div.appendChild(btns);
+      list.appendChild(div);
+    });
+  });
+}
+
+function loadAIApprovedStrats() { loadApprovedStrats(); }
+
+// ─── DYNAMIC UI CONFIG ─────────────────────────────────────────────────────
+var ALL_TABS = [
+  {id:'trade', name:'TRADE', icon:'◈', plan:'FREE'},
+  {id:'pos', name:'POSITIONS', icon:'◉', plan:'BASIC'},
+  {id:'risk', name:'RISK', icon:'⚡', plan:'BASIC'},
+  {id:'scan', name:'SCANNER', icon:'◎', plan:'BASIC'},
+  {id:'opts', name:'OPTIONS', icon:'◆', plan:'PRO'},
+  {id:'bt', name:'BACKTEST', icon:'∞', plan:'FREE'},
+  {id:'strats', name:'STRATEGIES', icon:'★', plan:'FREE'},
+  {id:'jnl', name:'JOURNAL', icon:'✎', plan:'FREE'},
+  {id:'rep', name:'REPORTS', icon:'📊', plan:'BASIC'},
+  {id:'calc', name:'CALC', icon:'∑', plan:'FREE'},
+  {id:'ai', name:'AI ENGINE', icon:'🤖', plan:'PRO'},
+  {id:'admin', name:'ADMIN', icon:'⚙', plan:'INSTITUTIONAL'},
+  {id:'legal', name:'LEGAL', icon:'📋', plan:'PRO'},
+  {id:'prof', name:'PROFILE', icon:'👤', plan:'FREE'},
+];
+
+var PLAN_ORDER = ['FREE', 'BASIC', 'PRO', 'INSTITUTIONAL'];
+
+function buildTabVisibilityList() {
+  var container = $('tab-visibility-list');
+  if (!container) return;
+  var userPlan = 'PRO'; // Default
+  container.innerHTML = '';
+  ALL_TABS.forEach(function(tab) {
+    var planIdx = PLAN_ORDER.indexOf(tab.plan);
+    var userPlanIdx = PLAN_ORDER.indexOf(userPlan);
+    var allowed = userPlanIdx >= planIdx;
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--bg4);border:1px solid var(--bo);border-radius:5px';
+    var left = document.createElement('div');
+    left.style.cssText = 'display:flex;align-items:center;gap:8px';
+    var icon = document.createElement('span');
+    icon.style.cssText = 'font-size:14px;width:20px;text-align:center';
+    icon.textContent = tab.icon;
+    var name = document.createElement('div');
+    var planBadge = document.createElement('span');
+    planBadge.style.cssText = 'font-size:7px;padding:1px 5px;border-radius:8px;border:1px solid;margin-left:6px;color:' + (allowed ? 'var(--gr)' : 'var(--rd)') + ';border-color:' + (allowed ? 'var(--gr)' : 'var(--rd)');
+    planBadge.textContent = tab.plan;
+    name.innerHTML = '<span style="font-size:10px;font-weight:600">' + tab.name + '</span>';
+    name.appendChild(planBadge);
+    left.appendChild(icon);
+    left.appendChild(name);
+    var toggle = document.createElement('label');
+    toggle.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'tab-vis-' + tab.id;
+    cb.checked = allowed; // Default: visible if plan allows
+    cb.disabled = !allowed;
+    if (!allowed) cb.title = 'Requires ' + tab.plan + ' plan';
+    cb.style.cssText = 'width:auto;cursor:pointer';
+    cb.onchange = function() {
+      if (allowed) applyTabVisibility();
+    };
+    toggle.appendChild(cb);
+    row.appendChild(left);
+    row.appendChild(toggle);
+    container.appendChild(row);
+  });
+}
+
+function applyTabVisibility() {
+  var visible = [];
+  ALL_TABS.forEach(function(tab) {
+    var cb = $('tab-vis-' + tab.id);
+    if (cb && cb.checked) visible.push(tab.id);
+  });
+  // Apply to DOM
+  ALL_TABS.forEach(function(tab) {
+    var pnl = $('pnl-' + tab.id);
+    // Find tab button
+    var isVisible = visible.indexOf(tab.id) >= 0;
+    // Hide/show tab buttons
+    document.querySelectorAll('.tab').forEach(function(btn) {
+      if (btn.textContent && btn.textContent.trim().indexOf(tab.name) >= 0) {
+        btn.style.display = isVisible ? '' : 'none';
+      }
+    });
+  });
+  uiConfig.visible_tabs = visible;
+}
+
+function saveUIConfig() {
+  var visible = [];
+  ALL_TABS.forEach(function(tab) {
+    var cb = $('tab-vis-' + tab.id);
+    if (cb && cb.checked) visible.push(tab.id);
+  });
+  req('/ui/config', 'POST', {user_id: UID, visible_tabs: visible}, function(err, d) {
+    if (!err && d && d.saved) {
+      toast('Dashboard settings saved! ✅', 'success');
+      applyTabVisibility();
+    } else {
+      toast('Saved locally!', 'info');
+      applyTabVisibility();
+    }
+  });
+}
+
+function loadUIConfig() {
+  req('/ui/config/' + UID, 'GET', null, function(err, d) {
+    if (err || !d) return;
+    uiConfig.visible_tabs = d.visible_tabs || [];
+    // Update checkboxes
+    if (d.visible_tabs) {
+      ALL_TABS.forEach(function(tab) {
+        var cb = $('tab-vis-' + tab.id);
+        if (cb) cb.checked = d.visible_tabs.indexOf(tab.id) >= 0;
+      });
+    }
+    applyTabVisibility();
+  });
+}
+
+// ─── EXTEND swProf to handle 'dash' ────────────────────────────────────────
+var _origSwProf = typeof swProf === 'function' ? swProf : null;
+function swProf(tab, btn) {
+  ['set','sub','th','dash'].forEach(function(t) {
+    var el = $('ps-' + t);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('#pnl-prof .tab').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  if (tab === 'dash') buildTabVisibilityList();
+}
+
+// ─── NOTIFICATIONS POLL ────────────────────────────────────────────────────
+function pollNotifCount() {
+  req('/notifications/' + UID + '/unread_count', 'GET', null, function(err, d) {
+    if (!err && d) updateNotifBadge(d.count || 0);
+  });
+}
+
+// ─── INIT EXTRAS ───────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  // Load auto-exec config
+  setTimeout(loadAutoExecConfig, 2000);
+  // Load UI config
+  setTimeout(loadUIConfig, 1500);
+  // Poll notifications every 60 sec
+  setInterval(pollNotifCount, 60000);
+  setTimeout(pollNotifCount, 3000);
+  // Send welcome notification
+  setTimeout(function() {
+    sendTestNotif('ai_signal', {
+      signal: 'BUY_CE', instrument: 'NIFTY',
+      confidence: 82, regime: 'TRENDING_UP'
+    });
+  }, 5000);
+});
+</script>
