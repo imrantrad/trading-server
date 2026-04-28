@@ -2322,3 +2322,11 @@ def update_user_profile(user_id: str, data: dict):
         "data": data,
         "saved_at": datetime.now().isoformat()
     }
+
+@app.get("/website", response_class=HTMLResponse)
+async def serve_website():
+    website_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../website.html")
+    if os.path.exists(website_path):
+        with open(website_path, "r") as f:
+            return HTMLResponse(f.read())
+    return HTMLResponse("<h1>Website not found</h1>")
