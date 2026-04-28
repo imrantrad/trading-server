@@ -520,8 +520,8 @@ console.log('API:', API);
 var UID = 'USR124535215';
 var INST = 'NIFTY', ACT = 'BUY', TYP = 'CE', MODE = 'PAPER', KILL = false, SELPLAN = 'PRO';
 var chatOpen = false, chatHistory = [];
-var prices = {NIFTY:23897,BANKNIFTY:56089,FINNIFTY:26141,SENSEX:76664,VIX:19.71};
-var changes = {NIFTY:-1.14,BANKNIFTY:-.38,FINNIFTY:-.4,SENSEX:-1.29,VIX:6.04};
+var prices = {NIFTY:24008.00,BANKNIFTY:56124.50,FINNIFTY:26201.30,SENSEX:78952.00,VIX:17.85};
+var changes = {NIFTY:-0.41,BANKNIFTY:-1.54,FINNIFTY:-0.87,SENSEX:-0.54,VIX:-1.80};
 
 // UTILS
 function fmt(n){return (n>=0?'₹+':'₹')+Math.round(n).toLocaleString('en-IN');}
@@ -646,7 +646,7 @@ function loadMkt() {
     }
     var mt=$('mkt-time');
     if(mt&&lastTime)mt.textContent=lastTime;
-    alog('Market data: '+(isOpen?'LIVE':'CLOSED - showing last close'),'ok');
+    
   });
 }
 
@@ -1283,6 +1283,14 @@ function loadChartData() {
 
     // LTP display
     var ltp = cdata.length > 0 ? cdata[cdata.length-1].close : (prices[chartSym]||0);
+    // Show IST time in chart
+    var istNow = new Date(Date.now() + 5.5*60*60*1000);
+    var istStr = istNow.getUTCHours().toString().padStart(2,'0') + ':' + istNow.getUTCMinutes().toString().padStart(2,'0') + ' IST';
+    var isMarketHr = istNow.getUTCDay()>=1&&istNow.getUTCDay()<=5&&(istNow.getUTCHours()>9||(istNow.getUTCHours()===9&&istNow.getUTCMinutes()>=15))&&(istNow.getUTCHours()<15||(istNow.getUTCHours()===15&&istNow.getUTCMinutes()<=30));
+    var liveDot=$('chart-live-dot');
+    if(liveDot){liveDot.style.background=isMarketHr?'var(--gr)':'var(--rd)';liveDot.title=isMarketHr?'Market Open':'Market Closed';}
+    var liveLabel=liveDot?liveDot.nextElementSibling:null;
+    if(liveLabel){liveLabel.textContent=isMarketHr?'LIVE '+istStr:'CLOSED '+istStr;liveLabel.style.color=isMarketHr?'var(--gr)':'var(--rd)';}
     var prev = cdata.length > 1 ? cdata[cdata.length-2].close : ltp;
     var diff = ltp - prev;
     var pct = prev > 0 ? diff/prev*100 : 0;
