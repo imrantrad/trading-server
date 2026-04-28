@@ -1864,12 +1864,10 @@ except Exception as e:
     print(f"Notifications: {e}")
 
 try:
-    try:
     from ai_engine.customer_care import care_engine
-except ImportError:
-    care_engine = None
-    CARE_V2_LOADED = True
+    CARE_V2_LOADED = True if care_engine else False
 except Exception as e:
+    care_engine = None
     CARE_V2_LOADED = False
     print(f"Care v2: {e}")
 
