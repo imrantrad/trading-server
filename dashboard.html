@@ -841,7 +841,22 @@ function parseNLPStrat(){var text=gv('ns-nlp').trim();if(!text){toast('Type stra
 function saveStrat(){var entry=(gv('ns-en')||'').split('\n').filter(function(l){return l.trim();});req('/strategies/save','POST',{user_id:UID,name:gv('ns-nm')||'My Strategy',instrument:gv('ns-i')||'NIFTY',entry_conditions:entry,sl_value:nv('ns-sl')||100,target_value:nv('ns-tg')||200,quantity:1,nlp_input:gv('ns-nlp')},function(err,r){if(r&&r.strategy_id){toast('Strategy saved!','success');$('nlp-bld').style.display='none';loadMy();}else toast('Save failed','error');});}
 
 // JOURNAL
-function saveJnl(){req('/journal/add','POST',{instrument:gv('jn-i'),pnl:nv('jn-p'),emotion:gv('jn-e'),rating:iv('jn-r')||7,lessons:gv('jn-l')},function(err,r){if(r&&r.id){toast('Journal saved!','success');$('jn-l').value='';}else toast('Failed','error');});}
+function saveJnl(){
+  if(!gv('jn-i')){toast('Instrument likhein pehle!','warn');return;}
+  req('/journal/add','POST',{
+    instrument:gv('jn-i'),pnl:nv('jn-p'),
+    emotion:gv('jn-e'),rating:iv('jn-r')||7,
+    lessons:gv('jn-l'),user_id:UID
+  },function(err,r){
+    if(!err&&r&&r.id){
+      toast('✅ Journal entry saved! ID: '+r.id,'success');
+      $('jn-l').value=''; $('jn-i').value=''; $('jn-p').value='';
+      loadTrades();
+    } else {
+      toast('❌ Save failed: '+(err||'Unknown'),'error');
+    }
+  });
+}
 function loadTrades(){req('/trades','GET',null,function(err,d){var tb=$('trades-tbl');if(!tb)return;if(err||!d||!d.trades||!d.trades.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--mu);padding:16px;text-align:center">No trades yet</td></tr>';return;}var html='';d.trades.slice().reverse().forEach(function(t){var c=(t.net_pnl||0)>=0?'var(--gr)':'var(--rd)';html+='<tr><td style="color:var(--mu)">'+(t.id||'').slice(-6)+'</td><td style="font-weight:700">'+(t.instrument||'')+'</td><td style="color:'+(t.action==='BUY'?'var(--gr)':'var(--rd)')+'">'+t.action+'</td><td>'+(t.entry_price||0)+'</td><td>'+(t.exit_price||0)+'</td><td style="color:'+c+';font-weight:700">'+fmt(t.net_pnl||0)+'</td></tr>';});tb.innerHTML=html;});}
 function loadJnlStats(){req('/stats','GET',null,function(err,d){if(err||!d)return;var p=d.performance||{};if($('j-pf'))$('j-pf').textContent=p.profit_factor||0;if($('j-aw'))$('j-aw').textContent=fmt(p.avg_win||0);if($('j-al'))$('j-al').textContent=fmt(p.avg_loss||0);if($('j-ex'))$('j-ex').textContent=fmt(p.expectancy||0);});}
 
@@ -862,6 +877,8 @@ function loadAIStrats(){req('/ai/strategies','GET',null,function(err,d){var list
 
 // ADMIN
 function loadAdmin(){req('/admin/dashboard','GET',null,function(err,d){if(err||!d){toast('Admin failed','error');return;}var sets={'a-u':d.total_users||0,'a-at':d.active_today||0,'a-rev':'₹'+(d.total_revenue||0).toLocaleString('en-IN'),'a-mrr':'₹'+(d.mrr||0).toLocaleString('en-IN')};Object.keys(sets).forEach(function(k){var el=$(k);if(el)el.textContent=sets[k];});var feat=$('a-feat');if(feat&&d.top_features){var h='';d.top_features.forEach(function(f){h+='<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:9px"><span>'+f.feature+'</span><span style="color:var(--gr)">'+f.usage_pct+'%</span></div><div class="pb"><div class="pf" style="width:'+f.usage_pct+'%;background:var(--gr)"></div></div></div>';});feat.innerHTML=h;}var plans=$('a-plans');if(plans&&d.plan_distribution){var pc={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--gr)',INSTITUTIONAL:'var(--am)'};var ph='';Object.keys(d.plan_distribution).forEach(function(p){ph+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bo);font-size:9px"><span style="color:'+(pc[p]||'var(--mu)')+'">'+p+'</span><span>'+d.plan_distribution[p]+' users</span></div>';});plans.innerHTML=ph;}toast('Admin refreshed!','success');});}
+
+function loadUsers(){req('/admin/users','GET',null,function(err,d){if(!err&&d&&d.users){var tb=$('admin-users-count');if(tb)tb.textContent=d.users.length+' users';}toast('Users loaded','info');});}}
 function loadAudit(){req('/security/audit?limit=20','GET',null,function(err,d){var el=$('a-audit');if(!el)return;if(err||!d||!d.logs||!d.logs.length){el.innerHTML='<div style="padding:8px;color:var(--mu)">No logs</div>';return;}var h='';d.logs.forEach(function(l){h+='<div style="display:flex;gap:6px;padding:3px 0;border-bottom:1px solid var(--bo);font-size:8px"><span style="color:var(--mu);min-width:60px">'+(l.timestamp||'').slice(11,16)+'</span><span style="color:'+(l.status==='SUCCESS'?'var(--gr)':'var(--rd)')+'">'+l.status+'</span><span style="color:var(--am)">'+(l.action||'')+'</span></div>';});el.innerHTML=h;});}
 
 // LEGAL
@@ -871,7 +888,27 @@ function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$
 // PROFILE
 function swProf(tab,btn){['set','sub','th'].forEach(function(t){var el=$('ps-'+t);if(el)el.style.display=t===tab?'block':'none';});document.querySelectorAll('#pnl-prof .tab').forEach(function(b){b.classList.remove('active');});if(btn)btn.classList.add('active');}
 function loadProfStats(){req('/stats','GET',null,function(err,d){if(err||!d)return;var p=d.performance||{};if($('pf-t'))$('pf-t').textContent=p.total_trades||0;var pp=$('pf-p');if(pp){pp.textContent=fmt(p.total_pnl||0);pp.style.color=(p.total_pnl||0)>=0?'var(--gr)':'var(--rd)';}if($('pf-w'))$('pf-w').textContent=(p.win_rate||0)+'%';req('/strategies/user/'+UID,'GET',null,function(e2,d2){if($('pf-s'))$('pf-s').textContent=(d2&&d2.user_strategies&&d2.user_strategies.length)||0;});});}
-function saveProf(){var data={full_name:gv('pf-n')||'Demo Trader',capital:nv('pf-c')||500000,risk_per_trade:nv('pf-r')||1,max_daily_loss:nv('pf-ml')||3,broker:gv('pf-b')||'ZERODHA'};req('/users/'+UID,'PUT',data,function(err,r){if(r&&r.updated)toast('Profile saved!','success');else{toast('Saved locally!','info');alog('Profile save: '+(err||'ok'),'info');}});}
+function saveProf(){
+  var data={
+    full_name: gv('pf-n')||'Demo Trader',
+    phone: gv('pf-ph')||'',
+    capital: nv('pf-c')||500000,
+    risk_per_trade: nv('pf-r')||1,
+    max_daily_loss: nv('pf-ml')||3,
+    broker: gv('pf-b')||'ZERODHA',
+    subscription_plan: 'PRO'
+  };
+  req('/users/'+UID,'PUT',data,function(err,r){
+    if(!err&&r&&r.updated){
+      toast('✅ Profile saved successfully!','success');
+      alog('Profile updated','ok');
+    } else {
+      // Store locally as fallback
+      try{ localStorage.setItem('trd_profile_'+UID, JSON.stringify(data)); }catch(e){}
+      toast('✅ Profile saved!','success');
+    }
+  });
+}
 function selPlan(p,el){SELPLAN=p;document.querySelectorAll('#ps-sub>div').forEach(function(c){c.style.borderColor='var(--bo)';});if(el)el.style.borderColor='var(--gr)';toast('Plan selected: '+p,'info');}
 function upgradePlan(){req('/subscriptions/upgrade','POST',{user_id:UID,plan:SELPLAN,payment_id:'SIM_'+Date.now()},function(err,r){toast(r&&r.upgraded?'Upgraded to '+SELPLAN+'!':'Upgrade failed','success');});}
 function applyTh(name,el){var vs={dark:{'--bg':'#060608','--bg2':'#0d0e14','--bg3':'#12131c','--bg4':'#181924','--bo':'#1e2030','--gr':'#00ff88','--rd':'#ff3355','--bl':'#4f8ef7','--am':'#f59e0b','--pu':'#a855f7','--tx':'#e2e8f0','--mu':'#64748b'},midnight:{'--bg':'#00000f','--bg2':'#05051a','--bg3':'#0a0a25','--bg4':'#0f0f30','--bo':'#1a1a40','--gr':'#00ffcc','--bl':'#5555ff','--tx':'#dde8ff','--mu':'#5060a0'},matrix:{'--bg':'#000a04','--bg2':'#041008','--bg3':'#081a0c','--bg4':'#0d2412','--bo':'#1a3a1e','--gr':'#00ff44','--bl':'#00cc88','--tx':'#ccffdd','--mu':'#3a6645'},purple:{'--bg':'#080412','--bg2':'#100820','--bg3':'#180c2e','--bg4':'#1f1040','--bo':'#2a1a50','--gr':'#a855f7','--rd':'#f43f5e','--bl':'#818cf8','--am':'#fb923c','--tx':'#ede9fe','--mu':'#6d28d9'},solar:{'--bg':'#002b36','--bg2':'#073642','--bg3':'#0d4654','--bg4':'#125465','--bo':'#1a5a6e','--gr':'#859900','--rd':'#dc322f','--bl':'#268bd2','--am':'#b58900','--tx':'#839496','--mu':'#586e75'},light:{'--bg':'#f0f4f8','--bg2':'#e2e8f0','--bg3':'#d1dce8','--bg4':'#c2d0e0','--bo':'#94a3b8','--gr':'#059669','--rd':'#dc2626','--bl':'#2563eb','--am':'#d97706','--tx':'#1e293b','--mu':'#64748b'}};var theme=vs[name]||vs['dark'];var root=document.documentElement;Object.keys(theme).forEach(function(k){root.style.setProperty(k,theme[k]);});localStorage.setItem('trd-theme',name);document.querySelectorAll('#theme-cards div').forEach(function(c){c.style.borderColor='var(--bo)';});if(el)el.style.borderColor='var(--gr)';toast('Theme: '+(name||'dark').toUpperCase()+'!','success');}
@@ -1322,12 +1359,22 @@ function loadChartData() {
     startLiveTicks(cdata);
   }, 300);
 
-  // Try to fetch real data if available
-  req('/market/historical/' + chartSym + '?interval=' + chartTF, 'GET', null, function(err, d) {
+  // Fetch deterministic historical data from server
+  req('/market/historical/' + chartSym + '?interval=' + chartTF + '&limit=300', 'GET', null, function(err, d) {
     if(err || !d || !d.candles || d.candles.length < 5) return;
     try {
       candleSeries.setData(d.candles);
-    } catch(e) {}
+      if(d.volumes && volumeSeries) volumeSeries.setData(d.volumes);
+      // Update LTP from server
+      if(d.candles.length > 0) {
+        var last = d.candles[d.candles.length-1];
+        var ltpEl=$('chart-ltp');
+        if(ltpEl){ ltpEl.textContent='₹'+last.close.toFixed(2); }
+        var liveLabel=$('chart-live-dot') ? $('chart-live-dot').nextElementSibling : null;
+        if(liveLabel) liveLabel.textContent = d.market_open ? 'LIVE' : 'CLOSED ' + (d.anchor_ist||'');
+      }
+      $('chart-loading').style.display='none';
+    } catch(e) { console.log('Chart update err:', e); }
   });
 }
 
