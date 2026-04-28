@@ -416,7 +416,104 @@ textarea{resize:vertical;min-height:55px}
   <button id="chat-btn" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3)">?</button>
 </div>
 
+
+
+<!-- PROFESSIONAL CHART MODAL -->
+<div id="chart-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);flex-direction:column">
+  <div style="background:var(--bg2);border-bottom:1px solid var(--bo);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px;font-weight:700;color:var(--gr)" id="chart-sym">NIFTY</span>
+        <span id="chart-ltp" style="font-size:20px;font-weight:700">—</span>
+        <span id="chart-chg" style="font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700">—</span>
+      </div>
+      <!-- Timeframes -->
+      <div style="display:flex;gap:3px" id="tf-btns">
+        <button class="tf-btn active" onclick="setTF('1',this)">1m</button>
+        <button class="tf-btn" onclick="setTF('5',this)">5m</button>
+        <button class="tf-btn" onclick="setTF('15',this)">15m</button>
+        <button class="tf-btn" onclick="setTF('30',this)">30m</button>
+        <button class="tf-btn" onclick="setTF('60',this)">1h</button>
+        <button class="tf-btn" onclick="setTF('240',this)">4h</button>
+        <button class="tf-btn" onclick="setTF('D',this)">1D</button>
+        <button class="tf-btn" onclick="setTF('W',this)">1W</button>
+      </div>
+      <!-- Indicators -->
+      <div style="display:flex;gap:3px;flex-wrap:wrap">
+        <button class="tf-btn" onclick="toggleIndicator('EMA20')" id="ind-EMA20">EMA20</button>
+        <button class="tf-btn" onclick="toggleIndicator('EMA50')" id="ind-EMA50">EMA50</button>
+        <button class="tf-btn" onclick="toggleIndicator('BB')" id="ind-BB">BB</button>
+        <button class="tf-btn" onclick="toggleIndicator('VWAP')" id="ind-VWAP">VWAP</button>
+        <button class="tf-btn" onclick="toggleIndicator('RSI')" id="ind-RSI">RSI</button>
+        <button class="tf-btn" onclick="toggleIndicator('MACD')" id="ind-MACD">MACD</button>
+        <button class="tf-btn" onclick="toggleIndicator('SUPERTREND')" id="ind-SUPERTREND">ST</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="chart-live-dot" style="width:8px;height:8px;border-radius:50%;background:var(--gr);display:inline-block;animation:pulse 1.5s infinite"></span>
+      <span style="font-size:8px;color:var(--gr)">LIVE</span>
+      <button onclick="closeChart()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:22px;padding:4px">✕</button>
+    </div>
+  </div>
+  <!-- Symbol search bar -->
+  <div style="background:var(--bg3);padding:8px 14px;display:flex;gap:8px;align-items:center;flex-shrink:0;border-bottom:1px solid var(--bo)">
+    <input id="sym-search" placeholder="Search symbol... (NIFTY, BANKNIFTY, RELIANCE...)" style="flex:1;border-radius:20px;padding:6px 14px;font-size:11px;background:var(--bg4)" onkeypress="if(event.key==='Enter')switchSymbol(this.value.toUpperCase())">
+    <div style="display:flex;gap:4px">
+      <button class="sym-btn active" id="sym-NIFTY" onclick="switchSymbol('NIFTY',this)">NIFTY</button>
+      <button class="sym-btn" id="sym-BANKNIFTY" onclick="switchSymbol('BANKNIFTY',this)">BANKNIFTY</button>
+      <button class="sym-btn" id="sym-FINNIFTY" onclick="switchSymbol('FINNIFTY',this)">FINNIFTY</button>
+      <button class="sym-btn" id="sym-SENSEX" onclick="switchSymbol('SENSEX',this)">SENSEX</button>
+    </div>
+    <!-- Chart type -->
+    <div style="display:flex;gap:3px">
+      <button class="tf-btn active" id="ct-candle" onclick="setChartType('candle',this)">🕯️</button>
+      <button class="tf-btn" id="ct-bar" onclick="setChartType('bar',this)">📊</button>
+      <button class="tf-btn" id="ct-line" onclick="setChartType('line',this)">📈</button>
+    </div>
+  </div>
+  <!-- Chart area -->
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative">
+    <div id="chart-container" style="flex:1;width:100%;min-height:0"></div>
+    <div id="chart-volume" style="height:80px;width:100%;flex-shrink:0"></div>
+    <!-- RSI panel -->
+    <div id="chart-rsi-panel" style="display:none;height:80px;width:100%;flex-shrink:0;border-top:1px solid var(--bo)">
+      <div id="chart-rsi-container" style="height:100%;width:100%"></div>
+    </div>
+    <!-- MACD panel -->
+    <div id="chart-macd-panel" style="display:none;height:80px;width:100%;flex-shrink:0;border-top:1px solid var(--bo)">
+      <div id="chart-macd-container" style="height:100%;width:100%"></div>
+    </div>
+    <!-- Loading overlay -->
+    <div id="chart-loading" style="position:absolute;inset:0;background:rgba(6,6,8,.8);display:flex;align-items:center;justify-content:center;z-index:10">
+      <div style="text-align:center"><div style="font-size:28px;margin-bottom:10px">📊</div><div style="color:var(--gr);font-size:12px">Loading chart data...</div></div>
+    </div>
+  </div>
+  <!-- Bottom info bar -->
+  <div style="background:var(--bg3);padding:6px 14px;display:flex;gap:16px;flex-shrink:0;border-top:1px solid var(--bo);font-size:9px;color:var(--mu);flex-wrap:wrap" id="ohlc-bar">
+    <span>O: <b id="ohlc-o" style="color:var(--tx)">—</b></span>
+    <span>H: <b id="ohlc-h" style="color:var(--gr)">—</b></span>
+    <span>L: <b id="ohlc-l" style="color:var(--rd)">—</b></span>
+    <span>C: <b id="ohlc-c" style="color:var(--tx)">—</b></span>
+    <span>Vol: <b id="ohlc-v" style="color:var(--bl)">—</b></span>
+    <span id="ohlc-indicators" style="color:var(--mu)"></span>
+    <span style="margin-left:auto">Data: NSE/BSE Simulated | Provider-agnostic architecture</span>
+  </div>
+</div>
+
+<style>
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tf-btn{font-family:monospace;font-size:8px;padding:3px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);cursor:pointer;border-radius:4px;letter-spacing:.5px}
+.tf-btn.active,.tf-btn:hover{background:var(--bg3);border-color:var(--gr);color:var(--gr)}
+.sym-btn{font-family:monospace;font-size:8px;padding:3px 10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);cursor:pointer;border-radius:4px;letter-spacing:1px}
+.sym-btn.active{background:#001a0e;border-color:var(--gr);color:var(--gr);font-weight:700}
+</style>
+
+
+
+
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
+
 // Dynamic API URL - always same origin as dashboard
 var API = (function(){
   var loc = window.location;
@@ -847,101 +944,27 @@ function fallbackToPolling() {
   loadMkt();
   
   setInterval(function(){var a=document.querySelector('.pnl.active');if(a){if(a.id==='pnl-risk')loadRisk();if(a.id==='pnl-pos')loadPos();}},15000);
+  
+  // Feature init
+  setTimeout(loadAutoExecConfig, 2000);
+  setTimeout(loadUIConfig, 1500);
+  setInterval(pollNotifCount, 60000);
+  setTimeout(pollNotifCount, 3000);
+  setTimeout(function() {
+    sendTestNotif('ai_signal', {signal:'BUY_CE',instrument:'NIFTY',confidence:82,regime:'TRENDING_UP'});
+  }, 5000);
+  
+  // Chat widget events
+  var chatBtn=$('chat-btn');
+  if(chatBtn)chatBtn.onclick=function(){chatOpen=!chatOpen;var win=$('chat-win');if(win)win.style.display=chatOpen?'flex':'none';if(chatOpen&&chatHistory.length===0){addChatMsg('Namaste! TRD Support hoon. Kaise madad karein?','bot');addChatSugg(['How to trade?','Plans & Pricing','AI Signals','Technical help']);}};
+  var chatClose=$('chat-close');if(chatClose)chatClose.onclick=function(){chatOpen=false;var win=$('chat-win');if(win)win.style.display='none';};
+  var chatSend=$('chat-send');if(chatSend)chatSend.onclick=function(){sendChat();};
+  var chatInp=$('chat-inp');if(chatInp)chatInp.onkeypress=function(e){if(e.key==='Enter')sendChat();};
 })();
-</script>
 
-<!-- PROFESSIONAL CHART MODAL -->
-<div id="chart-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);flex-direction:column">
-  <div style="background:var(--bg2);border-bottom:1px solid var(--bo);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:14px;font-weight:700;color:var(--gr)" id="chart-sym">NIFTY</span>
-        <span id="chart-ltp" style="font-size:20px;font-weight:700">—</span>
-        <span id="chart-chg" style="font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700">—</span>
-      </div>
-      <!-- Timeframes -->
-      <div style="display:flex;gap:3px" id="tf-btns">
-        <button class="tf-btn active" onclick="setTF('1',this)">1m</button>
-        <button class="tf-btn" onclick="setTF('5',this)">5m</button>
-        <button class="tf-btn" onclick="setTF('15',this)">15m</button>
-        <button class="tf-btn" onclick="setTF('30',this)">30m</button>
-        <button class="tf-btn" onclick="setTF('60',this)">1h</button>
-        <button class="tf-btn" onclick="setTF('240',this)">4h</button>
-        <button class="tf-btn" onclick="setTF('D',this)">1D</button>
-        <button class="tf-btn" onclick="setTF('W',this)">1W</button>
-      </div>
-      <!-- Indicators -->
-      <div style="display:flex;gap:3px;flex-wrap:wrap">
-        <button class="tf-btn" onclick="toggleIndicator('EMA20')" id="ind-EMA20">EMA20</button>
-        <button class="tf-btn" onclick="toggleIndicator('EMA50')" id="ind-EMA50">EMA50</button>
-        <button class="tf-btn" onclick="toggleIndicator('BB')" id="ind-BB">BB</button>
-        <button class="tf-btn" onclick="toggleIndicator('VWAP')" id="ind-VWAP">VWAP</button>
-        <button class="tf-btn" onclick="toggleIndicator('RSI')" id="ind-RSI">RSI</button>
-        <button class="tf-btn" onclick="toggleIndicator('MACD')" id="ind-MACD">MACD</button>
-        <button class="tf-btn" onclick="toggleIndicator('SUPERTREND')" id="ind-SUPERTREND">ST</button>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <span id="chart-live-dot" style="width:8px;height:8px;border-radius:50%;background:var(--gr);display:inline-block;animation:pulse 1.5s infinite"></span>
-      <span style="font-size:8px;color:var(--gr)">LIVE</span>
-      <button onclick="closeChart()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:22px;padding:4px">✕</button>
-    </div>
-  </div>
-  <!-- Symbol search bar -->
-  <div style="background:var(--bg3);padding:8px 14px;display:flex;gap:8px;align-items:center;flex-shrink:0;border-bottom:1px solid var(--bo)">
-    <input id="sym-search" placeholder="Search symbol... (NIFTY, BANKNIFTY, RELIANCE...)" style="flex:1;border-radius:20px;padding:6px 14px;font-size:11px;background:var(--bg4)" onkeypress="if(event.key==='Enter')switchSymbol(this.value.toUpperCase())">
-    <div style="display:flex;gap:4px">
-      <button class="sym-btn active" id="sym-NIFTY" onclick="switchSymbol('NIFTY',this)">NIFTY</button>
-      <button class="sym-btn" id="sym-BANKNIFTY" onclick="switchSymbol('BANKNIFTY',this)">BANKNIFTY</button>
-      <button class="sym-btn" id="sym-FINNIFTY" onclick="switchSymbol('FINNIFTY',this)">FINNIFTY</button>
-      <button class="sym-btn" id="sym-SENSEX" onclick="switchSymbol('SENSEX',this)">SENSEX</button>
-    </div>
-    <!-- Chart type -->
-    <div style="display:flex;gap:3px">
-      <button class="tf-btn active" id="ct-candle" onclick="setChartType('candle',this)">🕯️</button>
-      <button class="tf-btn" id="ct-bar" onclick="setChartType('bar',this)">📊</button>
-      <button class="tf-btn" id="ct-line" onclick="setChartType('line',this)">📈</button>
-    </div>
-  </div>
-  <!-- Chart area -->
-  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative">
-    <div id="chart-container" style="flex:1;width:100%;min-height:0"></div>
-    <div id="chart-volume" style="height:80px;width:100%;flex-shrink:0"></div>
-    <!-- RSI panel -->
-    <div id="chart-rsi-panel" style="display:none;height:80px;width:100%;flex-shrink:0;border-top:1px solid var(--bo)">
-      <div id="chart-rsi-container" style="height:100%;width:100%"></div>
-    </div>
-    <!-- MACD panel -->
-    <div id="chart-macd-panel" style="display:none;height:80px;width:100%;flex-shrink:0;border-top:1px solid var(--bo)">
-      <div id="chart-macd-container" style="height:100%;width:100%"></div>
-    </div>
-    <!-- Loading overlay -->
-    <div id="chart-loading" style="position:absolute;inset:0;background:rgba(6,6,8,.8);display:flex;align-items:center;justify-content:center;z-index:10">
-      <div style="text-align:center"><div style="font-size:28px;margin-bottom:10px">📊</div><div style="color:var(--gr);font-size:12px">Loading chart data...</div></div>
-    </div>
-  </div>
-  <!-- Bottom info bar -->
-  <div style="background:var(--bg3);padding:6px 14px;display:flex;gap:16px;flex-shrink:0;border-top:1px solid var(--bo);font-size:9px;color:var(--mu);flex-wrap:wrap" id="ohlc-bar">
-    <span>O: <b id="ohlc-o" style="color:var(--tx)">—</b></span>
-    <span>H: <b id="ohlc-h" style="color:var(--gr)">—</b></span>
-    <span>L: <b id="ohlc-l" style="color:var(--rd)">—</b></span>
-    <span>C: <b id="ohlc-c" style="color:var(--tx)">—</b></span>
-    <span>Vol: <b id="ohlc-v" style="color:var(--bl)">—</b></span>
-    <span id="ohlc-indicators" style="color:var(--mu)"></span>
-    <span style="margin-left:auto">Data: NSE/BSE Simulated | Provider-agnostic architecture</span>
-  </div>
-</div>
 
-<style>
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.tf-btn{font-family:monospace;font-size:8px;padding:3px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);cursor:pointer;border-radius:4px;letter-spacing:.5px}
-.tf-btn.active,.tf-btn:hover{background:var(--bg3);border-color:var(--gr);color:var(--gr)}
-.sym-btn{font-family:monospace;font-size:8px;padding:3px 10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);cursor:pointer;border-radius:4px;letter-spacing:1px}
-.sym-btn.active{background:#001a0e;border-color:var(--gr);color:var(--gr);font-weight:700}
-</style>
+// === CHART ===
 
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script>
 var chartInstance = null;
 var candleSeries = null;
 var volumeSeries = null;
@@ -1384,11 +1407,10 @@ function showFallbackChart() {
 
 // Close modal on ESC
 document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeChart(); });
-</script>
 
-</body>
-</html>
-<script>
+
+// === FEATURES ===
+
 // ══════════════════════════════════════════════════════════════════════════════
 // FEATURE SET 2: Notifications + Auto-Execute + AI Strategies + Dynamic UI
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1714,4 +1736,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }, 5000);
 });
+
 </script>
+</body>
+</html>
+
