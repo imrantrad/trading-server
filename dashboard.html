@@ -455,6 +455,7 @@ function req(url, method, data, cb) {
   x.open(method || 'GET', API + url, true);
   x.setRequestHeader('Content-Type', 'application/json');
   x.setRequestHeader('Accept', 'application/json');
+  x.setRequestHeader('bypass-tunnel-reminder', 'true');
   x.timeout = 10000;
   x.onreadystatechange = function() {
     if(x.readyState === 4) {
