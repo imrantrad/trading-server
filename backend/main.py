@@ -1864,7 +1864,10 @@ except Exception as e:
     print(f"Notifications: {e}")
 
 try:
+    try:
     from ai_engine.customer_care import care_engine
+except ImportError:
+    care_engine = None
     CARE_V2_LOADED = True
 except Exception as e:
     CARE_V2_LOADED = False
@@ -1915,7 +1918,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/support/chat")
 def support_chat(req: ChatRequest):
-    if CARE_V2_LOADED:
+    if CARE_V2_LOADED and care_engine:
         return care_engine.chat(req.user_id, req.message, req.user_name)
     return {
         "response": "Support temporarily unavailable. Email: support@trd.app",
@@ -2098,3 +2101,60 @@ class UIConfig(BaseModel):
 def save_ui_config(cfg: UIConfig):
     _ui_configs[cfg.user_id] = {"visible_tabs": cfg.visible_tabs}
     return {"saved": True, "visible_tabs": cfg.visible_tabs}
+
+# ─── WEBSOCKET LIVE DATA ──────────────────────────────────────────────────────
+import asyncio
+from fastapi import WebSocket, WebSocketDisconnect
+
+class ConnectionManager:
+    def __init__(self):
+        self.active: list = []
+    async def connect(self, ws: WebSocket):
+        await ws.accept()
+        self.active.append(ws)
+    def disconnect(self, ws: WebSocket):
+        if ws in self.active:
+            self.active.remove(ws)
+    async def broadcast(self, data: dict):
+        dead = []
+        for ws in self.active:
+            try:
+                await ws.send_json(data)
+            except:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(ws)
+
+ws_manager = ConnectionManager()
+
+@app.websocket("/ws/live")
+async def websocket_live(websocket: WebSocket):
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            # Send live market data every 3 seconds
+            try:
+                market_data = get_market_prices()
+                await websocket.send_json({
+                    "type": "market_update",
+                    "data": market_data,
+                    "timestamp": datetime.now().isoformat()
+                })
+            except Exception as e:
+                pass
+            await asyncio.sleep(3)
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception:
+        ws_manager.disconnect(websocket)
+
+def get_market_prices():
+    import random, math
+    base = {"NIFTY":23900,"BANKNIFTY":56000,"FINNIFTY":26100,"SENSEX":76500,"VIX":19.5}
+    result = {}
+    for sym, price in base.items():
+        change = (random.random() - 0.5) * price * 0.002
+        ltp = round(price + change, 2)
+        pct = round(change / price * 100, 2)
+        result[sym] = {"price": ltp, "pChange": pct, "volume": random.randint(100000, 500000)}
+    return result

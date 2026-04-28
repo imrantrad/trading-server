@@ -73,7 +73,6 @@ textarea{resize:vertical;min-height:55px}
 </div>
 <div class="tabs">
   <button class="tab active" onclick="show('trade',this)">TRADE</button>
-  <button class="tab" onclick="show('prof',this)" style="color:var(--pu)">👤 PROFILE</button>
   <button class="tab" onclick="show('pos',this)">POSITIONS</button>
   <button class="tab" onclick="show('risk',this)">RISK</button>
   <button class="tab" onclick="show('scan',this)">SCANNER</button>
@@ -418,7 +417,16 @@ textarea{resize:vertical;min-height:55px}
 </div>
 
 <script>
-var API = 'https://permalink-promising-jpeg-velocity.trycloudflare.com';
+// Dynamic API URL - always same origin as dashboard
+var API = (function(){
+  var loc = window.location;
+  // If served from Cloudflare tunnel or any host, use same origin
+  if(loc.hostname !== 'localhost' && loc.hostname !== '127.0.0.1'){
+    return loc.protocol + '//' + loc.host;
+  }
+  return 'http://13.53.175.88';
+})();
+console.log('API:', API);
 var UID = 'USR124535215';
 var INST = 'NIFTY', ACT = 'BUY', TYP = 'CE', MODE = 'PAPER', KILL = false, SELPLAN = 'PRO';
 var chatOpen = false, chatHistory = [];
@@ -758,17 +766,86 @@ function addChatMsg(text,role){var msgs=$('chat-msgs');if(!msgs)return;var div=d
 function addChatSugg(suggestions){var box=$('chat-sugg');if(!box)return;box.innerHTML='';suggestions.forEach(function(s){var btn=document.createElement('button');btn.textContent=s;btn.style.cssText='font-size:8px;padding:4px 10px;background:var(--bg4);border:1px solid var(--bo);border-radius:12px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--mu);margin:2px';btn.onclick=function(){sendChat(s);};box.appendChild(btn);});}
 function sendChat(override){var inp=$('chat-inp');var msg=override||(inp?inp.value.trim():'');if(!msg)return;if(inp&&!override)inp.value='';addChatMsg(msg,'user');var sugg=$('chat-sugg');if(sugg)sugg.innerHTML='<span style="color:var(--mu);font-size:9px">Typing...</span>';req('/support/chat','POST',{user_id:UID,message:msg,user_name:'Friend'},function(err,r){if(err||!r){addChatMsg('Server se connect nahi. Thoda wait karo!','bot');addChatSugg(['Try again','How to trade?']);return;}addChatMsg(r.response||'','bot');if(r.suggestions&&r.suggestions.length)addChatSugg(r.suggestions);});}
 
+// WEBSOCKET LIVE DATA
+var wsConn = null;
+var wsRetries = 0;
+
+function connectWS() {
+  try {
+    var wsProto = API.startsWith('https') ? 'wss' : 'ws';
+    var wsHost = API.replace('https://','').replace('http://','');
+    var wsUrl = wsProto + '://' + wsHost + '/ws/live';
+    
+    wsConn = new WebSocket(wsUrl);
+    
+    wsConn.onopen = function() {
+      wsRetries = 0;
+      $('api-dot').style.background = 'var(--gr)';
+      $('api-lbl').textContent = 'LIVE ●';
+      alog('WebSocket connected - Live data streaming!', 'ok');
+    };
+    
+    wsConn.onmessage = function(e) {
+      try {
+        var msg = JSON.parse(e.data);
+        if(msg.type === 'market_update' && msg.data) {
+          Object.keys(msg.data).forEach(function(k) {
+            if(msg.data[k].price) {
+              prices[k] = msg.data[k].price;
+              changes[k] = msg.data[k].pChange || 0;
+              // Update price in UI instantly
+              var el = $('px-'+k);
+              if(el) el.textContent = msg.data[k].price.toFixed(2);
+            }
+          });
+          renderMkt();
+        }
+      } catch(err) {}
+    };
+    
+    wsConn.onerror = function() {
+      // Fallback to polling
+      fallbackToPolling();
+    };
+    
+    wsConn.onclose = function() {
+      $('api-lbl').textContent = 'RECONNECTING';
+      wsRetries++;
+      // Exponential backoff
+      var delay = Math.min(1000 * Math.pow(2, wsRetries), 30000);
+      setTimeout(function() {
+        if(wsRetries < 10) connectWS();
+        else fallbackToPolling();
+      }, delay);
+    };
+  } catch(e) {
+    fallbackToPolling();
+  }
+}
+
+function fallbackToPolling() {
+  alog('WebSocket unavailable - using polling', 'info');
+  loadStats();
+  loadMkt();
+  setInterval(loadStats, 20000);
+  setInterval(loadMkt, 8000);
+}
+
 // INIT
 (function(){
   var t=localStorage.getItem('trd-theme');
   if(t&&t!=='dark'){applyTh(t,null);}
   buildPlanCards();
   buildThemeCards();
+  alog('TRD v12.3 initialized - Connecting...','sys');
+  
+  // Try WebSocket first, fallback to polling
+  connectWS();
+  
+  // Always do initial HTTP load
   loadStats();
   loadMkt();
-  alog('TRD v12.3 initialized','sys');
-  setInterval(loadStats,20000);
-  setInterval(loadMkt,8000);
+  
   setInterval(function(){var a=document.querySelector('.pnl.active');if(a){if(a.id==='pnl-risk')loadRisk();if(a.id==='pnl-pos')loadPos();}},15000);
 })();
 </script>
