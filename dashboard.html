@@ -345,90 +345,250 @@ textarea{resize:vertical;min-height:55px}
   </div>
 </div>
 
-<div id="pnl-prof" class="pnl">
-  <div class="card" style="background:linear-gradient(135deg,var(--bg3),var(--bg4));border-color:var(--gr)20">
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
-      <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#000">D</div>
-      <div style="flex:1"><div style="font-size:16px;font-weight:700">Demo Trader</div><div style="font-size:9px;color:var(--mu)">demo@trading.com</div>
-        <div style="display:flex;gap:6px;margin-top:6px"><span class="bdg" style="border-color:var(--pu);background:#160a28;color:var(--pu)">PRO</span><span class="bdg" style="border-color:var(--bl);background:#0a1628;color:var(--bl)">ZERODHA</span></div>
+
+<style>
+.prof-menu-item{display:flex;align-items:center;gap:14px;padding:14px 10px;border-radius:12px;cursor:pointer;transition:background .2s;margin-bottom:4px}
+.prof-menu-item:hover,.prof-menu-item:active{background:var(--bg3)}
+.prof-panel{background:var(--bg3);border:1px solid var(--bo);border-radius:12px;padding:16px;margin-top:4px}
+.prof-panel-header{font-size:12px;font-weight:700;color:var(--gr);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--bo);cursor:pointer;display:flex;align-items:center;gap:6px}
+</style>
+<div id="pnl-prof" class="pnl" style="padding:0;background:var(--bg)">
+
+  <!-- ── PROFILE HEADER ── -->
+  <div style="background:linear-gradient(135deg,#0a1628 0%,#001a0e 50%,#0d0e14 100%);padding:28px 20px 20px;position:relative;overflow:hidden">
+    <!-- bg decoration -->
+    <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(0,255,136,.06)"></div>
+    <div style="position:absolute;bottom:-30px;left:-20px;width:100px;height:100px;border-radius:50%;background:rgba(79,142,247,.05)"></div>
+    <!-- avatar + info -->
+    <div style="display:flex;align-items:center;gap:16px;position:relative;z-index:1">
+      <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#000;flex-shrink:0;box-shadow:0 0 0 3px rgba(0,255,136,.2)" id="prof-avatar">DT</div>
+      <div style="flex:1">
+        <div style="font-size:18px;font-weight:700;letter-spacing:-.3px" id="prof-name-display">Demo Trader</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:2px" id="prof-email-display">demo@trading.com</div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <span style="font-size:8px;padding:3px 10px;border-radius:10px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);color:#a855f7;font-weight:700;letter-spacing:1px">★ PRO</span>
+          <span style="font-size:8px;padding:3px 10px;border-radius:10px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);font-weight:700;letter-spacing:1px" id="prof-broker-badge">ZERODHA</span>
+          <span style="font-size:8px;padding:3px 10px;border-radius:10px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);color:var(--bl)" id="prof-mode-badge">PAPER MODE</span>
+        </div>
       </div>
-      <div style="text-align:right"><div style="font-size:9px;color:var(--mu)">CAPITAL</div><div style="font-size:20px;font-weight:700;color:var(--gr)">₹5.0L</div></div>
-    </div>
-    <div class="g4" style="margin-bottom:10px"><div class="stat"><div class="sl">TRADES</div><div class="sv" id="pf-t" style="color:var(--am)">0</div></div><div class="stat"><div class="sl">P&L</div><div class="sv" id="pf-p" style="color:var(--gr)">₹0</div></div><div class="stat"><div class="sl">WIN RATE</div><div class="sv" id="pf-w" style="color:var(--gr)">0%</div></div><div class="stat"><div class="sl">STRATS</div><div class="sv" id="pf-s" style="color:var(--bl)">0</div></div></div>
-  </div>
-  <div style="display:flex;gap:0;border-bottom:1px solid var(--bo)"><button class="tab active" id="pt-set" onclick="swProf('set',this)">SETTINGS</button><button class="tab" id="pt-sub" onclick="swProf('sub',this)">PLANS</button><button class="tab" id="pt-th" onclick="swProf('th',this)">THEMES</button>
-<button class="tab" id="pt-dash" onclick="swProf('dash',this)">DASHBOARD</button></div>
-  <div id="ps-set" class="card">
-    <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">NAME</div><input id="pf-n" placeholder="Your name"></div><div><div class="lbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div></div>
-    <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">CAPITAL</div><input type="number" id="pf-c" value="500000"></div><div><div class="lbl">RISK %</div><input type="number" id="pf-r" value="1"></div></div>
-    <div class="g2" style="gap:6px;margin-bottom:8px"><div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="pf-ml" value="3"></div><div><div class="lbl">BROKER</div><select id="pf-b"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option></select></div></div>
-    <button class="btn bg blg" onclick="saveProf()">✓ SAVE SETTINGS</button>
-  <div style="margin-top:16px;padding:14px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px">
-    <div style="font-size:9px;letter-spacing:2px;color:var(--mu);margin-bottom:10px;text-transform:uppercase">Broker API — Live Trading</div>
-    <div class="g2" style="gap:6px;margin-bottom:8px">
-      <div><div class="lbl">BROKER</div>
-        <select id="br-broker" style="width:100%">
-          <option value="ZERODHA">🔵 Zerodha Kite (Recommended)</option>
-          <option value="ANGEL">🟠 Angel One SmartAPI (Free)</option>
-          <option value="FYERS">🟢 Fyers API (Free)</option>
-          <option value="UPSTOX">🟣 Upstox API v3 (Free)</option>
-        </select>
-      </div>
-      <div><div class="lbl">MODE</div>
-        <select id="br-mode" style="width:100%">
-          <option value="PAPER">📄 Paper Trading (Safe)</option>
-          <option value="LIVE">⚡ Live Trading (Real Money)</option>
-        </select>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:9px;color:var(--mu)">CAPITAL</div>
+        <div style="font-size:22px;font-weight:800;color:var(--gr);letter-spacing:-1px" id="prof-cap-display">₹5.0L</div>
       </div>
     </div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Enter API key"></div>
-      <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Enter token"></div>
+    <!-- stats strip -->
+    <div style="display:flex;gap:0;margin-top:20px;background:rgba(255,255,255,.04);border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.06);position:relative;z-index:1">
+      <div style="flex:1;padding:10px 14px;text-align:center;border-right:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:16px;font-weight:700;color:var(--am)" id="pp-trades">0</div>
+        <div style="font-size:8px;color:var(--mu);margin-top:2px;letter-spacing:1px">TRADES</div>
+      </div>
+      <div style="flex:1;padding:10px 14px;text-align:center;border-right:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:16px;font-weight:700;color:var(--gr)" id="pp-pnl">₹0</div>
+        <div style="font-size:8px;color:var(--mu);margin-top:2px;letter-spacing:1px">TOTAL P&L</div>
+      </div>
+      <div style="flex:1;padding:10px 14px;text-align:center;border-right:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:16px;font-weight:700;color:var(--gr)" id="pp-wr">0%</div>
+        <div style="font-size:8px;color:var(--mu);margin-top:2px;letter-spacing:1px">WIN RATE</div>
+      </div>
+      <div style="flex:1;padding:10px 14px;text-align:center">
+        <div style="font-size:16px;font-weight:700;color:var(--bl)" id="pp-strats">0</div>
+        <div style="font-size:8px;color:var(--mu);margin-top:2px;letter-spacing:1px">STRATEGIES</div>
+      </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn bg" style="flex:1;padding:9px" onclick="connectBroker()">🔗 CONNECT BROKER</button>
-      <button class="btn bb" style="flex:1;padding:9px" onclick="showBrokerGuide()">📖 SETUP GUIDE</button>
-      <button class="btn br" style="padding:9px 14px" onclick="disconnectBroker()">✕</button>
-    </div>
-    <div id="broker-status" style="margin-top:8px;font-size:9px;color:var(--mu)"></div>
-    <div id="broker-guide" style="display:none;margin-top:10px;background:var(--bg);border:1px solid var(--bo);border-radius:4px;padding:10px;font-size:9px;line-height:1.8;color:var(--mu)"></div>
-  </div>
-  </div>
-  <div id="ps-sub" class="card" style="display:none">
-    <div class="chdr">SUBSCRIPTION PLANS</div>
-    <div class="g2" style="gap:6px;margin-bottom:8px" id="plan-cards"></div>
-    <button class="btn bg blg" onclick="upgradePlan()">UPGRADE PLAN</button>
-  </div>
-  <div id="ps-dash" class="card" style="display:none">
-  <div class="chdr">🎛️ DASHBOARD SETTINGS — Show/Hide Tabs</div>
-  <div style="font-size:9px;color:var(--mu);margin-bottom:10px">Uncheck any tab to hide it from the dashboard. Settings are saved automatically.</div>
-  <div id="tab-visibility-list" style="display:flex;flex-direction:column;gap:6px"></div>
-  <div style="margin-top:10px;padding:8px;background:var(--bg4);border-radius:4px;font-size:8px;color:var(--mu)">
-    <b style="color:var(--am)">Plan-based access:</b> Your PRO plan allows all tabs. Upgrade to unlock restricted features.
-  </div>
-  <button class="btn bg blg" onclick="saveUIConfig()" style="margin-top:10px">✓ SAVE DASHBOARD SETTINGS</button>
-</div>
-
-<div id="ps-th" class="card" style="display:none">
-    <div class="chdr">THEMES</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="theme-cards"></div>
-  </div>
-</div>
-
-</div>
-
-
-<!-- NOTIFICATION PANEL -->
-<div id="notif-panel" style="display:none;position:fixed;top:50px;right:14px;width:320px;max-height:480px;background:var(--bg2);border:1px solid var(--bo);border-radius:10px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:997;flex-direction:column">
-  <div style="background:var(--bg3);padding:12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bo)">
-    <div style="font-size:11px;font-weight:700;color:var(--gr)">🔔 Notifications</div>
-    <div style="display:flex;gap:8px">
-      <button onclick="markAllRead()" style="font-size:8px;background:none;border:1px solid var(--bo);color:var(--mu);cursor:pointer;padding:2px 8px;border-radius:4px;font-family:inherit">Mark all read</button>
-      <button onclick="toggleNotifPanel()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px">✕</button>
+    <!-- member info -->
+    <div style="display:flex;gap:8px;margin-top:12px;position:relative;z-index:1">
+      <div style="flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">📅</span>
+        <div><div style="font-size:8px;color:var(--mu);letter-spacing:1px">MEMBER SINCE</div><div style="font-size:10px;font-weight:600">April 2026</div></div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:14px">🆔</span>
+        <div><div style="font-size:8px;color:var(--mu);letter-spacing:1px">USER ID</div><div style="font-size:10px;font-weight:600">USR124535215</div></div>
+      </div>
     </div>
   </div>
-  <div id="notif-list" style="flex:1;overflow-y:auto;max-height:380px;padding:8px;display:flex;flex-direction:column;gap:6px">
-    <div style="color:var(--mu);text-align:center;padding:20px;font-size:10px">No notifications yet</div>
+
+  <!-- ── MENU LIST ── -->
+  <div style="padding:12px;overflow-y:auto;flex:1">
+
+    <!-- Account & Settings Group -->
+    <div style="font-size:8px;letter-spacing:2px;color:var(--mu);padding:4px 8px 10px;text-transform:uppercase">Account</div>
+
+    <!-- My Account -->
+    <div class="prof-menu-item" onclick="swProf('set',null)">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👤</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">My Account</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">Profile info, settings, preferences</div>
+      </div>
+      <div style="color:var(--mu);font-size:16px">›</div>
+    </div>
+
+    <!-- Subscription / Plans -->
+    <div class="prof-menu-item" onclick="swProf('sub',null)">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💎</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">Subscription Plans</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">PRO plan active · Renews May 2026</div>
+      </div>
+      <div style="color:var(--mu);font-size:16px">›</div>
+    </div>
+
+    <!-- Broker API -->
+    <div class="prof-menu-item" onclick="swProf('broker',null)">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔗</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">Broker API</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">Zerodha, Angel, Fyers, Upstox · Live trading</div>
+      </div>
+      <div style="color:var(--mu);font-size:16px">›</div>
+    </div>
+
+    <!-- Reports -->
+    <div class="prof-menu-item" onclick="show('rep',null)">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📊</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">Reports</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">Daily, weekly, monthly P&L analysis</div>
+      </div>
+      <div style="color:var(--mu);font-size:16px">›</div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="prof-menu-item" onclick="toggleNotifPanel()">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,51,102,.12);border:1px solid rgba(255,51,102,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔔</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">Notifications</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">Alerts, push, SMS, Telegram, WhatsApp</div>
+      </div>
+      <div style="color:var(--mu);font-size:16px">›</div>
+    </div>
+
+    <div style="font-size:8px;letter-spacing:2px;color:var(--mu);padding:14px 8px 10px;text-transform:uppercase">Customisation</div>
+
+    <!-- Themes -->
+    <div class="prof-menu-item" onclick="swProf('th',null)">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎨</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">Themes</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">Dark, Midnight, Matrix, Cosmic, Solar, Light</div>
+      </div>
+      <div style="color:var(--mu);font-size:16px">›</div>
+    </div>
+
+    <!-- Dashboard Settings -->
+    <div class="prof-menu-item" onclick="swProf('dash',null)">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎛️</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">Dashboard Settings</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">Show/hide tabs based on your plan</div>
+      </div>
+      <div style="color:var(--mu);font-size:16px">›</div>
+    </div>
+
+    <div style="font-size:8px;letter-spacing:2px;color:var(--mu);padding:14px 8px 10px;text-transform:uppercase">Legal & Support</div>
+
+    <!-- Legal -->
+    <div class="prof-menu-item" onclick="show('legal',null)">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📋</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">Legal & Compliance</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">Terms, privacy, risk disclosure, digital sign</div>
+      </div>
+      <div style="color:var(--mu);font-size:16px">›</div>
+    </div>
+
+    <!-- Support -->
+    <div class="prof-menu-item" onclick="toggleChat()">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💬</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">Customer Support</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">AI chat · Hindi/English · Human escalation</div>
+      </div>
+      <div style="color:var(--mu);font-size:16px">›</div>
+    </div>
+
+    <!-- About -->
+    <div class="prof-menu-item" style="opacity:.7">
+      <div style="width:40px;height:40px;border-radius:12px;background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">ℹ️</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">About TRD</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">v12.3.0 · AWS eu-north-1 · Build 2026.04</div>
+      </div>
+      <div style="color:var(--mu);font-size:16px">›</div>
+    </div>
+
+    <!-- ── DETAIL PANELS (shown when menu item clicked) ── -->
+    <div id="ps-set" class="prof-panel" style="display:none">
+      <div class="prof-panel-header" onclick="swProf(null,null)">‹ My Account</div>
+      <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">FULL NAME</div><input id="pf-n" placeholder="Your name" value="Demo Trader"></div><div><div class="lbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div></div>
+      <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">CAPITAL ₹</div><input type="number" id="pf-c" value="500000"></div><div><div class="lbl">RISK % PER TRADE</div><input type="number" id="pf-r" value="1"></div></div>
+      <div class="g2" style="gap:6px;margin-bottom:8px"><div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="pf-ml" value="3"></div><div><div class="lbl">DEFAULT BROKER</div><select id="pf-b"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option><option>UPSTOX</option></select></div></div>
+      <button class="btn bg blg" onclick="saveProf()">✓ SAVE SETTINGS</button>
+    </div>
+
+    <div id="ps-sub" class="prof-panel" style="display:none">
+      <div class="prof-panel-header" onclick="swProf(null,null)">‹ Subscription Plans</div>
+      <div style="display:flex;flex-direction:column;gap:10px" id="plan-cards"></div>
+      <button class="btn bg blg" onclick="upgradePlan()" style="margin-top:12px">💳 UPGRADE PLAN</button>
+    </div>
+
+    <div id="ps-broker" class="prof-panel" style="display:none">
+      <div class="prof-panel-header" onclick="swProf(null,null)">‹ Broker API</div>
+      <div style="background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:12px;margin-bottom:14px;font-size:10px;line-height:1.7;color:var(--mu)">
+        🔗 Connect your broker API for <b style="color:var(--tx)">live trading</b>. Paper mode uses simulated prices. Live mode executes real orders through your broker account.
+      </div>
+      <div class="g2" style="gap:6px;margin-bottom:6px">
+        <div><div class="lbl">BROKER</div>
+          <select id="br-broker" style="width:100%">
+            <option value="ZERODHA">🔵 Zerodha Kite</option>
+            <option value="ANGEL">🟠 Angel One</option>
+            <option value="FYERS">🟢 Fyers API</option>
+            <option value="UPSTOX">🟣 Upstox v3</option>
+          </select>
+        </div>
+        <div><div class="lbl">TRADING MODE</div>
+          <select id="br-mode" style="width:100%">
+            <option value="PAPER">📄 Paper (Safe)</option>
+            <option value="LIVE">⚡ Live (Real Money)</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2" style="gap:6px;margin-bottom:6px">
+        <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Enter API key"></div>
+        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Daily token"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn bg" style="flex:1;padding:10px" onclick="connectBroker()">🔗 CONNECT</button>
+        <button class="btn bb" style="flex:1;padding:10px" onclick="showBrokerGuide()">📖 GUIDE</button>
+        <button class="btn br" style="padding:10px 14px" onclick="disconnectBroker()">✕</button>
+      </div>
+      <div id="broker-status" style="font-size:10px;color:var(--mu);margin-bottom:8px"></div>
+      <div id="broker-guide" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:12px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
+      <!-- Broker cards -->
+      <div style="margin-top:16px">
+        <div style="font-size:8px;letter-spacing:2px;color:var(--mu);margin-bottom:10px;text-transform:uppercase">Supported Brokers</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🔵</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Zerodha Kite</div><div style="font-size:9px;color:var(--mu)">₹2000/mo · Most popular in India</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:10px">RECOMMENDED</span></div>
+          <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🟠</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Angel One SmartAPI</div><div style="font-size:9px;color:var(--mu)">FREE · WebSocket feed included</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);color:#00cc88;border-radius:10px">FREE</span></div>
+          <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🟢</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Fyers API</div><div style="font-size:9px;color:var(--mu)">FREE · Level 2 data available</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);color:#00cc88;border-radius:10px">FREE</span></div>
+          <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🟣</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Upstox API v3</div><div style="font-size:9px;color:var(--mu)">FREE · OAuth 2.0 based</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);color:#00cc88;border-radius:10px">FREE</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="ps-th" class="prof-panel" style="display:none">
+      <div class="prof-panel-header" onclick="swProf(null,null)">‹ Themes</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="theme-cards"></div>
+    </div>
+
+    <div id="ps-dash" class="prof-panel" style="display:none">
+      <div class="prof-panel-header" onclick="swProf(null,null)">‹ Dashboard Settings</div>
+      <div style="font-size:10px;color:var(--mu);margin-bottom:12px;line-height:1.6">Show/hide tabs. Your plan determines which tabs are accessible.</div>
+      <div id="tab-visibility-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <button class="btn bg blg" onclick="saveUIConfig()" style="margin-top:12px">✓ SAVE SETTINGS</button>
+    </div>
+
   </div>
 </div>
 
@@ -991,7 +1151,41 @@ function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$
 
 // PROFILE
 function swProf(tab,btn){['set','sub','th'].forEach(function(t){var el=$('ps-'+t);if(el)el.style.display=t===tab?'block':'none';});document.querySelectorAll('#pnl-prof .tab').forEach(function(b){b.classList.remove('active');});if(btn)btn.classList.add('active');}
-function loadProfStats(){req('/stats','GET',null,function(err,d){if(err||!d)return;var p=d.performance||{};if($('pf-t'))$('pf-t').textContent=p.total_trades||0;var pp=$('pf-p');if(pp){pp.textContent=fmt(p.total_pnl||0);pp.style.color=(p.total_pnl||0)>=0?'var(--gr)':'var(--rd)';}if($('pf-w'))$('pf-w').textContent=(p.win_rate||0)+'%';req('/strategies/user/'+UID,'GET',null,function(e2,d2){if($('pf-s'))$('pf-s').textContent=(d2&&d2.user_strategies&&d2.user_strategies.length)||0;});});}
+function loadProfStats(){
+  req('/stats','GET',null,function(err,d){
+    if(err||!d)return;
+    var p=d.performance||{};
+    var pnl=p.total_pnl||0;
+    var wr=p.win_rate||0;
+    var trades=p.total_trades||0;
+    
+    // Update new profile header stats
+    if($('pp-trades'))$('pp-trades').textContent=trades;
+    if($('pp-pnl')){$('pp-pnl').textContent=fmt(pnl);$('pp-pnl').style.color=pnl>=0?'var(--gr)':'var(--rd)';}
+    if($('pp-wr')){$('pp-wr').textContent=wr+'%';$('pp-wr').style.color=wr>=60?'var(--gr)':wr>=40?'var(--am)':'var(--rd)';}
+    if($('prof-cap-display'))$('prof-cap-display').textContent='₹'+((p.capital||500000)/100000).toFixed(1)+'L';
+    
+    req('/strategies/user/'+UID,'GET',null,function(e2,d2){
+      var cnt=(d2&&d2.user_strategies&&d2.user_strategies.length)||0;
+      if($('pp-strats'))$('pp-strats').textContent=cnt;
+    });
+  });
+  
+  // Load saved profile name
+  try{
+    var saved=localStorage.getItem('trd_profile_'+UID);
+    if(saved){
+      var d=JSON.parse(saved);
+      if(d.full_name&&$('prof-name-display'))$('prof-name-display').textContent=d.full_name;
+      if(d.broker&&$('prof-broker-badge'))$('prof-broker-badge').textContent=d.broker;
+      // Update avatar initials
+      if(d.full_name&&$('prof-avatar')){
+        var parts=d.full_name.split(' ');
+        $('prof-avatar').textContent=(parts[0]?parts[0][0]:'D')+(parts[1]?parts[1][0]:'T');
+      }
+    }
+  }catch(e){}
+}
 function saveProf(){
   var data={
     full_name: gv('pf-n')||'Demo Trader',
