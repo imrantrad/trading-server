@@ -68,10 +68,12 @@ textarea{resize:vertical;min-height:55px}
     <div class="dot" id="api-dot" style="background:var(--am)"></div>
     <span style="font-size:8px;color:var(--mu)" id="api-lbl">CONNECTING</span>
     <button class="btn br" id="kill-btn" onclick="toggleKill()" style="padding:3px 8px">KILL</button>
+    <button class="btn" onclick="show('prof',null)" style="padding:3px 10px;background:#160a28;border-color:var(--pu);color:var(--pu);font-size:9px">👤 PROFILE</button>
   </div>
 </div>
 <div class="tabs">
   <button class="tab active" onclick="show('trade',this)">TRADE</button>
+  <button class="tab" onclick="show('prof',this)" style="color:var(--pu)">👤 PROFILE</button>
   <button class="tab" onclick="show('pos',this)">POSITIONS</button>
   <button class="tab" onclick="show('risk',this)">RISK</button>
   <button class="tab" onclick="show('scan',this)">SCANNER</button>
@@ -84,7 +86,6 @@ textarea{resize:vertical;min-height:55px}
   <button class="tab" onclick="show('ai',this)">AI ENGINE</button>
   <button class="tab" onclick="show('admin',this)">ADMIN</button>
   <button class="tab" onclick="show('legal',this)">LEGAL</button>
-  <button class="tab" onclick="show('prof',this)">PROFILE</button>
 </div>
 <div class="main">
 
