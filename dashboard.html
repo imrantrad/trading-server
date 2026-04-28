@@ -73,6 +73,7 @@ textarea{resize:vertical;min-height:55px}
 </div>
 <div class="tabs">
   <button class="tab active" onclick="show('trade',this)">TRADE</button>
+  <button class="tab" onclick="openPaperTest()" style="color:var(--am)">📄 PAPER TEST</button>
   <button class="tab" onclick="show('risk',this)">RISK</button>
   <button class="tab" onclick="show('scan',this)">SCANNER</button>
   <button class="tab" onclick="show('opts',this)">OPTIONS</button>
@@ -90,7 +91,6 @@ textarea{resize:vertical;min-height:55px}
   <!-- Quick Action Row -->
   <div style="display:flex;gap:8px;margin-bottom:8px">
     <button class="btn bb" style="flex:1;padding:8px;font-size:9px" onclick="openLivePositions()">📈 LIVE POSITIONS</button>
-    <button class="btn ba" style="flex:1;padding:8px;font-size:9px" onclick="openPaperTest()">📄 PAPER TEST</button>
     <button class="btn bg" style="flex:1;padding:8px;font-size:9px" onclick="openStrategies()">★ STRATEGIES</button>
   </div>
   <div class="g4">
@@ -602,7 +602,7 @@ textarea{resize:vertical;min-height:55px}
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:10px;background:var(--bg3);border:1px solid var(--bo);border-radius:8px">
     <span style="font-size:14px">📄</span>
     <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--am)">PAPER TEST MODE</div><div style="font-size:9px;color:var(--mu)">Virtual trading — no real money · ₹5L virtual capital</div></div>
-    <button class="btn ba" style="padding:5px 12px;font-size:9px" onclick="show('trade',null)">← BACK</button>
+    <button class="btn ba" style="padding:5px 12px;font-size:9px" onclick="goBackToTrade()">← BACK</button>
   </div>
   <!-- Paper mode sub-tabs -->
   <div style="display:flex;gap:6px;margin-bottom:10px">
@@ -645,7 +645,7 @@ textarea{resize:vertical;min-height:55px}
           <div><div class="lbl">STOP LOSS (pts)</div><input type="number" id="pf-sl" value="100"></div>
           <div><div class="lbl">TARGET (pts)</div><input type="number" id="pf-tgt" value="200"></div>
         </div>
-        <button class="btn blg ba" id="paper-exec-btn" onclick="execPaperTrade()">📄 EXECUTE PAPER TRADE</button>
+        <button class="btn blg ba" style="background:#1a0e00" id="paper-exec-btn" onclick="execPaperTrade()">📄 EXECUTE PAPER TRADE</button>
       </div>
       <div class="card"><div class="chdr">PAPER LOG<button class="btn ba" onclick="document.getElementById('paper-log').innerHTML=''" style="padding:2px 8px;font-size:8px">CLR</button></div>
         <div id="paper-log" style="max-height:200px;overflow-y:auto;font-size:9px"></div>
@@ -683,7 +683,7 @@ textarea{resize:vertical;min-height:55px}
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:10px;background:var(--bg3);border:1px solid rgba(0,255,136,.2);border-radius:8px">
     <span style="font-size:14px">📈</span>
     <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--gr)">LIVE POSITIONS</div><div style="font-size:9px;color:var(--mu)">Real money positions only</div></div>
-    <button class="btn bg" style="padding:5px 12px;font-size:9px" onclick="show('trade',null)">← BACK</button>
+    <button class="btn bg" style="padding:5px 12px;font-size:9px" onclick="goBackToTrade()">← BACK</button>
   </div>
   <div class="g3" style="margin-bottom:10px">
     <div class="stat"><div class="sl">OPEN LIVE</div><div class="sv" id="lp-open" style="color:var(--bl)">0</div></div>
@@ -2285,6 +2285,22 @@ function pollNotifCount() {
 </html>
 
 <script>
+
+function goBackToTrade(){
+  // Hide all panels
+  document.querySelectorAll('.pnl').forEach(function(p){
+    p.classList.remove('active');
+    p.style.display = '';
+  });
+  // Show trade panel
+  var tp = document.getElementById('pnl-trade');
+  if(tp){ tp.classList.add('active'); tp.style.display='flex'; }
+  // Fix tab highlight - only TRADE tab active
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  var firstTab = document.querySelector('.tab');
+  if(firstTab) firstTab.classList.add('active');
+}
+
 // ── PAPER TEST + LIVE POSITIONS FUNCTIONS ──────────────────────────────────
 
 var PAPER_INST='NIFTY', PAPER_ACT='BUY', PAPER_TYP='CE';
