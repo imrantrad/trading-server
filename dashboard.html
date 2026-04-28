@@ -73,7 +73,7 @@ textarea{resize:vertical;min-height:55px}
 </div>
 <div class="tabs">
   <button class="tab active" onclick="show('trade',this)">TRADE</button>
-  <button class="tab" onclick="openPaperTest()" style="color:var(--am)">📄 PAPER TEST</button>
+  <button class="tab" id="tab-paper" onclick="activatePaperTab(this)">📄 PAPER TEST</button>
   <button class="tab" onclick="show('risk',this)">RISK</button>
   <button class="tab" onclick="show('scan',this)">SCANNER</button>
   <button class="tab" onclick="show('opts',this)">OPTIONS</button>
@@ -102,7 +102,7 @@ textarea{resize:vertical;min-height:55px}
   <div class="g2" style="gap:10px">
     <div class="card">
       <div class="chdr">ORDER ENTRY</div>
-      <div style="margin-bottom:8px"><div class="lbl">MODE</div><div style="display:flex;gap:4px"><button class="tog tb" id="m-PAPER" onclick="setMode('PAPER',this)">PAPER</button><button class="tog" id="m-LIVE" onclick="setMode('LIVE',this)">LIVE</button></div></div>
+
       <div style="margin-bottom:8px"><div class="lbl">INSTRUMENT</div><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="tog ta" id="bi-NIFTY" onclick="setInst('NIFTY',this)">NIFTY</button><button class="tog" id="bi-BANKNIFTY" onclick="setInst('BANKNIFTY',this)">BANKNIFTY</button><button class="tog" id="bi-FINNIFTY" onclick="setInst('FINNIFTY',this)">FINNIFTY</button><button class="tog" id="bi-SENSEX" onclick="setInst('SENSEX',this)">SENSEX</button></div></div>
       <div class="g2" style="gap:6px;margin-bottom:6px">
         <div><div class="lbl">ACTION</div><div style="display:flex;gap:4px"><button class="tog tg" id="ba-BUY" onclick="setAction('BUY')">BUY</button><button class="tog" id="ba-SELL" onclick="setAction('SELL')">SELL</button></div></div>
@@ -206,6 +206,14 @@ textarea{resize:vertical;min-height:55px}
 </div>
 
 <div id="pnl-bt" class="pnl">
+  <!-- Backtest strategy source buttons -->
+  <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+    <div style="font-size:9px;color:var(--mu);width:100%;margin-bottom:2px;letter-spacing:1px">SELECT FROM:</div>
+    <button class="btn bg" style="flex:1;padding:8px;font-size:9px" onclick="show('strats',null);loadBuiltin()">★ BUILT-IN</button>
+    <button class="btn bb" style="flex:1;padding:8px;font-size:9px" onclick="show('strats',null);loadMy()">📂 MY STRATEGIES</button>
+    <button class="btn ba" style="flex:1;padding:8px;font-size:9px" onclick="show('strats',null);toggleNLP()">◆ NLP BUILDER</button>
+    <button class="btn bg" style="flex:1;padding:8px;font-size:9px;border-color:var(--am);color:var(--am);background:#1a0e00" onclick="show('strats',null);loadAIApprovedStrats()">🤖 AI STRATEGIES</button>
+  </div>
   <div class="card"><div class="chdr">ADVANCED BACKTEST</div>
     <div class="g2" style="gap:6px;margin-bottom:6px">
       <div><div class="lbl">STRATEGY</div><select id="bt-s"><option value="STR_IRON_CONDOR_WEEKLY">Iron Condor (78%)</option><option value="STR_MAX_PAIN_EXPIRY">Max Pain (76%)</option><option value="STR_THETA_DECAY">Theta Decay (72%)</option><option value="STR_GAP_FADE">Gap Fade (74%)</option><option value="STR_PCR_REVERSAL">PCR Reversal (71%)</option><option value="STR_ORB">ORB (68%)</option><option value="EMA_CROSS">EMA Cross</option><option value="RSI_MEAN_REVERSION">RSI MR</option></select></div>
@@ -599,9 +607,13 @@ textarea{resize:vertical;min-height:55px}
 
 <!-- PAPER TEST PANEL -->
 <div id="pnl-paper" class="pnl" style="display:none">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:10px;background:var(--bg3);border:1px solid var(--bo);border-radius:8px">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:10px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px">
     <span style="font-size:14px">📄</span>
-    <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--am)">PAPER TEST MODE</div><div style="font-size:9px;color:var(--mu)">Virtual trading — no real money · ₹5L virtual capital</div></div>
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:700;color:var(--am)">PAPER TEST MODE</div>
+      <div style="font-size:9px;color:var(--mu)">Simulated trades · No real money · ₹5L virtual capital</div>
+    </div>
+    <span style="font-size:8px;padding:3px 10px;border-radius:10px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);color:var(--am);font-weight:700">PAPER ONLY</span>
     <button class="btn ba" style="padding:5px 12px;font-size:9px" onclick="goBackToTrade()">← BACK</button>
   </div>
   <!-- Paper mode sub-tabs -->
@@ -2286,19 +2298,24 @@ function pollNotifCount() {
 
 <script>
 
-function goBackToTrade(){
-  // Hide all panels
-  document.querySelectorAll('.pnl').forEach(function(p){
-    p.classList.remove('active');
-    p.style.display = '';
-  });
-  // Show trade panel
-  var tp = document.getElementById('pnl-trade');
-  if(tp){ tp.classList.add('active'); tp.style.display='flex'; }
-  // Fix tab highlight - only TRADE tab active
+
+function activatePaperTab(btn){
+  // Give green underline like other tabs
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  var firstTab = document.querySelector('.tab');
-  if(firstTab) firstTab.classList.add('active');
+  if(btn) btn.classList.add('active');
+  openPaperTest();
+}
+
+function goBackToTrade(){
+  document.querySelectorAll('.pnl').forEach(function(p){
+    p.classList.remove('active'); p.style.display='';
+  });
+  var tp=document.getElementById('pnl-trade');
+  if(tp){tp.classList.add('active');tp.style.display='flex';}
+  // Highlight TRADE tab (first tab)
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  var tradeTab=document.querySelector('.tab[onclick*="trade"]');
+  if(tradeTab) tradeTab.classList.add('active');
 }
 
 // ── PAPER TEST + LIVE POSITIONS FUNCTIONS ──────────────────────────────────
