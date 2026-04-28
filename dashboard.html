@@ -362,7 +362,37 @@ textarea{resize:vertical;min-height:55px}
     <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">NAME</div><input id="pf-n" placeholder="Your name"></div><div><div class="lbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div></div>
     <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">CAPITAL</div><input type="number" id="pf-c" value="500000"></div><div><div class="lbl">RISK %</div><input type="number" id="pf-r" value="1"></div></div>
     <div class="g2" style="gap:6px;margin-bottom:8px"><div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="pf-ml" value="3"></div><div><div class="lbl">BROKER</div><select id="pf-b"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option></select></div></div>
-    <button class="btn bg blg" onclick="saveProf()">SAVE SETTINGS</button>
+    <button class="btn bg blg" onclick="saveProf()">✓ SAVE SETTINGS</button>
+  <div style="margin-top:16px;padding:14px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px">
+    <div style="font-size:9px;letter-spacing:2px;color:var(--mu);margin-bottom:10px;text-transform:uppercase">Broker API — Live Trading</div>
+    <div class="g2" style="gap:6px;margin-bottom:8px">
+      <div><div class="lbl">BROKER</div>
+        <select id="br-broker" style="width:100%">
+          <option value="ZERODHA">🔵 Zerodha Kite (Recommended)</option>
+          <option value="ANGEL">🟠 Angel One SmartAPI (Free)</option>
+          <option value="FYERS">🟢 Fyers API (Free)</option>
+          <option value="UPSTOX">🟣 Upstox API v3 (Free)</option>
+        </select>
+      </div>
+      <div><div class="lbl">MODE</div>
+        <select id="br-mode" style="width:100%">
+          <option value="PAPER">📄 Paper Trading (Safe)</option>
+          <option value="LIVE">⚡ Live Trading (Real Money)</option>
+        </select>
+      </div>
+    </div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Enter API key"></div>
+      <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Enter token"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn bg" style="flex:1;padding:9px" onclick="connectBroker()">🔗 CONNECT BROKER</button>
+      <button class="btn bb" style="flex:1;padding:9px" onclick="showBrokerGuide()">📖 SETUP GUIDE</button>
+      <button class="btn br" style="padding:9px 14px" onclick="disconnectBroker()">✕</button>
+    </div>
+    <div id="broker-status" style="margin-top:8px;font-size:9px;color:var(--mu)"></div>
+    <div id="broker-guide" style="display:none;margin-top:10px;background:var(--bg);border:1px solid var(--bo);border-radius:4px;padding:10px;font-size:9px;line-height:1.8;color:var(--mu)"></div>
+  </div>
   </div>
   <div id="ps-sub" class="card" style="display:none">
     <div class="chdr">SUBSCRIPTION PLANS</div>
@@ -511,7 +541,81 @@ textarea{resize:vertical;min-height:55px}
 
 
 
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js">
+// ── BROKER API ──────────────────────────────────────────────────────────────
+function connectBroker(){
+  var broker = gv('br-broker');
+  var mode = gv('br-mode');
+  var key = gv('br-key');
+  var token = gv('br-token');
+  
+  if(!key){ toast('Enter API key first!','warn'); return; }
+  
+  var st = $('broker-status');
+  if(st) st.innerHTML = '<span style="color:var(--am)">Connecting...</span>';
+  
+  req('/broker/connect','POST',{
+    user_id: UID,
+    broker: broker,
+    api_key: key,
+    access_token: token,
+    mode: mode
+  }, function(err, r){
+    if(err || !r){
+      if(st) st.innerHTML = '<span style="color:var(--rd)">Connection failed: ' + (err||'Unknown') + '</span>';
+      toast('Broker connection failed','error');
+      return;
+    }
+    var color = r.connected ? 'var(--gr)' : 'var(--am)';
+    if(st) st.innerHTML = '<span style="color:'+color+'">'+r.message+'</span>';
+    toast(r.message, r.connected ? 'success' : 'warn');
+    alog('Broker: ' + r.broker + ' | ' + r.status, r.connected ? 'ok' : 'info');
+    
+    // Save to localStorage
+    try{ localStorage.setItem('trd_broker_'+UID, JSON.stringify({broker:broker,mode:mode,connected:r.connected})); }catch(e){}
+  });
+}
+
+function disconnectBroker(){
+  req('/broker/disconnect/'+UID,'POST',null,function(err,r){
+    var st = $('broker-status');
+    if(st) st.innerHTML = '<span style="color:var(--mu)">Disconnected. Using paper mode.</span>';
+    toast('Broker disconnected. Paper mode active.','info');
+    try{ localStorage.removeItem('trd_broker_'+UID); }catch(e){}
+  });
+}
+
+function showBrokerGuide(){
+  var guide = $('broker-guide');
+  var broker = gv('br-broker') || 'ZERODHA';
+  if(!guide) return;
+  
+  req('/broker/supported','GET',null,function(err,d){
+    if(err || !d) return;
+    var br = (d.brokers||[]).find(function(b){ return b.id === broker; });
+    if(!br){ guide.style.display='none'; return; }
+    
+    guide.style.display = guide.style.display === 'block' ? 'none' : 'block';
+    guide.innerHTML = '<b style="color:var(--tx)">' + br.logo + ' ' + br.name + ' Setup:</b><br>' + 
+      br.setup_steps.join('<br>') + 
+      '<br><br><a href="' + br.docs + '" target="_blank" style="color:var(--gr)">→ Official Docs</a>' +
+      '<br><span style="color:var(--am)">Charges: ' + br.charges + '</span>';
+  });
+}
+
+function loadBrokerStatus(){
+  req('/broker/status/'+UID,'GET',null,function(err,d){
+    if(err||!d||!d.connected) return;
+    var st = $('broker-status');
+    var br = $('br-broker');
+    var md = $('br-mode');
+    if(st) st.innerHTML = '<span style="color:var(--gr)">● ' + d.broker + ' connected | ' + d.mode + ' mode</span>';
+    if(br && d.broker) br.value = d.broker;
+    if(md && d.mode) md.value = d.mode;
+    alog('Broker: ' + d.broker + ' | ' + d.status, 'ok');
+  });
+}
+</script>
 <script>
 
 // Dynamic API URL - always same origin as dashboard
@@ -898,16 +1002,39 @@ function saveProf(){
     broker: gv('pf-b')||'ZERODHA',
     subscription_plan: 'PRO'
   };
+  // Save to localStorage first (instant)
+  try{ localStorage.setItem('trd_profile_'+UID, JSON.stringify(data)); }catch(e){}
+  // Then sync to server
   req('/users/'+UID,'PUT',data,function(err,r){
-    if(!err&&r&&r.updated){
-      toast('✅ Profile saved successfully!','success');
-      alog('Profile updated','ok');
-    } else {
-      // Store locally as fallback
-      try{ localStorage.setItem('trd_profile_'+UID, JSON.stringify(data)); }catch(e){}
+    if(!err && r && (r.updated || r.user_id)){
       toast('✅ Profile saved!','success');
+      alog('Profile saved to server','ok');
+    } else {
+      // localStorage already saved
+      toast('✅ Profile saved locally!','success');
+      alog('Profile saved locally','ok');
     }
+    // Update UI
+    var nameEl=document.querySelector('.auth-brand-name');
+    if(nameEl && data.full_name) nameEl.textContent = data.full_name;
   });
+}
+
+function loadSavedProfile(){
+  // Load from localStorage on startup
+  try{
+    var saved = localStorage.getItem('trd_profile_'+UID);
+    if(saved){
+      var d = JSON.parse(saved);
+      if($('pf-n') && d.full_name) $('pf-n').value = d.full_name;
+      if($('pf-ph') && d.phone) $('pf-ph').value = d.phone;
+      if($('pf-c') && d.capital) $('pf-c').value = d.capital;
+      if($('pf-r') && d.risk_per_trade) $('pf-r').value = d.risk_per_trade;
+      if($('pf-ml') && d.max_daily_loss) $('pf-ml').value = d.max_daily_loss;
+      if($('pf-b') && d.broker) $('pf-b').value = d.broker;
+      alog('Profile loaded from saved settings','sys');
+    }
+  }catch(e){}
 }
 function selPlan(p,el){SELPLAN=p;document.querySelectorAll('#ps-sub>div').forEach(function(c){c.style.borderColor='var(--bo)';});if(el)el.style.borderColor='var(--gr)';toast('Plan selected: '+p,'info');}
 function upgradePlan(){req('/subscriptions/upgrade','POST',{user_id:UID,plan:SELPLAN,payment_id:'SIM_'+Date.now()},function(err,r){toast(r&&r.upgraded?'Upgraded to '+SELPLAN+'!':'Upgrade failed','success');});}
@@ -1003,6 +1130,9 @@ function fallbackToPolling() {
   loadMkt();
   
   setInterval(function(){var a=document.querySelector('.pnl.active');if(a){if(a.id==='pnl-risk')loadRisk();if(a.id==='pnl-pos')loadPos();}},15000);
+  // Load saved profile and broker on startup
+  setTimeout(loadSavedProfile, 500);
+  setTimeout(loadBrokerStatus, 2000);
   
   // Feature init
   setTimeout(loadAutoExecConfig, 2000);

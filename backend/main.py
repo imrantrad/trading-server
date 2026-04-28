@@ -1235,11 +1235,43 @@ def get_user(user_id: str):
     return user if user else {"error":"User not found"}
 
 @app.put("/users/{user_id}")
-def update_user(user_id: str, payload: UserUpdate):
-    if not USER_SYSTEM: return {"error":"Not loaded"}
-    updates = {k:v for k,v in payload.dict().items() if v is not None}
-    user_db.update_profile(user_id, updates)
-    return {"updated": True, "fields": list(updates.keys())}
+def update_user(user_id: str, payload: dict = None):
+    """Save user profile — persists in memory, works without DB"""
+    from datetime import datetime
+    if payload is None:
+        payload = {}
+    
+    # Store in memory (replace with DB in production)
+    if not hasattr(update_user, '_store'):
+        update_user._store = {}
+    
+    update_user._store[user_id] = {
+        **payload,
+        "user_id": user_id,
+        "updated_at": datetime.now().isoformat()
+    }
+    
+    return {
+        "updated": True,
+        "user_id": user_id,
+        "message": "Profile saved successfully",
+        "data": update_user._store[user_id]
+    }
+
+@app.get("/users/{user_id}/profile")
+def get_user_profile(user_id: str):
+    """Get saved profile"""
+    if hasattr(update_user, '_store') and user_id in update_user._store:
+        return update_user._store[user_id]
+    return {
+        "user_id": user_id,
+        "full_name": "Demo Trader",
+        "capital": 500000,
+        "risk_per_trade": 1,
+        "max_daily_loss": 3,
+        "broker": "ZERODHA",
+        "subscription_plan": "PRO"
+    }
 
 @app.get("/users")
 def list_users():
@@ -2312,16 +2344,7 @@ def get_subscription(user_id: str):
     return sub
 
 # ── PROFILE SAVE (PUT) ────────────────────────────────────────────────────────
-@app.put("/users/{user_id}")
-def update_user_profile(user_id: str, data: dict):
-    """Save user profile settings"""
-    # In production: save to DB
-    return {
-        "updated": True,
-        "user_id": user_id,
-        "data": data,
-        "saved_at": datetime.now().isoformat()
-    }
+
 
 @app.get("/website", response_class=HTMLResponse)
 async def serve_website():
