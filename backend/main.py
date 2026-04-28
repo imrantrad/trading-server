@@ -740,7 +740,7 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.on_event("startup")
 async def startup():
     if FULL_SYSTEM:
-        asyncio.create_task(ws_manager.tick_loop())
+        pass  # WebSocket tick handled per connection
     if EVENT_DRIVEN:
         bus.emit(EventType.SYSTEM_START, {"msg":"System fully started","modules":"ALL"})
 
@@ -1730,7 +1730,7 @@ def pwa_manifest():
 # AI CUSTOMER CARE + NOTIFICATIONS
 # ═══════════════════════════════════════════════════════
 try:
-    from ai_engine.customer_care import care
+    from ai_engine.customer_care import care_engine
     CARE_LOADED = True
 except Exception as e:
     CARE_LOADED = False
