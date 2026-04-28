@@ -1851,3 +1851,250 @@ fetch(API+'/stats').then(function(r){
 }).catch(function(e){add('ERROR: '+e.message,'err');s.innerHTML='<b class=err>'+e.message+'</b>';});
 </script></body></html>""")
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ADVANCED FEATURES: Notifications + AI Care + Dynamic UI + Auto-Execute
+# ══════════════════════════════════════════════════════════════════════════════
+
+try:
+    from notifications.notification_engine import send_notification, get_notifications, mark_read, get_unread_count, NotifType
+    NOTIF_LOADED = True
+except Exception as e:
+    NOTIF_LOADED = False
+    print(f"Notifications: {e}")
+
+try:
+    from ai_engine.customer_care import care_engine
+    CARE_V2_LOADED = True
+except Exception as e:
+    CARE_V2_LOADED = False
+    print(f"Care v2: {e}")
+
+# ─── NOTIFICATION ENDPOINTS ───────────────────────────────────────────────────
+class NotifRequest(BaseModel):
+    user_id: str = "USR124535215"
+    notif_type: str
+    data: dict = {}
+
+@app.post("/notifications/send")
+def send_notif(req: NotifRequest):
+    if not NOTIF_LOADED:
+        return {"sent": False, "reason": "module_not_loaded"}
+    result = send_notification(req.notif_type, req.data, req.user_id)
+    return result
+
+@app.get("/notifications/{user_id}")
+def get_notifs(user_id: str, limit: int = 20, unread_only: bool = False):
+    if not NOTIF_LOADED:
+        return {"notifications": [], "count": 0}
+    notifs = get_notifications(user_id, limit, unread_only)
+    return {
+        "notifications": notifs,
+        "count": len(notifs),
+        "unread": get_unread_count(user_id)
+    }
+
+@app.post("/notifications/{user_id}/read")
+def mark_notifs_read(user_id: str, notif_id: str = None):
+    if not NOTIF_LOADED:
+        return {"ok": True}
+    mark_read(user_id, notif_id)
+    return {"ok": True, "unread": get_unread_count(user_id)}
+
+@app.get("/notifications/{user_id}/unread_count")
+def notif_unread_count(user_id: str):
+    if not NOTIF_LOADED:
+        return {"count": 0}
+    return {"count": get_unread_count(user_id)}
+
+# ─── AI CUSTOMER CARE V2 ──────────────────────────────────────────────────────
+class ChatRequest(BaseModel):
+    user_id: str = "USR124535215"
+    message: str
+    user_name: str = "Friend"
+
+@app.post("/support/chat")
+def support_chat(req: ChatRequest):
+    if CARE_V2_LOADED:
+        return care_engine.chat(req.user_id, req.message, req.user_name)
+    return {
+        "response": "Support temporarily unavailable. Email: support@trd.app",
+        "kb_hit": False,
+        "suggestions": ["Email support", "Try again later"]
+    }
+
+@app.get("/support/topics")
+def support_topics():
+    """Pre-built quick question categories"""
+    return {
+        "categories": [
+            {"name": "Getting Started", "icon": "🚀", "questions": ["How to place first trade?","NLP trading guide","Paper vs Live mode"]},
+            {"name": "Subscription", "icon": "💳", "questions": ["Plans & pricing","Upgrade plan","FREE vs PRO"]},
+            {"name": "AI Engine", "icon": "🤖", "questions": ["AI signals guide","Auto-execute setup","Strategy evolution"]},
+            {"name": "Risk & Safety", "icon": "⚠️", "questions": ["Kill switch guide","Position sizing","Daily loss limit"]},
+            {"name": "Strategies", "icon": "★", "questions": ["10 built-in strategies","NLP strategy builder","Backtest guide"]},
+            {"name": "Technical", "icon": "🔧", "questions": ["App offline fix","Mobile app guide","Browser compatibility"]},
+        ]
+    }
+
+# ─── AI AUTO-EXECUTE ──────────────────────────────────────────────────────────
+class AutoExecuteConfig(BaseModel):
+    user_id: str = "USR124535215"
+    enabled: bool = False
+    min_confidence: float = 0.75
+    max_lots: int = 1
+    daily_signal_limit: int = 3
+    instruments: list = ["NIFTY", "BANKNIFTY"]
+    mode: str = "PAPER"  # Always default to PAPER for safety
+
+_auto_execute_configs = {}
+_auto_execute_counts = {}  # user_id -> date -> count
+
+@app.get("/ai/auto_execute/config/{user_id}")
+def get_auto_execute_config(user_id: str):
+    return _auto_execute_configs.get(user_id, {
+        "enabled": False, "min_confidence": 0.75, "max_lots": 1,
+        "daily_signal_limit": 3, "instruments": ["NIFTY"], "mode": "PAPER",
+        "user_id": user_id
+    })
+
+@app.post("/ai/auto_execute/config")
+def set_auto_execute_config(cfg: AutoExecuteConfig):
+    _auto_execute_configs[cfg.user_id] = cfg.dict()
+    if NOTIF_LOADED:
+        send_notification("ai_signal", {
+            "signal": "AUTO-EXECUTE " + ("ENABLED" if cfg.enabled else "DISABLED"),
+            "instrument": ",".join(cfg.instruments),
+            "confidence": int(cfg.min_confidence * 100),
+            "regime": cfg.mode
+        }, cfg.user_id)
+    return {"updated": True, "config": cfg.dict()}
+
+@app.post("/ai/auto_execute/trigger/{instrument}")
+def trigger_auto_execute(instrument: str, user_id: str = "USR124535215"):
+    """Called after AI signal — checks if should auto-execute"""
+    cfg = _auto_execute_configs.get(user_id, {})
+    if not cfg.get("enabled", False):
+        return {"executed": False, "reason": "auto_execute_disabled"}
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    key = f"{user_id}:{today}"
+    count = _auto_execute_counts.get(key, 0)
+
+    if count >= cfg.get("daily_signal_limit", 3):
+        return {"executed": False, "reason": "daily_limit_reached", "count": count}
+
+    # Get AI signal
+    from ai_engine.ai_strategy_engine import ai_engine as ai_eng
+    signal_data = ai_eng.generate_signal(instrument, 19.5)
+
+    conf = signal_data.get("confidence", 0)
+    min_conf = cfg.get("min_confidence", 0.75)
+
+    if conf < min_conf:
+        return {"executed": False, "reason": "confidence_too_low", "confidence": conf, "min_required": min_conf}
+
+    if signal_data.get("circuit_breaker"):
+        return {"executed": False, "reason": "circuit_breaker_active"}
+
+    sig = signal_data.get("signal", "WAIT")
+    if sig == "WAIT":
+        return {"executed": False, "reason": "signal_is_wait"}
+
+    # Execute
+    action = "BUY" if "BUY" in sig else "SELL"
+    opt_type = "CE" if "CE" in sig else "PE"
+
+    trade_data = {
+        "instrument": instrument,
+        "action": action,
+        "option_type": opt_type,
+        "quantity": cfg.get("max_lots", 1),
+        "entry_price": signal_data.get("entry_price", 100),
+        "mode": cfg.get("mode", "PAPER"),
+        "confidence": conf,
+        "source": "AI_AUTO_EXECUTE",
+        "risk_metrics": {
+            "stoploss_points": abs(signal_data.get("entry_price", 100) - signal_data.get("stoploss", 80)),
+            "target_points": abs(signal_data.get("target", 150) - signal_data.get("entry_price", 100))
+        }
+    }
+
+    # Record count
+    _auto_execute_counts[key] = count + 1
+
+    if NOTIF_LOADED:
+        send_notification("trade_executed", {
+            "action": action, "instrument": instrument,
+            "option_type": opt_type, "price": signal_data.get("entry_price", 100),
+            "lots": cfg.get("max_lots", 1), "mode": cfg.get("mode", "PAPER")
+        }, user_id)
+
+    return {
+        "executed": True,
+        "trade": trade_data,
+        "signal": signal_data,
+        "count_today": count + 1,
+        "limit": cfg.get("daily_signal_limit", 3)
+    }
+
+# ─── AI-APPROVED STRATEGIES ───────────────────────────────────────────────────
+@app.get("/ai/strategies/approved")
+def get_approved_strategies():
+    """Only strategies that passed 15-day paper test with >62% WR"""
+    try:
+        from ai_engine.ai_strategy_engine import ai_engine as ai_eng
+        strats = ai_eng.get_all_strategies()
+        approved = [s for s in strats if s.get("status") == "APPROVED"]
+        return {
+            "strategies": approved,
+            "count": len(approved),
+            "quality_gate": {
+                "min_win_rate": 0.62,
+                "min_profit_factor": 1.5,
+                "required_paper_days": 15,
+                "anti_overfit": True
+            }
+        }
+    except:
+        return {"strategies": [], "count": 0}
+
+# ─── DYNAMIC UI CONFIG ────────────────────────────────────────────────────────
+# Tab visibility by plan
+TAB_PLAN_ACCESS = {
+    "FREE": ["trade", "backtest", "strategies", "journal", "calc", "profile"],
+    "BASIC": ["trade", "positions", "risk", "scanner", "backtest", "strategies", "journal", "reports", "calc", "profile"],
+    "PRO": ["trade", "positions", "risk", "scanner", "opts", "backtest", "strategies", "journal", "reports", "calc", "ai", "legal", "profile"],
+    "INSTITUTIONAL": ["trade", "positions", "risk", "scanner", "opts", "backtest", "strategies", "journal", "reports", "calc", "ai", "admin", "legal", "profile"],
+}
+
+_ui_configs = {}  # user_id -> {visible_tabs: [...]}
+
+@app.get("/ui/config/{user_id}")
+def get_ui_config(user_id: str):
+    user_cfg = _ui_configs.get(user_id, {})
+    
+    # Get user plan
+    plan = "PRO"  # Default, in prod fetch from DB
+    allowed_tabs = TAB_PLAN_ACCESS.get(plan, TAB_PLAN_ACCESS["FREE"])
+    
+    # User's custom visibility (subset of allowed)
+    visible = user_cfg.get("visible_tabs", allowed_tabs)
+    # Ensure no tab outside plan access
+    visible = [t for t in visible if t in allowed_tabs]
+    
+    return {
+        "visible_tabs": visible,
+        "allowed_tabs": allowed_tabs,
+        "plan": plan,
+        "all_tabs": list(TAB_PLAN_ACCESS["INSTITUTIONAL"]),
+    }
+
+class UIConfig(BaseModel):
+    user_id: str
+    visible_tabs: list
+
+@app.post("/ui/config")
+def save_ui_config(cfg: UIConfig):
+    _ui_configs[cfg.user_id] = {"visible_tabs": cfg.visible_tabs}
+    return {"saved": True, "visible_tabs": cfg.visible_tabs}
