@@ -118,7 +118,7 @@ textarea{resize:vertical;min-height:55px}
         <div id="nlp-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:6px;font-size:8px;line-height:1.8"></div>
       </div>
       <div class="card">
-        <div class="chdr">MARKET WATCH</div>
+        <div class="chdr">MARKET WATCH <span id="mkt-status" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
         <div id="mkt-grd" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
       </div>
       <div class="card">
@@ -627,9 +627,26 @@ function loadMkt() {
   req('/market/all', 'GET', null, function(err, d) {
     if(err) { alog('Market: '+err,'err'); return; }
     var keys=Object.keys(d.data||{});
-    keys.forEach(function(k){if(d.data[k]&&d.data[k].price>0){prices[k]=d.data[k].price;if(d.data[k].pChange!==undefined)changes[k]=d.data[k].pChange;}});
+    var isOpen = false;
+    var lastTime = '';
+    keys.forEach(function(k){
+      if(d.data[k]&&d.data[k].price>0){
+        prices[k]=d.data[k].price;
+        if(d.data[k].pChange!==undefined)changes[k]=d.data[k].pChange;
+        if(d.data[k].market_open) isOpen=true;
+        if(d.data[k].last_updated) lastTime=d.data[k].last_updated;
+      }
+    });
     renderMkt();
-    alog('Market loaded','ok');
+    // Update market status badge
+    var ms=$('mkt-status');
+    if(ms){
+      if(isOpen){ms.textContent='● LIVE';ms.style.background='#001a0e';ms.style.color='var(--gr)';ms.style.borderColor='var(--gr)';}
+      else{ms.textContent='● CLOSED';ms.style.background='#1a0008';ms.style.color='var(--rd)';ms.style.borderColor='var(--rd)';}
+    }
+    var mt=$('mkt-time');
+    if(mt&&lastTime)mt.textContent=lastTime;
+    alog('Market data: '+(isOpen?'LIVE':'CLOSED - showing last close'),'ok');
   });
 }
 
@@ -1148,7 +1165,17 @@ function generateOHLC(sym, tf, periods) {
 
   var data = [];
   var volData = [];
-  var now = Math.floor(Date.now() / 1000);
+  // Use IST offset for chart timestamps
+var now = Math.floor(Date.now() / 1000);
+// Snap to last market day if market closed
+var nowDate = new Date();
+var istOffset = 5.5 * 60 * 60 * 1000;
+var istDate = new Date(nowDate.getTime() + istOffset);
+var istHour = istDate.getUTCHours();
+var istDay = istDate.getUTCDay();
+// If weekend or after 15:30 IST, use last Friday/today's close
+if(istDay === 0) now -= 2*86400; // Sunday -> Friday
+else if(istDay === 6) now -= 86400; // Saturday -> Friday
 
   var tfSecs = { '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
   var secs = tfSecs[tf] || 86400;

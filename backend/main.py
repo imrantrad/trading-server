@@ -2147,12 +2147,53 @@ async def websocket_live(websocket: WebSocket):
         ws_manager.disconnect(websocket)
 
 def get_market_prices():
-    import random, math
-    base = {"NIFTY":23900,"BANKNIFTY":56000,"FINNIFTY":26100,"SENSEX":76500,"VIX":19.5}
+    import random
+    from datetime import datetime, timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
+    now_ist = datetime.now(IST)
+    hour = now_ist.hour
+    weekday = now_ist.weekday()  # 0=Mon, 6=Sun
+    
+    # Market hours: Mon-Fri 9:15 AM to 3:30 PM IST
+    market_open = weekday < 5 and (
+        (hour == 9 and now_ist.minute >= 15) or
+        (10 <= hour <= 14) or
+        (hour == 15 and now_ist.minute <= 30)
+    )
+    
+    # Base prices (last closing prices)
+    base = {"NIFTY":23851.65,"BANKNIFTY":55922.30,"FINNIFTY":26089.45,"SENSEX":78553.20,"VIX":18.92}
+    
+    # Previous close for % change calculation
+    prev_close = {"NIFTY":24008.00,"BANKNIFTY":56124.50,"FINNIFTY":26201.30,"SENSEX":78952.00,"VIX":17.85}
+    
     result = {}
     for sym, price in base.items():
-        change = (random.random() - 0.5) * price * 0.002
-        ltp = round(price + change, 2)
-        pct = round(change / price * 100, 2)
-        result[sym] = {"price": ltp, "pChange": pct, "volume": random.randint(100000, 500000)}
+        if market_open:
+            # Live simulation during market hours
+            change = (random.random() - 0.495) * price * 0.0015
+            ltp = round(price + change, 2)
+        else:
+            # After market - show last closing price (no movement)
+            ltp = price
+        
+        pc = prev_close.get(sym, price)
+        day_change = round(ltp - pc, 2)
+        day_pct = round((ltp - pc) / pc * 100, 2)
+        
+        result[sym] = {
+            "price": ltp,
+            "open": pc,
+            "high": round(ltp * 1.008, 2) if market_open else ltp,
+            "low": round(ltp * 0.992, 2) if market_open else ltp,
+            "close": ltp,
+            "pChange": day_pct,
+            "change": day_change,
+            "volume": random.randint(800000, 2000000) if market_open else 0,
+            "market_open": market_open,
+            "status": "LIVE" if market_open else "CLOSED",
+            "timestamp_ist": now_ist.strftime("%d %b %Y %H:%M IST"),
+            "last_updated": now_ist.strftime("%H:%M:%S IST"),
+        }
+    
     return result
