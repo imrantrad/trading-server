@@ -4,7 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TRD v12.3 — Institutional Derivative Trading Intelligence</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Clash+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
+<style>
+/* Font fallbacks if Google Fonts blocked */
+:root {
+  --font-display: 'Space Grotesk', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'DM Mono', 'Courier New', 'Consolas', monospace;
+}
+</style>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -24,7 +31,7 @@
   --text:#e8eaf0;
   --muted:#4b5563;
   --dim:#1e2533;
-  --font-display:'Clash Display',sans-serif;
+  --font-display:var(--font-display);
   --font-mono:'DM Mono',monospace;
 }
 html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--border2) var(--void)}
@@ -389,7 +396,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:80px
 }
 </style>
 </head>
-<body>
+<body style="background:#00000a;color:#e8eaf0">
 <div id="cursor"><div id="c-dot"></div><div id="c-ring"></div></div>
 
 <!-- NAV -->
@@ -1168,7 +1175,7 @@ function doLogin(){
   showMsg('login','Signing you in...','info');
   setTimeout(function(){
     showMsg('login','✓ Success! Redirecting to dashboard...','ok');
-    setTimeout(function(){window.location.href='http://13.53.175.88';},1200);
+    setTimeout(function(){window.location.href='https://those-starring-whale-think.trycloudflare.com';},1200);
   },1500);
 }
 
@@ -1182,7 +1189,7 @@ function doSignup(){
   showMsg('signup','Creating your account...','info');
   setTimeout(function(){
     showMsg('signup','🎉 Account created! Redirecting...','ok');
-    setTimeout(function(){window.location.href='http://13.53.175.88';},1500);
+    setTimeout(function(){window.location.href='https://those-starring-whale-think.trycloudflare.com';},1500);
   },1800);
 }
 
@@ -1190,7 +1197,7 @@ function doGoogle(){
   showMsg('login','Connecting to Google...','info');
   setTimeout(function(){
     showMsg('login','✓ Google auth successful! Redirecting...','ok');
-    setTimeout(function(){window.location.href='http://13.53.175.88';},1200);
+    setTimeout(function(){window.location.href='https://those-starring-whale-think.trycloudflare.com';},1200);
   },1400);
 }
 
