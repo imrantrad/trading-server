@@ -848,17 +848,7 @@ function applyTh(name,el){var vs={dark:{'--bg':'#060608','--bg2':'#0d0e14','--bg
 function buildPlanCards(){var pc=$('plan-cards');if(!pc)return;var plans=[{id:'FREE',name:'FREE',price:'₹0',color:'var(--mu)',features:'3 Strategies\n1 Month BT'},{id:'BASIC',name:'BASIC',price:'₹499/mo',color:'var(--bl)',features:'20 Strategies\n6 Month BT'},{id:'PRO',name:'PRO',price:'₹1499/mo',color:'var(--gr)',features:'Unlimited\nAI Engine',rec:true},{id:'INSTITUTIONAL',name:'INSTITUTION',price:'₹4999/mo',color:'var(--am)',features:'Everything\n5yr BT'}];var html='';plans.forEach(function(p){var isCur=p.id==='PRO';html+='<div style="background:'+(isCur?'#001a0e':'var(--bg4)')+';border:2px solid '+(isCur?'var(--gr)':'var(--bo)')+';border-radius:6px;padding:12px;text-align:center;cursor:pointer" onclick="selPlan(\''+p.id+'\',this)"><div style="font-weight:700;color:'+p.color+'">'+p.name+'</div><div style="font-size:20px;font-weight:700;color:var(--gr);margin:4px 0">'+p.price+'</div><div style="font-size:8px;color:var(--mu);white-space:pre-line">'+p.features+'</div>'+(p.rec?'<div style="background:var(--gr);color:#000;font-size:7px;border-radius:2px;padding:2px 5px;margin-top:4px">RECOMMENDED</div>':'')+'</div>';});pc.innerHTML=html;}
 function buildThemeCards(){var tc=$('theme-cards');if(!tc)return;var themes=[{id:'dark',name:'DARK'},{id:'midnight',name:'MIDNIGHT'},{id:'matrix',name:'MATRIX'},{id:'purple',name:'COSMIC'},{id:'solar',name:'SOLARIZED'},{id:'light',name:'LIGHT'}];var html='';themes.forEach(function(t){html+='<div style="border:2px solid var(--bo);border-radius:6px;padding:10px;cursor:pointer;text-align:center" onclick="applyTh(\''+t.id+'\',this)"><div style="font-size:10px;font-weight:700">'+t.name+'</div></div>';});tc.innerHTML=html;}
 
-// CUSTOMER CARE CHAT
-document.addEventListener('DOMContentLoaded',function(){
-  var chatBtn=$('chat-btn');
-  var chatClose=$('chat-close');
-  var chatSend=$('chat-send');
-  var chatInp=$('chat-inp');
-  if(chatBtn)chatBtn.onclick=function(){chatOpen=!chatOpen;var win=$('chat-win');if(win)win.style.display=chatOpen?'flex':'none';if(chatOpen&&chatHistory.length===0){addChatMsg('Namaste! TRD Support hoon. Kaise madad karein?','bot');addChatSugg(['How to trade?','Plans & Pricing','AI Signals','Technical help']);}};
-  if(chatClose)chatClose.onclick=function(){chatOpen=false;var win=$('chat-win');if(win)win.style.display='none';};
-  if(chatSend)chatSend.onclick=function(){sendChat();};
-  if(chatInp)chatInp.onkeypress=function(e){if(e.key==='Enter')sendChat();};
-});
+// Chat setup handled in IIFE
 function addChatMsg(text,role){var msgs=$('chat-msgs');if(!msgs)return;var div=document.createElement('div');div.style.cssText='max-width:85%;padding:10px 12px;border-radius:10px;font-size:10px;line-height:1.6;margin-bottom:8px;word-wrap:break-word;';if(role==='bot'){div.style.background='var(--bg4)';div.style.border='1px solid var(--bo)';div.style.alignSelf='flex-start';}else{div.style.background='#001a0e';div.style.border='1px solid var(--gr)';div.style.color='var(--gr)';div.style.alignSelf='flex-end';}div.textContent=text;msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;chatHistory.push({role:role,text:text});}
 function addChatSugg(suggestions){var box=$('chat-sugg');if(!box)return;box.innerHTML='';suggestions.forEach(function(s){var btn=document.createElement('button');btn.textContent=s;btn.style.cssText='font-size:8px;padding:4px 10px;background:var(--bg4);border:1px solid var(--bo);border-radius:12px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--mu);margin:2px';btn.onclick=function(){sendChat(s);};box.appendChild(btn);});}
 function sendChat(override){var inp=$('chat-inp');var msg=override||(inp?inp.value.trim():'');if(!msg)return;if(inp&&!override)inp.value='';addChatMsg(msg,'user');var sugg=$('chat-sugg');if(sugg)sugg.innerHTML='<span style="color:var(--mu);font-size:9px">Typing...</span>';req('/support/chat','POST',{user_id:UID,message:msg,user_name:'Friend'},function(err,r){if(err||!r){addChatMsg('Server se connect nahi. Thoda wait karo!','bot');addChatSugg(['Try again','How to trade?']);return;}addChatMsg(r.response||'','bot');if(r.suggestions&&r.suggestions.length)addChatSugg(r.suggestions);});}
@@ -1432,25 +1422,48 @@ function loadNotifications() {
     if (err || !d) return;
     var list = $('notif-list');
     if (!list) return;
+    list.innerHTML = '';
     if (!d.notifications || !d.notifications.length) {
       list.innerHTML = '<div style="color:var(--mu);text-align:center;padding:20px;font-size:10px">No notifications yet</div>';
       return;
     }
-    // Update badge
     updateNotifBadge(d.unread || 0);
-    var html = '';
     d.notifications.forEach(function(n) {
       var c = n.priority === 'critical' ? 'var(--rd)' : n.priority === 'high' ? 'var(--am)' : 'var(--bl)';
-      html += '<div style="background:' + (n.read ? 'var(--bg4)' : 'var(--bg3)') + ';border:1px solid ' + (n.read ? 'var(--bo)' : c) + ';border-radius:5px;padding:8px;cursor:pointer" onclick="markNotifRead(\'' + n.id + '\')">' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
-        '<div style="font-size:10px;font-weight:700;color:' + c + '">' + (n.emoji || '') + ' ' + n.title + '</div>' +
-        '<span style="font-size:8px;color:var(--mu)">' + (n.timestamp || '').slice(11, 16) + '</span></div>' +
-        '<div style="font-size:9px;color:var(--mu);line-height:1.5">' + n.body + '</div>' +
-        '<div style="display:flex;gap:4px;margin-top:4px">' + (n.channels || []).map(function(ch) {
-          return '<span style="font-size:7px;padding:1px 5px;background:var(--bg);border:1px solid var(--bo);border-radius:8px;color:var(--mu)">' + ch + '</span>';
-        }).join('') + '</div></div>';
+      var div = document.createElement('div');
+      div.style.cssText = 'background:' + (n.read ? 'var(--bg4)' : 'var(--bg3)') + ';border:1px solid ' + (n.read ? 'var(--bo)' : c) + ';border-radius:5px;padding:8px;margin-bottom:6px;cursor:pointer';
+      var nid = n.id;
+      div.onclick = function() { markNotifRead(nid); };
+      
+      var row1 = document.createElement('div');
+      row1.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:4px';
+      var title = document.createElement('div');
+      title.style.cssText = 'font-size:10px;font-weight:700;color:' + c;
+      title.textContent = (n.emoji || '') + ' ' + (n.title || '');
+      var time = document.createElement('span');
+      time.style.cssText = 'font-size:8px;color:var(--mu)';
+      time.textContent = (n.timestamp || '').slice(11, 16);
+      row1.appendChild(title);
+      row1.appendChild(time);
+      
+      var body = document.createElement('div');
+      body.style.cssText = 'font-size:9px;color:var(--mu);line-height:1.5';
+      body.textContent = n.body || '';
+      
+      var channels = document.createElement('div');
+      channels.style.cssText = 'display:flex;gap:4px;margin-top:4px';
+      (n.channels || []).forEach(function(ch) {
+        var span = document.createElement('span');
+        span.style.cssText = 'font-size:7px;padding:1px 5px;background:var(--bg);border:1px solid var(--bo);border-radius:8px;color:var(--mu)';
+        span.textContent = ch;
+        channels.appendChild(span);
+      });
+      
+      div.appendChild(row1);
+      div.appendChild(body);
+      div.appendChild(channels);
+      list.appendChild(div);
     });
-    list.innerHTML = html;
   });
 }
 
@@ -1719,21 +1732,7 @@ function pollNotifCount() {
   });
 }
 
-// ─── INIT EXTRAS ───────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
-  // Load auto-exec config
-  setTimeout(loadAutoExecConfig, 2000);
-  // Load UI config
-  setTimeout(loadUIConfig, 1500);
-  // Poll notifications every 60 sec
-  setInterval(pollNotifCount, 60000);
-  setTimeout(pollNotifCount, 3000);
-  // Send welcome notification
-  setTimeout(function() {
-    sendTestNotif('ai_signal', {
-      signal: 'BUY_CE', instrument: 'NIFTY',
-      confidence: 82, regime: 'TRENDING_UP'
-    });
+// Feature init handled in IIFE
   }, 5000);
 });
 
