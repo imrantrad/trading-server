@@ -641,22 +641,44 @@ function loadMkt() {
 }
 
 function renderMkt() {
-  var keys=['NIFTY','BANKNIFTY','FINNIFTY','SENSEX','VIX'];
-  var g=$('mkt-grd');if(!g)return;
-  var html='';
-  keys.forEach(function(k){
-    var up=(changes[k]||0)>=0;
-    html+='<div onclick="openChart(''+k+'')" style="background:var(--bg4);border:1px solid '+(up?'rgba(0,255,136,.2)':'rgba(255,51,85,.2)')+';border-radius:4px;padding:7px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor=''+(up?'var(--gr)':'var(--rd)')+'';" onmouseout="this.style.borderColor=''+(up?'rgba(0,255,136,.2)':'rgba(255,51,85,.2)')+''">'+
-      '<div style="font-size:7px;color:var(--mu)">'+k+'</div>'+
-      '<div style="font-size:12px;font-weight:700" id="px-'+k+'">'+(prices[k]||0).toFixed(2)+'</div>'+
-      '<div style="font-size:8px;color:'+(up?'var(--gr)':'var(--rd)')+'">'+( up?'▲':'▼')+Math.abs(changes[k]||0).toFixed(2)+'%</div>'+
-      '<div style="font-size:7px;color:var(--mu);margin-top:2px">📊 Chart</div>'+
-      '</div>';
+  var keys = ['NIFTY','BANKNIFTY','FINNIFTY','SENSEX','VIX'];
+  var g = $('mkt-grd');
+  if (!g) return;
+  g.innerHTML = '';
+  keys.forEach(function(k) {
+    var up = (changes[k] || 0) >= 0;
+    var div = document.createElement('div');
+    div.style.cssText = 'background:var(--bg4);border:1px solid ' + (up ? 'rgba(0,255,136,.2)' : 'rgba(255,51,85,.2)') + ';border-radius:4px;padding:7px;text-align:center;cursor:pointer;transition:all .2s';
+    div.onmouseover = function() { this.style.borderColor = up ? 'var(--gr)' : 'var(--rd)'; };
+    div.onmouseout = function() { this.style.borderColor = up ? 'rgba(0,255,136,.2)' : 'rgba(255,51,85,.2)'; };
+    var sym = k;
+    div.onclick = function() { openChart(sym); };
+
+    var label = document.createElement('div');
+    label.style.cssText = 'font-size:7px;color:var(--mu)';
+    label.textContent = k;
+
+    var price = document.createElement('div');
+    price.style.cssText = 'font-size:12px;font-weight:700';
+    price.id = 'px-' + k;
+    price.textContent = (prices[k] || 0).toFixed(2);
+
+    var chg = document.createElement('div');
+    chg.style.cssText = 'font-size:8px;color:' + (up ? 'var(--gr)' : 'var(--rd)');
+    chg.textContent = (up ? '▲' : '▼') + Math.abs(changes[k] || 0).toFixed(2) + '%';
+
+    var chart = document.createElement('div');
+    chart.style.cssText = 'font-size:7px;color:var(--mu);margin-top:2px';
+    chart.textContent = '📊 Chart';
+
+    div.appendChild(label);
+    div.appendChild(price);
+    div.appendChild(chg);
+    div.appendChild(chart);
+    g.appendChild(div);
   });
-  g.innerHTML=html;
 }
 
-// ORDER ENTRY
 function setMode(m,btn){MODE=m;document.querySelectorAll('[id^="m-"]').forEach(function(b){b.className='tog';});if(btn)btn.className='tog tb';$('mode-bdg').textContent=m;updateBtn();}
 function setInst(i,btn){INST=i;document.querySelectorAll('[id^="bi-"]').forEach(function(b){b.className='tog';});if(btn)btn.className='tog ta';updateBtn();}
 function setAction(a){ACT=a;$('ba-BUY').className='tog'+(a==='BUY'?' tg':'');$('ba-SELL').className='tog'+(a==='SELL'?' tr':'');updateBtn();}
