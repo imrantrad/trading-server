@@ -515,14 +515,7 @@ textarea{resize:vertical;min-height:55px}
 <script>
 
 // Dynamic API URL - always same origin as dashboard
-var API = (function(){
-  var loc = window.location;
-  // If served from Cloudflare tunnel or any host, use same origin
-  if(loc.hostname !== 'localhost' && loc.hostname !== '127.0.0.1'){
-    return loc.protocol + '//' + loc.host;
-  }
-  return 'http://13.53.175.88';
-})();
+var API = 'https://commerce-delayed-story-aud.trycloudflare.com';
 console.log('API:', API);
 var UID = 'USR124535215';
 var INST = 'NIFTY', ACT = 'BUY', TYP = 'CE', MODE = 'PAPER', KILL = false, SELPLAN = 'PRO';
