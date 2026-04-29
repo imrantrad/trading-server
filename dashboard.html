@@ -99,6 +99,13 @@ textarea{resize:vertical;min-height:55px}
       <button id="mode-live-btn" onclick="switchToMode('LIVE')" style="font-size:9px;padding:5px 14px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer;font-family:inherit">LIVE</button>
     </div>
   </div>
+  <!-- COMPACT MARKET WATCH STRIP -->
+  <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:6px 10px;margin-bottom:8px;overflow-x:auto">
+    <div style="display:flex;align-items:center;gap:4px;min-width:max-content">
+      <span id="mkt-status" style="font-size:8px;padding:2px 7px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd);flex-shrink:0;margin-right:6px">● CLOSED</span>
+      <div id="mkt-grd" style="display:flex;gap:4px"></div>
+    </div>
+  </div>
   <!-- Quick Action Row -->
   <div style="display:flex;gap:8px;margin-bottom:8px">
     <button class="btn bb" style="flex:1;padding:8px;font-size:9px" onclick="openLivePositions()">📈 POSITIONS</button>
@@ -630,7 +637,7 @@ textarea{resize:vertical;min-height:55px}
 
   <!-- Sub-tabs -->
   <div style="display:flex;gap:6px;margin-bottom:10px">
-    <button id="pt-trade-btn" onclick="showPaperTab('trade',this)" style="flex:1;padding:8px;font-size:10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--gr);border-radius:5px;cursor:pointer;font-family:inherit;font-weight:700">📝 TRADE</button>
+    <button id="pt-trade-btn" onclick="showPaperTab('trade',this)" style="flex:1;padding:8px;font-size:10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--gr);border-radius:5px;cursor:pointer;font-family:inherit;font-weight:700">📝 ORDER ENTRY</button>
     <button id="pt-pos-btn" onclick="showPaperTab('pos',this)" style="flex:1;padding:8px;font-size:10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer;font-family:inherit">📊 POSITIONS</button>
     <button id="pt-strats-btn" onclick="showPaperTab('strats',this)" style="flex:1;padding:8px;font-size:10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer;font-family:inherit">★ STRATEGIES</button>
   </div>
@@ -1157,35 +1164,29 @@ function renderMkt() {
   g.innerHTML = '';
   keys.forEach(function(k) {
     var up = (changes[k] || 0) >= 0;
-    var div = document.createElement('div');
-    div.style.cssText = 'background:var(--bg4);border:1px solid ' + (up ? 'rgba(0,255,136,.2)' : 'rgba(255,51,85,.2)') + ';border-radius:4px;padding:7px;text-align:center;cursor:pointer;transition:all .2s';
-    div.onmouseover = function() { this.style.borderColor = up ? 'var(--gr)' : 'var(--rd)'; };
-    div.onmouseout = function() { this.style.borderColor = up ? 'rgba(0,255,136,.2)' : 'rgba(255,51,85,.2)'; };
-    var sym = k;
-    div.onclick = function() { openChart(sym); };
-
-    var label = document.createElement('div');
-    label.style.cssText = 'font-size:7px;color:var(--mu)';
-    label.textContent = k;
-
-    var price = document.createElement('div');
-    price.style.cssText = 'font-size:12px;font-weight:700';
-    price.id = 'px-' + k;
-    price.textContent = (prices[k] || 0).toFixed(2);
-
-    var chg = document.createElement('div');
-    chg.style.cssText = 'font-size:8px;color:' + (up ? 'var(--gr)' : 'var(--rd)');
-    chg.textContent = (up ? '▲' : '▼') + Math.abs(changes[k] || 0).toFixed(2) + '%';
-
-    var chart = document.createElement('div');
-    chart.style.cssText = 'font-size:7px;color:var(--mu);margin-top:2px';
-    chart.textContent = '📊 Chart';
-
-    div.appendChild(label);
-    div.appendChild(price);
-    div.appendChild(chg);
-    div.appendChild(chart);
-    g.appendChild(div);
+    var chip = document.createElement('div');
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:' + (up?'rgba(0,255,136,.07)':'rgba(255,51,102,.07)') + ';border:1px solid ' + (up?'rgba(0,255,136,.2)':'rgba(255,51,102,.2)') + ';border-radius:20px;cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0';
+    chip.onclick = function(){ openChart(k); };
+    chip.onmouseover = function(){ this.style.opacity='.8'; };
+    chip.onmouseout = function(){ this.style.opacity='1'; };
+    
+    var sym = document.createElement('span');
+    sym.style.cssText = 'font-size:9px;font-weight:700;color:var(--mu)';
+    sym.textContent = k;
+    
+    var px = document.createElement('span');
+    px.style.cssText = 'font-size:11px;font-weight:700;color:var(--tx)';
+    px.id = 'px-' + k;
+    px.textContent = (prices[k]||0).toFixed(2);
+    
+    var ch = document.createElement('span');
+    ch.style.cssText = 'font-size:9px;color:' + (up?'var(--gr)':'var(--rd)');
+    ch.textContent = (up?'▲':'▼') + Math.abs(changes[k]||0).toFixed(2) + '%';
+    
+    chip.appendChild(sym);
+    chip.appendChild(px);
+    chip.appendChild(ch);
+    g.appendChild(chip);
   });
 }
 
