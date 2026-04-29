@@ -645,7 +645,7 @@ input:focus, select:focus, textarea:focus {
 <div id="pnl-prof" class="pnl" style="padding:0;background:var(--bg)">
 
   <!-- ── PROFILE HEADER ── -->
-  <div style="background:linear-gradient(135deg,#0a1628 0%,#001a0e 50%,#0d0e14 100%);padding:28px 20px 20px;position:relative;overflow:hidden">
+  <div style="background:linear-gradient(135deg,#0a1628 0%,#001a0e 50%,#0d0e14 100%);padding:28px 20px 20px;position:relative;overflow:hidden" id="prof-header">
     <!-- bg decoration -->
     <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(0,255,136,.06)"></div>
     <div style="position:absolute;bottom:-30px;left:-20px;width:100px;height:100px;border-radius:50%;background:rgba(79,142,247,.05)"></div>
@@ -1861,46 +1861,52 @@ function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$
 
 // PROFILE
 function swProf(tab,btn){
-  var PANELS = ['set','sub','broker','th','dash','notif','about'];
+  var PANELS=['set','sub','broker','th','dash','notif','about'];
   
-  // Hide all sub-panels
+  // Hide ALL sub-panels
   PANELS.forEach(function(t){
     var el=document.getElementById('ps-'+t);
-    if(el){ el.style.display='none'; }
+    if(el) el.style.display='none';
   });
   
-  // Show/hide menu
-  var menuSec=document.getElementById('prof-menu-section');
-  if(menuSec) menuSec.style.display = tab ? 'none' : 'block';
+  // Toggle menu section
+  var menu=document.getElementById('prof-menu-section');
+  if(menu) menu.style.display = tab ? 'none' : 'block';
   
   if(tab){
+    // Show target panel
     var panel=document.getElementById('ps-'+tab);
     if(panel){
       panel.style.display='block';
       
-      // Move panel to top of pnl-prof (after header div)
+      // SCROLL TO TOP - so panel is visible immediately
       var pf=document.getElementById('pnl-prof');
+      if(pf){ pf.scrollTop=0; }
+      // Also scroll window to top
+      window.scrollTo({top:0, behavior:'smooth'});
+      
+      // Move panel right after profile header (before menu)
       if(pf){
-        // Find the scrollable content div (second child = after header)
-        var header = pf.querySelector('[style*="gradient"]');
-        var insertAfter = header ? header.nextElementSibling : pf.firstElementChild;
-        if(insertAfter && insertAfter !== panel){
-          pf.insertBefore(panel, insertAfter);
+        var header=pf.querySelector('[id="prof-header"]') || pf.firstElementChild;
+        if(header && header.nextSibling !== panel){
+          pf.insertBefore(panel, header.nextSibling);
         }
       }
     }
+    
+    // Load panel data
+    if(tab==='dash') buildTabVisibilityList();
+    if(tab==='sub') buildPlanCards();
+    if(tab==='th') buildThemeCards();
+    if(tab==='broker') loadBrokerStatus();
+    if(tab==='notif') loadNotifPrefs();
+    if(tab==='about') {} // static content
+  } else {
+    // Back to menu - scroll top
+    var pf2=document.getElementById('pnl-prof');
+    if(pf2) pf2.scrollTop=0;
+    window.scrollTo({top:0, behavior:'smooth'});
   }
-  
-  // Load data
-  if(tab==='dash') buildTabVisibilityList();
-  if(tab==='sub') buildPlanCards();
-  if(tab==='th') buildThemeCards();
-  if(tab==='broker') loadBrokerStatus();
-  if(tab==='notif') loadNotifPrefs();
-  
-  // Scroll to top
-  var pf2=document.getElementById('pnl-prof');
-  if(pf2){ pf2.scrollTop=0; window.scrollTo(0,0); }
 }
 function loadProfStats(){
   req('/stats','GET',null,function(err,d){
