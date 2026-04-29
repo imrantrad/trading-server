@@ -5,7 +5,7 @@ FastAPI + Event Bus + Paper Engine + Risk Manager + Full NLP + Hedge NLP
 import sys, os, time, re
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI
+from fastapi import Request, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -1659,10 +1659,7 @@ def get_consents(user_id: str):
     return {"consents": legal.get_consents(user_id), "risk_signed": legal.has_signed_risk_disclosure(user_id)}
 
 # ── ADMIN ────────────────────────────────────────────────
-@app.get("/admin/dashboard")
-def admin_dashboard():
-    if not ENTERPRISE: return {}
-    return admin.get_dashboard()
+# /admin/dashboard handled below
 
 @app.get("/admin/users")
 def admin_users(limit: int = 50):
