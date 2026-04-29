@@ -3062,12 +3062,18 @@ var paperPositions = [];
 var livePositions = [];
 
 function openPaperTest(){
-  // Show paper panel, hide others
-  document.querySelectorAll('.pnl').forEach(function(p){p.classList.remove('active');});
-  var pp = document.getElementById('pnl-paper');
-  if(pp){ pp.style.display='flex'; pp.classList.add('active'); }
-  showPaperTab('trade', document.getElementById('pt-trade-btn'));
+  document.querySelectorAll('.pnl').forEach(function(p){p.classList.remove('active');p.removeAttribute('style');});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  var pp=document.getElementById('pnl-paper');
+  if(pp){pp.removeAttribute('style');pp.classList.add('active');}
+  var pt=document.getElementById('tab-paper');
+  if(pt)pt.classList.add('active');
+  showPaperTab('trade',document.getElementById('pt-trade-btn'));
   loadPaperStats();
+  // Scroll to top
+  window.scrollTo(0,0);
+  document.querySelector('.main') && (document.querySelector('.main').scrollTop=0);
+  if(pp) pp.scrollTop=0;
 }
 
 function openLivePositions(){
