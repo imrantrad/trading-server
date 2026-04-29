@@ -88,9 +88,20 @@ textarea{resize:vertical;min-height:55px}
 <div class="main">
 
 <div id="pnl-trade" class="pnl active">
+  <!-- Unified Mode Bar -->
+  <div id="trade-mode-bar" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:10px 14px;background:rgba(0,255,136,.03);border:1px solid rgba(0,255,136,.08);border-radius:8px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="mode-indicator" style="font-size:10px;font-weight:700;padding:4px 12px;border-radius:20px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);color:var(--gr);letter-spacing:.5px">📄 PAPER MODE</span>
+      <span id="mode-desc" style="font-size:10px;color:var(--mu)">Orders go to virtual wallet</span>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button id="mode-paper-btn" onclick="switchToMode('PAPER')" style="font-size:9px;padding:5px 14px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:4px;font-weight:700;cursor:pointer;font-family:inherit">PAPER</button>
+      <button id="mode-live-btn" onclick="switchToMode('LIVE')" style="font-size:9px;padding:5px 14px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer;font-family:inherit">LIVE</button>
+    </div>
+  </div>
   <!-- Quick Action Row -->
   <div style="display:flex;gap:8px;margin-bottom:8px">
-    <button class="btn bb" style="flex:1;padding:8px;font-size:9px" onclick="openLivePositions()">📈 LIVE POSITIONS</button>
+    <button class="btn bb" style="flex:1;padding:8px;font-size:9px" onclick="openLivePositions()">📈 POSITIONS</button>
     <button class="btn bg" style="flex:1;padding:8px;font-size:9px" onclick="openStrategies()">★ STRATEGIES</button>
   </div>
   <div class="g4">
@@ -898,6 +909,67 @@ var API = 'https://dis-historic-varying-blair.trycloudflare.com';
 console.log('API:', API);
 var UID = 'USR124535215';
 var INST = 'NIFTY', ACT = 'BUY', TYP = 'CE', MODE = 'PAPER', KILL = false, SELPLAN = 'PRO';
+// ── UNIFIED TRADE MODE ──
+var TRADE_MODE = 'PAPER'; // 'PAPER' | 'LIVE'
+// Switch trade mode - same screen, different execution path
+
+function switchToMode(mode){
+  TRADE_MODE = mode;
+  // Update button styles
+  var pb = document.getElementById('mode-paper-btn');
+  var lb = document.getElementById('mode-live-btn');
+  var desc = document.getElementById('mode-desc');
+  if(mode === 'LIVE'){
+    if(pb){ pb.style.background='var(--bg4)'; pb.style.borderColor='var(--bo)'; pb.style.color='var(--mu)'; }
+    if(lb){ lb.style.background='rgba(255,51,102,.1)'; lb.style.borderColor='rgba(255,51,102,.3)'; lb.style.color='var(--rd)'; lb.style.fontWeight='700'; }
+    if(desc) desc.textContent='Orders go to real broker ('+((localStorage.getItem('trd_profile_'+UID) && JSON.parse(localStorage.getItem('trd_profile_'+UID)||'{}').broker) || 'ZERODHA')+')';
+    toast('⚡ Switched to LIVE mode — Real money at risk!','warn');
+  } else {
+    if(pb){ pb.style.background='rgba(0,255,136,.1)'; pb.style.borderColor='rgba(0,255,136,.3)'; pb.style.color='var(--gr)'; pb.style.fontWeight='700'; }
+    if(lb){ lb.style.background='var(--bg4)'; lb.style.borderColor='var(--bo)'; lb.style.color='var(--mu)'; lb.style.fontWeight='400'; }
+    if(desc) desc.textContent='Orders go to virtual wallet (simulated)';
+    toast('📄 Switched to PAPER mode — Safe simulation','success');
+  }
+  updateModeIndicator();
+  // Update execute button
+  var btn = document.getElementById('exec-btn');
+  if(btn){
+    btn.textContent = (mode==='LIVE'?'⚡ EXECUTE LIVE ':'📄 EXECUTE PAPER ') + ACT + ' ' + INST + ' ' + TYP;
+    btn.className = 'btn blg ' + (ACT==='BUY' ? (mode==='LIVE'?'br':'bg') : 'br');
+  }
+  // Save mode preference
+  try{ localStorage.setItem('trd_trade_mode', mode); }catch(e){}
+}
+
+function setTradeMode(mode) {
+  TRADE_MODE = mode;
+  updateModeIndicator();
+  // Reload positions for this mode
+  if(document.getElementById('pnl-trade').classList.contains('active')){
+    loadStats();
+  }
+}
+function updateModeIndicator() {
+  var ind = document.getElementById('mode-indicator');
+  var execBtn = document.getElementById('exec-btn');
+  var modeBar = document.getElementById('trade-mode-bar');
+  if(!ind) return;
+  if(TRADE_MODE === 'LIVE') {
+    ind.textContent = '⚡ LIVE MODE';
+    ind.style.background = 'rgba(255,51,102,.12)';
+    ind.style.border = '1px solid rgba(255,51,102,.3)';
+    ind.style.color = 'var(--rd)';
+    if(modeBar){ modeBar.style.background='rgba(255,51,102,.05)'; modeBar.style.borderColor='rgba(255,51,102,.15)'; }
+    if(execBtn){ execBtn.className='btn blg br'; execBtn.style.background='#1a0008'; }
+  } else {
+    ind.textContent = '📄 PAPER MODE';
+    ind.style.background = 'rgba(0,255,136,.08)';
+    ind.style.border = '1px solid rgba(0,255,136,.2)';
+    ind.style.color = 'var(--gr)';
+    if(modeBar){ modeBar.style.background='rgba(0,255,136,.03)'; modeBar.style.borderColor='rgba(0,255,136,.08)'; }
+    if(execBtn){ execBtn.className='btn blg bg'; }
+  }
+}
 var chatOpen = false, chatHistory = [];
 var prices = {NIFTY:24008.00,BANKNIFTY:56124.50,FINNIFTY:26201.30,SENSEX:78952.00,VIX:17.85};
 var changes = {NIFTY:-0.41,BANKNIFTY:-1.54,FINNIFTY:-0.87,SENSEX:-0.54,VIX:-1.80};
@@ -1072,12 +1144,21 @@ function setMode(m,btn){MODE=m;document.querySelectorAll('[id^="m-"]').forEach(f
 function setInst(i,btn){INST=i;document.querySelectorAll('[id^="bi-"]').forEach(function(b){b.className='tog';});if(btn)btn.className='tog ta';updateBtn();}
 function setAction(a){ACT=a;$('ba-BUY').className='tog'+(a==='BUY'?' tg':'');$('ba-SELL').className='tog'+(a==='SELL'?' tr':'');updateBtn();}
 function setType(t){TYP=t;['CE','PE','FUT'].forEach(function(x){$('bt-'+x).className='tog'+(x===t?' tb':'');});updateBtn();}
-function updateBtn(){var b=$('exec-btn');if(!b)return;b.textContent='EXECUTE '+ACT+' '+INST+' '+TYP;b.className='btn blg '+(ACT==='BUY'?'bg':'br');}
+function updateBtn(){var b=$('exec-btn');if(!b)return;var prefix=TRADE_MODE==='LIVE'?'⚡ EXECUTE LIVE ':'📄 EXECUTE PAPER ';b.textContent=prefix+ACT+' '+INST+' '+TYP;b.className='btn blg '+(ACT==='BUY'?(TRADE_MODE==='LIVE'?'br':'bg'):'br');}
 
 function execTrade() {
   var price=nv('f-price')||100,lots=iv('f-lots')||1,sl=nv('f-sl'),tgt=nv('f-tgt'),strike=iv('f-strike');
   var rm={};if(sl)rm.stoploss_points=sl;if(tgt)rm.target_points=tgt;
-  req('/trade','POST',{instrument:INST,action:ACT,option_type:TYP,strike:strike,expiry:gv('f-exp')||'WEEKLY',quantity:lots,entry_price:price,mode:MODE,risk_metrics:rm},function(err,r){
+  
+  // ── EXECUTION LOGIC SEPARATION ──
+  // LIVE mode → real broker API → real market
+  // PAPER mode → simulated environment → virtual wallet
+  var execMode = TRADE_MODE; // 'PAPER' or 'LIVE'
+  var endpoint = '/trade'; // same endpoint, backend checks mode
+  
+  if(execMode === 'LIVE' && !confirm('⚠️ LIVE MODE: This will execute a REAL trade with REAL money via your broker. Confirm?')) return;
+  
+  req(endpoint,'POST',{instrument:INST,action:ACT,option_type:TYP,strike:strike,expiry:gv('f-exp')||'WEEKLY',quantity:lots,entry_price:price,mode:execMode,execution_source:'MANUAL',risk_metrics:rm},function(err,r){
     if(err){alog(err,'err');toast('Error: '+err,'error');return;}
     if(r.status==='EXECUTED'){
       alog('EXECUTED: '+(r.position_id||'').slice(-6),'ok');
@@ -1457,6 +1538,8 @@ function fallbackToPolling() {
   setInterval(function(){var a=document.querySelector('.pnl.active');if(a){if(a.id==='pnl-risk')loadRisk();if(a.id==='pnl-pos')loadPos();}},15000);
   // Load saved profile and broker on startup
   setTimeout(loadSavedProfile, 500);
+  // Restore trade mode preference
+  try{ var sm=localStorage.getItem('trd_trade_mode'); if(sm) switchToMode(sm); }catch(e){}
   setTimeout(loadBrokerStatus, 2000);
   
   // Feature init
