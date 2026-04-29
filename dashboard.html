@@ -2228,6 +2228,30 @@ function initChart() {
       borderColor: '#1e2030',
       timeVisible: true,
       secondsVisible: false,
+      tickMarkFormatter: function(time, tickMarkType, locale) {
+        // Convert UTC timestamp to IST (UTC+5:30)
+        var istTime = time + 19800; // +5:30 in seconds
+        var d = new Date(istTime * 1000);
+        var h = d.getUTCHours().toString().padStart(2,'0');
+        var m = d.getUTCMinutes().toString().padStart(2,'0');
+        var day = d.getUTCDate();
+        var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
+        // Show time for intraday, date for daily
+        if(tickMarkType <= 2) return day + ' ' + mon;
+        return h + ':' + m;
+      },
+    },
+    localization: {
+      timeFormatter: function(time) {
+        // Tooltip time in IST
+        var istTime = time + 19800;
+        var d = new Date(istTime * 1000);
+        var day = d.getUTCDate().toString().padStart(2,'0');
+        var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
+        var h = d.getUTCHours().toString().padStart(2,'0');
+        var m = d.getUTCMinutes().toString().padStart(2,'0');
+        return day+' '+mon+' '+h+':'+m+' IST';
+      },
     },
     handleScroll: { vertTouchDrag: false },
     watermark: { visible: false },
