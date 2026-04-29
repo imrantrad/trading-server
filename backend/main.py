@@ -1371,6 +1371,34 @@ def builtin_strategies():
             "notes": "High R/R but needs all 5 conditions. Risky but rewarding."
         },
         {
+            "id": "CONFLUENCE_930", "name": "9:30 AM Confluence Strategy",
+            "instrument": "NIFTY", "action": "BUY", "option_type": "CE",
+            "quantity": 1, "stop_loss": 20, "target": 45, "timeframe": "5m",
+            "avg_win_rate": 73, "avg_monthly_return": 12.4, "max_drawdown": 5,
+            "type": "INTRADAY", "indicators": "ADX,EMA50,EMA200,RSI,Volume,VIX,ATR",
+            "order_type": "MARKET", "product_type": "MIS",
+            "trailing_sl": 10,
+            "description": "ADX>25 | EMA50>EMA200 | VIX<22 | ATM strike 9:30AM | RSI>60 | Volume>1.5x | SL=20pts TP=45pts",
+            "conditions": "ADX 14 > 25 AND EMA50 > EMA200 AND VIX < 22 AND time >= 9:30 AND price current >= price 9:15 open AND RSI 14 > 60 AND volume > average volume 10 * 1.5 AND ATM strike NIFTY round spot/50 * 50",
+            "exit_conditions": "SL = entry - 20 OR TP = entry + 45 OR if price +30 then trail SL to entry+10 OR time >= 10:30 exit market",
+            "no_trade": "ADX < 25 sideways | VIX > 22 high volatility | time > 10:30 | daily loss > 5%",
+            "notes": "Phase 1: ADX+EMA+VIX check before 9:30. Phase 2: ATM strike at 9:30. Phase 3: RSI+Volume confluence. Phase 4: SL=20 TP=45 trailing. Max 5 trades/day."
+        },
+        {
+            "id": "ORB_ATM_930", "name": "Opening Range Breakout (9:30 ATM)",
+            "instrument": "NIFTY", "action": "BUY", "option_type": "CE",
+            "quantity": 1, "stop_loss": 20, "target": 40, "timeframe": "1m",
+            "avg_win_rate": 71, "avg_monthly_return": 10.8, "max_drawdown": 4,
+            "type": "ORB", "indicators": "Volume,ATR,RSI",
+            "order_type": "MARKET", "product_type": "MIS",
+            "trailing_sl": 0,
+            "description": "Entry after 9:30 | LTP >= 9:15 open price | Volume > SMA(5)*1.5 | ATR guard: change < ATR*2 | ATM weekly CE | TP=+5% | SL=-4% | Exit 10:30",
+            "conditions": "time >= 9:30 AND LTP >= opening price 9:15 AND volume > SMA volume 5 * 1.5 AND LTP change < ATR 14 * 2 AND ATM NIFTY weekly expiry CE",
+            "exit_conditions": "TP: LTP >= traded price * 1.05 (5% gain) OR SL: LTP <= traded price * 0.96 (4% loss) OR time >= 10:30 auto square-off",
+            "no_trade": "time < 9:30 | LTP < 9:15 open | volume weak | ATR spike | daily loss > 5% | trades >= 2",
+            "notes": "Max 2 trades/day. Daily 5% drawdown shutdown. Dynamic ATM strike NFO weekly expiry. Clean 1:1.25 R/R with 5% target."
+        },
+        {
             "id": "MOMENTUM_ACCEL", "name": "Momentum Trend Acceleration",
             "instrument": "NIFTY", "action": "BUY", "option_type": "CE",
             "quantity": 1, "stop_loss": 80, "target": 240, "timeframe": "5m",
