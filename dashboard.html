@@ -4371,7 +4371,12 @@ function calcPayoff(){
     var total=0;
     _payoffLegs.forEach(function(l){
       var expiry=l.option_type==='CE'?Math.max(0,s-l.strike):Math.max(0,l.strike-s);
-      var pnl=(l.action==='BUY'?expiry-l.premium:l.premium-expiry)*l.lots*50;
+      var pnl;
+      if(l.action==='BUY'){
+        pnl = (expiry - l.premium) * l.lots * 50;
+      } else { // SELL
+        pnl = (l.premium - expiry) * l.lots * 50;
+      }
       total+=pnl;
     });
     return {spot:s,pnl:Math.round(total)};
@@ -4382,13 +4387,18 @@ function calcPayoff(){
   var bes=[];
   for(var i=1;i<payoffs.length;i++){
     if(payoffs[i-1].pnl*payoffs[i].pnl<0){
-      bes.push(Math.round((payoffs[i-1].spot+payoffs[i].spot)/2));
+      // Linear interpolation for exact breakeven
+      var be = payoffs[i-1].spot + (payoffs[i].spot - payoffs[i-1].spot) * 
+               Math.abs(payoffs[i-1].pnl) / (Math.abs(payoffs[i-1].pnl) + Math.abs(payoffs[i].pnl));
+      bes.push(Math.round(be));
     }
   }
   
   document.getElementById('payoff-out').style.display='block';
   document.getElementById('po-maxp').textContent='₹'+maxP.toLocaleString();
-  document.getElementById('po-maxl').textContent='₹'+maxL.toLocaleString();
+  var maxLDisplay = maxL < 0 ? '-₹'+Math.abs(maxL).toLocaleString() : '₹'+maxL.toLocaleString();
+  document.getElementById('po-maxl').textContent = maxLDisplay;
+  document.getElementById('po-maxl').style.color = maxL < 0 ? 'var(--rd)' : 'var(--gr)';
   document.getElementById('po-be').textContent=bes.length?bes.join(' / '):'N/A';
   document.getElementById('po-rr').textContent=maxL!==0?'1:'+(Math.abs(maxP/maxL)).toFixed(2):'∞';
   
