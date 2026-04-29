@@ -340,7 +340,12 @@ input:focus, select:focus, textarea:focus {
     <div class="card" style="margin-bottom:8px">
       <div class="g2" style="gap:8px">
         <div><div class="lbl">INSTRUMENT</div>
-          <select id="ch-i"><option value="24000">NIFTY</option><option value="56000">BANKNIFTY</option></select>
+          <select id="ch-i" onchange="document.getElementById('ch-spot-val').value=this.value">
+  <option value="24000">NIFTY (~24000)</option>
+  <option value="56000">BANKNIFTY (~56000)</option>
+  <option value="26000">FINNIFTY (~26000)</option>
+  <option value="78000">SENSEX (~78000)</option>
+</select>
         </div>
         <div><div class="lbl">EXPIRY (days)</div><input type="number" id="ch-exp" value="7"></div>
       </div>
@@ -4301,6 +4306,7 @@ function optTab(tab,btn){
 }
 
 function calcGreeksNew(){
+  toast('Calculating...','info');
   var spot=parseFloat(document.getElementById('g-spot').value)||24000;
   var strike=parseFloat(document.getElementById('g-strike').value)||24000;
   var exp=parseInt(document.getElementById('g-exp').value)||7;
@@ -4328,6 +4334,7 @@ function calcGreeksNew(){
 }
 
 function loadOptionsChain(){
+  toast('Loading chain...','info');
   var spot=parseFloat((document.getElementById('ch-i')||{}).value)||24000;
   var exp=parseInt((document.getElementById('ch-exp')||{}).value)||7;
   var vix=parseFloat((document.getElementById('ch-vix')||{}).value)||15;
@@ -4351,6 +4358,7 @@ function loadOptionsChain(){
 }
 
 function calcIV(){
+  toast('Calculating IV...','info');
   var mkt=parseFloat((document.getElementById('iv-mkt')||{}).value)||100;
   var spot=parseFloat((document.getElementById('iv-spot')||{}).value)||24000;
   var strike=parseFloat((document.getElementById('iv-strike')||{}).value)||24000;
