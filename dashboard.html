@@ -2328,23 +2328,44 @@ function generateOHLC(sym, tf, periods) {
   var data = [];
   var volData = [];
   // Use IST offset for chart timestamps
-// Chart anchor: last trading day 15:30 IST = 10:00 UTC
+// Chart anchor - IST aware
   var _utcNow = Date.now();
   var _istMs  = _utcNow + 5.5*60*60*1000;
   var _istD   = new Date(_istMs);
   var _h = _istD.getUTCHours(), _m = _istD.getUTCMinutes(), _dow = _istD.getUTCDay();
+  // Market open: Mon-Fri 9:15 AM to 3:30 PM IST
   var _mktOpen = _dow>=1 && _dow<=5 &&
     ((_h===9&&_m>=15)||(_h>=10&&_h<=14)||(_h===15&&_m<=30));
   var _ancMs;
   if(_mktOpen){
-    _ancMs = _utcNow; // Live: use current time
+    _ancMs = _utcNow; // Market open - use current time (live data)
   } else {
-    // Find last market close: most recent weekday 15:30 IST (10:00 UTC)
+    // Market closed - anchor to last 15:30 IST = 10:00 UTC
     var _d = new Date(_istMs);
-    // Set to 15:30 IST = 10:00 UTC of current day
     _d.setUTCHours(10,0,0,0);
     _ancMs = _d.getTime();
-    // If today's 15:30 IST is in the future, go back 1 day
+    // If today's close is future, go back 1 day
+    if(_ancMs > _utcNow) _ancMs -= 86400000;
+    // Skip weekends
+    for(var _wi=0; _wi<3; _wi++){
+      var _wd = new Date(_ancMs).getUTCDay();
+      if(_wd>=1 && _wd<=5) break;
+      _ancMs -= 86400000;
+    }
+  }
+  var now = Math.floor(_ancMs/1000);
+  
+  // Ensure enough candles:
+  if(tf==='1s') periods=Math.max(periods,300);
+  if(tf==='5s') periods=Math.max(periods,300);
+  if(tf==='1')  periods=Math.max(periods,600);
+  if(tf==='5')  periods=Math.max(periods,450);
+  if(tf==='15') periods=Math.max(periods,200);
+  if(tf==='30') periods=Math.max(periods,160);
+  if(tf==='60') periods=Math.max(periods,120);
+  if(tf==='240')periods=Math.max(periods,180);
+  if(tf==='D')  periods=Math.max(periods,365);
+  if(tf==='W')  periods=Math.max(periods,104); 1 day
     if(_ancMs > _utcNow) _ancMs -= 86400000;
     // Skip weekends
     var _wd;
@@ -2365,17 +2386,7 @@ function generateOHLC(sym, tf, periods) {
   if(periods < minNeeded) periods = minNeeded;
 
   var tfSecs = { '1s':1, '5s':5, '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
-  // Ensure enough candles for full view
-  if(tf==='1s') periods=Math.max(periods,300);   // 5 min of ticks
-  if(tf==='5s') periods=Math.max(periods,360);   // 30 min of ticks
-  if(tf==='1')  periods=Math.max(periods,600);   // 10 hrs
-  if(tf==='5')  periods=Math.max(periods,450);   // 6 trading days
-  if(tf==='15') periods=Math.max(periods,200);   // 7 trading days
-  if(tf==='30') periods=Math.max(periods,160);   // 10 trading days
-  if(tf==='60') periods=Math.max(periods,120);   // 3 months
-  if(tf==='240')periods=Math.max(periods,180);   // 6 months
-  if(tf==='D')  periods=Math.max(periods,365);   // 1 year
-  if(tf==='W')  periods=Math.max(periods,104);   // 2 years
+  // Periods handled in anchor section above
   var secs = tfSecs[tf] || 86400;
 
   var vol = currentBase * (sym==='NIFTY'?0.0005:sym==='BANKNIFTY'?0.0008:0.0006);
