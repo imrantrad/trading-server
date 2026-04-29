@@ -623,7 +623,6 @@ textarea{resize:vertical;min-height:55px}
       <span style="font-size:9px;padding:3px 10px;border-radius:10px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);font-weight:700;letter-spacing:1px">● PAPER TEST</span>
       <span style="font-size:10px;color:var(--mu)">Virtual ₹5L · No real money</span>
     </div>
-    <button class="btn bg" style="padding:5px 12px;font-size:9px" onclick="goBackToTrade()">← BACK</button>
   </div>
   <!-- Paper mode sub-tabs -->
   <div style="display:flex;gap:6px;margin-bottom:10px">
@@ -704,7 +703,6 @@ textarea{resize:vertical;min-height:55px}
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:10px;background:var(--bg3);border:1px solid rgba(0,255,136,.2);border-radius:8px">
     <span style="font-size:14px">📈</span>
     <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--gr)">LIVE POSITIONS</div><div style="font-size:9px;color:var(--mu)">Real money positions only</div></div>
-    <button class="btn bg" style="padding:5px 12px;font-size:9px" onclick="goBackToTrade()">← BACK</button>
   </div>
   <div class="g3" style="margin-bottom:10px">
     <div class="stat"><div class="sl">OPEN LIVE</div><div class="sv" id="lp-open" style="color:var(--bl)">0</div></div>
@@ -1028,10 +1026,29 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 
 // PANELS
 function show(name, btn) {
-  document.querySelectorAll('.pnl').forEach(function(p){p.classList.remove('active');});
+  // Hide ALL panels including paper/livepos special panels
+  document.querySelectorAll('.pnl').forEach(function(p){
+    p.classList.remove('active');
+    // Also hide panels that use display:none instead of class
+    if(p.id === 'pnl-paper' || p.id === 'pnl-livepos') p.style.display = 'none';
+  });
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  var p=$('pnl-'+name);if(p)p.classList.add('active');
-  if(btn&&btn.classList)btn.classList.add('active');
+  
+  // Show target panel
+  var p = $('pnl-'+name);
+  if(p){ p.classList.add('active'); p.style.display = 'flex'; }
+  if(btn && btn.classList) btn.classList.add('active');
+  
+  // Auto-highlight matching tab if btn not passed
+  if(!btn){
+    document.querySelectorAll('.tab').forEach(function(t){
+      if(t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'"+name+"'") >= 0){
+        t.classList.add('active');
+      }
+    });
+  }
+  
+  // Load data for panel
   if(name==='pos')loadPos();
   if(name==='risk')loadRisk();
   if(name==='jnl'){loadTrades();loadJnlStats();}
@@ -2387,19 +2404,10 @@ function pollNotifCount() {
 
 
 function activatePaperTab(btn){
-  // Hide ALL panels first
-  document.querySelectorAll('.pnl').forEach(function(p){
-    p.classList.remove('active');
-    p.style.display = 'none';
-  });
-  // Green underline on tab
+  openPaperTest();
+  // Green underline on this tab
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   if(btn) btn.classList.add('active');
-  // Show paper panel
-  var pp = document.getElementById('pnl-paper');
-  if(pp){ pp.style.display = 'flex'; pp.classList.add('active'); }
-  showPaperTab('trade', document.getElementById('pt-trade-btn'));
-  loadPaperStats();
 }
 
 function goBackToTrade(){
@@ -2430,7 +2438,12 @@ function openPaperTest(){
 }
 
 function openLivePositions(){
-  document.querySelectorAll('.pnl').forEach(function(p){p.classList.remove('active');});
+  // Close ALL panels first
+  document.querySelectorAll('.pnl').forEach(function(p){
+    p.classList.remove('active');
+    p.style.display = 'none';
+  });
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   var lp = document.getElementById('pnl-livepos');
   if(lp){ lp.style.display='flex'; lp.classList.add('active'); }
   loadLivePositions();
