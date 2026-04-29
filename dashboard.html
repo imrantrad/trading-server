@@ -2365,7 +2365,7 @@ function generateOHLC(sym, tf, periods) {
   if(tf==='60') periods=Math.max(periods,120);
   if(tf==='240')periods=Math.max(periods,180);
   if(tf==='D')  periods=Math.max(periods,365);
-  if(tf==='W')  periods=Math.max(periods,104); 1 day
+  if(tf==='W')  periods=Math.max(periods,104); // 2 years
     if(_ancMs > _utcNow) _ancMs -= 86400000;
     // Skip weekends
     var _wd;
