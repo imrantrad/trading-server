@@ -586,24 +586,8 @@ def update_market(prices: dict, indicators: dict = {}):
     return {"updated": True}
 
 # ─── OPTIONS CHAIN ─────────────────────────────────
-@app.get("/options/chain")
-def options_chain(spot: float = 22450, dte: int = 7, iv: float = 15,
-                  instrument: str = "NIFTY"):
-    chain = generate_chain(spot, dte, iv/100)
-    return chain
 
-@app.get("/options/greeks")
-def option_greeks(spot: float, strike: float, dte: int = 7,
-                  iv: float = 15, opt_type: str = "CE"):
-    from engine.options_chain import black_scholes
-    result = black_scholes(spot, strike, dte, 0.065, iv/100, opt_type)
-    intrinsic = max(0, spot-strike) if opt_type=="CE" else max(0, strike-spot)
-    return {**result, "intrinsic_value": round(intrinsic, 2),
-            "time_value": round(result["price"]-intrinsic, 2),
-            "moneyness": "ATM" if abs(spot-strike)<25 else ("ITM" if
-                (opt_type=="CE" and spot>strike) or (opt_type=="PE" and spot<strike) else "OTM")}
 
-# ─── PORTFOLIO ──────────────────────────────────────
 @app.get("/portfolio/summary")
 def portfolio_summary():
     if not MODULES_LOADED: return {"error": "Module not loaded"}
@@ -2636,54 +2620,7 @@ def get_option_chain(spot, expiry_days, r=0.065, vix=15.0):
 
 # ── OPTIONS API ENDPOINTS ─────────────────────────────────────────────────
 
-@app.get("/options/greeks")
-def options_greeks(
-    spot: float = 24000,
-    strike: float = 24000,
-    expiry_days: int = 7,
-    iv: float = 15.0,
-    rate: float = 6.5,
-    option_type: str = "CE"
-):
-    T = expiry_days / 365
-    sigma = iv / 100
-    r = rate / 100
-    greeks = calculate_greeks(spot, strike, T, r, sigma, option_type)
-    greeks["inputs"] = {"spot":spot,"strike":strike,"expiry_days":expiry_days,"iv":iv,"option_type":option_type}
-    return greeks
 
-@app.get("/options/chain")
-def options_chain(
-    spot: float = 24000,
-    expiry_days: int = 7,
-    vix: float = 15.0
-):
-    chain = get_option_chain(spot, expiry_days, vix=vix)
-    atm = round(spot/50)*50
-    # Find ATM greeks
-    atm_ce = next((x for x in chain if x['strike']==atm and x['option_type']=='CE'), {})
-    return {
-        "spot": spot,
-        "atm_strike": atm,
-        "expiry_days": expiry_days,
-        "vix": vix,
-        "atm_ce_price": atm_ce.get("price",0),
-        "atm_ce_iv": atm_ce.get("iv_pct",0),
-        "chain": chain,
-        "count": len(chain)
-    }
-
-@app.get("/options/iv")
-def implied_vol(
-    market_price: float = 100,
-    spot: float = 24000,
-    strike: float = 24000,
-    expiry_days: int = 7,
-    option_type: str = "CE"
-):
-    T = expiry_days / 365
-    iv = implied_volatility(market_price, spot, strike, T, 0.065, option_type)
-    return {"implied_volatility": iv, "iv_pct": round(iv*100,2)}
 
 @app.post("/options/strategy_payoff")
 async def strategy_payoff(request: Request):
