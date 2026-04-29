@@ -1131,7 +1131,7 @@ input:focus, select:focus, textarea:focus {
       <div style="font-size:16px;font-weight:700">💎 Subscription Plans</div>
       <button onclick="closeModal('sub')" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer">✕</button>
     </div>
-    <div id="plan-cards" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div id="modal-plan-cards" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
 </div>
 
@@ -1142,7 +1142,7 @@ input:focus, select:focus, textarea:focus {
       <div style="font-size:16px;font-weight:700">🎨 Themes</div>
       <button onclick="closeModal('th')" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer">✕</button>
     </div>
-    <div id="theme-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+    <div id="modal-theme-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
   </div>
 </div>
 
@@ -1155,7 +1155,7 @@ input:focus, select:focus, textarea:focus {
     </div>
     <div class="card">
       <div style="font-size:10px;color:var(--mu);margin-bottom:12px;line-height:1.7">Show/hide tabs based on your plan.</div>
-      <div id="tab-visibility-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="modal-tab-list" style="display:flex;flex-direction:column;gap:8px"></div>
       <button class="btn bg blg" onclick="saveUIConfig();closeModal('dash')" style="width:100%;margin-top:12px">✓ SAVE SETTINGS</button>
     </div>
   </div>
@@ -1389,10 +1389,79 @@ function openModal(id){
   m.style.display = 'block';
   document.body.style.overflow = 'hidden';
   _openModals.push(id);
-  // Load data
-  if(id==='sub') setTimeout(buildPlanCards, 50);
-  if(id==='th') setTimeout(buildThemeCards, 50);
-  if(id==='dash') setTimeout(buildTabVisibilityList, 50);
+  // Load data into MODAL-specific containers
+  if(id==='sub'){
+    setTimeout(function(){
+      var pc=document.getElementById('modal-plan-cards');
+      if(!pc)return;
+      var plans=[
+        {id:'FREE',name:'FREE',price:'₹0',color:'var(--mu)',features:['Paper trading','3 strategies','Basic NLP']},
+        {id:'BASIC',name:'BASIC',price:'₹499/mo',color:'var(--bl)',features:['Scanner','Options chain','20 strategies']},
+        {id:'PRO',name:'PRO ⭐',price:'₹1,499/mo',color:'var(--p0)',features:['AI Engine','Auto-execute','Live API','Unlimited']},
+        {id:'INSTITUTIONAL',name:'INSTITUTIONAL',price:'₹4,999/mo',color:'var(--am)',features:['White-label','5yr backtest','SLA','Custom API']}
+      ];
+      pc.innerHTML='';
+      plans.forEach(function(p){
+        var div=document.createElement('div');
+        div.style.cssText='background:var(--bg4);border:2px solid '+(p.id==='PRO'?p.color:'var(--bo)')+';border-radius:10px;padding:16px;cursor:pointer;transition:all .2s';
+        div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:14px;font-weight:700;color:'+p.color+'">'+p.name+'</div><div style="font-size:15px;font-weight:700">'+p.price+'</div></div>'
+          +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">'+p.features.map(function(f){return '<span style="font-size:9px;padding:2px 8px;background:var(--bg);border:1px solid var(--bo);border-radius:8px;color:var(--mu)">'+f+'</span>';}).join('')+'</div>'
+          +'<button onclick="upgradePlan(''+p.id+'');closeModal('sub')" style="width:100%;padding:10px;background:'+(p.id==='PRO'?p.color:'var(--bg3)')+';border:1px solid '+p.color+';color:'+(p.id==='PRO'?'#000':p.color)+';border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit">SELECT '+p.name+'</button>';
+        pc.appendChild(div);
+      });
+    },50);
+  }
+  if(id==='th'){
+    setTimeout(function(){
+      var tc=document.getElementById('modal-theme-cards');
+      if(!tc)return;
+      var themes=[
+        {id:'dark',name:'DARK',desc:'Default',color:'#00ff88'},
+        {id:'midnight',name:'MIDNIGHT',desc:'Deep blue',color:'#00ffcc'},
+        {id:'matrix',name:'MATRIX',desc:'Hacker',color:'#00ff44'},
+        {id:'purple',name:'COSMIC',desc:'Violet',color:'#a855f7'},
+        {id:'neon',name:'NEON',desc:'Cyberpunk',color:'#00ffcc'},
+        {id:'light',name:'LIGHT',desc:'Clean',color:'#059669'}
+      ];
+      tc.innerHTML='';
+      themes.forEach(function(t){
+        var div=document.createElement('div');
+        div.style.cssText='border:2px solid var(--bo);border-radius:10px;padding:14px;cursor:pointer;text-align:center;transition:all .2s';
+        div.innerHTML='<div style="width:28px;height:28px;border-radius:50%;background:'+t.color+';margin:0 auto 8px;box-shadow:0 0 14px '+t.color+'44"></div><div style="font-size:10px;font-weight:700">'+t.name+'</div><div style="font-size:9px;color:var(--mu);margin-top:2px">'+t.desc+'</div>';
+        div.onmouseover=function(){this.style.borderColor=t.color;};
+        div.onmouseout=function(){this.style.borderColor='var(--bo)';};
+        div.onclick=function(){applyTh(t.id,null);this.style.borderColor=t.color;toast('Theme: '+t.name,'success');};
+        tc.appendChild(div);
+      });
+    },50);
+  }
+  if(id==='dash'){
+    setTimeout(function(){
+      var container=document.getElementById('modal-tab-list');
+      if(!container)return;
+      container.innerHTML='';
+      var tabs=[
+        {id:'trade',name:'TRADE',plan:'FREE'},
+        {id:'risk',name:'RISK',plan:'FREE'},
+        {id:'scan',name:'SCANNER',plan:'BASIC'},
+        {id:'opts',name:'OPTIONS',plan:'BASIC'},
+        {id:'bt',name:'BACKTEST',plan:'FREE'},
+        {id:'strats',name:'STRATEGIES',plan:'FREE'},
+        {id:'jnl',name:'JOURNAL',plan:'FREE'},
+        {id:'rep',name:'REPORTS',plan:'BASIC'},
+        {id:'calc',name:'CALCULATOR',plan:'FREE'},
+        {id:'ai',name:'AI ENGINE',plan:'PRO'},
+        {id:'admin',name:'ADMIN',plan:'PRO'},
+        {id:'legal',name:'LEGAL',plan:'FREE'}
+      ];
+      tabs.forEach(function(t){
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg3);border:1px solid var(--bo);border-radius:8px';
+        row.innerHTML='<div><div style="font-size:12px;font-weight:600">'+t.name+'</div><div style="font-size:9px;color:var(--mu)">Requires: '+t.plan+'</div></div><input type="checkbox" id="modal-tab-'+t.id+'" checked style="width:18px;height:18px;accent-color:var(--gr)">';
+        container.appendChild(row);
+      });
+    },50);
+  }
   if(id==='account') setTimeout(loadSavedProfile, 50);
   // Close on backdrop click
   m.onclick = function(e){ if(e.target===m) closeModal(id); };
