@@ -707,7 +707,7 @@ input:focus, select:focus, textarea:focus {
     <div style="font-size:8px;letter-spacing:2px;color:var(--mu);padding:4px 8px 10px;text-transform:uppercase">Account</div>
 
     <!-- My Account -->
-    <div class="prof-menu-item" onclick="openPModal('account')">
+    <div class="prof-menu-item" onclick="swProf('set',null)">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👤</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">My Account</div>
@@ -717,7 +717,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- Subscription / Plans -->
-    <div class="prof-menu-item" onclick="openPModal('sub')">
+    <div class="prof-menu-item" onclick="swProf('sub',null)">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💎</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Subscription Plans</div>
@@ -759,7 +759,7 @@ input:focus, select:focus, textarea:focus {
     <div style="font-size:8px;letter-spacing:2px;color:var(--mu);padding:14px 8px 10px;text-transform:uppercase">Customisation</div>
 
     <!-- Themes -->
-    <div class="prof-menu-item" onclick="openPModal('th')">
+    <div class="prof-menu-item" onclick="swProf('th',null)">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎨</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Themes</div>
@@ -769,7 +769,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- Dashboard Settings -->
-    <div class="prof-menu-item" onclick="openPModal('dash')">
+    <div class="prof-menu-item" onclick="swProf('dash',null)">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎛️</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Dashboard Settings</div>
@@ -801,7 +801,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- About -->
-    <div class="prof-menu-item" onclick="openPModal('about')" style="opacity:.9">
+    <div class="prof-menu-item" onclick="swProf('about',null)" style="opacity:.9">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">ℹ️</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">About TRD</div>
@@ -1097,71 +1097,6 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 
-<div id="pmodal-account" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.96);overflow-y:auto;-webkit-overflow-scrolling:touch">
-  <div style="max-width:480px;margin:0 auto;padding:16px;min-height:100vh">
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px;position:sticky;top:0;background:rgba(0,0,10,.98);z-index:1">
-      <button onclick="closePModal()" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer;flex-shrink:0">‹</button>
-      <div style="font-size:15px;font-weight:700">👤 My Account</div>
-    </div>
-    <div class="card">
-  <div class="g2" style="gap:10px;margin-bottom:10px"><div><div class="lbl">FULL NAME</div><input id="pf-n" placeholder="Your name"></div><div><div class="lbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div></div>
-  <div class="g2" style="gap:10px;margin-bottom:10px"><div><div class="lbl">CAPITAL ₹</div><input type="number" id="pf-c" value="500000"></div><div><div class="lbl">RISK %</div><input type="number" id="pf-r" value="1"></div></div>
-  <div class="g2" style="gap:10px;margin-bottom:14px"><div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="pf-ml" value="3"></div><div><div class="lbl">DEFAULT BROKER</div><select id="pf-b"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option><option>UPSTOX</option></select></div></div>
-  <button class="btn bg blg" onclick="saveProf();closePModal()" style="width:100%">✓ SAVE SETTINGS</button>
-</div>
-  </div>
-</div>
-<div id="pmodal-sub" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.96);overflow-y:auto;-webkit-overflow-scrolling:touch">
-  <div style="max-width:480px;margin:0 auto;padding:16px;min-height:100vh">
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px;position:sticky;top:0;background:rgba(0,0,10,.98);z-index:1">
-      <button onclick="closePModal()" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer;flex-shrink:0">‹</button>
-      <div style="font-size:15px;font-weight:700">💎 Subscription Plans</div>
-    </div>
-    <div id="pmodal-plan-cards" style="display:flex;flex-direction:column;gap:10px"></div>
-  </div>
-</div>
-<div id="pmodal-th" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.96);overflow-y:auto;-webkit-overflow-scrolling:touch">
-  <div style="max-width:480px;margin:0 auto;padding:16px;min-height:100vh">
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px;position:sticky;top:0;background:rgba(0,0,10,.98);z-index:1">
-      <button onclick="closePModal()" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer;flex-shrink:0">‹</button>
-      <div style="font-size:15px;font-weight:700">🎨 Themes</div>
-    </div>
-    <div id="pmodal-theme-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
-  </div>
-</div>
-<div id="pmodal-dash" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.96);overflow-y:auto;-webkit-overflow-scrolling:touch">
-  <div style="max-width:480px;margin:0 auto;padding:16px;min-height:100vh">
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px;position:sticky;top:0;background:rgba(0,0,10,.98);z-index:1">
-      <button onclick="closePModal()" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer;flex-shrink:0">‹</button>
-      <div style="font-size:15px;font-weight:700">🎛️ Dashboard Settings</div>
-    </div>
-    <div class="card">
-  <div style="font-size:10px;color:var(--mu);margin-bottom:12px">Show/hide tabs based on your plan.</div>
-  <div id="pmodal-tab-list" style="display:flex;flex-direction:column;gap:8px"></div>
-  <button class="btn bg blg" onclick="saveUIConfig();closePModal()" style="width:100%;margin-top:12px">✓ SAVE</button>
-</div>
-  </div>
-</div>
-<div id="pmodal-about" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.96);overflow-y:auto;-webkit-overflow-scrolling:touch">
-  <div style="max-width:480px;margin:0 auto;padding:16px;min-height:100vh">
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px;position:sticky;top:0;background:rgba(0,0,10,.98);z-index:1">
-      <button onclick="closePModal()" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer;flex-shrink:0">‹</button>
-      <div style="font-size:15px;font-weight:700">ℹ️ About TRD</div>
-    </div>
-    <div class="card" style="text-align:center;padding:24px 16px">
-  <div style="width:60px;height:60px;border-radius:16px;background:linear-gradient(135deg,var(--gr),var(--bl));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#000;margin:0 auto 12px">T</div>
-  <div style="font-size:20px;font-weight:700;margin-bottom:4px">TRD v12.3</div>
-  <div style="font-size:11px;color:var(--mu);margin-bottom:20px">Institutional Derivative Trading System</div>
-  <div style="display:flex;flex-direction:column;gap:8px;text-align:left">
-    <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Version</span><span style="font-size:11px;font-weight:600">v12.3.0</span></div>
-    <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Server</span><span style="font-size:11px;font-weight:600">AWS eu-north-1</span></div>
-    <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Endpoints</span><span style="font-size:11px;font-weight:600;color:var(--gr)">154+</span></div>
-    <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Uptime</span><span style="font-size:11px;font-weight:600;color:var(--gr)">99.9%</span></div>
-  </div>
-  <div style="margin-top:14px;padding:10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:8px;font-size:9px;color:var(--mu);line-height:1.7">⚠️ Not SEBI registered. Trade responsibly.</div>
-</div>
-  </div>
-</div>
 <!-- BROKER API MODAL -->
 <div id="broker-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,10,.95);backdrop-filter:blur(10px);overflow-y:auto">
   <div style="max-width:500px;margin:20px auto;padding:16px">
@@ -1354,94 +1289,6 @@ function bellClick(){
 }
 
 // ── BROKER API ──────────────────────────────────────────────────────────────
-
-
-// ── PROFILE MODALS (fixed position, always at top) ─────────────────────────
-var _currentPModal = null;
-
-function openPModal(id){
-  if(_currentPModal) closePModal();
-  var m = document.getElementById('pmodal-'+id);
-  if(!m) return;
-  m.style.display = 'block';
-  m.scrollTop = 0;
-  _currentPModal = id;
-  document.body.style.overflow = 'hidden';
-  // Load content
-  if(id==='account') setTimeout(loadSavedProfile, 50);
-  if(id==='sub') setTimeout(loadSubModal, 50);
-  if(id==='th') setTimeout(loadThModal, 50);
-  if(id==='dash') setTimeout(loadDashModal, 50);
-}
-
-function closePModal(){
-  if(_currentPModal){
-    var m = document.getElementById('pmodal-'+_currentPModal);
-    if(m) m.style.display = 'none';
-    _currentPModal = null;
-  }
-  document.body.style.overflow = '';
-}
-
-function loadSubModal(){
-  var pc = document.getElementById('pmodal-plan-cards');
-  if(!pc) return;
-  var plans=[
-    {id:'FREE',name:'FREE',price:'₹0',color:'var(--mu)',features:['Paper trading','3 strategies','Basic NLP']},
-    {id:'BASIC',name:'BASIC',price:'₹499/mo',color:'var(--bl)',features:['Scanner','20 strategies','Reports']},
-    {id:'PRO',name:'PRO ⭐',price:'₹1,499/mo',color:'var(--p0)',features:['AI Engine','Auto-execute','Live API']},
-    {id:'INSTITUTIONAL',name:'INSTITUTIONAL',price:'₹4,999/mo',color:'var(--am)',features:['White-label','5yr backtest','SLA']}
-  ];
-  pc.innerHTML='';
-  plans.forEach(function(p){
-    var d=document.createElement('div');
-    d.style.cssText='background:var(--bg4);border:2px solid '+(p.id==='PRO'?p.color:'var(--bo)')+';border-radius:10px;padding:16px;margin-bottom:10px';
-    d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:14px;font-weight:700;color:'+p.color+'">'+p.name+'</div><div style="font-size:14px;font-weight:700">'+p.price+'</div></div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">'+p.features.map(function(f){return '<span style="font-size:9px;padding:2px 8px;background:var(--bg);border:1px solid var(--bo);border-radius:8px;color:var(--mu)">'+f+'</span>';}).join('')+'</div><button onclick="upgradePlan(''+p.id+'');closePModal()" style="width:100%;padding:10px;background:'+(p.id==='PRO'?p.color:'transparent')+';border:1px solid '+p.color+';color:'+(p.id==='PRO'?'#000':p.color)+';border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit">SELECT '+p.name+'</button>';
-    pc.appendChild(d);
-  });
-}
-
-function loadThModal(){
-  var tc = document.getElementById('pmodal-theme-cards');
-  if(!tc) return;
-  var themes=[
-    {id:'dark',name:'DARK',desc:'Default',color:'#00ff88'},
-    {id:'midnight',name:'MIDNIGHT',desc:'Deep blue',color:'#00ffcc'},
-    {id:'matrix',name:'MATRIX',desc:'Hacker',color:'#00ff44'},
-    {id:'purple',name:'COSMIC',desc:'Violet',color:'#a855f7'},
-    {id:'neon',name:'NEON',desc:'Cyberpunk',color:'#ff00cc'},
-    {id:'light',name:'LIGHT',desc:'Clean',color:'#059669'}
-  ];
-  tc.innerHTML='';
-  themes.forEach(function(t){
-    var d=document.createElement('div');
-    d.style.cssText='border:2px solid var(--bo);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border-color .2s';
-    d.innerHTML='<div style="width:32px;height:32px;border-radius:50%;background:'+t.color+';margin:0 auto 8px;box-shadow:0 0 14px '+t.color+'55"></div><div style="font-size:10px;font-weight:700">'+t.name+'</div><div style="font-size:9px;color:var(--mu);margin-top:2px">'+t.desc+'</div>';
-    d.onmouseover=function(){this.style.borderColor=t.color;};
-    d.onmouseout=function(){this.style.borderColor='var(--bo)';};
-    var tid=t.id;
-    d.onclick=function(){applyTh(tid,null);this.style.borderColor=t.color;toast('Theme: '+t.name,'success');};
-    tc.appendChild(d);
-  });
-}
-
-function loadDashModal(){
-  var c = document.getElementById('pmodal-tab-list');
-  if(!c) return;
-  var tabs=[
-    {id:'trade',name:'TRADE'},{id:'risk',name:'RISK'},{id:'scan',name:'SCANNER'},
-    {id:'opts',name:'OPTIONS'},{id:'bt',name:'BACKTEST'},{id:'strats',name:'STRATEGIES'},
-    {id:'jnl',name:'JOURNAL'},{id:'rep',name:'REPORTS'},{id:'calc',name:'CALCULATOR'},
-    {id:'ai',name:'AI ENGINE'},{id:'admin',name:'ADMIN'},{id:'legal',name:'LEGAL'}
-  ];
-  c.innerHTML='';
-  tabs.forEach(function(t){
-    var r=document.createElement('div');
-    r.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border:1px solid var(--bo);border-radius:8px';
-    r.innerHTML='<div style="font-size:12px;font-weight:600">'+t.name+'</div><input type="checkbox" id="pmodal-tab-'+t.id+'" checked style="width:18px;height:18px;accent-color:var(--gr)">';
-    c.appendChild(r);
-  });
-}
 
 function openBrokerModal(){
   var m=document.getElementById('broker-modal');
@@ -2121,17 +1968,6 @@ function swProf(tab,btn){
   if(tab==='th') setTimeout(buildThemeCards,50);
   if(tab==='broker') setTimeout(loadBrokerStatus,50);
   if(tab==='notif') setTimeout(loadNotifPrefs,50);
-
-  // Scroll to top after showing panel
-  setTimeout(function(){
-    window.scrollTo(0,0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-    var pf = document.getElementById('pnl-prof');
-    if(pf) pf.scrollTop = 0;
-    var main = document.querySelector('.main');
-    if(main) main.scrollTop = 0;
-  }, 20);
 }
 function loadProfStats(){
   req('/stats','GET',null,function(err,d){
