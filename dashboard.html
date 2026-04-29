@@ -701,6 +701,7 @@ input:focus, select:focus, textarea:focus {
   <!-- ── MENU LIST ── -->
   <div style="padding:12px;overflow-y:auto;flex:1">
 
+<div id="prof-menu-section">
     <!-- Account & Settings Group -->
     <div style="font-size:8px;letter-spacing:2px;color:var(--mu);padding:4px 8px 10px;text-transform:uppercase">Account</div>
 
@@ -799,7 +800,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- About -->
-    <div class="prof-menu-item" style="opacity:.7">
+    <div class="prof-menu-item" onclick="swProf('about',null)" style="opacity:.9">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">ℹ️</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">About TRD</div>
@@ -810,7 +811,27 @@ input:focus, select:focus, textarea:focus {
 
     </div><!-- end prof-menu-section -->
 
-    <!-- ── DETAIL PANELS (shown when menu item clicked) ── -->
+</div>
+        <div id="ps-about" class="prof-panel" style="display:none">
+      <div class="prof-panel-header" onclick="swProf(null,null)">‹ About TRD</div>
+      <div style="text-align:center;padding:20px 0">
+        <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,var(--gr),var(--bl));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#000;margin:0 auto 16px">T</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:4px">TRD v12.3</div>
+        <div style="font-size:10px;color:var(--mu);margin-bottom:20px">Institutional Derivative Trading System</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Version</span><span style="font-size:11px;font-weight:600">v12.3.0</span></div>
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Build</span><span style="font-size:11px;font-weight:600">2026.04.29</span></div>
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Server</span><span style="font-size:11px;font-weight:600">AWS eu-north-1</span></div>
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">API Endpoints</span><span style="font-size:11px;font-weight:600;color:var(--gr)">154+</span></div>
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Strategies</span><span style="font-size:11px;font-weight:600;color:var(--gr)">10 Built-in</span></div>
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:12px 14px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Uptime</span><span style="font-size:11px;font-weight:600;color:var(--gr)">99.9%</span></div>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:6px;font-size:9px;color:var(--mu);text-align:center;line-height:1.7">
+        ⚠️ Not SEBI registered. For educational & research purposes only. Trade responsibly.
+      </div>
+    </div>
+        <!-- ── DETAIL PANELS (shown when menu item clicked) ── -->
     <div id="ps-set" class="prof-panel" style="display:none">
       <div class="prof-panel-header" onclick="swProf(null,null)">‹ My Account</div>
       <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">FULL NAME</div><input id="pf-n" placeholder="Your name" value="Demo Trader"></div><div><div class="lbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div></div>
@@ -1837,27 +1858,30 @@ function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$
 
 // PROFILE
 function swProf(tab,btn){
-  var panels=['set','sub','broker','th','dash','notif'];
-  var hasPanel = tab && panels.indexOf(tab)>=0;
-  
-  // 1. Show/hide sub-panels
-  panels.forEach(function(t){
+  // Hide all sub-panels
+  ['set','sub','broker','th','dash','notif','about'].forEach(function(t){
     var el=document.getElementById('ps-'+t);
-    if(el) el.style.display=(t===tab)?'block':'none';
+    if(el) el.style.display='none';
   });
   
-  // 2. Toggle menu visibility using wrapper ID
-  var menuSec = document.getElementById('prof-menu-section');
-  if(menuSec) menuSec.style.display = hasPanel ? 'none' : 'block';
+  // Show/hide main menu section
+  var menuSec=document.getElementById('prof-menu-section');
+  if(menuSec) menuSec.style.display = (tab ? 'none' : 'block');
   
-  // 3. Load panel data
+  // Show target panel
+  if(tab){
+    var panel=document.getElementById('ps-'+tab);
+    if(panel) panel.style.display='block';
+  }
+  
+  // Load data
   if(tab==='dash') buildTabVisibilityList();
   if(tab==='sub') buildPlanCards();
   if(tab==='th') buildThemeCards();
   if(tab==='broker') loadBrokerStatus();
   if(tab==='notif') loadNotifPrefs();
   
-  // 4. Scroll to top of profile panel
+  // Scroll to TOP of profile panel
   var pf=document.getElementById('pnl-prof');
   if(pf) pf.scrollTop=0;
 }
