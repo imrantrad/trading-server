@@ -82,18 +82,23 @@ STRATEGY_CONFIGS = {
 }
 
 def _get_seed(strategy: str, capital: float, months: int, quantity: int) -> int:
-    """Generate deterministic seed from input parameters."""
-    key = f"{strategy}|{capital}|{months}|{quantity}"
+    """Generate deterministic seed - includes current year-month for time-relevant results."""
+    from datetime import datetime as _dt3
+    ym = _dt3.now().strftime("%Y-%m")  # Changes each month
+    key = f"{strategy}|{capital}|{months}|{quantity}|{ym}"
     return int(hashlib.sha256(key.encode()).hexdigest()[:8], 16)
 
-def _get_trading_days(months: int) -> List[date]:
+def _get_trading_days(months: int, end_date: date = None) -> List[date]:
     """
-    Get deterministic trading day list.
-    Uses FIXED reference date (2024-01-01) as anchor — no datetime.now()
+    Get trading days ending at end_date (default: today).
+    For 1 month: shows last 1 month of actual dates.
     """
-    # Fixed anchor — NEVER use datetime.now()
-    anchor = date(2024, 12, 31)
-    start = anchor - timedelta(days=months * 30)
+    from datetime import date as _date, datetime as _dt
+    # Use actual current date as anchor
+    if end_date is None:
+        end_date = _dt.now().date()
+    anchor = end_date
+    start = anchor - timedelta(days=months * 31)  # ~1 month = 31 days
     
     trading_days = []
     d = start
@@ -136,7 +141,9 @@ def run_advanced_backtest(
     
     # ── STEP 3: Get deterministic trading days ───────────────────────────────
     # NO datetime.now() — fully fixed date range
-    trading_days = _get_trading_days(months)
+    from datetime import datetime as _dt2
+    today = _dt2.now().date()
+    trading_days = _get_trading_days(months, end_date=today)
     
     # ── STEP 4: Process each day deterministically ───────────────────────────
     daily_results: List[dict] = []
