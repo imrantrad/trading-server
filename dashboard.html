@@ -3565,7 +3565,51 @@ function loadPaperStrats(type){
       var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';
       var b1=document.createElement('button');b1.className='btn ba';b1.style.cssText='flex:1;padding:6px;font-size:9px';b1.textContent='📄 PAPER TRADE';
       var inst=(s.instrument||'NIFTY').split('/')[0];
-      b1.onclick=function(){setPaperInst(inst,document.getElementById('pbi-'+inst));showPaperTab('trade',document.getElementById('pt-trade-btn'));toast(inst+' ready for paper trade','success');};
+      b1.onclick=function(){
+  // 1. Fill Order Entry fields
+  setPaperInst(inst, document.getElementById('pbi-'+inst));
+  // Set action
+  var action = (s.action||s.entry_action||'BUY').toUpperCase();
+  setPaperAction(action);
+  // Set option type
+  var otype = (s.option_type||s.type||'CE').toUpperCase();
+  if(otype==='CE'||otype==='PE'||otype==='FUT') setPaperType(otype);
+  // Set lots
+  var lotsEl = document.getElementById('paper-lots');
+  if(lotsEl) lotsEl.value = s.quantity||s.lots||1;
+  // Set SL and Target
+  var slEl = document.getElementById('paper-sl');
+  var tgtEl = document.getElementById('paper-tgt');
+  if(slEl) slEl.value = s.stop_loss||s.sl||100;
+  if(tgtEl) tgtEl.value = s.target||s.tgt||200;
+
+  // 2. Fill NLP textarea with full strategy action plan
+  var nlpEl = document.getElementById('nlp-in');
+  if(nlpEl){
+    var conditions = s.conditions||s.entry_conditions||s.description||'';
+    var nlpText = (action.toLowerCase()) + ' ' + inst + ' ' + (otype) +
+      ' lots ' + (s.quantity||1) +
+      ' sl ' + (s.stop_loss||100) +
+      ' target ' + (s.target||200);
+    if(conditions) nlpText += '
+conditions: ' + conditions;
+    if(s.exit_conditions) nlpText += '
+exit: ' + s.exit_conditions;
+    if(s.timeframe) nlpText += '
+timeframe: ' + s.timeframe;
+    nlpEl.value = nlpText;
+    // Expand NLP section
+    var nlpSec = document.getElementById('nlp-section');
+    if(nlpSec) nlpSec.style.display = 'block';
+  }
+
+  // 3. Show order entry tab
+  showPaperTab('trade', document.getElementById('pt-trade-btn'));
+  
+  // 4. Show toast with strategy name
+  var name = s.name||s.strategy_name||'Strategy';
+  toast('✅ ' + name + ' loaded → Order Entry + NLP filled', 'success');
+};
       var b2=document.createElement('button');b2.className='btn bb';b2.style.cssText='flex:1;padding:6px;font-size:9px';b2.textContent='📊 BACKTEST';
       var sid=s.id||s.strategy_id;b2.onclick=function(){show('bt',null);if(sid&&$('bt-s'))$('bt-s').value=sid;toast('Strategy loaded for backtest','info');};
       btns.appendChild(b1);btns.appendChild(b2);div.appendChild(btns);psl.appendChild(div);
