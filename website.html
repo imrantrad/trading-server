@@ -463,7 +463,7 @@ function doLogin(){
   if(!e||!p){showMsg('ml','Please fill all fields','aerr');return;}
   if(!e.includes('@')){showMsg('ml','Invalid email','aerr');return;}
   showMsg('ml','Signing in...','ainf');
-  setTimeout(function(){showMsg('ml','✓ Success! Redirecting...','aok');setTimeout(function(){window.location.href='https://wall-holds-strategic-clarity.trycloudflare.com';},1200);},1500);
+  setTimeout(function(){showMsg('ml','✓ Success! Redirecting...','aok');setTimeout(function(){window.location.href=window.location.origin;},1200);},1500);
 }
 function doSignup(){
   var n=document.getElementById('sn').value.trim(),e=document.getElementById('se').value.trim(),p=document.getElementById('sp').value;
@@ -471,11 +471,11 @@ function doSignup(){
   if(!e.includes('@')){showMsg('ms','Invalid email','aerr');return;}
   if(p.length<8){showMsg('ms','Password must be at least 8 characters','aerr');return;}
   showMsg('ms','Creating account...','ainf');
-  setTimeout(function(){showMsg('ms','🎉 Account created! Welcome to TRD!','aok');setTimeout(function(){window.location.href='https://wall-holds-strategic-clarity.trycloudflare.com';},1500);},1800);
+  setTimeout(function(){showMsg('ms','🎉 Account created! Welcome to TRD!','aok');setTimeout(function(){window.location.href=window.location.origin;},1500);},1800);
 }
 function doGoogle(){
   showMsg('ml','Connecting to Google...','ainf');
-  setTimeout(function(){showMsg('ml','✓ Success! Redirecting...','aok');setTimeout(function(){window.location.href='https://wall-holds-strategic-clarity.trycloudflare.com';},1200);},1400);
+  setTimeout(function(){showMsg('ml','✓ Success! Redirecting...','aok');setTimeout(function(){window.location.href=window.location.origin;},1200);},1400);
 }
 </script>
 </body>

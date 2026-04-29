@@ -1246,7 +1246,18 @@ function loadBrokerStatus(){
 <script>
 
 // Dynamic API URL - always same origin as dashboard
-var API = 'https://wall-holds-strategic-clarity.trycloudflare.com';
+var API = (function(){
+  var loc = window.location;
+  // If page loaded via tunnel (HTTPS), use tunnel URL as API
+  if(loc.protocol === 'https:' && loc.hostname !== 'localhost'){
+    return loc.protocol + '//' + loc.host;
+  }
+  // If loaded via HTTP direct IP, use same
+  if(loc.protocol === 'http:'){
+    return loc.protocol + '//' + loc.host;
+  }
+  return 'https://wall-holds-strategic-clarity.trycloudflare.com';
+})();
 console.log('API:', API);
 var UID = 'USR124535215';
 var INST = 'NIFTY', ACT = 'BUY', TYP = 'CE', MODE = 'PAPER', KILL = false, SELPLAN = 'PRO';
