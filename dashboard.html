@@ -2375,15 +2375,7 @@ function generateOHLC(sym, tf, periods) {
       _ancMs -= 86400000;
     }
   }
-  var now = Math.floor(_ancMs / 1000);
-  
-  // For intraday charts: increase periods to cover full trading day
-  // 9:15 AM to 3:30 PM IST = 375 minutes
-  // For 5m: need 75 candles for full day; increase periods if needed
-  var tradingMinutes = 375; // 9:15 to 15:30
-  var minPeriods = {'1':375,'5':75,'15':25,'30':13,'60':7,'240':2,'D':1,'W':1};
-  var minNeeded = (minPeriods[tf] || 1) * 5; // 5 days buffer
-  if(periods < minNeeded) periods = minNeeded;
+
 
   var tfSecs = { '1s':1, '5s':5, '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
   // Periods handled in anchor section above
