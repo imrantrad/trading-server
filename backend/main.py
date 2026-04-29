@@ -2781,3 +2781,298 @@ async def options_payoff(request: Request):
             bes.append(round((payoffs[i-1]["spot"]+payoffs[i]["spot"])/2,2))
     maxp=max(p["pnl"] for p in payoffs); maxl=min(p["pnl"] for p in payoffs)
     return {"payoffs":payoffs,"breakevens":bes,"max_profit":maxp,"max_loss":maxl,"risk_reward":round(abs(maxp/maxl),2) if maxl!=0 else 999,"legs_count":len(legs)}
+
+# ════════════════════════════════════════════════════════════════════════════
+# ADVANCED PAPER TRADING ENGINE v2
+# Multi-leg, Auto-execute, Trailing SL, Time exit, Daily limits
+# ════════════════════════════════════════════════════════════════════════════
+from datetime import datetime, timedelta, timezone
+import threading, time as _time
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+class AdvancedPaperEngine:
+    def __init__(self):
+        self.positions = {}      # active positions
+        self.closed_positions = []
+        self.daily_trades = {}   # date -> count
+        self.daily_pnl = {}      # date -> pnl
+        self.scheduled_orders = []  # auto-execute queue
+        self.capital = 500000
+        self.lock = threading.Lock()
+        self._scheduler_running = False
+        
+    def get_ist_time(self):
+        return datetime.now(IST)
+    
+    def get_today(self):
+        return self.get_ist_time().strftime("%Y-%m-%d")
+    
+    def get_daily_trades(self):
+        return self.daily_trades.get(self.get_today(), 0)
+    
+    def get_daily_pnl(self):
+        return self.daily_pnl.get(self.get_today(), 0.0)
+    
+    def check_daily_limits(self, max_trades=5, max_loss_pct=5.0):
+        if self.get_daily_trades() >= max_trades:
+            return False, f"Max {max_trades} trades/day reached"
+        daily_loss = self.get_daily_pnl()
+        max_loss = -(self.capital * max_loss_pct / 100)
+        if daily_loss <= max_loss:
+            return False, f"Daily drawdown {max_loss_pct}% hit - trading stopped"
+        return True, "OK"
+    
+    def execute_multi_leg(self, strategy_name, legs, capital=None):
+        """Execute multi-leg strategy (Iron Condor, Straddle, etc.)"""
+        today = self.get_today()
+        ok, msg = self.check_daily_limits()
+        if not ok:
+            return {"success": False, "error": msg}
+        
+        group_id = f"GRP_{int(_time.time())}"
+        executed_legs = []
+        
+        for leg in legs:
+            pos_id = f"POS_{int(_time.time()*1000)}_{leg['option_type']}"
+            position = {
+                "id": pos_id,
+                "group_id": group_id,
+                "strategy": strategy_name,
+                "instrument": leg.get("instrument","NIFTY"),
+                "option_type": leg["option_type"],
+                "action": leg["action"],
+                "strike": leg["strike"],
+                "lots": leg.get("lots",1),
+                "entry_price": leg["premium"],
+                "current_price": leg["premium"],
+                "sl": leg.get("sl", leg["premium"] * (0.8 if leg["action"]=="BUY" else 1.2)),
+                "target": leg.get("target", leg["premium"] * (1.2 if leg["action"]=="BUY" else 0.8)),
+                "trailing_sl": leg.get("trailing_sl", 0),
+                "trailing_high": leg["premium"],
+                "time_exit": leg.get("time_exit", None),  # "10:30"
+                "status": "ACTIVE",
+                "pnl": 0.0,
+                "entry_time": self.get_ist_time().strftime("%H:%M:%S"),
+                "entry_date": today,
+                "mode": "PAPER"
+            }
+            with self.lock:
+                self.positions[pos_id] = position
+            executed_legs.append(pos_id)
+        
+        # Update daily trade count
+        self.daily_trades[today] = self.daily_trades.get(today, 0) + 1
+        
+        return {
+            "success": True,
+            "group_id": group_id,
+            "legs_executed": len(executed_legs),
+            "position_ids": executed_legs,
+            "strategy": strategy_name,
+            "message": f"{strategy_name} executed - {len(legs)} legs"
+        }
+    
+    def update_prices(self, prices_dict):
+        """Update all position prices and check SL/Target/Trailing/Time"""
+        now_ist = self.get_ist_time()
+        now_time = now_ist.strftime("%H:%M")
+        today = self.get_today()
+        to_close = []
+        
+        with self.lock:
+            for pos_id, pos in self.positions.items():
+                if pos["status"] != "ACTIVE":
+                    continue
+                
+                sym = pos["instrument"]
+                curr = prices_dict.get(sym, pos["current_price"])
+                pos["current_price"] = curr
+                
+                # P&L calculation
+                lot_size = 50
+                if pos["action"] == "BUY":
+                    pos["pnl"] = (curr - pos["entry_price"]) * pos["lots"] * lot_size
+                else:
+                    pos["pnl"] = (pos["entry_price"] - curr) * pos["lots"] * lot_size
+                
+                # Update daily P&L
+                self.daily_pnl[today] = self.daily_pnl.get(today, 0) + pos["pnl"]
+                
+                close_reason = None
+                
+                # Trailing SL update
+                if pos["trailing_sl"] > 0 and pos["action"] == "BUY":
+                    if curr > pos["trailing_high"]:
+                        pos["trailing_high"] = curr
+                        pos["sl"] = curr - pos["trailing_sl"]
+                
+                # Check SL
+                if pos["action"] == "BUY" and curr <= pos["sl"]:
+                    close_reason = "SL_HIT"
+                elif pos["action"] == "SELL" and curr >= pos["sl"]:
+                    close_reason = "SL_HIT"
+                
+                # Check Target
+                if pos["action"] == "BUY" and curr >= pos["target"]:
+                    close_reason = "TARGET_HIT"
+                elif pos["action"] == "SELL" and curr <= pos["target"]:
+                    close_reason = "TARGET_HIT"
+                
+                # Time exit
+                if pos["time_exit"] and now_time >= pos["time_exit"]:
+                    close_reason = f"TIME_EXIT_{pos['time_exit']}"
+                
+                if close_reason:
+                    to_close.append((pos_id, close_reason))
+        
+        # Close positions
+        for pos_id, reason in to_close:
+            self.close_position(pos_id, reason)
+        
+        return {"updated": len(self.positions), "closed": len(to_close)}
+    
+    def close_position(self, pos_id, reason="MANUAL"):
+        with self.lock:
+            if pos_id not in self.positions:
+                return None
+            pos = self.positions.pop(pos_id)
+            pos["status"] = "CLOSED"
+            pos["close_reason"] = reason
+            pos["close_time"] = self.get_ist_time().strftime("%H:%M:%S")
+            self.closed_positions.append(pos)
+            return pos
+    
+    def schedule_order(self, order_config):
+        """Schedule auto-execute at specific time"""
+        self.scheduled_orders.append({
+            "execute_at": order_config.get("execute_at", "09:30"),
+            "strategy": order_config.get("strategy", ""),
+            "legs": order_config.get("legs", []),
+            "executed": False,
+            "conditions": order_config.get("conditions", {})
+        })
+        return {"scheduled": True, "execute_at": order_config.get("execute_at")}
+    
+    def check_scheduled_orders(self):
+        """Called periodically to execute scheduled orders"""
+        now = self.get_ist_time().strftime("%H:%M")
+        executed = []
+        for order in self.scheduled_orders:
+            if not order["executed"] and now >= order["execute_at"]:
+                result = self.execute_multi_leg(order["strategy"], order["legs"])
+                order["executed"] = True
+                executed.append(result)
+        return executed
+    
+    def get_summary(self):
+        total_pnl = sum(p["pnl"] for p in self.positions.values())
+        total_closed_pnl = sum(p["pnl"] for p in self.closed_positions)
+        return {
+            "active_positions": len(self.positions),
+            "closed_positions": len(self.closed_positions),
+            "active_pnl": round(total_pnl, 2),
+            "closed_pnl": round(total_closed_pnl, 2),
+            "total_pnl": round(total_pnl + total_closed_pnl, 2),
+            "daily_trades": self.get_daily_trades(),
+            "daily_pnl": round(self.get_daily_pnl(), 2),
+            "positions": list(self.positions.values()),
+            "closed": self.closed_positions[-10:]
+        }
+
+# Global instance
+adv_paper = AdvancedPaperEngine()
+
+# ── API ENDPOINTS ──────────────────────────────────────────────────────────
+
+@app.post("/paper/v2/execute_multi")
+async def paper_execute_multi(request: Request):
+    """Execute multi-leg paper trade"""
+    data = await request.json()
+    strategy = data.get("strategy","Custom")
+    legs = data.get("legs",[])
+    if not legs:
+        return {"success":False,"error":"No legs provided"}
+    result = adv_paper.execute_multi_leg(strategy, legs)
+    return result
+
+@app.post("/paper/v2/execute_strategy")
+async def paper_execute_strategy(request: Request):
+    """Execute preset strategy by name"""
+    data = await request.json()
+    name = data.get("strategy","STRADDLE")
+    spot = float(data.get("spot", 24000))
+    atm = round(spot/50)*50
+    max_trades = int(data.get("max_trades",5))
+    time_exit = data.get("time_exit","15:30")
+    
+    ok, msg = adv_paper.check_daily_limits(max_trades)
+    if not ok:
+        return {"success":False,"error":msg}
+    
+    # Build legs based on strategy
+    legs_map = {
+        "STRADDLE": [
+            {"option_type":"CE","action":"BUY","strike":atm,"premium":200,"sl":100,"target":400,"time_exit":time_exit},
+            {"option_type":"PE","action":"BUY","strike":atm,"premium":200,"sl":100,"target":400,"time_exit":time_exit}
+        ],
+        "STRANGLE": [
+            {"option_type":"CE","action":"BUY","strike":atm+100,"premium":120,"sl":60,"target":240,"time_exit":time_exit},
+            {"option_type":"PE","action":"BUY","strike":atm-100,"premium":120,"sl":60,"target":240,"time_exit":time_exit}
+        ],
+        "IRON_CONDOR": [
+            {"option_type":"CE","action":"SELL","strike":atm+100,"premium":80,"sl":160,"target":20,"time_exit":time_exit},
+            {"option_type":"CE","action":"BUY", "strike":atm+200,"premium":30,"sl":60,"target":100,"time_exit":time_exit},
+            {"option_type":"PE","action":"SELL","strike":atm-100,"premium":80,"sl":160,"target":20,"time_exit":time_exit},
+            {"option_type":"PE","action":"BUY", "strike":atm-200,"premium":30,"sl":60,"target":100,"time_exit":time_exit}
+        ],
+        "ORB_930": [
+            {"option_type":"CE","action":"BUY","strike":atm,"premium":200,"sl":160,"target":210,
+             "trailing_sl":20,"time_exit":"10:30"}
+        ],
+        "CONFLUENCE_930": [
+            {"option_type":"CE","action":"BUY","strike":atm,"premium":200,"sl":180,"target":245,
+             "trailing_sl":10,"time_exit":"10:30"}
+        ]
+    }
+    
+    legs = legs_map.get(name, legs_map["STRADDLE"])
+    for l in legs:
+        l["instrument"] = data.get("instrument","NIFTY")
+        l["lots"] = int(data.get("lots",1))
+    
+    return adv_paper.execute_multi_leg(name, legs)
+
+@app.post("/paper/v2/schedule")
+async def paper_schedule_order(request: Request):
+    """Schedule auto-execute at a time"""
+    data = await request.json()
+    return adv_paper.schedule_order(data)
+
+@app.post("/paper/v2/close/{pos_id}")
+async def paper_close_position(pos_id: str):
+    pos = adv_paper.close_position(pos_id, "MANUAL")
+    if pos:
+        return {"closed":True,"position":pos}
+    return {"closed":False,"error":"Position not found"}
+
+@app.post("/paper/v2/close_all")
+async def paper_close_all():
+    closed = []
+    for pid in list(adv_paper.positions.keys()):
+        p = adv_paper.close_position(pid, "MANUAL_ALL")
+        if p: closed.append(p)
+    return {"closed": len(closed), "positions": closed}
+
+@app.get("/paper/v2/summary")
+def paper_v2_summary():
+    return adv_paper.get_summary()
+
+@app.post("/paper/v2/update_prices")
+async def paper_update_prices(request: Request):
+    data = await request.json()
+    return adv_paper.update_prices(data.get("prices",{}))
+
+@app.get("/paper/v2/check_scheduled")
+def paper_check_scheduled():
+    return {"executed": adv_paper.check_scheduled_orders()}

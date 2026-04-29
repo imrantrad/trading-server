@@ -4522,4 +4522,129 @@ function calcIV(){
   });
 }
 
+</script><script>
+// ── ADVANCED PAPER TRADING ENGINE JS ─────────────────────────────────────────
+
+function executeAdvPaper(){
+  var strategy = document.getElementById('adv-strategy').value;
+  var inst = document.getElementById('adv-inst').value;
+  var spot = parseFloat(document.getElementById('adv-spot').value)||24000;
+  var timeExit = document.getElementById('adv-time-exit').value;
+  var maxTrades = parseInt(document.getElementById('adv-max-trades').value)||5;
+  var lots = parseInt(document.getElementById('adv-lots').value)||1;
+  var status = document.getElementById('adv-status');
+  
+  if(status) status.innerHTML='<span style="color:var(--am)">Executing...</span>';
+  
+  req('/paper/v2/execute_strategy','POST',{
+    strategy:strategy, spot:spot, instrument:inst,
+    time_exit:timeExit, max_trades:maxTrades, lots:lots
+  },function(err,r){
+    if(err||!r||!r.success){
+      if(status) status.innerHTML='<span style="color:var(--rd)">❌ '+(r&&r.error?r.error:'Failed')+'</span>';
+      toast((r&&r.error?r.error:'Execute failed'),'error');
+      return;
+    }
+    if(status) status.innerHTML='<span style="color:var(--gr)">✅ '+r.legs_executed+' legs executed | Group: '+r.group_id+'</span>';
+    toast('✅ '+strategy+' executed - '+r.legs_executed+' legs!','success');
+    setTimeout(loadAdvSummary, 500);
+  });
+}
+
+function scheduleAdvPaper(){
+  var strategy = document.getElementById('adv-strategy').value;
+  var inst = document.getElementById('adv-inst').value;
+  var spot = parseFloat(document.getElementById('adv-spot').value)||24000;
+  var lots = parseInt(document.getElementById('adv-lots').value)||1;
+  
+  req('/paper/v2/schedule','POST',{
+    strategy:strategy, execute_at:'09:30',
+    instrument:inst, spot:spot, lots:lots
+  },function(err,r){
+    if(!err&&r&&r.scheduled){
+      toast('⏰ '+strategy+' scheduled at 9:30 AM!','success');
+      var status=document.getElementById('adv-status');
+      if(status) status.innerHTML='<span style="color:var(--am)">⏰ Scheduled: '+strategy+' at 9:30 AM</span>';
+    } else {
+      toast('Schedule failed','error');
+    }
+  });
+}
+
+function closeAllAdvPaper(){
+  if(!confirm('Close ALL active positions?')) return;
+  req('/paper/v2/close_all','POST',{},function(err,r){
+    if(!err&&r){
+      toast('✅ '+r.closed+' positions closed','success');
+      loadAdvSummary();
+    }
+  });
+}
+
+function loadAdvSummary(){
+  req('/paper/v2/summary','GET',null,function(err,d){
+    var el=document.getElementById('adv-positions');
+    if(!el) return;
+    if(err||!d){ el.innerHTML='<span style="color:var(--rd)">Error loading</span>'; return; }
+    
+    if(!d.positions||!d.positions.length){
+      el.innerHTML='<div style="color:var(--mu);text-align:center;padding:10px">No active positions</div>';
+    } else {
+      var html2='<div style="margin-bottom:6px;font-size:9px;color:var(--mu)">'+
+        'Active: '+d.active_positions+' | Daily trades: '+d.daily_trades+
+        ' | P&L: <span style="color:'+(d.total_pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+d.total_pnl+'</span></div>';
+      d.positions.forEach(function(p){
+        var pnlColor = p.pnl>=0?'var(--gr)':'var(--rd)';
+        html2+='<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;margin-bottom:4px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<div><span style="font-weight:700">'+(p.action==='BUY'?'📈':'📉')+' '+p.action+' '+p.instrument+' '+p.option_type+'</span>'+
+          ' <span style="font-size:9px;color:var(--mu)">K='+p.strike+' ×'+p.lots+'</span></div>'+
+          '<span style="color:'+pnlColor+';font-weight:700">₹'+p.pnl.toFixed(0)+'</span></div>'+
+          '<div style="font-size:9px;color:var(--mu);margin-top:4px">'+
+          'Entry: ₹'+p.entry_price+' | Now: ₹'+p.current_price+
+          ' | SL: ₹'+p.sl.toFixed(0)+' | Tgt: ₹'+p.target.toFixed(0)+
+          (p.time_exit?' | Exit: '+p.time_exit:'')+
+          '</div>'+
+          '<button onclick="closeAdvPos(\''+p.id+'\')" style="font-size:8px;padding:2px 8px;margin-top:4px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:3px;cursor:pointer">Close</button>'+
+          '</div>';
+      });
+      el.innerHTML=html2;
+    }
+    
+    // Update prices periodically
+    var prices = {};
+    ['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].forEach(function(s){
+      if(window.prices && window.prices[s]) prices[s]=window.prices[s];
+    });
+    if(Object.keys(prices).length){
+      req('/paper/v2/update_prices','POST',{prices:prices},function(){});
+    }
+  });
+}
+
+function closeAdvPos(posId){
+  req('/paper/v2/close/'+posId,'POST',{},function(err,r){
+    if(!err&&r&&r.closed){
+      toast('Position closed: ₹'+r.position.pnl.toFixed(0),'success');
+      loadAdvSummary();
+    }
+  });
+}
+
+// Auto-refresh positions every 10 seconds when paper test is visible
+setInterval(function(){
+  var pt=document.getElementById('pnl-paper');
+  if(pt&&pt.classList.contains('active')){
+    var el=document.getElementById('adv-positions');
+    if(el&&el.innerHTML!=='Click ↻ to load') loadAdvSummary();
+    // Check scheduled orders
+    req('/paper/v2/check_scheduled','GET',null,function(err,r){
+      if(!err&&r&&r.executed&&r.executed.length){
+        r.executed.forEach(function(ex){
+          if(ex.success) toast('⏰ Auto-executed: '+ex.strategy,'success');
+        });
+      }
+    });
+  }
+},10000);
 </script>
