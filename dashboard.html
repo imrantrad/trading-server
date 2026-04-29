@@ -1857,32 +1857,48 @@ function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$
 
 // PROFILE
 function swProf(tab,btn){
+  var PANELS=['set','sub','broker','th','dash','notif','about'];
+  
   // Hide all sub-panels
-  ['set','sub','broker','th','dash','notif','about'].forEach(function(t){
+  PANELS.forEach(function(t){
     var el=document.getElementById('ps-'+t);
     if(el) el.style.display='none';
   });
   
-  // Show/hide main menu section
+  // Show/hide menu
   var menuSec=document.getElementById('prof-menu-section');
   if(menuSec) menuSec.style.display = (tab ? 'none' : 'block');
   
-  // Show target panel
   if(tab){
     var panel=document.getElementById('ps-'+tab);
-    if(panel) panel.style.display='block';
+    if(panel){
+      panel.style.display='block';
+      
+      // Move panel to very TOP of pnl-prof scrollable div
+      var pf=document.getElementById('pnl-prof');
+      if(pf){
+        // Insert panel as first child of pnl-prof
+        pf.insertBefore(panel, pf.firstChild);
+        pf.scrollTop=0;
+      }
+      window.scrollTo(0,0);
+      // Also scroll .main container
+      var main=document.querySelector('.main');
+      if(main) main.scrollTop=0;
+    }
+  } else {
+    // Back to menu - scroll top
+    var pf2=document.getElementById('pnl-prof');
+    if(pf2) pf2.scrollTop=0;
+    window.scrollTo(0,0);
   }
   
   // Load data
-  if(tab==='dash') buildTabVisibilityList();
-  if(tab==='sub') buildPlanCards();
-  if(tab==='th') buildThemeCards();
-  if(tab==='broker') loadBrokerStatus();
-  if(tab==='notif') loadNotifPrefs();
-  
-  // Scroll to TOP of profile panel
-  var pf=document.getElementById('pnl-prof');
-  if(pf) pf.scrollTop=0;
+  if(tab==='dash') setTimeout(buildTabVisibilityList,50);
+  if(tab==='sub') setTimeout(buildPlanCards,50);
+  if(tab==='th') setTimeout(buildThemeCards,50);
+  if(tab==='broker') setTimeout(loadBrokerStatus,50);
+  if(tab==='notif') setTimeout(loadNotifPrefs,50);
 }
 function loadProfStats(){
   req('/stats','GET',null,function(err,d){
