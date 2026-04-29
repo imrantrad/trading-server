@@ -1916,8 +1916,13 @@ var wsConn = null;
 var wsRetries = 0;
 
 function connectWS() {
+  // WebSocket only works on HTTPS/WSS - skip on HTTP
+  if(API.startsWith('http:') || window.location.protocol === 'http:') {
+    fallbackToPolling();
+    return;
+  }
   try {
-    var wsProto = API.startsWith('https') ? 'wss' : 'ws';
+    var wsProto = 'wss';
     var wsHost = API.replace('https://','').replace('http://','');
     var wsUrl = wsProto + '://' + wsHost + '/ws/live';
     
