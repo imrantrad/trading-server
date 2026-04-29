@@ -402,6 +402,24 @@ input:focus, select:focus, textarea:focus {
 
 <div id="pnl-admin" class="pnl">
 
+  <!-- Admin Login Gate -->
+  <div id="adm-login-gate" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;min-height:300px">
+    <div style="width:60px;height:60px;border-radius:16px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:20px">⚙️</div>
+    <div style="font-size:18px;font-weight:700;color:var(--am);margin-bottom:4px">ADMIN LOGIN</div>
+    <div style="font-size:10px;color:var(--mu);margin-bottom:24px">TRD v12.3 Control Panel</div>
+    <div style="width:100%;max-width:280px">
+      <div class="lbl" style="margin-bottom:4px">USERNAME</div>
+      <input id="adm-login-user" placeholder="admin" style="margin-bottom:10px" onkeypress="if(event.key==='Enter')$('adm-login-pass').focus()">
+      <div class="lbl" style="margin-bottom:4px">PASSWORD</div>
+      <input type="password" id="adm-login-pass" placeholder="••••••••" style="margin-bottom:6px" onkeypress="if(event.key==='Enter')doAdminLogin()">
+      <div id="adm-login-err" style="font-size:9px;color:var(--rd);margin-bottom:10px;display:none"></div>
+      <button class="btn ba blg" onclick="doAdminLogin()" style="width:100%;padding:12px;font-size:12px">🔐 LOGIN</button>
+    </div>
+  </div>
+
+  <!-- Admin panel (hidden until login) -->
+  <div id="adm-panel-content" style="display:none">
+
   <!-- Admin header -->
   <div style="background:linear-gradient(135deg,#1a0a00,#0d0014);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:14px 16px;margin-bottom:10px">
     <div style="display:flex;align-items:center;justify-content:space-between">
@@ -412,9 +430,9 @@ input:focus, select:focus, textarea:focus {
           <div style="font-size:9px;color:var(--mu)">Full system access · TRD v12.3</div>
         </div>
       </div>
-      <div id="admin-status-dot" style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--mu)">
+      <div style="display:flex;align-items:center;gap:8px"><button onclick="adminLogout()" style="font-size:9px;padding:4px 10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">⎋ LOGOUT</button><div id="admin-status-dot" style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--mu)">
         <span style="width:8px;height:8px;border-radius:50%;background:var(--gr)"></span>ONLINE
-      </div>
+      </div></div>
     </div>
   </div>
 
@@ -562,6 +580,8 @@ input:focus, select:focus, textarea:focus {
   </div>
 
 </div>
+</div>
+<!-- end adm-panel-content -->
 
 <div id="pnl-legal" class="pnl">
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px"><button class="btn bg" onclick="showLegal('tos')">ToS</button><button class="btn bb" onclick="showLegal('privacy')">Privacy</button><button class="btn br" onclick="showLegal('risk_disclosure')">Risk</button></div>
@@ -2984,6 +3004,52 @@ function loadLivePositions(){
 // ══════════════════════════════════════════════════════════════════
 // ADMIN CONTROL PANEL FUNCTIONS
 // ══════════════════════════════════════════════════════════════════
+
+
+function doAdminLogin(){
+  var user = document.getElementById('adm-login-user').value.trim();
+  var pass = document.getElementById('adm-login-pass').value;
+  var err = document.getElementById('adm-login-err');
+  if(!user||!pass){ if(err){err.textContent='Fill all fields';err.style.display='block';} return; }
+  
+  req('/admin/login','POST',{username:user,password:pass},function(e,r){
+    if(e||!r||!r.success){
+      if(err){err.textContent='Invalid credentials';err.style.display='block';}
+      return;
+    }
+    // Success - store token
+    try{ localStorage.setItem('trd_admin_token', r.token); localStorage.setItem('trd_admin_name', r.name); }catch(ex){}
+    document.getElementById('adm-login-gate').style.display='none';
+    document.getElementById('adm-panel-content').style.display='block';
+    adminTab('dash', document.getElementById('adm-tab-dash'));
+    toast('✅ Welcome, '+r.name+'!','success');
+  });
+}
+
+function adminLogout(){
+  try{ localStorage.removeItem('trd_admin_token'); }catch(e){}
+  document.getElementById('adm-login-gate').style.display='flex';
+  document.getElementById('adm-panel-content').style.display='none';
+  document.getElementById('adm-login-user').value='';
+  document.getElementById('adm-login-pass').value='';
+}
+
+// Check if already logged in when opening admin
+var _origShow2 = show;
+show = function(name,btn){
+  _origShow2(name,btn);
+  if(name==='admin'){
+    // Check saved token
+    try{
+      var tok = localStorage.getItem('trd_admin_token');
+      if(tok){
+        document.getElementById('adm-login-gate').style.display='none';
+        document.getElementById('adm-panel-content').style.display='block';
+        adminTab('dash', document.getElementById('adm-tab-dash'));
+      }
+    }catch(e){}
+  }
+};
 
 function adminTab(tab, btn){
   ['dash','users','pay','sys'].forEach(function(t){
