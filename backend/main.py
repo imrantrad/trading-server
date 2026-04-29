@@ -2510,3 +2510,337 @@ def get_subscription_status(user_id: str):
             "INSTITUTIONAL": ["everything","5yr_backtest","white_label","custom_api","admin_dashboard","sla"]
         }.get(user.get("plan","FREE"), [])
     }
+
+# ════════════════════════════════════════════════════════════════════════════
+# OPTIONS ENGINE — Black-Scholes + Greeks
+# ════════════════════════════════════════════════════════════════════════════
+import math
+
+def norm_cdf(x):
+    """Standard normal CDF using approximation"""
+    a1,a2,a3,a4,a5 = 0.319381530,-0.356563782,1.781477937,-1.821255978,1.330274429
+    k = 1.0/(1.0+0.2316419*abs(x))
+    poly = k*(a1+k*(a2+k*(a3+k*(a4+k*a5))))
+    pdf = math.exp(-0.5*x*x)/math.sqrt(2*math.pi)
+    cdf = 1.0 - pdf*poly
+    return cdf if x >= 0 else 1.0 - cdf
+
+def norm_pdf(x):
+    return math.exp(-0.5*x*x)/math.sqrt(2*math.pi)
+
+def black_scholes(S, K, T, r, sigma, option_type='CE'):
+    """
+    Black-Scholes option pricing
+    S=spot, K=strike, T=time_to_expiry(years), r=risk_free_rate, sigma=volatility
+    """
+    if T <= 0: return max(0, S-K) if option_type=='CE' else max(0, K-S)
+    if sigma <= 0: sigma = 0.001
+    
+    d1 = (math.log(S/K) + (r + 0.5*sigma**2)*T) / (sigma*math.sqrt(T))
+    d2 = d1 - sigma*math.sqrt(T)
+    
+    if option_type == 'CE':
+        price = S*norm_cdf(d1) - K*math.exp(-r*T)*norm_cdf(d2)
+    else:
+        price = K*math.exp(-r*T)*norm_cdf(-d2) - S*norm_cdf(-d1)
+    
+    return max(0, price)
+
+def calculate_greeks(S, K, T, r, sigma, option_type='CE'):
+    """Calculate all 5 Greeks + IV"""
+    if T <= 0:
+        return {"delta":1.0 if option_type=='CE' else -1.0,"gamma":0,"theta":0,"vega":0,"rho":0,"price":max(0,S-K if option_type=='CE' else K-S)}
+    
+    if sigma <= 0: sigma = 0.001
+    
+    d1 = (math.log(S/K) + (r + 0.5*sigma**2)*T) / (sigma*math.sqrt(T))
+    d2 = d1 - sigma*math.sqrt(T)
+    
+    price = black_scholes(S, K, T, r, sigma, option_type)
+    
+    # Delta
+    delta = norm_cdf(d1) if option_type=='CE' else norm_cdf(d1)-1
+    
+    # Gamma (same for CE and PE)
+    gamma = norm_pdf(d1) / (S * sigma * math.sqrt(T))
+    
+    # Theta (per day)
+    theta_base = -(S * norm_pdf(d1) * sigma) / (2 * math.sqrt(T))
+    if option_type == 'CE':
+        theta = (theta_base - r*K*math.exp(-r*T)*norm_cdf(d2)) / 365
+    else:
+        theta = (theta_base + r*K*math.exp(-r*T)*norm_cdf(-d2)) / 365
+    
+    # Vega (per 1% change in IV)
+    vega = S * norm_pdf(d1) * math.sqrt(T) * 0.01
+    
+    # Rho (per 1% change in rate)
+    if option_type == 'CE':
+        rho = K * T * math.exp(-r*T) * norm_cdf(d2) * 0.01
+    else:
+        rho = -K * T * math.exp(-r*T) * norm_cdf(-d2) * 0.01
+    
+    # Moneyness
+    intrinsic = max(0, S-K) if option_type=='CE' else max(0, K-S)
+    time_value = price - intrinsic
+    
+    return {
+        "price": round(price, 2),
+        "delta": round(delta, 4),
+        "gamma": round(gamma, 6),
+        "theta": round(theta, 4),
+        "vega": round(vega, 4),
+        "rho": round(rho, 4),
+        "intrinsic_value": round(intrinsic, 2),
+        "time_value": round(time_value, 2),
+        "d1": round(d1, 4),
+        "d2": round(d2, 4),
+        "moneyness": "ITM" if intrinsic > 0 else "ATM" if abs(S-K) < S*0.005 else "OTM"
+    }
+
+def implied_volatility(market_price, S, K, T, r, option_type='CE', precision=0.0001):
+    """Newton-Raphson IV calculation"""
+    if T <= 0: return 0.0
+    sigma = 0.3  # initial guess
+    for _ in range(100):
+        price = black_scholes(S, K, T, r, sigma, option_type)
+        vega = S * norm_pdf((math.log(S/K)+(r+0.5*sigma**2)*T)/(sigma*math.sqrt(T))) * math.sqrt(T)
+        if vega < 1e-10: break
+        diff = price - market_price
+        if abs(diff) < precision: break
+        sigma -= diff/vega
+        if sigma <= 0: sigma = 0.001
+    return round(sigma, 4)
+
+def get_option_chain(spot, expiry_days, r=0.065, vix=15.0):
+    """Generate full options chain around ATM"""
+    sigma = vix / 100
+    T = expiry_days / 365
+    atm = round(spot/50) * 50
+    
+    chain = []
+    for i in range(-5, 6):
+        K = atm + i*50
+        for otype in ['CE','PE']:
+            g = calculate_greeks(spot, K, T, r, sigma, otype)
+            g.update({
+                "strike": K,
+                "option_type": otype,
+                "expiry_days": expiry_days,
+                "iv_pct": round(sigma*100, 2),
+                "lot_size": 50,
+                "total_premium": round(g["price"]*50, 2)
+            })
+            chain.append(g)
+    return chain
+
+# ── OPTIONS API ENDPOINTS ─────────────────────────────────────────────────
+
+@app.get("/options/greeks")
+def options_greeks(
+    spot: float = 24000,
+    strike: float = 24000,
+    expiry_days: int = 7,
+    iv: float = 15.0,
+    rate: float = 6.5,
+    option_type: str = "CE"
+):
+    T = expiry_days / 365
+    sigma = iv / 100
+    r = rate / 100
+    greeks = calculate_greeks(spot, strike, T, r, sigma, option_type)
+    greeks["inputs"] = {"spot":spot,"strike":strike,"expiry_days":expiry_days,"iv":iv,"option_type":option_type}
+    return greeks
+
+@app.get("/options/chain")
+def options_chain(
+    spot: float = 24000,
+    expiry_days: int = 7,
+    vix: float = 15.0
+):
+    chain = get_option_chain(spot, expiry_days, vix=vix)
+    atm = round(spot/50)*50
+    # Find ATM greeks
+    atm_ce = next((x for x in chain if x['strike']==atm and x['option_type']=='CE'), {})
+    return {
+        "spot": spot,
+        "atm_strike": atm,
+        "expiry_days": expiry_days,
+        "vix": vix,
+        "atm_ce_price": atm_ce.get("price",0),
+        "atm_ce_iv": atm_ce.get("iv_pct",0),
+        "chain": chain,
+        "count": len(chain)
+    }
+
+@app.get("/options/iv")
+def implied_vol(
+    market_price: float = 100,
+    spot: float = 24000,
+    strike: float = 24000,
+    expiry_days: int = 7,
+    option_type: str = "CE"
+):
+    T = expiry_days / 365
+    iv = implied_volatility(market_price, spot, strike, T, 0.065, option_type)
+    return {"implied_volatility": iv, "iv_pct": round(iv*100,2)}
+
+@app.post("/options/strategy_payoff")
+async def strategy_payoff(request: Request):
+    """Calculate P&L for multi-leg options strategy"""
+    data = await request.json()
+    legs = data.get("legs", [])
+    spot_range = data.get("spot_range", [])
+    
+    if not spot_range:
+        spot = data.get("spot", 24000)
+        spot_range = [spot + i*50 for i in range(-20, 21)]
+    
+    payoffs = []
+    for s in spot_range:
+        total_pnl = 0
+        for leg in legs:
+            K = leg.get("strike", 24000)
+            otype = leg.get("option_type","CE")
+            premium = leg.get("premium", 0)
+            lots = leg.get("lots", 1)
+            action = leg.get("action","BUY")
+            lot_size = 50
+            
+            expiry_val = max(0, s-K) if otype=='CE' else max(0, K-s)
+            pnl_per_share = (expiry_val - premium) if action=='BUY' else (premium - expiry_val)
+            total_pnl += pnl_per_share * lots * lot_size
+        
+        payoffs.append({"spot": s, "pnl": round(total_pnl, 2)})
+    
+    # Find breakeven points
+    breakevens = []
+    for i in range(1, len(payoffs)):
+        if payoffs[i-1]["pnl"] * payoffs[i]["pnl"] < 0:
+            be = (payoffs[i-1]["spot"] + payoffs[i]["spot"]) / 2
+            breakevens.append(round(be, 2))
+    
+    max_profit = max(p["pnl"] for p in payoffs)
+    max_loss = min(p["pnl"] for p in payoffs)
+    
+    return {
+        "payoffs": payoffs,
+        "breakevens": breakevens,
+        "max_profit": max_profit,
+        "max_loss": max_loss,
+        "risk_reward": round(abs(max_profit/max_loss), 2) if max_loss != 0 else 999
+    }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# OPTIONS ENGINE — Black-Scholes + Greeks
+# ════════════════════════════════════════════════════════════════════════════
+import math as _math
+
+def _norm_cdf(x):
+    a1,a2,a3,a4,a5 = 0.319381530,-0.356563782,1.781477937,-1.821255978,1.330274429
+    k = 1.0/(1.0+0.2316419*abs(x))
+    poly = k*(a1+k*(a2+k*(a3+k*(a4+k*a5))))
+    pdf = _math.exp(-0.5*x*x)/_math.sqrt(2*_math.pi)
+    cdf = 1.0 - pdf*poly
+    return cdf if x >= 0 else 1.0 - cdf
+
+def _norm_pdf(x):
+    return _math.exp(-0.5*x*x)/_math.sqrt(2*_math.pi)
+
+def _bs_price(S, K, T, r, sigma, otype):
+    if T <= 0: return max(0, S-K) if otype=='CE' else max(0, K-S)
+    if sigma <= 0: sigma = 0.001
+    d1 = (_math.log(S/K) + (r+0.5*sigma**2)*T)/(sigma*_math.sqrt(T))
+    d2 = d1 - sigma*_math.sqrt(T)
+    if otype == 'CE':
+        return S*_norm_cdf(d1) - K*_math.exp(-r*T)*_norm_cdf(d2)
+    return K*_math.exp(-r*T)*_norm_cdf(-d2) - S*_norm_cdf(-d1)
+
+def _calc_greeks(S, K, T, r, sigma, otype):
+    if T <= 0:
+        return {"price":round(max(0,S-K if otype=="CE" else K-S),2),"delta":1.0 if otype=="CE" else -1.0,"gamma":0,"theta":0,"vega":0,"rho":0,"intrinsic_value":max(0,S-K if otype=="CE" else K-S),"time_value":0,"moneyness":"ITM"}
+    if sigma<=0: sigma=0.001
+    d1 = (_math.log(S/K)+(r+0.5*sigma**2)*T)/(sigma*_math.sqrt(T))
+    d2 = d1 - sigma*_math.sqrt(T)
+    price = _bs_price(S, K, T, r, sigma, otype)
+    delta = _norm_cdf(d1) if otype=="CE" else _norm_cdf(d1)-1
+    gamma = _norm_pdf(d1)/(S*sigma*_math.sqrt(T))
+    theta_base = -(S*_norm_pdf(d1)*sigma)/(2*_math.sqrt(T))
+    if otype=="CE":
+        theta = (theta_base - r*K*_math.exp(-r*T)*_norm_cdf(d2))/365
+    else:
+        theta = (theta_base + r*K*_math.exp(-r*T)*_norm_cdf(-d2))/365
+    vega = S*_norm_pdf(d1)*_math.sqrt(T)*0.01
+    rho = (K*T*_math.exp(-r*T)*_norm_cdf(d2)*0.01) if otype=="CE" else (-K*T*_math.exp(-r*T)*_norm_cdf(-d2)*0.01)
+    intrinsic = max(0, S-K) if otype=="CE" else max(0, K-S)
+    moneyness = "ITM" if intrinsic>0 else "ATM" if abs(S-K)<S*0.005 else "OTM"
+    return {"price":round(max(0,price),2),"delta":round(delta,4),"gamma":round(gamma,6),"theta":round(theta,4),"vega":round(vega,4),"rho":round(rho,4),"intrinsic_value":round(intrinsic,2),"time_value":round(max(0,price-intrinsic),2),"moneyness":moneyness}
+
+def _calc_iv(mkt_price, S, K, T, r, otype, precision=0.0001):
+    if T<=0: return 0.0
+    sigma = 0.3
+    for _ in range(100):
+        price = _bs_price(S, K, T, r, sigma, otype)
+        d1 = (_math.log(S/K)+(r+0.5*sigma**2)*T)/(sigma*_math.sqrt(T))
+        vega = S*_norm_pdf(d1)*_math.sqrt(T)
+        if vega < 1e-10: break
+        diff = price - mkt_price
+        if abs(diff) < precision: break
+        sigma -= diff/vega
+        if sigma <= 0: sigma = 0.001
+    return round(sigma, 4)
+
+@app.get("/options/greeks")
+def options_greeks(spot:float=24000, strike:float=24000, expiry_days:int=7, iv:float=15.0, rate:float=6.5, option_type:str="CE"):
+    T = expiry_days/365; sigma = iv/100; r = rate/100
+    g = _calc_greeks(spot, strike, T, r, sigma, option_type)
+    g["inputs"] = {"spot":spot,"strike":strike,"expiry_days":expiry_days,"iv_pct":iv,"option_type":option_type}
+    g["lot_size"] = 50
+    g["total_premium"] = round(g["price"]*50, 2)
+    return g
+
+@app.get("/options/chain")
+def options_chain(spot:float=24000, expiry_days:int=7, vix:float=15.0, rate:float=6.5):
+    sigma = vix/100; T = expiry_days/365; r = rate/100
+    atm = round(spot/50)*50
+    chain = []
+    for i in range(-5, 6):
+        K = atm + i*50
+        for otype in ["CE","PE"]:
+            g = _calc_greeks(spot, K, T, r, sigma, otype)
+            g.update({"strike":K,"option_type":otype,"expiry_days":expiry_days,"iv_pct":round(vix,2),"lot_size":50,"total_premium":round(g["price"]*50,2),"oi":0,"volume":0})
+            chain.append(g)
+    atm_ce = next((x for x in chain if x["strike"]==atm and x["option_type"]=="CE"), {})
+    atm_pe = next((x for x in chain if x["strike"]==atm and x["option_type"]=="PE"), {})
+    return {"spot":spot,"atm_strike":atm,"expiry_days":expiry_days,"vix":vix,"atm_ce":atm_ce,"atm_pe":atm_pe,"chain":chain,"count":len(chain)}
+
+@app.get("/options/iv")
+def implied_vol(market_price:float=100, spot:float=24000, strike:float=24000, expiry_days:int=7, option_type:str="CE"):
+    T = expiry_days/365
+    iv = _calc_iv(market_price, spot, strike, T, 0.065, option_type)
+    return {"implied_volatility":iv,"iv_pct":round(iv*100,2),"market_price":market_price}
+
+@app.post("/options/payoff")
+async def options_payoff(request: Request):
+    data = await request.json()
+    legs = data.get("legs",[])
+    spot = data.get("spot",24000)
+    spot_range = [spot + i*50 for i in range(-20,21)]
+    payoffs = []
+    for s in spot_range:
+        total = 0
+        for leg in legs:
+            K=leg.get("strike",24000); otype=leg.get("option_type","CE")
+            premium=leg.get("premium",0); lots=leg.get("lots",1)
+            action=leg.get("action","BUY"); ls=50
+            val = max(0,s-K) if otype=="CE" else max(0,K-s)
+            pnl = (val-premium) if action=="BUY" else (premium-val)
+            total += pnl*lots*ls
+        payoffs.append({"spot":s,"pnl":round(total,2)})
+    bes = []
+    for i in range(1,len(payoffs)):
+        if payoffs[i-1]["pnl"]*payoffs[i]["pnl"]<0:
+            bes.append(round((payoffs[i-1]["spot"]+payoffs[i]["spot"])/2,2))
+    maxp=max(p["pnl"] for p in payoffs); maxl=min(p["pnl"] for p in payoffs)
+    return {"payoffs":payoffs,"breakevens":bes,"max_profit":maxp,"max_loss":maxl,"risk_reward":round(abs(maxp/maxl),2) if maxl!=0 else 999,"legs_count":len(legs)}
