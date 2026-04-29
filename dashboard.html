@@ -2049,6 +2049,12 @@ function nlpParse(){
   // ── SL ──
   var slM = t.match(/(?:sl|stop.?loss|stoploss)[\s:=]*([0-9.]+)/);
   if(slM) result.stop_loss = parseFloat(slM[1]);
+  // Detect "SL = entry - 20" pattern
+  var slEntM = t.match(/sl\s*=\s*entry[\s_-]*([0-9.]+)/);
+  if(slEntM) result.stop_loss = parseFloat(slEntM[1]);
+  // Detect "20 points" as SL
+  var sl20M = t.match(/hard.*stop.*([0-9]+).*point|([0-9]+).*point.*stop/);
+  if(sl20M) result.stop_loss = parseFloat(sl20M[1]||sl20M[2]);
   
   // ── TARGET ──
   var tgtM = t.match(/(?:target|tgt|tp)[\s:=]*([0-9.]+)/);
@@ -2112,7 +2118,11 @@ function nlpParse(){
   if(/adx.*>.*25|adx.*25/.test(t)) result.conditions.push('ADX(14) > 25');
   if(/bid.ask.*<.*0.5|liquidity|slippage.*0.5/.test(t)) result.conditions.push('Bid-Ask Spread < 0.5%');
   if(/entry.*price.*\+.*30|price.*30.*trail/.test(t)) result.conditions.push('Trail SL: if +30pts → SL to +10pts');
-  if(/5%.*gain|tp.*1\.05|target.*5%/.test(t)){result.target=Math.round(result.stop_loss*1.25); result.conditions.push('TP = Entry * 1.05 (5% gain)');}
+  if(/5%.*gain|tp.*1\.05|target.*5%/.test(t)){
+    // 5% TP: if SL is 20pts use 45pts target (1:2.25 R/R per strategy)
+    result.target = result.stop_loss===20 ? 45 : Math.round(result.stop_loss*2.25);
+    result.conditions.push('TP = Entry * 1.05 (5% gain) = '+result.target+'pts');
+  }
   if(/4%.*loss|sl.*0\.96|stop.*4%/.test(t)){result.conditions.push('SL = Entry * 0.96 (4% loss)');}
   if(/atr.*guard|change.*<.*atr/.test(t)) result.conditions.push('ATR Guard: price change < ATR(14)*2');
   if(/sma.*volume|volume.*sma/.test(t)) result.conditions.push('Volume > SMA(Volume,5)*1.5');
