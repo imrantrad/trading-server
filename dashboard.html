@@ -2338,7 +2338,7 @@ function generateOHLC(sym, tf, periods) {
     ((_h===9&&_m>=15)||(_h>=10&&_h<=14)||(_h===15&&_m<=30));
   var _ancMs;
   if(_mktOpen){
-    _ancMs = _utcNow; // Market open - use current time (live data)
+    _ancMs = _utcNow + 120000; // Market open + 2min offset for system lag
   } else {
     // Market closed - anchor to last 15:30 IST = 10:00 UTC
     var _d = new Date(_istMs);
@@ -2642,7 +2642,7 @@ function startLiveTicks(cdata) {
     lastCandle.low = Math.min(lastCandle.low, tick);
 
     try { // Use current time for live tick
-    lastCandle.time = Math.floor(Date.now()/1000);
+    lastCandle.time = Math.floor(Date.now()/1000) + 120; // +2 min offset for system lag
     candleSeries.update(lastCandle); } catch(e){}
 
     var ltpEl=$('chart-ltp');
