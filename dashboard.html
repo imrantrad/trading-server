@@ -1837,35 +1837,29 @@ function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$
 
 // PROFILE
 function swProf(tab,btn){
-  var panels = ['set','sub','broker','th','dash','notif'];
-  var hasPanel = panels.indexOf(tab) >= 0;
+  var panels=['set','sub','broker','th','dash','notif'];
+  var hasPanel = tab && panels.indexOf(tab)>=0;
   
-  // Show/hide sub-panels
+  // 1. Show/hide sub-panels
   panels.forEach(function(t){
-    var el = document.getElementById('ps-'+t);
-    if(el) el.style.display = (t===tab) ? 'block' : 'none';
+    var el=document.getElementById('ps-'+t);
+    if(el) el.style.display=(t===tab)?'block':'none';
   });
   
-  // Hide/show all menu items and section labels
-  document.querySelectorAll('#pnl-prof .prof-menu-item').forEach(function(el){
-    el.style.display = hasPanel ? 'none' : '';
-  });
-  // Hide section title labels when sub-panel open
-  document.querySelectorAll('#pnl-prof > div:last-child > div[style*="8px"][style*="letter-spacing"]').forEach(function(el){
-    el.style.display = hasPanel ? 'none' : '';
-  });
+  // 2. Toggle menu visibility using wrapper ID
+  var menuSec = document.getElementById('prof-menu-section');
+  if(menuSec) menuSec.style.display = hasPanel ? 'none' : 'block';
   
-  // Load data for specific panels
+  // 3. Load panel data
   if(tab==='dash') buildTabVisibilityList();
   if(tab==='sub') buildPlanCards();
   if(tab==='th') buildThemeCards();
-  if(tab==='broker'){ loadBrokerStatus(); }
-  if(tab==='notif'){ loadNotifPrefs(); }
+  if(tab==='broker') loadBrokerStatus();
+  if(tab==='notif') loadNotifPrefs();
   
-  if(!tab){
-    var pf = document.getElementById('pnl-prof');
-    if(pf) pf.scrollTop = 0;
-  }
+  // 4. Scroll to top of profile panel
+  var pf=document.getElementById('pnl-prof');
+  if(pf) pf.scrollTop=0;
 }
 function loadProfStats(){
   req('/stats','GET',null,function(err,d){
@@ -2474,10 +2468,13 @@ function loadChartData() {
 
     // LTP display
     var ltp = cdata.length > 0 ? cdata[cdata.length-1].close : (prices[chartSym]||0);
-    // Show IST time in chart
-    var istNow = new Date(Date.now() + 5.5*60*60*1000);
-    var istStr = istNow.getUTCHours().toString().padStart(2,'0') + ':' + istNow.getUTCMinutes().toString().padStart(2,'0') + ' IST';
-    var isMarketHr = istNow.getUTCDay()>=1&&istNow.getUTCDay()<=5&&(istNow.getUTCHours()>9||(istNow.getUTCHours()===9&&istNow.getUTCMinutes()>=15))&&(istNow.getUTCHours()<15||(istNow.getUTCHours()===15&&istNow.getUTCMinutes()<=30));
+    // Show IST time in chart (accurate)
+    var _now = Date.now();
+    var istNow = new Date(_now + 5.5*60*60*1000);
+    var istH = istNow.getUTCHours(), istM = istNow.getUTCMinutes();
+    var istStr = istH.toString().padStart(2,'0') + ':' + istM.toString().padStart(2,'0') + ' IST';
+    var dow = istNow.getUTCDay();
+    var isMarketHr = dow>=1&&dow<=5&&((istH===9&&istM>=15)||istH>=10&&istH<=14||(istH===15&&istM<=30));
     var liveDot=$('chart-live-dot');
     if(liveDot){liveDot.style.background=isMarketHr?'var(--gr)':'var(--rd)';liveDot.title=isMarketHr?'Market Open':'Market Closed';}
     var liveLabel=liveDot?liveDot.nextElementSibling:null;
