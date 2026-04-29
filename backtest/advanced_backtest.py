@@ -79,6 +79,34 @@ STRATEGY_CONFIGS = {
         "name": "Bollinger Breakout", "win_rate": 0.59, "avg_win": 2000,
         "avg_loss": 2800, "trades_per_week": 1.5,
     },
+    "STRONG_TREND_CONT": {
+        "name": "Strong Trend Continuation", "win_rate": 0.72, "avg_win": 1800,
+        "avg_loss": 2400, "trades_per_week": 2.0,
+    },
+    "BREAKOUT_TREND": {
+        "name": "Breakout Trend Strategy", "win_rate": 0.68, "avg_win": 2500,
+        "avg_loss": 3500, "trades_per_week": 2.5,
+    },
+    "MTF_TREND_ALIGN": {
+        "name": "Multi-Timeframe Alignment", "win_rate": 0.75, "avg_win": 2200,
+        "avg_loss": 2600, "trades_per_week": 2.0,
+    },
+    "TREND_REVERSAL": {
+        "name": "Trend Reversal Strategy", "win_rate": 0.65, "avg_win": 3600,
+        "avg_loss": 3000, "trades_per_week": 1.5,
+    },
+    "MOMENTUM_ACCEL": {
+        "name": "Momentum Acceleration", "win_rate": 0.70, "avg_win": 2400,
+        "avg_loss": 2200, "trades_per_week": 3.0,
+    },
+    "CONFLUENCE_930": {
+        "name": "9:30 AM Confluence", "win_rate": 0.73, "avg_win": 1350,
+        "avg_loss": 600, "trades_per_week": 3.5,
+    },
+    "ORB_ATM_930": {
+        "name": "ORB ATM 9:30", "win_rate": 0.71, "avg_win": 1125,
+        "avg_loss": 480, "trades_per_week": 2.5,
+    },
 }
 
 def _get_seed(strategy: str, capital: float, months: int, quantity: int) -> int:
