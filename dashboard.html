@@ -114,6 +114,7 @@ input:focus, select:focus, textarea:focus {
   input,select,textarea{font-size:16px!important} /* Prevent zoom on iOS */
 }
 
+#prof-panels-top{display:none}
 </style>
 </head>
 <body>
@@ -698,6 +699,142 @@ input:focus, select:focus, textarea:focus {
     </div>
   </div>
 
+
+  <!-- PANELS: shown at top when menu item clicked -->
+  <div id="prof-panels-top">
+    <div id="ps-set" class="prof-panel" style="display:none">
+          <div class="prof-panel-header" onclick="swProf(null,null)">‹ My Account</div>
+          <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">FULL NAME</div><input id="pf-n" placeholder="Your name" value="Demo Trader"></div><div><div class="lbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div></div>
+          <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">CAPITAL ₹</div><input type="number" id="pf-c" value="500000"></div><div><div class="lbl">RISK % PER TRADE</div><input type="number" id="pf-r" value="1"></div></div>
+          <div class="g2" style="gap:6px;margin-bottom:8px"><div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="pf-ml" value="3"></div><div><div class="lbl">DEFAULT BROKER</div><select id="pf-b"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option><option>UPSTOX</option></select></div></div>
+          <button class="btn bg blg" onclick="saveProf()">✓ SAVE SETTINGS</button>
+        </div>
+    <div id="ps-sub" class="prof-panel" style="display:none">
+          <div class="prof-panel-header" onclick="swProf(null,null)">‹ Subscription Plans</div>
+          <div style="display:flex;flex-direction:column;gap:10px" id="plan-cards"></div>
+          <button class="btn bg blg" onclick="upgradePlan()" style="margin-top:12px">💳 UPGRADE PLAN</button>
+        </div>
+    <div id="ps-broker" class="prof-panel" style="display:none">
+          <div class="prof-panel-header" onclick="swProf(null,null)">‹ Broker API</div>
+          <div style="background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;line-height:1.9;color:var(--mu)">
+            🔗 <b style="color:var(--tx)">How to get API credentials:</b><br>
+            <b style="color:var(--bl)">Zerodha:</b> kite.trade → Apps → Create App → copy API Key<br>
+            <b style="color:var(--bl)">Angel:</b> smartapi.angelone.in → Create App → copy API Key<br>
+            <b style="color:var(--bl)">Fyers:</b> myapi.fyers.in → Create App → copy App ID<br>
+            <b style="color:var(--bl)">Token:</b> Generate daily from broker app/website → paste here
+          </div>
+          <div class="g2" style="gap:6px;margin-bottom:6px">
+            <div><div class="lbl">BROKER</div>
+              <select id="br-broker" style="width:100%">
+                <option value="ZERODHA">🔵 Zerodha Kite</option>
+                <option value="ANGEL">🟠 Angel One</option>
+                <option value="FYERS">🟢 Fyers API</option>
+                <option value="UPSTOX">🟣 Upstox v3</option>
+              </select>
+            </div>
+            <div><div class="lbl">TRADING MODE</div>
+              <select id="br-mode" style="width:100%">
+                <option value="PAPER">📄 Paper (Safe)</option>
+                <option value="LIVE">⚡ Live (Real Money)</option>
+              </select>
+            </div>
+          </div>
+          <div class="g2" style="gap:6px;margin-bottom:6px">
+            <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Enter API key"></div>
+            <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Daily token"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn bg" style="flex:1;padding:10px" onclick="connectBroker()">🔗 CONNECT</button>
+            <button class="btn bb" style="flex:1;padding:10px" onclick="showBrokerGuide()">📖 GUIDE</button>
+            <button class="btn br" style="padding:10px 14px" onclick="disconnectBroker()">✕</button>
+          </div>
+          <div id="broker-status" style="font-size:10px;color:var(--mu);margin-bottom:8px"></div>
+          <div id="broker-guide" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:12px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
+          <!-- Broker cards -->
+          <div style="margin-top:16px">
+            <div style="font-size:8px;letter-spacing:2px;color:var(--mu);margin-bottom:10px;text-transform:uppercase">Supported Brokers</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🔵</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Zerodha Kite</div><div style="font-size:9px;color:var(--mu)">₹2000/mo · Most popular in India</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:10px">RECOMMENDED</span></div>
+              <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🟠</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Angel One SmartAPI</div><div style="font-size:9px;color:var(--mu)">FREE · WebSocket feed included</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);color:#00cc88;border-radius:10px">FREE</span></div>
+              <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🟢</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Fyers API</div><div style="font-size:9px;color:var(--mu)">FREE · Level 2 data available</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);color:#00cc88;border-radius:10px">FREE</span></div>
+              <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🟣</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Upstox API v3</div><div style="font-size:9px;color:var(--mu)">FREE · OAuth 2.0 based</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);color:#00cc88;border-radius:10px">FREE</span></div>
+            </div>
+          </div>
+        </div>
+    <div id="ps-th" class="prof-panel" style="display:none">
+          <div class="prof-panel-header" onclick="swProf(null,null)">‹ Themes</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="theme-cards"></div>
+        </div>
+    <div id="ps-dash" class="prof-panel" style="display:none">
+          <div class="prof-panel-header" onclick="swProf(null,null)">‹ Dashboard Settings</div>
+          <div style="font-size:10px;color:var(--mu);margin-bottom:12px;line-height:1.6">Show/hide tabs. Your plan determines which tabs are accessible.</div>
+          <div id="tab-visibility-list" style="display:flex;flex-direction:column;gap:6px"></div>
+          <button class="btn bg blg" onclick="saveUIConfig()" style="margin-top:12px">✓ SAVE SETTINGS</button>
+        </div>
+    <div id="ps-notif" class="prof-panel" style="display:none">
+          <div class="prof-panel-header" onclick="swProf(null,null)">‹ Notifications</div>
+          <div style="font-size:10px;color:var(--mu);margin-bottom:14px;line-height:1.7">Choose which channels to receive alerts on.</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
+              <span style="font-size:20px">📱</span>
+              <div style="flex:1"><div style="font-size:12px;font-weight:600">In-App</div><div style="font-size:9px;color:var(--mu)">Real-time in dashboard</div></div>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="notif-inapp" checked style="width:16px;height:16px;accent-color:var(--gr)">
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
+              <span style="font-size:20px">🔔</span>
+              <div style="flex:1"><div style="font-size:12px;font-weight:600">Push Notification</div><div style="font-size:9px;color:var(--mu)">Browser / mobile push</div></div>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="notif-push" checked style="width:16px;height:16px;accent-color:var(--gr)">
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
+              <span style="font-size:20px">📧</span>
+              <div style="flex:1"><div style="font-size:12px;font-weight:600">Email</div><div style="font-size:9px;color:var(--mu)">AWS SES delivery</div></div>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="notif-email" checked style="width:16px;height:16px;accent-color:var(--gr)">
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
+              <span style="font-size:20px">💬</span>
+              <div style="flex:1"><div style="font-size:12px;font-weight:600">SMS</div><div style="font-size:9px;color:var(--mu)">MSG91 / Twilio</div></div>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="notif-sms" checked style="width:16px;height:16px;accent-color:var(--gr)">
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
+              <span style="font-size:20px">✈️</span>
+              <div style="flex:1"><div style="font-size:12px;font-weight:600">Telegram</div><div style="font-size:9px;color:var(--mu)">@TRD_Support bot</div></div>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="notif-telegram" checked style="width:16px;height:16px;accent-color:var(--gr)">
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
+              <span style="font-size:20px">💚</span>
+              <div style="flex:1"><div style="font-size:12px;font-weight:600">WhatsApp</div><div style="font-size:9px;color:var(--mu)">Business API</div></div>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="notif-whatsapp" checked style="width:16px;height:16px;accent-color:var(--gr)">
+              </label>
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div class="lbl">QUIET HOURS (IST)</div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--mu)">
+              <span>11:00 PM</span><span>—</span><span>7:00 AM</span>
+              <span style="font-size:9px;padding:2px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:8px">AUTO</span>
+            </div>
+          </div>
+          <button class="btn bg blg" onclick="saveNotifPrefs()" style="width:100%">✓ SAVE NOTIFICATION SETTINGS</button>
+        </div>
+    
+      </div>
+    </div>
+    
+    
+    <!-- PAPER TEST PANEL -->
+  </div>
+
   <!-- ── MENU LIST ── -->
   <div style="padding:12px;overflow-y:auto;flex:1">
 
@@ -830,143 +967,9 @@ input:focus, select:focus, textarea:focus {
         ⚠️ Not SEBI registered. For educational & research purposes only. Trade responsibly.
       </div>
     </div>
-        <!-- ── DETAIL PANELS (shown when menu item clicked) ── -->
-    <div id="ps-set" class="prof-panel" style="display:none">
-      <div class="prof-panel-header" onclick="swProf(null,null)">‹ My Account</div>
-      <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">FULL NAME</div><input id="pf-n" placeholder="Your name" value="Demo Trader"></div><div><div class="lbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div></div>
-      <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">CAPITAL ₹</div><input type="number" id="pf-c" value="500000"></div><div><div class="lbl">RISK % PER TRADE</div><input type="number" id="pf-r" value="1"></div></div>
-      <div class="g2" style="gap:6px;margin-bottom:8px"><div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="pf-ml" value="3"></div><div><div class="lbl">DEFAULT BROKER</div><select id="pf-b"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option><option>UPSTOX</option></select></div></div>
-      <button class="btn bg blg" onclick="saveProf()">✓ SAVE SETTINGS</button>
-    </div>
-
-    <div id="ps-sub" class="prof-panel" style="display:none">
-      <div class="prof-panel-header" onclick="swProf(null,null)">‹ Subscription Plans</div>
-      <div style="display:flex;flex-direction:column;gap:10px" id="plan-cards"></div>
-      <button class="btn bg blg" onclick="upgradePlan()" style="margin-top:12px">💳 UPGRADE PLAN</button>
-    </div>
-
-    <div id="ps-broker" class="prof-panel" style="display:none">
-      <div class="prof-panel-header" onclick="swProf(null,null)">‹ Broker API</div>
-      <div style="background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;line-height:1.9;color:var(--mu)">
-        🔗 <b style="color:var(--tx)">How to get API credentials:</b><br>
-        <b style="color:var(--bl)">Zerodha:</b> kite.trade → Apps → Create App → copy API Key<br>
-        <b style="color:var(--bl)">Angel:</b> smartapi.angelone.in → Create App → copy API Key<br>
-        <b style="color:var(--bl)">Fyers:</b> myapi.fyers.in → Create App → copy App ID<br>
-        <b style="color:var(--bl)">Token:</b> Generate daily from broker app/website → paste here
-      </div>
-      <div class="g2" style="gap:6px;margin-bottom:6px">
-        <div><div class="lbl">BROKER</div>
-          <select id="br-broker" style="width:100%">
-            <option value="ZERODHA">🔵 Zerodha Kite</option>
-            <option value="ANGEL">🟠 Angel One</option>
-            <option value="FYERS">🟢 Fyers API</option>
-            <option value="UPSTOX">🟣 Upstox v3</option>
-          </select>
-        </div>
-        <div><div class="lbl">TRADING MODE</div>
-          <select id="br-mode" style="width:100%">
-            <option value="PAPER">📄 Paper (Safe)</option>
-            <option value="LIVE">⚡ Live (Real Money)</option>
-          </select>
-        </div>
-      </div>
-      <div class="g2" style="gap:6px;margin-bottom:6px">
-        <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Enter API key"></div>
-        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Daily token"></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="btn bg" style="flex:1;padding:10px" onclick="connectBroker()">🔗 CONNECT</button>
-        <button class="btn bb" style="flex:1;padding:10px" onclick="showBrokerGuide()">📖 GUIDE</button>
-        <button class="btn br" style="padding:10px 14px" onclick="disconnectBroker()">✕</button>
-      </div>
-      <div id="broker-status" style="font-size:10px;color:var(--mu);margin-bottom:8px"></div>
-      <div id="broker-guide" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:12px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
-      <!-- Broker cards -->
-      <div style="margin-top:16px">
-        <div style="font-size:8px;letter-spacing:2px;color:var(--mu);margin-bottom:10px;text-transform:uppercase">Supported Brokers</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🔵</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Zerodha Kite</div><div style="font-size:9px;color:var(--mu)">₹2000/mo · Most popular in India</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:10px">RECOMMENDED</span></div>
-          <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🟠</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Angel One SmartAPI</div><div style="font-size:9px;color:var(--mu)">FREE · WebSocket feed included</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);color:#00cc88;border-radius:10px">FREE</span></div>
-          <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🟢</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Fyers API</div><div style="font-size:9px;color:var(--mu)">FREE · Level 2 data available</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);color:#00cc88;border-radius:10px">FREE</span></div>
-          <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">🟣</span><div style="flex:1"><div style="font-size:12px;font-weight:600">Upstox API v3</div><div style="font-size:9px;color:var(--mu)">FREE · OAuth 2.0 based</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);color:#00cc88;border-radius:10px">FREE</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="ps-th" class="prof-panel" style="display:none">
-      <div class="prof-panel-header" onclick="swProf(null,null)">‹ Themes</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="theme-cards"></div>
-    </div>
-
-    <div id="ps-dash" class="prof-panel" style="display:none">
-      <div class="prof-panel-header" onclick="swProf(null,null)">‹ Dashboard Settings</div>
-      <div style="font-size:10px;color:var(--mu);margin-bottom:12px;line-height:1.6">Show/hide tabs. Your plan determines which tabs are accessible.</div>
-      <div id="tab-visibility-list" style="display:flex;flex-direction:column;gap:6px"></div>
-      <button class="btn bg blg" onclick="saveUIConfig()" style="margin-top:12px">✓ SAVE SETTINGS</button>
-    </div>
-
-    <div id="ps-notif" class="prof-panel" style="display:none">
-      <div class="prof-panel-header" onclick="swProf(null,null)">‹ Notifications</div>
-      <div style="font-size:10px;color:var(--mu);margin-bottom:14px;line-height:1.7">Choose which channels to receive alerts on.</div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
-        <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
-          <span style="font-size:20px">📱</span>
-          <div style="flex:1"><div style="font-size:12px;font-weight:600">In-App</div><div style="font-size:9px;color:var(--mu)">Real-time in dashboard</div></div>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-            <input type="checkbox" id="notif-inapp" checked style="width:16px;height:16px;accent-color:var(--gr)">
-          </label>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
-          <span style="font-size:20px">🔔</span>
-          <div style="flex:1"><div style="font-size:12px;font-weight:600">Push Notification</div><div style="font-size:9px;color:var(--mu)">Browser / mobile push</div></div>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-            <input type="checkbox" id="notif-push" checked style="width:16px;height:16px;accent-color:var(--gr)">
-          </label>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
-          <span style="font-size:20px">📧</span>
-          <div style="flex:1"><div style="font-size:12px;font-weight:600">Email</div><div style="font-size:9px;color:var(--mu)">AWS SES delivery</div></div>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-            <input type="checkbox" id="notif-email" checked style="width:16px;height:16px;accent-color:var(--gr)">
-          </label>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
-          <span style="font-size:20px">💬</span>
-          <div style="flex:1"><div style="font-size:12px;font-weight:600">SMS</div><div style="font-size:9px;color:var(--mu)">MSG91 / Twilio</div></div>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-            <input type="checkbox" id="notif-sms" checked style="width:16px;height:16px;accent-color:var(--gr)">
-          </label>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
-          <span style="font-size:20px">✈️</span>
-          <div style="flex:1"><div style="font-size:12px;font-weight:600">Telegram</div><div style="font-size:9px;color:var(--mu)">@TRD_Support bot</div></div>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-            <input type="checkbox" id="notif-telegram" checked style="width:16px;height:16px;accent-color:var(--gr)">
-          </label>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px">
-          <span style="font-size:20px">💚</span>
-          <div style="flex:1"><div style="font-size:12px;font-weight:600">WhatsApp</div><div style="font-size:9px;color:var(--mu)">Business API</div></div>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-            <input type="checkbox" id="notif-whatsapp" checked style="width:16px;height:16px;accent-color:var(--gr)">
-          </label>
-        </div>
-      </div>
-      <div style="margin-bottom:14px">
-        <div class="lbl">QUIET HOURS (IST)</div>
-        <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--mu)">
-          <span>11:00 PM</span><span>—</span><span>7:00 AM</span>
-          <span style="font-size:9px;padding:2px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:8px">AUTO</span>
-        </div>
-      </div>
-      <button class="btn bg blg" onclick="saveNotifPrefs()" style="width:100%">✓ SAVE NOTIFICATION SETTINGS</button>
-    </div>
-
-  </div>
+    
 </div>
 
-
-<!-- PAPER TEST PANEL -->
 <div id="pnl-paper" class="pnl" style="display:none">
 
   <!-- Header bar -->
@@ -1862,37 +1865,28 @@ function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$
 // PROFILE
 function swProf(tab,btn){
   var PANELS=['set','sub','broker','th','dash','notif','about'];
+  var container = document.getElementById('prof-panels-top');
+  var menu = document.getElementById('prof-menu-section');
   
-  // Hide ALL sub-panels
+  // Hide all panels first
   PANELS.forEach(function(t){
     var el=document.getElementById('ps-'+t);
-    if(el){ el.style.cssText='display:none'; }
+    if(el) el.style.display='none';
   });
   
-  // Toggle menu
-  var menu=document.getElementById('prof-menu-section');
-  
   if(tab){
+    // Show container, hide menu
+    if(container) container.style.display='block';
     if(menu) menu.style.display='none';
     
-    var panel=document.getElementById('ps-'+tab);
-    if(panel){
-      // Show panel as overlay at top of pnl-prof
-      panel.style.cssText='display:block;position:relative;z-index:10;background:var(--bg);margin-bottom:10px';
-      
-      // Scroll pnl-prof to very top
-      var pf=document.getElementById('pnl-prof');
-      if(pf){
-        pf.scrollTop=0;
-        // Move panel to be first child after header
-        var hdr=document.getElementById('prof-header');
-        var afterHdr = hdr ? hdr.parentNode.children[1] : pf.firstElementChild;
-        if(afterHdr && afterHdr.id !== 'ps-'+tab){
-          pf.insertBefore(panel, afterHdr);
-        }
-        setTimeout(function(){ pf.scrollTop=0; }, 50);
-      }
-    }
+    // Show specific panel
+    var panel = document.getElementById('ps-'+tab);
+    if(panel) panel.style.display='block';
+    
+    // Scroll profile to very top
+    var pf = document.getElementById('pnl-prof');
+    if(pf){ pf.scrollTop=0; }
+    window.scrollTo(0,0);
     
     // Load data
     if(tab==='dash') buildTabVisibilityList();
@@ -1902,9 +1896,11 @@ function swProf(tab,btn){
     if(tab==='notif') loadNotifPrefs();
     
   } else {
+    // Hide container, show menu
+    if(container) container.style.display='none';
     if(menu) menu.style.display='block';
-    var pf3=document.getElementById('pnl-prof');
-    if(pf3) pf3.scrollTop=0;
+    var pf=document.getElementById('pnl-prof');
+    if(pf) pf.scrollTop=0;
   }
 }
 function loadProfStats(){
