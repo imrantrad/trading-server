@@ -1321,7 +1321,20 @@ function show(name, btn) {
   if(name==='risk')loadRisk();
   if(name==='jnl'){loadTrades();loadJnlStats();}
   if(name==='ai')loadAIStatus();
-  if(name==='admin')loadAdmin();
+  if(name==='admin'){
+    // Admin: check token
+    try{
+      var tok=localStorage.getItem('trd_admin_token');
+      if(tok){
+        var gate=document.getElementById('adm-login-gate');
+        var panel=document.getElementById('adm-panel-content');
+        if(gate) gate.style.display='none';
+        if(panel) panel.style.display='block';
+        setTimeout(function(){adminTab('dash',document.getElementById('adm-tab-dash'));},100);
+      }
+    }catch(e){}
+    loadAdmin();
+  }
   if(name==='prof')loadProfStats();
 }
 
@@ -3035,21 +3048,7 @@ function adminLogout(){
 }
 
 // Check if already logged in when opening admin
-var _origShow2 = show;
-show = function(name,btn){
-  _origShow2(name,btn);
-  if(name==='admin'){
-    // Check saved token
-    try{
-      var tok = localStorage.getItem('trd_admin_token');
-      if(tok){
-        document.getElementById('adm-login-gate').style.display='none';
-        document.getElementById('adm-panel-content').style.display='block';
-        adminTab('dash', document.getElementById('adm-tab-dash'));
-      }
-    }catch(e){}
-  }
-};
+
 
 function adminTab(tab, btn){
   ['dash','users','pay','sys'].forEach(function(t){
@@ -3272,11 +3271,5 @@ function loadSubStatus(){
 }
 
 // Load admin on show + init
-var _origShow = show;
-function show(name,btn){
-  _origShow(name,btn);
-  if(name==='admin'){
-    adminTab('dash',document.getElementById('adm-tab-dash'));
-  }
-}
+
 </script>
