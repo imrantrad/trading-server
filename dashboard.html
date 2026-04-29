@@ -865,7 +865,8 @@ textarea{resize:vertical;min-height:55px}
 
 
 
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js">
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script>
 // ── BROKER API ──────────────────────────────────────────────────────────────
 function connectBroker(){
   var broker = gv('br-broker');
@@ -1223,6 +1224,44 @@ function execTrade() {
   });
 }
 
+
+
+// ── STRATEGY REGISTRY FOR NLP ──────────────────────────────────────────────
+var NLP_STRATEGY_REGISTRY = {};
+
+function loadStrategyRegistry(){
+  // Load all strategies into registry for NLP matching
+  var sources = [
+    {ep:'/strategies/builtin', key:'strategies'},
+    {ep:'/strategies/user/'+UID, key:'user_strategies'},
+    {ep:'/ai/strategies/approved', key:'approved_strategies'}
+  ];
+  sources.forEach(function(src){
+    req(src.ep,'GET',null,function(err,d){
+      if(err||!d) return;
+      var strats = d[src.key] || d.strategies || [];
+      strats.forEach(function(s){
+        var name = (s.name||s.strategy_name||'').toLowerCase().trim();
+        if(name) NLP_STRATEGY_REGISTRY[name] = s;
+        // Also register short names / aliases
+        var words = name.split(' ');
+        if(words.length > 1) NLP_STRATEGY_REGISTRY[words.join('_')] = s;
+      });
+    });
+  });
+}
+
+// Enhanced NLP parse - add strategy name recognition
+function nlpMatchStrategy(text){
+  var t = text.toLowerCase();
+  // Check if any known strategy name appears in text
+  for(var name in NLP_STRATEGY_REGISTRY){
+    if(t.indexOf(name) >= 0){
+      return NLP_STRATEGY_REGISTRY[name];
+    }
+  }
+  return null;
+}
 
 function toggleNLPGuide(){
   var g=document.getElementById('nlp-guide');
@@ -1595,6 +1634,7 @@ function fallbackToPolling() {
   })();
   // Load saved profile and broker on startup
   setTimeout(loadSavedProfile, 500);
+  setTimeout(loadStrategyRegistry, 3000); // Load all strategies for NLP
   // Restore trade mode preference
   try{ var sm=localStorage.getItem('trd_trade_mode'); if(sm) switchToMode(sm); }catch(e){}
   setTimeout(loadBrokerStatus, 2000);
