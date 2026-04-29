@@ -4328,7 +4328,7 @@ function calcGreeksNew(){
     set('g-timevalue','₹'+d.time_value);
     var mEl=document.getElementById('g-money');
     if(mEl){mEl.textContent=d.moneyness;mEl.style.color=d.moneyness==='ITM'?'var(--gr)':d.moneyness==='OTM'?'var(--rd)':'var(--am)';}
-    set('g-total','₹'+((d.total_premium)|||(d.price*50)).toFixed(2));
+    set('g-total','₹'+(d.total_premium || (d.price*50)).toFixed(2));
     toast('✅ Greeks calculated!','success');
   });
 }
