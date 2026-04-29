@@ -3606,12 +3606,9 @@ function loadPaperStrats(type){
       ' lots ' + (s.quantity||1) +
       ' sl ' + (s.stop_loss||100) +
       ' target ' + (s.target||200);
-    if(conditions) nlpText += '
-conditions: ' + conditions;
-    if(s.exit_conditions) nlpText += '
-exit: ' + s.exit_conditions;
-    if(s.timeframe) nlpText += '
-timeframe: ' + s.timeframe;
+    if(conditions) nlpText += '\nconditions: ' + conditions;
+    if(s.exit_conditions) nlpText += '\nexit: ' + s.exit_conditions;
+    if(s.timeframe) nlpText += '\ntimeframe: ' + s.timeframe;
     nlpEl.value = nlpText;
     // Expand NLP section
     var nlpSec = document.getElementById('nlp-section');
