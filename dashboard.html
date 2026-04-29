@@ -1968,6 +1968,17 @@ function swProf(tab,btn){
   if(tab==='th') setTimeout(buildThemeCards,50);
   if(tab==='broker') setTimeout(loadBrokerStatus,50);
   if(tab==='notif') setTimeout(loadNotifPrefs,50);
+
+  // Scroll to top after showing panel
+  setTimeout(function(){
+    window.scrollTo(0,0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    var pf = document.getElementById('pnl-prof');
+    if(pf) pf.scrollTop = 0;
+    var main = document.querySelector('.main');
+    if(main) main.scrollTop = 0;
+  }, 20);
 }
 function loadProfStats(){
   req('/stats','GET',null,function(err,d){
