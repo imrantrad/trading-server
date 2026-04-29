@@ -3113,6 +3113,61 @@ function pollNotifCount() {
 // Feature init handled in IIFE
 
 </script>
+
+<!-- FLOATING ACTION BUTTONS (Bottom Right) -->
+<div id="fab-container" style="position:fixed;bottom:20px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:900">
+  
+  <!-- Broker API -->
+  <div class="fab-btn" onclick="openBrokerModal()" title="Broker API" style="background:linear-gradient(135deg,#001a0e,#003318);border-color:rgba(0,255,136,.3)">
+    <span>🔗</span>
+    <span class="fab-lbl">API</span>
+  </div>
+  
+  <!-- Notifications -->
+  <div class="fab-btn" onclick="bellClick()" title="Notifications" style="background:linear-gradient(135deg,#1a0008,#330010);border-color:rgba(255,51,102,.3);position:relative">
+    <span>🔔</span>
+    <span class="fab-lbl">Alerts</span>
+    <span id="fab-notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--rd);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1">0</span>
+  </div>
+  
+  <!-- AI Signal -->
+  <div class="fab-btn" onclick="show('ai',null)" title="AI Engine" style="background:linear-gradient(135deg,#0d0014,#1a0028);border-color:rgba(168,85,247,.3)">
+    <span>🤖</span>
+    <span class="fab-lbl">AI</span>
+  </div>
+
+  <!-- Kill Switch -->
+  <div class="fab-btn" onclick="toggleKill()" title="Kill Switch" id="fab-kill" style="background:linear-gradient(135deg,#1a0005,#2a0008);border-color:rgba(255,51,102,.4)">
+    <span>🔴</span>
+    <span class="fab-lbl">Kill</span>
+  </div>
+  
+  <!-- Scroll to top -->
+  <div class="fab-btn" onclick="window.scrollTo({top:0,behavior:'smooth'});document.querySelector('.main')&&(document.querySelector('.main').scrollTop=0)" title="Scroll to top" style="background:var(--bg3);border-color:var(--bo)">
+    <span style="font-size:14px">↑</span>
+    <span class="fab-lbl">Top</span>
+  </div>
+  
+</div>
+
+<style>
+.fab-btn{
+  width:48px;height:48px;border-radius:14px;border:1px solid;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .2s;gap:1px;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+.fab-btn:active{transform:scale(.92);opacity:.8}
+.fab-btn span:first-child{font-size:18px;line-height:1}
+.fab-lbl{font-size:7px;color:var(--mu);letter-spacing:.5px;text-transform:uppercase;font-weight:600}
+@media(max-width:768px){
+  #fab-container{bottom:16px;right:12px;gap:6px}
+  .fab-btn{width:44px;height:44px;border-radius:12px}
+}
+</style>
+
 </body>
 </html>
 
