@@ -769,7 +769,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- Dashboard Settings -->
-    <div class="prof-menu-item" onclick="swProf('dash',null)">
+    <div class="prof-menu-item" onclick="openDashModal()">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎛️</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Dashboard Settings</div>
@@ -1097,6 +1097,19 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 
+<!-- DASHBOARD SETTINGS MODAL -->
+<div id="pmodal-dash" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.97);overflow-y:auto">
+  <div style="max-width:480px;margin:0 auto;padding:16px">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px">
+      <button onclick="document.getElementById('pmodal-dash').style.display='none';document.body.style.overflow=''" style="background:var(--bg3);border:1px solid var(--bo);color:var(--gr);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer">&#8249;</button>
+      <div style="font-size:15px;font-weight:700">&#127765; Dashboard Settings</div>
+    </div>
+    <div style="font-size:10px;color:var(--mu);margin-bottom:12px">Show/hide tabs based on your plan.</div>
+    <div id="pmodal-dash-tabs" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button onclick="saveDashSettings()" style="width:100%;margin-top:14px;padding:12px;background:var(--gr);border:none;color:#000;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">&#10003; SAVE SETTINGS</button>
+  </div>
+</div>
+
 <!-- THEMES MODAL -->
 <div id="pmodal-th" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.97);overflow-y:auto">
   <div style="max-width:480px;margin:0 auto;padding:16px">
@@ -1361,6 +1374,42 @@ function openMyAccount(){
 }
 
 
+
+
+function openDashModal(){
+  var c=document.getElementById('pmodal-dash-tabs');
+  if(c&&!c.children.length){
+    var tabs=[
+      ['trade','TRADE','Always visible'],
+      ['paper','PAPER TEST','Always visible'],
+      ['risk','RISK','Risk management'],
+      ['scan','SCANNER','Market scanner'],
+      ['opts','OPTIONS','Options chain'],
+      ['bt','BACKTEST','Strategy testing'],
+      ['jnl','JOURNAL','Trade journal'],
+      ['rep','REPORTS','P&L reports'],
+      ['calc','CALCULATOR','Options calc'],
+      ['ai','AI ENGINE','AI signals'],
+      ['admin','ADMIN','Admin panel'],
+      ['legal','LEGAL','Legal docs']
+    ];
+    tabs.forEach(function(t){
+      var r=document.createElement('div');
+      r.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border:1px solid var(--bo);border-radius:8px';
+      r.innerHTML='<div><div style="font-size:12px;font-weight:600">'+t[1]+'</div><div style="font-size:9px;color:var(--mu)">'+t[2]+'</div></div><input type="checkbox" id="pdash-'+t[0]+'" checked style="width:18px;height:18px;accent-color:var(--gr)">';
+      c.appendChild(r);
+    });
+  }
+  var m=document.getElementById('pmodal-dash');
+  if(m){m.style.display='block';m.scrollTop=0;}
+  document.body.style.overflow='hidden';
+}
+
+function saveDashSettings(){
+  toast('Settings saved!','success');
+  document.getElementById('pmodal-dash').style.display='none';
+  document.body.style.overflow='';
+}
 
 function openThModal(){
   var tc=document.getElementById('pmodal-th-cards');
