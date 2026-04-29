@@ -638,7 +638,7 @@ input:focus, select:focus, textarea:focus {
 <style>
 .prof-menu-item{display:flex;align-items:center;gap:14px;padding:14px 10px;border-radius:12px;cursor:pointer;transition:background .2s;margin-bottom:4px}
 .prof-menu-item:hover,.prof-menu-item:active{background:var(--bg3)}
-.prof-panel{background:var(--bg3);border:1px solid var(--bo);border-radius:12px;padding:16px;margin-top:4px}
+.prof-panel{background:var(--bg);border:1px solid var(--bo);border-radius:10px;padding:16px;margin-bottom:8px}
 .prof-panel-header{font-size:12px;font-weight:700;color:var(--gr);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--bo);cursor:pointer;display:flex;align-items:center;gap:6px}
 .rm-fill{height:100%;border-radius:2px;transition:width 1.5s ease}
 </style>
@@ -1866,46 +1866,45 @@ function swProf(tab,btn){
   // Hide ALL sub-panels
   PANELS.forEach(function(t){
     var el=document.getElementById('ps-'+t);
-    if(el) el.style.display='none';
+    if(el){ el.style.cssText='display:none'; }
   });
   
-  // Toggle menu section
+  // Toggle menu
   var menu=document.getElementById('prof-menu-section');
-  if(menu) menu.style.display = tab ? 'none' : 'block';
   
   if(tab){
-    // Show target panel
+    if(menu) menu.style.display='none';
+    
     var panel=document.getElementById('ps-'+tab);
     if(panel){
-      panel.style.display='block';
+      // Show panel as overlay at top of pnl-prof
+      panel.style.cssText='display:block;position:relative;z-index:10;background:var(--bg);margin-bottom:10px';
       
-      // SCROLL TO TOP - so panel is visible immediately
+      // Scroll pnl-prof to very top
       var pf=document.getElementById('pnl-prof');
-      if(pf){ pf.scrollTop=0; }
-      // Also scroll window to top
-      window.scrollTo({top:0, behavior:'smooth'});
-      
-      // Move panel right after profile header (before menu)
       if(pf){
-        var header=pf.querySelector('[id="prof-header"]') || pf.firstElementChild;
-        if(header && header.nextSibling !== panel){
-          pf.insertBefore(panel, header.nextSibling);
+        pf.scrollTop=0;
+        // Move panel to be first child after header
+        var hdr=document.getElementById('prof-header');
+        var afterHdr = hdr ? hdr.parentNode.children[1] : pf.firstElementChild;
+        if(afterHdr && afterHdr.id !== 'ps-'+tab){
+          pf.insertBefore(panel, afterHdr);
         }
+        setTimeout(function(){ pf.scrollTop=0; }, 50);
       }
     }
     
-    // Load panel data
+    // Load data
     if(tab==='dash') buildTabVisibilityList();
     if(tab==='sub') buildPlanCards();
     if(tab==='th') buildThemeCards();
     if(tab==='broker') loadBrokerStatus();
     if(tab==='notif') loadNotifPrefs();
-    if(tab==='about') {} // static content
+    
   } else {
-    // Back to menu - scroll top
-    var pf2=document.getElementById('pnl-prof');
-    if(pf2) pf2.scrollTop=0;
-    window.scrollTo({top:0, behavior:'smooth'});
+    if(menu) menu.style.display='block';
+    var pf3=document.getElementById('pnl-prof');
+    if(pf3) pf3.scrollTop=0;
   }
 }
 function loadProfStats(){
