@@ -1154,6 +1154,12 @@ function loadMkt() {
     }
     var mt=$('mkt-time');
     if(mt&&lastTime)mt.textContent=lastTime;
+    // Update mkt-status based on IST time
+    var istNow2 = new Date(Date.now() + 5.5*60*60*1000);
+    var istH2=istNow2.getUTCHours(),istM2=istNow2.getUTCMinutes(),istDow2=istNow2.getUTCDay();
+    var mktIsOpen=(istDow2>=1&&istDow2<=5)&&((istH2===9&&istM2>=15)||(istH2>=10&&istH2<=14)||(istH2===15&&istM2<=30));
+    var ms2=$('mkt-status');
+    if(ms2){if(mktIsOpen){ms2.textContent='● LIVE';ms2.style.background='#001a0e';ms2.style.color='var(--gr)';ms2.style.borderColor='var(--gr)';}else{ms2.textContent='● CLOSED';ms2.style.background='#1a0008';ms2.style.color='var(--rd)';ms2.style.borderColor='var(--rd)';}}
     
   });
 }
@@ -1838,7 +1844,7 @@ function generateOHLC(sym, tf, periods) {
   var data = [];
   var volData = [];
   // Use IST offset for chart timestamps
-// Anchor to last market close: 15:30 IST = 10:00 UTC
+// Chart anchor: last trading day 15:30 IST = 10:00 UTC
   var _utcNow = Date.now();
   var _istMs  = _utcNow + 5.5*60*60*1000;
   var _istD   = new Date(_istMs);
@@ -1847,19 +1853,40 @@ function generateOHLC(sym, tf, periods) {
     ((_h===9&&_m>=15)||(_h>=10&&_h<=14)||(_h===15&&_m<=30));
   var _ancMs;
   if(_mktOpen){
-    _ancMs = _utcNow;
+    _ancMs = _utcNow; // Live: use current time
   } else {
-    // Last 15:30 IST = 10:00 UTC
-    var _close = new Date(_istD); _close.setUTCHours(10,0,0,0);
-    _ancMs = _close.getTime();
+    // Find last market close: most recent weekday 15:30 IST (10:00 UTC)
+    var _d = new Date(_istMs);
+    // Set to 15:30 IST = 10:00 UTC of current day
+    _d.setUTCHours(10,0,0,0);
+    _ancMs = _d.getTime();
+    // If today's 15:30 IST is in the future, go back 1 day
     if(_ancMs > _utcNow) _ancMs -= 86400000;
-    var _ad = new Date(_ancMs).getUTCDay();
-    if(_ad===0) _ancMs -= 2*86400000;
-    else if(_ad===6) _ancMs -= 86400000;
+    // Skip weekends
+    var _wd;
+    for(var _i=0;_i<7;_i++){
+      _wd = new Date(_ancMs).getUTCDay();
+      if(_wd>=1 && _wd<=5) break;
+      _ancMs -= 86400000;
+    }
   }
   var now = Math.floor(_ancMs / 1000);
+  
+  // For intraday charts: increase periods to cover full trading day
+  // 9:15 AM to 3:30 PM IST = 375 minutes
+  // For 5m: need 75 candles for full day; increase periods if needed
+  var tradingMinutes = 375; // 9:15 to 15:30
+  var minPeriods = {'1':375,'5':75,'15':25,'30':13,'60':7,'240':2,'D':1,'W':1};
+  var minNeeded = (minPeriods[tf] || 1) * 5; // 5 days buffer
+  if(periods < minNeeded) periods = minNeeded;
 
   var tfSecs = { '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
+  // Ensure enough candles for full view
+  if(tf==='1'&&periods<500) periods=500;
+  if(tf==='5'&&periods<200) periods=200;
+  if(tf==='15'&&periods<100) periods=100;
+  if(tf==='30'&&periods<80) periods=80;
+  if(tf==='D'&&periods<365) periods=365;
   var secs = tfSecs[tf] || 86400;
 
   var vol = currentBase * (sym==='NIFTY'?0.0005:sym==='BANKNIFTY'?0.0008:0.0006);
