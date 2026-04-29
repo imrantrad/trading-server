@@ -1880,8 +1880,10 @@ function generateOHLC(sym, tf, periods) {
   var minNeeded = (minPeriods[tf] || 1) * 5; // 5 days buffer
   if(periods < minNeeded) periods = minNeeded;
 
-  var tfSecs = { '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
+  var tfSecs = { '1s':1, '5s':5, '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
   // Ensure enough candles for full view
+  if(tf==='1s') periods=Math.max(periods,300);   // 5 min of ticks
+  if(tf==='5s') periods=Math.max(periods,360);   // 30 min of ticks
   if(tf==='1')  periods=Math.max(periods,600);   // 10 hrs
   if(tf==='5')  periods=Math.max(periods,450);   // 6 trading days
   if(tf==='15') periods=Math.max(periods,200);   // 7 trading days
@@ -1898,17 +1900,15 @@ function generateOHLC(sym, tf, periods) {
   for(var i = periods; i >= 0; i--) {
     var t = now - (i * secs);
     
-    // Skip weekends for intraday charts
-    if(tf !== 'D' && tf !== 'W') {
+    // Skip weekends/off-hours for intraday (but not tick charts)
+    if(tf !== 'D' && tf !== 'W' && tf !== '1s' && tf !== '5s') {
       var tDate = new Date(t * 1000 + 5.5*60*60*1000); // IST
       var tDow = tDate.getUTCDay();
       var tHour = tDate.getUTCHours();
       var tMin = tDate.getUTCMinutes();
-      // Skip Saturday/Sunday
       if(tDow === 0 || tDow === 6) continue;
-      // Skip before 9:15 AM IST (3:45 UTC) and after 3:30 PM IST (10:00 UTC)
       var tUTCMins = tHour * 60 + tMin;
-      if(tUTCMins < 225 || tUTCMins > 600) continue; // 3:45 to 10:00 UTC
+      if(tUTCMins < 225 || tUTCMins > 600) continue;
     }
     // Skip weekends for daily
     if(tf === 'D' || tf === 'W') {
@@ -2038,7 +2038,7 @@ function loadChartData() {
   }, 300);
 
   // Fetch deterministic historical data from server
-  var histLimit = {'1':600,'5':450,'15':200,'30':160,'60':120,'240':180,'D':365,'W':104};
+  var histLimit = {'1s':300,'5s':360,'1':600,'5':450,'15':200,'30':160,'60':120,'240':180,'D':365,'W':104};
   var lim = histLimit[chartTF] || 300;
   req('/market/historical/' + chartSym + '?interval=' + chartTF + '&limit='+lim, 'GET', null, function(err, d) {
     if(err || !d || !d.candles || d.candles.length < 5) return;
