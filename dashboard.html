@@ -2162,8 +2162,40 @@ function applyStrategyToOrderEntry(s, paperMode){
     nlp.value = txt;
   }
   
-  toast('✅ '+name+' loaded → Order Entry + NLP filled','success');
+  // Fill new fields
+  var otEl = document.getElementById('order-type');
+  if(otEl && s.order_type) otEl.value = s.order_type;
+  var ptEl = document.getElementById('product-type');
+  if(ptEl && s.product_type) ptEl.value = s.product_type;
+  var tslEl = document.getElementById('trailing-sl');
+  if(tslEl) tslEl.value = s.trailing_sl||s.trailing_stoploss||0;
+  var tfEl = document.getElementById('order-tf');
+  if(tfEl && s.timeframe) tfEl.value = s.timeframe;
+  var tagEl = document.getElementById('order-tag');
+  if(tagEl) tagEl.value = name;
+  calcRR();
+  
+  toast('✅ '+name+' → All fields filled!','success');
 }
+
+
+// ── R/R Auto-calc ──────────────────────────────────────────────────────────
+function calcRR(){
+  var sl = parseFloat(document.getElementById('stoploss').value)||1;
+  var tgt = parseFloat(document.getElementById('target').value)||1;
+  var rr = (tgt/sl).toFixed(2);
+  var el = document.getElementById('rr-display');
+  if(el){
+    el.textContent = '1:'+rr;
+    el.style.color = rr>=2?'var(--gr)':rr>=1.5?'var(--am)':'var(--rd)';
+  }
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var sl=document.getElementById('stoploss');
+  var tgt=document.getElementById('target');
+  if(sl) sl.addEventListener('input', calcRR);
+  if(tgt) tgt.addEventListener('input', calcRR);
+});
 
 function loadBuiltin(){
   req('/strategies/builtin','GET',null,function(err,d){
