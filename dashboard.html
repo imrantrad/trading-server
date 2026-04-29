@@ -134,6 +134,7 @@ input:focus, select:focus, textarea:focus {
     <span style="font-size:8px;color:var(--mu)" id="api-lbl">CONNECTING</span>
     <button class="btn br" id="kill-btn" onclick="toggleKill()" style="padding:3px 8px">KILL</button>
     <button class="btn" onclick="show('prof',null)" style="padding:3px 10px;background:#160a28;border-color:var(--pu);color:var(--pu);font-size:9px">👤 PROFILE</button>
+    <button class="btn" onclick="openBrokerModal()" style="padding:3px 10px;background:#001a0e;border-color:var(--gr);color:var(--gr);font-size:9px" title="Broker API">🔗</button>
   </div>
 </div>
 
@@ -726,7 +727,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- Broker API -->
-    <div class="prof-menu-item" onclick="swProf('broker',null)">
+    <div class="prof-menu-item" onclick="openBrokerModal()">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔗</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Broker API</div>
@@ -746,7 +747,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- Notifications -->
-    <div class="prof-menu-item" onclick="swProf('notif',null)">
+    <div class="prof-menu-item" onclick="toggleNotifPanel()">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,51,102,.12);border:1px solid rgba(255,51,102,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔔</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Notifications</div>
@@ -1095,6 +1096,57 @@ input:focus, select:focus, textarea:focus {
   </div>
 </div>
 
+
+<!-- BROKER API MODAL -->
+<div id="broker-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,10,.95);backdrop-filter:blur(10px);overflow-y:auto">
+  <div style="max-width:500px;margin:20px auto;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:700;color:var(--gr)">🔗 Broker API Setup</div>
+      <button onclick="closeBrokerModal()" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div style="background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--mu);line-height:1.7">
+      🔗 Connect your broker for <b style="color:var(--tx)">live trading</b>. Paper mode = simulated. Live mode = real orders via broker API.
+    </div>
+    <div class="card">
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">BROKER</div>
+          <select id="br-broker" style="width:100%">
+            <option value="ZERODHA">🔵 Zerodha Kite (₹2000/mo)</option>
+            <option value="ANGEL">🟠 Angel One (Free)</option>
+            <option value="FYERS">🟢 Fyers API (Free)</option>
+            <option value="UPSTOX">🟣 Upstox v3 (Free)</option>
+          </select>
+        </div>
+        <div><div class="lbl">MODE</div>
+          <select id="br-mode" style="width:100%">
+            <option value="PAPER">📄 Paper (Safe)</option>
+            <option value="LIVE">⚡ Live (Real Money)</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Your API key"></div>
+        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Daily token"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn bg blg" style="flex:1" onclick="connectBroker()">🔗 CONNECT BROKER</button>
+        <button class="btn bb" style="padding:10px 14px" onclick="showBrokerGuide()">📖</button>
+        <button class="btn br" style="padding:10px 14px" onclick="disconnectBroker()">✕</button>
+      </div>
+      <div id="broker-status" style="font-size:10px;color:var(--mu)"></div>
+      <div id="broker-guide" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:10px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
+    </div>
+    <!-- Supported brokers -->
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--mu);text-transform:uppercase;margin-bottom:4px">Supported Brokers</div>
+      <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🔵</span><div style="flex:1"><div style="font-size:12px;font-weight:700">Zerodha Kite</div><div style="font-size:9px;color:var(--mu)">₹2000/mo · Most popular · Full features</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:8px">RECOMMENDED</span></div>
+      <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🟠</span><div style="flex:1"><div style="font-size:12px;font-weight:700">Angel One SmartAPI</div><div style="font-size:9px;color:var(--mu)">FREE · WebSocket feed · Good for beginners</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,100,.1);border:1px solid rgba(0,204,100,.2);color:#00cc88;border-radius:8px">FREE</span></div>
+      <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🟢</span><div style="flex:1"><div style="font-size:12px;font-weight:700">Fyers API</div><div style="font-size:9px;color:var(--mu)">FREE · Level 2 data available</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,100,.1);border:1px solid rgba(0,204,100,.2);color:#00cc88;border-radius:8px">FREE</span></div>
+      <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🟣</span><div style="flex:1"><div style="font-size:12px;font-weight:700">Upstox API v3</div><div style="font-size:9px;color:var(--mu)">FREE · OAuth 2.0 · Modern API</div></div><span style="font-size:8px;padding:3px 8px;background:rgba(0,204,100,.1);border:1px solid rgba(0,204,100,.2);color:#00cc88;border-radius:8px">FREE</span></div>
+    </div>
+  </div>
+</div>
+
 <!-- CHAT WIDGET -->
 <div style="position:fixed;bottom:16px;right:16px;z-index:998">
   <div id="chat-win" style="display:none;position:fixed;bottom:76px;right:16px;width:310px;height:440px;background:var(--bg2);border:1px solid var(--bo);border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999;flex-direction:column">
@@ -1237,6 +1289,23 @@ function bellClick(){
 }
 
 // ── BROKER API ──────────────────────────────────────────────────────────────
+
+function openBrokerModal(){
+  var m=document.getElementById('broker-modal');
+  if(m){ m.style.display='block'; loadBrokerStatus(); }
+  document.body.style.overflow='hidden';
+}
+function closeBrokerModal(){
+  var m=document.getElementById('broker-modal');
+  if(m) m.style.display='none';
+  document.body.style.overflow='';
+}
+// Close on backdrop click
+document.addEventListener('DOMContentLoaded',function(){
+  var m=document.getElementById('broker-modal');
+  if(m) m.addEventListener('click',function(e){if(e.target===m)closeBrokerModal();});
+});
+
 function connectBroker(){
   var broker = gv('br-broker');
   var mode = gv('br-mode');
