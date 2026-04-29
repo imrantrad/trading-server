@@ -283,29 +283,112 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 <div id="pnl-opts" class="pnl">
-  <div class="card"><div class="chdr">OPTIONS CHAIN<button class="btn bg" onclick="loadChain()" style="padding:4px 10px">LOAD</button></div>
-    <div style="display:flex;gap:6px;margin-bottom:8px"><div style="flex:1"><div class="lbl">INST</div><select id="ch-i"><option>NIFTY</option><option>BANKNIFTY</option></select></div><div style="flex:1"><div class="lbl">DTE</div><input type="number" id="ch-d" value="7"></div></div>
-    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="color:var(--gr)">CE OI</th><th style="color:var(--gr)">CE LTP</th><th style="color:var(--gr)">CE Delta</th><th style="color:var(--am)">STRIKE</th><th style="color:var(--rd)">PE Delta</th><th style="color:var(--rd)">PE LTP</th><th style="color:var(--rd)">PE OI</th></tr></thead><tbody id="chain-tbl"></tbody></table></div>
+
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:10px">
+    <button class="btn ba" id="opt-tab-greeks" onclick="optTab('greeks',this)" style="flex:1;padding:7px;font-size:9px">🧮 GREEKS</button>
+    <button class="btn" id="opt-tab-chain" onclick="optTab('chain',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">📊 CHAIN</button>
+    <button class="btn" id="opt-tab-payoff" onclick="optTab('payoff',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">📈 PAYOFF</button>
+    <button class="btn" id="opt-tab-iv" onclick="optTab('iv',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🎯 IV CALC</button>
   </div>
-  <div class="g2" style="gap:10px">
-    <div class="card"><div class="chdr">GREEKS CALCULATOR</div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <div class="g2" style="gap:4px"><div><div class="lbl">SPOT</div><input type="number" id="bs-s" placeholder="23900"></div><div><div class="lbl">STRIKE</div><input type="number" id="bs-k" placeholder="24000"></div></div>
-        <div class="g2" style="gap:4px"><div><div class="lbl">DTE</div><input type="number" id="bs-d" value="7"></div><div><div class="lbl">IV %</div><input type="number" id="bs-v" value="15"></div></div>
-        <div class="g2" style="gap:4px"><div><div class="lbl">TYPE</div><select id="bs-t"><option>CE</option><option>PE</option></select></div><div><div class="lbl">RATE %</div><input type="number" id="bs-r" value="6.5"></div></div>
-        <button class="btn bg blg" onclick="calcGreeks()">CALCULATE GREEKS</button>
-        <div id="greek-out" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:8px"></div>
+
+  <!-- GREEKS CALCULATOR -->
+  <div id="opt-greeks">
+    <div class="card" style="margin-bottom:8px">
+      <div class="chdr">🧮 Black-Scholes Greeks Calculator</div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">SPOT PRICE</div><input type="number" id="g-spot" value="24000"></div>
+        <div><div class="lbl">STRIKE PRICE</div><input type="number" id="g-strike" value="24000"></div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">EXPIRY (days)</div><input type="number" id="g-exp" value="7"></div>
+        <div><div class="lbl">IV % (Volatility)</div><input type="number" id="g-iv" value="15" step="0.5"></div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">RISK-FREE RATE %</div><input type="number" id="g-rate" value="6.5" step="0.1"></div>
+        <div><div class="lbl">OPTION TYPE</div>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <button class="btn ba active" id="gbt-CE" onclick="document.getElementById('gbt-CE').classList.add('active');document.getElementById('gbt-PE').classList.remove('active');calcGreeks()" style="flex:1;padding:7px;font-size:11px">CE</button>
+            <button class="btn br" id="gbt-PE" onclick="document.getElementById('gbt-PE').classList.add('active');document.getElementById('gbt-CE').classList.remove('active');calcGreeks()" style="flex:1;padding:7px;font-size:11px">PE</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn bg blg" onclick="calcGreeks()" style="width:100%">⚡ CALCULATE GREEKS</button>
+    </div>
+
+    <!-- Greeks Output -->
+    <div id="greeks-out" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+        <div class="stat" style="text-align:center"><div class="sl">PREMIUM</div><div class="sv" id="g-price" style="color:var(--am);font-size:18px">—</div></div>
+        <div class="stat" style="text-align:center"><div class="sl">DELTA Δ</div><div class="sv" id="g-delta" style="color:var(--bl)">—</div></div>
+        <div class="stat" style="text-align:center"><div class="sl">GAMMA Γ</div><div class="sv" id="g-gamma" style="color:var(--gr);font-size:13px">—</div></div>
+        <div class="stat" style="text-align:center"><div class="sl">THETA Θ/day</div><div class="sv" id="g-theta" style="color:var(--rd)">—</div></div>
+        <div class="stat" style="text-align:center"><div class="sl">VEGA ν/1%IV</div><div class="sv" id="g-vega" style="color:var(--p0)">—</div></div>
+        <div class="stat" style="text-align:center"><div class="sl">RHO ρ/1%r</div><div class="sv" id="g-rho" style="color:var(--mu)">—</div></div>
+      </div>
+      <div class="card" style="font-size:10px;line-height:2">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Intrinsic Value</span><span id="g-intrinsic" style="font-weight:700"></span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Time Value</span><span id="g-timevalue" style="font-weight:700"></span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Moneyness</span><span id="g-money" style="font-weight:700"></span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Total Premium (1 lot)</span><span id="g-total" style="font-weight:700;color:var(--am)"></span></div>
       </div>
     </div>
-    <div class="card"><div class="chdr">MARGIN CALC</div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <div><div class="lbl">INST</div><select id="mg-i"><option>NIFTY</option><option>BANKNIFTY</option></select></div>
-        <div class="g2" style="gap:4px"><div><div class="lbl">LOTS</div><input type="number" id="mg-l" value="1"></div><div><div class="lbl">PRICE</div><input type="number" id="mg-p" placeholder="100"></div></div>
-        <button class="btn bb blg" onclick="calcMargin()">CALC MARGIN</button>
-        <div id="mg-out" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:8px;font-size:10px"></div>
+  </div>
+
+  <!-- OPTIONS CHAIN -->
+  <div id="opt-chain" style="display:none">
+    <div class="card" style="margin-bottom:8px">
+      <div class="g2" style="gap:8px">
+        <div><div class="lbl">INSTRUMENT</div>
+          <select id="ch-i"><option value="24000">NIFTY</option><option value="56000">BANKNIFTY</option></select>
+        </div>
+        <div><div class="lbl">EXPIRY (days)</div><input type="number" id="ch-exp" value="7"></div>
+      </div>
+      <div class="g2" style="gap:8px;margin-top:8px">
+        <div><div class="lbl">VIX %</div><input type="number" id="ch-vix" value="15" step="0.5"></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn bg blg" onclick="loadOptionsChain()" style="width:100%;padding:9px">LOAD CHAIN</button></div>
+      </div>
+    </div>
+    <div id="chain-out" style="overflow-x:auto">
+      <div style="text-align:center;color:var(--mu);padding:20px;font-size:10px">Click LOAD CHAIN</div>
+    </div>
+  </div>
+
+  <!-- IV CALCULATOR -->
+  <div id="opt-iv" style="display:none">
+    <div class="card">
+      <div class="chdr">🎯 Implied Volatility Calculator</div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">MARKET PRICE</div><input type="number" id="iv-mkt" value="100"></div>
+        <div><div class="lbl">SPOT</div><input type="number" id="iv-spot" value="24000"></div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">STRIKE</div><input type="number" id="iv-strike" value="24000"></div>
+        <div><div class="lbl">EXPIRY (days)</div><input type="number" id="iv-exp" value="7"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn ba" id="ivbt-CE" onclick="document.getElementById('ivbt-CE').classList.add('active');document.getElementById('ivbt-PE').classList.remove('active')" style="flex:1;padding:8px">CE</button>
+        <button class="btn br" id="ivbt-PE" onclick="document.getElementById('ivbt-PE').classList.add('active');document.getElementById('ivbt-CE').classList.remove('active')" style="flex:1;padding:8px">PE</button>
+      </div>
+      <button class="btn bg blg" onclick="calcIV()" style="width:100%">🎯 CALCULATE IV</button>
+      <div id="iv-out" style="display:none;margin-top:12px">
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--mu);margin-bottom:4px">IMPLIED VOLATILITY</div>
+          <div id="iv-result" style="font-size:36px;font-weight:800;color:var(--am)">—</div>
+          <div style="font-size:10px;color:var(--mu);margin-top:4px">Annualized IV</div>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- PAYOFF DIAGRAM placeholder -->
+  <div id="opt-payoff" style="display:none">
+    <div class="card">
+      <div class="chdr">📈 Payoff Diagram (Coming Soon)</div>
+      <div style="text-align:center;padding:30px;color:var(--mu);font-size:10px">Multi-leg payoff calculator<br>Iron Condor / Straddle / Strangle</div>
+    </div>
+  </div>
+
 </div>
 
 <div id="pnl-bt" class="pnl">
