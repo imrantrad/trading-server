@@ -2375,7 +2375,7 @@ function generateOHLC(sym, tf, periods) {
       _ancMs -= 86400000;
     }
   }
-
+  var now = Math.floor(_ancMs/1000);
 
   var tfSecs = { '1s':1, '5s':5, '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
   // Periods handled in anchor section above
