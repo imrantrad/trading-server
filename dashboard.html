@@ -967,7 +967,7 @@ input:focus, select:focus, textarea:focus {
 <div id="pnl-paper" class="pnl" style="display:none">
 
   <!-- Header bar -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:8px 12px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:6px 10px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px">
     <div style="display:flex;align-items:center;gap:8px">
       <span style="width:8px;height:8px;border-radius:50%;background:var(--gr);display:inline-block;animation:pulse 2s infinite"></span>
       <span style="font-size:11px;font-weight:700;color:var(--gr)">PAPER TEST</span>
@@ -985,19 +985,18 @@ input:focus, select:focus, textarea:focus {
   <!-- PAPER TRADE TAB -->
   <div id="paper-tab-trade">
     <!-- Stats -->
-    <div class="g4" style="margin-bottom:10px">
-      <div class="stat"><div class="sl">PAPER P&L</div><div class="sv" id="pt-pnl" style="color:var(--am)">₹+0</div><div class="ss">Simulated</div></div>
-      <div class="stat"><div class="sl">TRADES</div><div class="sv" id="pt-trades" style="color:var(--bl)">0</div></div>
-      <div class="stat"><div class="sl">WIN RATE</div><div class="sv" id="pt-wr" style="color:var(--gr)">0%</div></div>
-      <div class="stat"><div class="sl">VIRTUAL CAP</div><div class="sv" id="pt-cap" style="color:var(--am);font-size:14px">₹5.0L</div></div>
+    <div class="g4" style="margin-bottom:6px">
+      <div class="stat" style="padding:6px 4px"><div class="sl">PAPER P&L</div><div class="sv" id="pt-pnl" style="color:var(--am);font-size:14px">₹+0</div></div>
+      <div class="stat" style="padding:6px 4px"><div class="sl">TRADES</div><div class="sv" id="pt-trades" style="color:var(--bl);font-size:14px">0</div></div>
+      <div class="stat" style="padding:6px 4px"><div class="sl">WIN RATE</div><div class="sv" id="pt-wr" style="color:var(--gr);font-size:14px">0%</div></div>
+      <div class="stat" style="padding:6px 4px"><div class="sl">VIRTUAL CAP</div><div class="sv" id="pt-cap" style="color:var(--am);font-size:13px">₹5.0L</div></div>
     </div>
 
     <div class="g2" style="gap:10px">
       <!-- Order Entry -->
-      <div class="card">
-        <div class="chdr">ORDER ENTRY</div>
-
-        <div style="margin-bottom:8px">
+      <div class="card" style="padding:10px">
+        <div class="chdr" style="margin-bottom:6px">ORDER ENTRY</div>
+        <div style="margin-bottom:6px">
           <div class="lbl">INSTRUMENT</div>
           <div style="display:flex;gap:4px;flex-wrap:wrap">
             <button class="tog ta" id="pbi-NIFTY" onclick="setPaperInst('NIFTY',this)">NIFTY</button>
