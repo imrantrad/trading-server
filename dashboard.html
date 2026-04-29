@@ -1820,37 +1820,34 @@ function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$
 
 // PROFILE
 function swProf(tab,btn){
-  // Find menu list container (direct child divs with class prof-menu-item)
-  var menuItems = document.querySelectorAll('#pnl-prof .prof-menu-item');
-  var menuGroups = document.querySelectorAll('#pnl-prof > div > div[style*="font-size:8px"]');
-  var mainTitle = document.querySelector('#pnl-prof > div:first-child'); // Header
-  
-  // Get all section label divs and menu items
-  var menuSection = document.getElementById('prof-menu-section');
+  var panels = ['set','sub','broker','th','dash','notif'];
+  var hasPanel = panels.indexOf(tab) >= 0;
   
   // Show/hide sub-panels
-  ['set','sub','broker','th','dash','notif'].forEach(function(t){
-    var el=$('ps-'+t);
+  panels.forEach(function(t){
+    var el = document.getElementById('ps-'+t);
     if(el) el.style.display = (t===tab) ? 'block' : 'none';
   });
   
-  // Hide/show menu list based on tab
-  var isSubPanel = !!tab;
-  menuItems.forEach(function(el){ el.style.display = isSubPanel ? 'none' : ''; });
-  menuGroups.forEach(function(el){ el.style.display = isSubPanel ? 'none' : ''; });
+  // Hide/show all menu items and section labels
+  document.querySelectorAll('#pnl-prof .prof-menu-item').forEach(function(el){
+    el.style.display = hasPanel ? 'none' : '';
+  });
+  // Hide section title labels when sub-panel open
+  document.querySelectorAll('#pnl-prof > div:last-child > div[style*="8px"][style*="letter-spacing"]').forEach(function(el){
+    el.style.display = hasPanel ? 'none' : '';
+  });
   
+  // Load data for specific panels
   if(tab==='dash') buildTabVisibilityList();
   if(tab==='sub') buildPlanCards();
   if(tab==='th') buildThemeCards();
-  if(tab==='broker') loadBrokerStatus();
-  if(tab==='notif') loadNotifPrefs();
+  if(tab==='broker'){ loadBrokerStatus(); }
+  if(tab==='notif'){ loadNotifPrefs(); }
   
   if(!tab){
-    // Back to menu - show all menu items
-    menuItems.forEach(function(el){ el.style.display = ''; });
-    menuGroups.forEach(function(el){ el.style.display = ''; });
-    var pf=document.getElementById('pnl-prof');
-    if(pf) pf.scrollTop=0;
+    var pf = document.getElementById('pnl-prof');
+    if(pf) pf.scrollTop = 0;
   }
 }
 function loadProfStats(){
