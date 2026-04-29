@@ -49,11 +49,59 @@ textarea{resize:vertical;min-height:55px}
 .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
 .bdg{font-size:7px;padding:2px 7px;border-radius:10px;font-weight:700;border:1px solid}
 #toast{position:fixed;top:50px;right:12px;z-index:999;background:var(--bg2);border-left:3px solid var(--gr);border:1px solid var(--bo);border-radius:5px;padding:10px 14px;font-size:10px;display:none;max-width:280px}
+.rm-fill{height:100%;border-radius:2px;transition:width 1.5s ease}
+
+/* ── PREMIUM POLISH ── */
+:root {
+  --shadow-green: 0 0 20px rgba(0,255,136,.08);
+  --shadow-card: 0 4px 24px rgba(0,0,0,.4);
+}
+.card {
+  box-shadow: var(--shadow-card);
+  transition: border-color .2s, box-shadow .2s;
+}
+.card:hover { border-color: var(--bo); }
+
+/* Better scrollbar */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--bo); border-radius: 2px; }
+
+/* Button hover glow */
+.btn:hover { transform: translateY(-1px); transition: all .15s; }
+.blg { font-size: 12px !important; padding: 12px !important; letter-spacing: 1px; border-radius: 6px !important; }
+
+/* Input focus glow */
+input:focus, select:focus, textarea:focus {
+  border-color: var(--gr) !important;
+  box-shadow: 0 0 0 2px rgba(0,255,136,.08);
+}
+
+/* Tab active indicator */
+.tab.active { color: var(--gr) !important; border-bottom-color: var(--gr) !important; }
+
+/* Stat card hover */
+.stat { transition: background .2s; }
+.stat:hover { background: var(--bg3); }
+
+/* Market watch chips hover */
+.mkt-chip:hover { opacity: .85; transform: translateY(-1px); }
+
+/* Table row hover */
+.tbl tbody tr:hover td { background: var(--bg3) !important; }
+
+/* Modal backdrop */
+#chart-modal { backdrop-filter: blur(4px); }
+
+/* Smooth panel transitions */
+.pnl { animation: fadeIn .2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
 </style>
 </head>
 <body>
 <div id="toast"></div>
-<div class="hdr">
+<div class="hdr" style="background:linear-gradient(90deg,#00000a 0%,#030510 50%,#00000a 100%);border-bottom:1px solid rgba(0,255,136,.1)">
   <div style="display:flex;align-items:center;gap:8px">
     <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px">TRD v12.3</span>
     <span class="bdg" id="mode-bdg" style="border-color:var(--bl);background:#0a1628;color:var(--bl)">PAPER</span>
@@ -129,7 +177,7 @@ textarea{resize:vertical;min-height:55px}
       <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">STRIKE</div><input type="number" id="f-strike" placeholder="23900"></div><div><div class="lbl">LOTS</div><input type="number" id="f-lots" value="1"></div></div>
       <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">ENTRY PRICE</div><input type="number" id="f-price" placeholder="Premium"></div><div><div class="lbl">EXPIRY</div><select id="f-exp"><option>WEEKLY</option><option>MONTHLY</option></select></div></div>
       <div class="g2" style="gap:6px;margin-bottom:10px"><div><div class="lbl">STOP LOSS (pts)</div><input type="number" id="f-sl" value="100"></div><div><div class="lbl">TARGET (pts)</div><input type="number" id="f-tgt" value="200"></div></div>
-      <button class="btn blg bg" id="exec-btn" onclick="execTrade()">EXECUTE BUY NIFTY CE</button>
+      <button class="btn blg bg" id="exec-btn" onclick="execTrade()" style="background:linear-gradient(135deg,#006633,#004422);border-color:#00ff88">EXECUTE BUY NIFTY CE</button>
       <div style="margin-top:10px;overflow-x:auto"><table class="tbl"><thead><tr><th>ID</th><th>INST</th><th>OPT</th><th>LOTS</th><th>ENTRY</th><th>SIDE</th><th>STATUS</th></tr></thead><tbody id="exec-rows"></tbody></table></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -381,6 +429,7 @@ textarea{resize:vertical;min-height:55px}
 .prof-menu-item:hover,.prof-menu-item:active{background:var(--bg3)}
 .prof-panel{background:var(--bg3);border:1px solid var(--bo);border-radius:12px;padding:16px;margin-top:4px}
 .prof-panel-header{font-size:12px;font-weight:700;color:var(--gr);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--bo);cursor:pointer;display:flex;align-items:center;gap:6px}
+.rm-fill{height:100%;border-radius:2px;transition:width 1.5s ease}
 </style>
 <div id="pnl-prof" class="pnl" style="padding:0;background:var(--bg)">
 
@@ -862,6 +911,7 @@ textarea{resize:vertical;min-height:55px}
 .tf-btn.active,.tf-btn:hover{background:var(--bg3);border-color:var(--gr);color:var(--gr)}
 .sym-btn{font-family:monospace;font-size:8px;padding:3px 10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);cursor:pointer;border-radius:4px;letter-spacing:1px}
 .sym-btn.active{background:#001a0e;border-color:var(--gr);color:var(--gr);font-weight:700}
+.rm-fill{height:100%;border-radius:2px;transition:width 1.5s ease}
 </style>
 
 
@@ -1269,6 +1319,22 @@ function nlpMatchStrategy(text){
     }
   }
   return null;
+}
+
+
+function toggleChat(){
+  var btn = document.getElementById('chat-btn');
+  if(btn) btn.click();
+  else {
+    // Direct toggle
+    chatOpen = !chatOpen;
+    var win = document.getElementById('chat-win');
+    if(win) win.style.display = chatOpen ? 'flex' : 'none';
+    if(chatOpen && chatHistory.length === 0){
+      addChatMsg('Namaste! TRD Support hoon. Kaise madad karein?','bot');
+      addChatSugg(['How to trade?','Plans & Pricing','AI Signals','Technical help']);
+    }
+  }
 }
 
 function toggleNLPGuide(){

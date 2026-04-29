@@ -2171,140 +2171,13 @@ class JournalEntry(BaseModel):
     lessons: str = ""
     user_id: str = "USR124535215"
 
-@app.post("/journal/add")
-def add_journal_entry(entry: JournalEntry):
-    uid = entry.user_id
-    if uid not in _journal_store:
-        _journal_store[uid] = []
-    eid = f"JNL{len(_journal_store[uid])+1:04d}"
-    rec = {
-        "id": eid,
-        "instrument": entry.instrument,
-        "pnl": entry.pnl,
-        "emotion": entry.emotion,
-        "rating": entry.rating,
-        "lessons": entry.lessons,
-        "timestamp": datetime.now().isoformat(),
-        "date": datetime.now().strftime("%Y-%m-%d")
-    }
-    _journal_store[uid].insert(0, rec)
-    return {"id": eid, "saved": True}
-
 @app.get("/journal/{user_id}")
 def get_journal(user_id: str, limit: int = 50):
     entries = _journal_store.get(user_id, [])
     return {"entries": entries[:limit], "count": len(entries)}
 
 # ── PAPER RESET ──────────────────────────────────────────────────────────────
-@app.post("/paper/reset")
-def reset_paper(capital: float = 500000, user_id: str = "USR124535215"):
-    """Reset paper trading engine"""
-    global PAPER_CAPITAL, PAPER_PNL, open_positions, closed_trades
-    PAPER_CAPITAL = capital
-    open_positions.clear()
-    for key in list(closed_trades.__class__.__dict__):
-        pass
-    return {
-        "reset": True,
-        "capital": capital,
-        "message": f"Paper engine reset to ₹{capital:,.0f}",
-        "timestamp": datetime.now().isoformat()
-    }
-
 # ── MARKET HISTORICAL ────────────────────────────────────────────────────────
-@app.get("/market/historical/{symbol}")
-def market_historical(symbol: str, interval: str = "D", limit: int = 365):
-    """Historical OHLCV data for charts - deterministic for same params"""
-    import hashlib, random as rnd
-    
-    base_prices = {
-        "NIFTY": 24008, "BANKNIFTY": 56124, "FINNIFTY": 26201,
-        "SENSEX": 78952, "VIX": 17.85
-    }
-    
-    sym = symbol.upper()
-    base = base_prices.get(sym, 24000)
-    
-    # Deterministic seed
-    seed = int(hashlib.md5(f"{sym}{interval}".encode()).hexdigest()[:8], 16)
-    rng = rnd.Random(seed)
-    
-    interval_secs = {
-        "1": 60, "5": 300, "15": 900, "30": 1800,
-        "60": 3600, "240": 14400, "D": 86400, "W": 604800
-    }
-    secs = interval_secs.get(interval, 86400)
-    
-    # Anchor to last market close (15:30 IST = 10:00 UTC)
-    from datetime import timezone, timedelta
-    IST = timezone(timedelta(hours=5, minutes=30))
-    now_ist = datetime.now(IST)
-    h, m, dow = now_ist.hour, now_ist.minute, now_ist.weekday()
-    
-    mkt_open = dow < 5 and ((h == 9 and m >= 15) or (10 <= h <= 14) or (h == 15 and m <= 30))
-    
-    if mkt_open:
-        anchor = int(datetime.now().timestamp())
-    else:
-        # Last 15:30 IST
-        anchor_dt = now_ist.replace(hour=15, minute=30, second=0, microsecond=0)
-        if anchor_dt > now_ist:
-            anchor_dt = anchor_dt - timedelta(days=1)
-        # Skip weekends
-        while anchor_dt.weekday() >= 5:
-            anchor_dt -= timedelta(days=1)
-        anchor = int(anchor_dt.timestamp())
-    
-    candles = []
-    vol_data = []
-    price = base
-    volatility = base * (0.0008 if sym == "BANKNIFTY" else 0.0005)
-    
-    for i in range(limit, -1, -1):
-        t = anchor - (i * secs)
-        
-        # Skip weekends for daily
-        if interval in ["D", "W"]:
-            from datetime import date
-            d = datetime.fromtimestamp(t)
-            if d.weekday() >= 5:
-                continue
-        
-        change = (rng.random() - 0.495) * volatility * (1 + rng.random() * 0.3)
-        close = max(price * 0.85, price + change)
-        high_extra = rng.random() * volatility * 0.6
-        low_extra = rng.random() * volatility * 0.6
-        high = max(price, close) + high_extra
-        low = min(price, close) - low_extra
-        
-        candles.append({
-            "time": t,
-            "open": round(price, 2),
-            "high": round(high, 2),
-            "low": round(low, 2),
-            "close": round(close, 2)
-        })
-        vol_data.append({
-            "time": t,
-            "value": rng.randint(200000, 800000),
-            "color": "rgba(0,255,136,.4)" if close >= price else "rgba(255,51,85,.4)"
-        })
-        price = close
-    
-    # Last candle = current price
-    if candles and mkt_open:
-        candles[-1]["close"] = base_prices.get(sym, candles[-1]["close"])
-    
-    return {
-        "symbol": sym,
-        "interval": interval,
-        "candles": candles,
-        "volumes": vol_data,
-        "count": len(candles),
-        "market_open": mkt_open,
-        "anchor_ist": datetime.now(IST).strftime("%d %b %Y %H:%M IST")
-    }
-
 # ── SUBSCRIPTIONS ─────────────────────────────────────────────────────────────
 _subscriptions = {}
 
@@ -2312,36 +2185,6 @@ class UpgradeRequest(BaseModel):
     user_id: str
     plan: str
     payment_id: str = ""
-
-@app.post("/subscriptions/upgrade")
-def upgrade_subscription(req: UpgradeRequest):
-    plan_prices = {"FREE": 0, "BASIC": 499, "PRO": 1499, "INSTITUTIONAL": 4999}
-    if req.plan not in plan_prices:
-        return {"upgraded": False, "reason": "Invalid plan"}
-    
-    _subscriptions[req.user_id] = {
-        "plan": req.plan,
-        "price": plan_prices[req.plan],
-        "payment_id": req.payment_id,
-        "upgraded_at": datetime.now().isoformat(),
-        "expires_at": (datetime.now() + __import__('datetime').timedelta(days=30)).isoformat()
-    }
-    return {
-        "upgraded": True,
-        "plan": req.plan,
-        "price": plan_prices[req.plan],
-        "message": f"Successfully upgraded to {req.plan}! Welcome aboard! 🎉",
-        "expires_at": _subscriptions[req.user_id]["expires_at"]
-    }
-
-@app.get("/subscriptions/{user_id}")
-def get_subscription(user_id: str):
-    sub = _subscriptions.get(user_id, {
-        "plan": "PRO", "price": 1499,
-        "upgraded_at": datetime.now().isoformat(),
-        "expires_at": (datetime.now() + __import__('datetime').timedelta(days=25)).isoformat()
-    })
-    return sub
 
 # ── PROFILE SAVE (PUT) ────────────────────────────────────────────────────────
 
