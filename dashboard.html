@@ -191,9 +191,10 @@ input:focus, select:focus, textarea:focus {
     </div>
   </div>
   <!-- Quick Action Row -->
-  <div style="display:flex;gap:8px;margin-bottom:8px">
+  <div style="display:flex;gap:6px;margin-bottom:8px">
     <button class="btn bb" style="flex:1;padding:8px;font-size:9px" onclick="openLivePositions()">📈 POSITIONS</button>
     <button class="btn bg" style="flex:1;padding:8px;font-size:9px" onclick="openStrategies()">★ STRATEGIES</button>
+    <button class="btn" style="flex:1;padding:8px;font-size:9px;background:rgba(0,255,136,.07);border-color:var(--gr);color:var(--gr)" onclick="openPaperTest()">📄 PAPER</button>
   </div>
   <div class="g4">
     <div class="stat"><div class="sl">TOTAL P&L</div><div class="sv" id="s-pnl" style="color:var(--gr)">₹0</div><div class="ss" id="s-pp">0%</div></div>
@@ -3465,8 +3466,22 @@ function openLivePositions(){
 }
 
 function openStrategies(){
-  show('strats', null);
+  // Show strategies panel
+  document.querySelectorAll('.pnl').forEach(function(p){
+    p.classList.remove('active'); p.removeAttribute('style');
+  });
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  var sp = document.getElementById('pnl-strats');
+  if(sp){ sp.removeAttribute('style'); sp.classList.add('active'); }
+  // Highlight strategies tab button
+  document.querySelectorAll('.tab').forEach(function(t){
+    if(t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'strats'")>=0){
+      t.classList.add('active');
+    }
+  });
+  window.scrollTo(0,0);
   loadBuiltin();
+  toast('Strategies loaded','info');
 }
 
 function showPaperTab(tab, btn){
