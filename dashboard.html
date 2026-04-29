@@ -386,11 +386,31 @@ input:focus, select:focus, textarea:focus {
     </div>
   </div>
 
-  <!-- PAYOFF DIAGRAM placeholder -->
+  <!-- PAYOFF DIAGRAM -->
   <div id="opt-payoff" style="display:none">
-    <div class="card">
-      <div class="chdr">📈 Payoff Diagram (Coming Soon)</div>
-      <div style="text-align:center;padding:30px;color:var(--mu);font-size:10px">Multi-leg payoff calculator<br>Iron Condor / Straddle / Strangle</div>
+    <div class="card" style="margin-bottom:8px">
+      <div class="chdr">📈 Strategy Payoff Builder</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn bg" onclick="loadPayoffPreset('straddle')" style="flex:1;padding:7px;font-size:9px">STRADDLE</button>
+        <button class="btn bb" onclick="loadPayoffPreset('strangle')" style="flex:1;padding:7px;font-size:9px">STRANGLE</button>
+        <button class="btn ba" onclick="loadPayoffPreset('iron_condor')" style="flex:1;padding:7px;font-size:9px">IRON CONDOR</button>
+        <button class="btn br" onclick="loadPayoffPreset('bull_spread')" style="flex:1;padding:7px;font-size:9px">BULL SPREAD</button>
+      </div>
+      <div><div class="lbl">SPOT PRICE</div><input type="number" id="po-spot" value="24000" style="margin-bottom:8px"></div>
+      <div id="po-legs" style="margin-bottom:8px"></div>
+      <button class="btn bg blg" onclick="calcPayoff()" style="width:100%">📈 CALCULATE PAYOFF</button>
+    </div>
+    <div id="payoff-out" style="display:none">
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div class="stat"><div class="sl">MAX PROFIT</div><div class="sv" id="po-maxp" style="color:var(--gr)">—</div></div>
+        <div class="stat"><div class="sl">MAX LOSS</div><div class="sv" id="po-maxl" style="color:var(--rd)">—</div></div>
+        <div class="stat"><div class="sl">BREAKEVEN(S)</div><div class="sv" id="po-be" style="font-size:11px;color:var(--am)">—</div></div>
+        <div class="stat"><div class="sl">RISK/REWARD</div><div class="sv" id="po-rr" style="color:var(--gr)">—</div></div>
+      </div>
+      <div class="card">
+        <div class="chdr">P&L at Expiry</div>
+        <div id="payoff-chart" style="height:160px;position:relative;overflow:hidden"></div>
+      </div>
     </div>
   </div>
 
@@ -4287,6 +4307,116 @@ function loadSubStatus(){
 
 // Load admin on show + init
 
+
+
+// ── PAYOFF DIAGRAM ────────────────────────────────────────────────────────────
+var _payoffLegs = [];
+
+var _payoffPresets = {
+  straddle: [
+    {action:'BUY',option_type:'CE',strike_offset:0,premium:214,lots:1},
+    {action:'BUY',option_type:'PE',strike_offset:0,premium:214,lots:1}
+  ],
+  strangle: [
+    {action:'BUY',option_type:'CE',strike_offset:100,premium:120,lots:1},
+    {action:'BUY',option_type:'PE',strike_offset:-100,premium:120,lots:1}
+  ],
+  iron_condor: [
+    {action:'SELL',option_type:'CE',strike_offset:100,premium:80,lots:1},
+    {action:'BUY', option_type:'CE',strike_offset:200,premium:30,lots:1},
+    {action:'SELL',option_type:'PE',strike_offset:-100,premium:80,lots:1},
+    {action:'BUY', option_type:'PE',strike_offset:-200,premium:30,lots:1}
+  ],
+  bull_spread: [
+    {action:'BUY', option_type:'CE',strike_offset:0,  premium:214,lots:1},
+    {action:'SELL',option_type:'CE',strike_offset:100,premium:120,lots:1}
+  ]
+};
+
+function loadPayoffPreset(name){
+  var spot = parseFloat(document.getElementById('po-spot').value)||24000;
+  var preset = _payoffPresets[name];
+  if(!preset) return;
+  _payoffLegs = preset.map(function(l){
+    return {action:l.action,option_type:l.option_type,strike:spot+l.strike_offset,premium:l.premium,lots:l.lots};
+  });
+  renderPayoffLegs();
+  toast(name.replace('_',' ').toUpperCase()+' loaded','success');
+}
+
+function renderPayoffLegs(){
+  var c=document.getElementById('po-legs');
+  if(!c) return;
+  c.innerHTML='<div style="font-size:9px;font-weight:700;color:var(--mu);margin-bottom:6px">LEGS ('+_payoffLegs.length+'):</div>';
+  _payoffLegs.forEach(function(l,i){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:6px;padding:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;margin-bottom:4px;font-size:10px';
+    var ac=l.action==='BUY'?'var(--gr)':'var(--rd)';
+    row.innerHTML='<span style="color:'+ac+';font-weight:700">'+l.action+'</span>'
+      +'<span style="color:var(--bl)">'+l.option_type+'</span>'
+      +'<span>K='+l.strike+'</span>'
+      +'<span style="color:var(--am)">₹'+l.premium+'</span>'
+      +'<span style="color:var(--mu)">×'+l.lots+' lot</span>';
+    c.appendChild(row);
+  });
+}
+
+function calcPayoff(){
+  if(!_payoffLegs.length){toast('Select a strategy preset first','warn');return;}
+  var spot=parseFloat(document.getElementById('po-spot').value)||24000;
+  var spotRange=[];
+  for(var s=spot-1000;s<=spot+1000;s+=50) spotRange.push(s);
+  
+  var payoffs=spotRange.map(function(s){
+    var total=0;
+    _payoffLegs.forEach(function(l){
+      var expiry=l.option_type==='CE'?Math.max(0,s-l.strike):Math.max(0,l.strike-s);
+      var pnl=(l.action==='BUY'?expiry-l.premium:l.premium-expiry)*l.lots*50;
+      total+=pnl;
+    });
+    return {spot:s,pnl:Math.round(total)};
+  });
+  
+  var maxP=Math.max.apply(null,payoffs.map(function(p){return p.pnl;}));
+  var maxL=Math.min.apply(null,payoffs.map(function(p){return p.pnl;}));
+  var bes=[];
+  for(var i=1;i<payoffs.length;i++){
+    if(payoffs[i-1].pnl*payoffs[i].pnl<0){
+      bes.push(Math.round((payoffs[i-1].spot+payoffs[i].spot)/2));
+    }
+  }
+  
+  document.getElementById('payoff-out').style.display='block';
+  document.getElementById('po-maxp').textContent='₹'+maxP.toLocaleString();
+  document.getElementById('po-maxl').textContent='₹'+maxL.toLocaleString();
+  document.getElementById('po-be').textContent=bes.length?bes.join(' / '):'N/A';
+  document.getElementById('po-rr').textContent=maxL!==0?'1:'+(Math.abs(maxP/maxL)).toFixed(2):'∞';
+  
+  // Draw simple bar chart
+  var chart=document.getElementById('payoff-chart');
+  var absMax=Math.max(Math.abs(maxP),Math.abs(maxL));
+  var svgH=160,svgW=chart.offsetWidth||320;
+  var midY=svgH/2;
+  var points=payoffs.filter(function(_,i){return i%2===0;});
+  var w=svgW/points.length;
+  
+  var svg='<svg width="100%" height="'+svgH+'" style="overflow:visible">';
+  svg+='<line x1="0" y1="'+midY+'" x2="'+svgW+'" y2="'+midY+'" stroke="rgba(255,255,255,.1)" stroke-width="1"/>';
+  svg+='<text x="4" y="'+midY+'" fill="#64748b" font-size="8">0</text>';
+  
+  points.forEach(function(p,i){
+    var barH=Math.abs(p.pnl/absMax)*(svgH/2-10);
+    var color=p.pnl>=0?'#00ff88':'#ff3366';
+    var x=i*w;
+    var y=p.pnl>=0?midY-barH:midY;
+    svg+='<rect x="'+x+'" y="'+y+'" width="'+(w-1)+'" height="'+barH+'" fill="'+color+'" opacity="0.8"/>';
+    // Spot label every 5 bars
+    if(i%5===0) svg+='<text x="'+x+'" y="'+(svgH-2)+'" fill="#64748b" font-size="7">'+p.spot+'</text>';
+  });
+  svg+='</svg>';
+  chart.innerHTML=svg;
+  toast('Payoff calculated!','success');
+}
 
 // ── OPTIONS TAB FUNCTIONS ─────────────────────────────────────────────────
 function optTab(tab,btn){
