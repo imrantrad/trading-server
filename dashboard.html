@@ -4285,14 +4285,19 @@ function loadSubStatus(){
 
 // ── OPTIONS TAB FUNCTIONS ─────────────────────────────────────────────────
 function optTab(tab,btn){
+  // Show/hide panels
   ['greeks','chain','payoff','iv'].forEach(function(t){
     var el=document.getElementById('opt-'+t);
     if(el) el.style.display=(t===tab)?'block':'none';
   });
-  document.querySelectorAll('[id^="opt-tab-"]').forEach(function(b){
-    b.style.background='var(--bg4)';b.style.borderColor='var(--bo)';b.style.color='var(--mu)';
+  // Reset all tab buttons
+  ['greeks','chain','payoff','iv'].forEach(function(t){
+    var b=document.getElementById('opt-tab-'+t);
+    if(b){b.style.background='var(--bg4)';b.style.borderColor='var(--bo)';b.style.color='var(--mu)';}
   });
-  if(btn){btn.style.background='rgba(251,191,36,.1)';btn.style.borderColor='rgba(251,191,36,.3)';btn.style.color='var(--am)';}
+  // Highlight active tab
+  var active=document.getElementById('opt-tab-'+tab);
+  if(active){active.style.background='rgba(251,191,36,.1)';active.style.borderColor='rgba(251,191,36,.3)';active.style.color='var(--am)';}
 }
 
 function calcGreeksNew(){
