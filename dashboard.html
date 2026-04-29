@@ -4365,7 +4365,7 @@ function calcPayoff(){
   if(!_payoffLegs.length){toast('Select a strategy preset first','warn');return;}
   var spot=parseFloat(document.getElementById('po-spot').value)||24000;
   var spotRange=[];
-  for(var s=spot-1000;s<=spot+1000;s+=50) spotRange.push(s);
+  for(var s=spot-1500;s<=spot+1500;s+=25) spotRange.push(s);
   
   var payoffs=spotRange.map(function(s){
     var total=0;
@@ -4396,10 +4396,19 @@ function calcPayoff(){
   
   document.getElementById('payoff-out').style.display='block';
   document.getElementById('po-maxp').textContent='₹'+maxP.toLocaleString();
-  var maxLDisplay = maxL < 0 ? '-₹'+Math.abs(maxL).toLocaleString() : '₹'+maxL.toLocaleString();
+  var maxLDisplay = maxL < 0 ? '-₹'+Math.abs(maxL).toLocaleString() : (maxL===0?'₹0 (Hedged)':'₹'+maxL.toLocaleString());
   document.getElementById('po-maxl').textContent = maxLDisplay;
-  document.getElementById('po-maxl').style.color = maxL < 0 ? 'var(--rd)' : 'var(--gr)';
-  document.getElementById('po-be').textContent=bes.length?bes.join(' / '):'N/A';
+  document.getElementById('po-maxl').style.color = maxL < 0 ? 'var(--rd)' : maxL===0 ? 'var(--am)' : 'var(--gr)';
+  // Also find transition points (where max profit zone starts/ends)
+  var transits=[];
+  for(var bi=1;bi<payoffs.length;bi++){
+    var prev=payoffs[bi-1].pnl,curr=payoffs[bi].pnl;
+    if(Math.abs(curr-prev)>500 && (curr===maxP||prev===maxP||curr===0||prev===0)){
+      if(!transits.includes(payoffs[bi].spot)) transits.push(payoffs[bi].spot);
+    }
+  }
+  var beDisplay = bes.length ? bes.join(' / ') : (transits.length ? '~'+transits.slice(0,2).join(' / ') : 'None (fully in profit)');
+  document.getElementById('po-be').textContent = beDisplay;
   document.getElementById('po-rr').textContent=maxL!==0?'1:'+(Math.abs(maxP/maxL)).toFixed(2):'∞';
   
   // Draw simple bar chart
