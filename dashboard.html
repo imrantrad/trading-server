@@ -1704,7 +1704,22 @@ function showLegal(type){req('/legal/'+type,'GET',null,function(err,d){var card=
 function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$(id);return e&&e.checked;});if(!all){toast('Check all boxes!','error');return;}var box=$('sig-box');if(!box)return;box.style.display='block';box.innerHTML='<div style="color:var(--gr);font-size:12px;font-weight:700;margin-bottom:4px">DIGITALLY SIGNED</div><div style="font-size:9px;color:var(--mu)">Time: '+new Date().toLocaleString('en-IN')+'</div><div style="font-size:9px;color:var(--mu)">User: Demo | Plan: PRO</div>';toast('Signed!','success');}
 
 // PROFILE
-function swProf(tab,btn){['set','sub','th'].forEach(function(t){var el=$('ps-'+t);if(el)el.style.display=t===tab?'block':'none';});document.querySelectorAll('#pnl-prof .tab').forEach(function(b){b.classList.remove('active');});if(btn)btn.classList.add('active');}
+function swProf(tab,btn){
+  // All profile sub-panels
+  ['set','sub','broker','th','dash'].forEach(function(t){
+    var el=$('ps-'+t);
+    if(el) el.style.display = (t===tab) ? 'block' : 'none';
+  });
+  if(tab==='dash') buildTabVisibilityList();
+  if(tab==='sub') buildPlanCards();
+  if(tab==='th') buildThemeCards();
+  if(tab==='broker') { loadBrokerStatus(); }
+  if(!tab) {
+    // Back to main menu - scroll top
+    var pf=document.getElementById('pnl-prof');
+    if(pf) pf.scrollTop=0;
+  }
+}
 function loadProfStats(){
   req('/stats','GET',null,function(err,d){
     if(err||!d)return;
