@@ -1159,7 +1159,7 @@ function bellClick(){
   _bellClicks++;
   if(_bellTimer) clearTimeout(_bellTimer);
   _bellTimer = setTimeout(function(){ _bellClicks = 0; }, 3000);
-  if(_bellClicks >= 5){
+  if(_bellClicks >= 3){
     _bellClicks = 0;
     // Open admin tab
     show('admin', null);
@@ -1830,8 +1830,9 @@ function loadProfStats(){
   }catch(e){}
 }
 function saveProf(){
+  var name = gv('pf-n')||'Demo Trader';
   var data={
-    full_name: gv('pf-n')||'Demo Trader',
+    full_name: name,
     phone: gv('pf-ph')||'',
     capital: nv('pf-c')||500000,
     risk_per_trade: nv('pf-r')||1,
@@ -1839,10 +1840,13 @@ function saveProf(){
     broker: gv('pf-b')||'ZERODHA',
     subscription_plan: 'PRO'
   };
-  // Save to localStorage first (instant)
+  // Save to localStorage FIRST (instant, persists on refresh)
   try{ localStorage.setItem('trd_profile_'+UID, JSON.stringify(data)); }catch(e){}
-  // Update ALL name displays immediately
+  // Update ALL displays immediately
   updateProfileUI(data);
+  // Also update prof-name-display directly
+  var nd = document.getElementById('prof-name-display');
+  if(nd) nd.textContent = data.full_name;
   // Then sync to server
   req('/users/'+UID,'PUT',data,function(err,r){
     toast('✅ Profile saved!','success');
@@ -1963,37 +1967,75 @@ function fallbackToPolling() {
 
 // INIT
 (function(){
+  // ── STEP 1: Theme ──
   var t=localStorage.getItem('trd-theme');
   if(t&&t!=='dark'){applyTh(t,null);}
+  
+  // ── STEP 2: Build UI components ──
   buildPlanCards();
   buildThemeCards();
-  alog('TRD v12.3 initialized - Connecting...','sys');
   
-  // Try WebSocket first, fallback to polling
+  // ── STEP 3: Force correct startup panel ──
+  // Hide ALL panels first
+  document.querySelectorAll('.pnl').forEach(function(p){
+    p.classList.remove('active');
+    p.removeAttribute('style');
+  });
+  document.querySelectorAll('.tab').forEach(function(t2){t2.classList.remove('active');});
+  
+  // Restore last tab from localStorage (default: trade)
+  var lastTab = 'trade';
+  try{
+    var saved = localStorage.getItem('trd_last_tab');
+    if(saved && saved !== 'paper' && saved !== 'livepos' && document.getElementById('pnl-'+saved)){
+      lastTab = saved;
+    }
+  }catch(e){}
+  
+  // Show the target panel
+  var tp2 = document.getElementById('pnl-'+lastTab);
+  if(tp2){ tp2.classList.add('active'); }
+  
+  // Highlight matching tab button
+  var tabFound = false;
+  document.querySelectorAll('.tab').forEach(function(tb){
+    if(!tabFound && tb.getAttribute('onclick') && tb.getAttribute('onclick').indexOf("'"+lastTab+"'") >= 0){
+      tb.classList.add('active'); tabFound = true;
+    }
+  });
+  if(!tabFound){
+    var fb = document.querySelector('.tab');
+    if(fb) fb.classList.add('active');
+  }
+  
+  // ── STEP 4: Load profile from localStorage ──
+  loadSavedProfile();
+  
+  // ── STEP 5: Restore trade mode ──
+  try{ var sm=localStorage.getItem('trd_trade_mode'); if(sm) switchToMode(sm); }catch(e){}
+  
+  // ── STEP 6: Connect & Load data ──
   connectWS();
-  
-  // Always do initial HTTP load
   loadStats();
   loadMkt();
   
-  setInterval(function(){var a=document.querySelector('.pnl.active');if(a){if(a.id==='pnl-risk')loadRisk();if(a.id==='pnl-pos')loadPos();}},15000);
-  // Show trade panel on startup
-  (function(){
-    var tp = document.getElementById('pnl-trade');
-    if(tp){ tp.classList.add('active'); }
-    var ft = document.querySelector('.tab');
-    if(ft) ft.classList.add('active');
-  })();
-  // Load saved profile and broker on startup
-  setTimeout(loadSavedProfile, 500);
-  setTimeout(loadStrategyRegistry, 3000); // Load all strategies for NLP
-  // Restore trade mode preference
-  try{ var sm=localStorage.getItem('trd_trade_mode'); if(sm) switchToMode(sm); }catch(e){}
+  // ── STEP 7: Delayed tasks ──
   setTimeout(loadBrokerStatus, 2000);
+  setTimeout(loadAutoExecConfig, 2500);
+  setTimeout(loadStrategyRegistry, 3000);
+  // NOTE: loadUIConfig removed from auto-run (was causing paper test switch)
   
+  setInterval(function(){
+    var a=document.querySelector('.pnl.active');
+    if(a){
+      if(a.id==='pnl-risk')loadRisk();
+      if(a.id==='pnl-pos')loadPos();
+    }
+  },15000);
+  
+  alog('TRD v12.3 ready','sys');
+  // Load saved profile and broker on startup
   // Feature init
-  setTimeout(loadAutoExecConfig, 2000);
-  setTimeout(loadUIConfig, 1500);
   setInterval(pollNotifCount, 60000);
   setTimeout(pollNotifCount, 3000);
   setTimeout(function() {
