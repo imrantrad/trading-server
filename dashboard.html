@@ -286,10 +286,10 @@ input:focus, select:focus, textarea:focus {
 
   <!-- Sub-tabs -->
   <div style="display:flex;gap:4px;margin-bottom:10px">
-    <button class="btn ba" id="opt-tab-greeks" onclick="optTab('greeks',this)" style="flex:1;padding:7px;font-size:9px">🧮 GREEKS</button>
-    <button class="btn" id="opt-tab-chain" onclick="optTab('chain',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">📊 CHAIN</button>
-    <button class="btn" id="opt-tab-payoff" onclick="optTab('payoff',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">📈 PAYOFF</button>
-    <button class="btn" id="opt-tab-iv" onclick="optTab('iv',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🎯 IV CALC</button>
+    <button class="btn ba" id="opt-tab-greeks" onclick="['greeks','chain','payoff','iv'].forEach(function(t){var e=document.getElementById('opt-'+t);if(e)e.style.display=t==='greeks'?'block':'none';});['greeks','chain','payoff','iv'].forEach(function(t){var b=document.getElementById('opt-tab-'+t);if(b){b.style.background=t==='greeks'?'rgba(251,191,36,.1)':'var(--bg4)';b.style.color=t==='greeks'?'var(--am)':'var(--mu)';}})" style="flex:1;padding:7px;font-size:9px">🧮 GREEKS</button>
+    <button class="btn" id="opt-tab-chain" onclick="['greeks','chain','payoff','iv'].forEach(function(t){var e=document.getElementById('opt-'+t);if(e)e.style.display=t==='chain'?'block':'none';});['greeks','chain','payoff','iv'].forEach(function(t){var b=document.getElementById('opt-tab-'+t);if(b){b.style.background=t==='chain'?'rgba(251,191,36,.1)':'var(--bg4)';b.style.color=t==='chain'?'var(--am)':'var(--mu)';}})" style="flex:1;padding:7px;font-size:9px">📊 CHAIN</button>
+    <button class="btn" id="opt-tab-payoff" onclick="['greeks','chain','payoff','iv'].forEach(function(t){var e=document.getElementById('opt-'+t);if(e)e.style.display=t==='payoff'?'block':'none';});['greeks','chain','payoff','iv'].forEach(function(t){var b=document.getElementById('opt-tab-'+t);if(b){b.style.background=t==='payoff'?'rgba(251,191,36,.1)':'var(--bg4)';b.style.color=t==='payoff'?'var(--am)':'var(--mu)';}})" style="flex:1;padding:7px;font-size:9px">📈 PAYOFF</button>
+    <button class="btn" id="opt-tab-iv" onclick="['greeks','chain','payoff','iv'].forEach(function(t){var e=document.getElementById('opt-'+t);if(e)e.style.display=t==='iv'?'block':'none';});['greeks','chain','payoff','iv'].forEach(function(t){var b=document.getElementById('opt-tab-'+t);if(b){b.style.background=t==='iv'?'rgba(251,191,36,.1)':'var(--bg4)';b.style.color=t==='iv'?'var(--am)':'var(--mu)';}})" style="flex:1;padding:7px;font-size:9px">🎯 IV</button>
   </div>
 
   <!-- GREEKS CALCULATOR -->
