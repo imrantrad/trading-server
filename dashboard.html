@@ -401,10 +401,166 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 <div id="pnl-admin" class="pnl">
-  <div style="display:flex;gap:6px;margin-bottom:4px"><button class="btn bg" onclick="loadAdmin()">REFRESH</button><button class="btn bb" onclick="loadAudit()">AUDIT LOG</button></div>
-  <div class="g4"><div class="stat"><div class="sl">USERS</div><div class="sv" id="a-u" style="color:var(--bl)">-</div></div><div class="stat"><div class="sl">ACTIVE TODAY</div><div class="sv" id="a-at" style="color:var(--gr)">-</div></div><div class="stat"><div class="sl">REVENUE</div><div class="sv" id="a-rev" style="color:var(--am);font-size:12px">-</div></div><div class="stat"><div class="sl">MRR</div><div class="sv" id="a-mrr" style="color:var(--gr);font-size:12px">-</div></div></div>
-  <div class="g2" style="gap:10px"><div class="card"><div class="chdr">FEATURE USAGE</div><div id="a-feat" style="font-size:9px;color:var(--mu)">Click REFRESH</div></div><div class="card"><div class="chdr">PLAN DIST</div><div id="a-plans" style="font-size:9px;color:var(--mu)">Click REFRESH</div></div></div>
-  <div class="card"><div class="chdr">AUDIT LOG</div><div id="a-audit" style="font-size:9px;max-height:120px;overflow-y:auto;color:var(--mu)">Click AUDIT LOG</div></div>
+
+  <!-- Admin header -->
+  <div style="background:linear-gradient(135deg,#1a0a00,#0d0014);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:14px 16px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.25);display:flex;align-items:center;justify-content:center;font-size:20px">⚙️</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--am)">ADMIN CONTROL PANEL</div>
+          <div style="font-size:9px;color:var(--mu)">Full system access · TRD v12.3</div>
+        </div>
+      </div>
+      <div id="admin-status-dot" style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--mu)">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--gr)"></span>ONLINE
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin sub-tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">
+    <button class="btn ba" id="adm-tab-dash" onclick="adminTab('dash',this)" style="flex:1;padding:7px;font-size:9px">📊 DASHBOARD</button>
+    <button class="btn" id="adm-tab-users" onclick="adminTab('users',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">👥 USERS</button>
+    <button class="btn" id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">💳 PAYMENTS</button>
+    <button class="btn" id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🖥️ SYSTEM</button>
+  </div>
+
+  <!-- DASHBOARD TAB -->
+  <div id="adm-dash">
+    <div class="g4" style="margin-bottom:10px">
+      <div class="stat"><div class="sl">TOTAL USERS</div><div class="sv" id="adm-total" style="color:var(--bl)">—</div></div>
+      <div class="stat"><div class="sl">ACTIVE</div><div class="sv" id="adm-active" style="color:var(--gr)">—</div></div>
+      <div class="stat"><div class="sl">FREE ACCESS</div><div class="sv" id="adm-free" style="color:var(--am)">—</div></div>
+      <div class="stat"><div class="sl">TOTAL CAPITAL</div><div class="sv" id="adm-cap" style="color:var(--gr);font-size:12px">—</div></div>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <div class="chdr">PLAN DISTRIBUTION</div>
+      <div id="adm-plans" style="display:flex;gap:8px;flex-wrap:wrap;padding:4px 0"></div>
+    </div>
+    <div class="card">
+      <div class="chdr">QUICK ACTIONS</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn bg" onclick="adminTab('users',document.getElementById('adm-tab-users'))" style="flex:1;padding:9px;font-size:9px">👥 MANAGE USERS</button>
+        <button class="btn bb" onclick="adminTab('pay',document.getElementById('adm-tab-pay'))" style="flex:1;padding:9px;font-size:9px">💳 PAYMENT CONFIG</button>
+        <button class="btn ba" onclick="adminTab('sys',document.getElementById('adm-tab-sys'))" style="flex:1;padding:9px;font-size:9px">🖥️ SYSTEM STATUS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- USERS TAB -->
+  <div id="adm-users" style="display:none">
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <button class="btn bg" onclick="showAddUser()" style="flex:1;padding:8px;font-size:9px">➕ ADD USER</button>
+      <button class="btn bb" onclick="loadAdminUsers()" style="flex:1;padding:8px;font-size:9px">↻ REFRESH</button>
+    </div>
+
+    <!-- Add/Edit User Form -->
+    <div id="adm-user-form" style="display:none;background:var(--bg3);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--am);margin-bottom:10px" id="adm-form-title">➕ ADD NEW USER</div>
+      <input type="hidden" id="adm-uid">
+      <div class="g2" style="gap:6px;margin-bottom:6px">
+        <div><div class="lbl">FULL NAME</div><input id="adm-name" placeholder="User full name"></div>
+        <div><div class="lbl">EMAIL</div><input id="adm-email" placeholder="user@email.com"></div>
+      </div>
+      <div class="g2" style="gap:6px;margin-bottom:6px">
+        <div><div class="lbl">PHONE</div><input id="adm-phone" placeholder="+91 9876543210"></div>
+        <div><div class="lbl">CAPITAL ₹</div><input type="number" id="adm-capital" value="500000"></div>
+      </div>
+      <div class="g2" style="gap:6px;margin-bottom:6px">
+        <div><div class="lbl">PLAN</div>
+          <select id="adm-plan">
+            <option value="FREE">FREE</option>
+            <option value="BASIC">BASIC — ₹499/mo</option>
+            <option value="PRO" selected>PRO — ₹1499/mo</option>
+            <option value="INSTITUTIONAL">INSTITUTIONAL — ₹4999/mo</option>
+          </select>
+        </div>
+        <div><div class="lbl">STATUS</div>
+          <select id="adm-status">
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="SUSPENDED">SUSPENDED</option>
+            <option value="PENDING">PENDING</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2" style="gap:6px;margin-bottom:8px">
+        <div><div class="lbl">PAYMENT ID</div><input id="adm-payid" placeholder="PAY_xxxxx"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:16px">
+          <input type="checkbox" id="adm-freeaccess" style="width:16px;height:16px">
+          <label for="adm-freeaccess" style="font-size:10px;color:var(--am)">FREE ACCESS (bypass subscription)</label>
+        </div>
+      </div>
+      <div><div class="lbl">NOTES</div><textarea id="adm-notes" rows="2" placeholder="Admin notes..."></textarea></div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <button class="btn bg blg" onclick="saveAdminUser()" style="flex:1">✓ SAVE USER</button>
+        <button class="btn" onclick="document.getElementById('adm-user-form').style.display='none'" style="padding:10px 16px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">✕</button>
+      </div>
+    </div>
+
+    <!-- Users table -->
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>USER ID</th><th>NAME</th><th>EMAIL</th><th>PLAN</th><th>STATUS</th><th>FREE</th><th>ACTIONS</th></tr></thead>
+        <tbody id="adm-users-tbl"><tr><td colspan="7" style="text-align:center;color:var(--mu);padding:20px">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PAYMENTS TAB -->
+  <div id="adm-pay" style="display:none">
+    <div class="card" style="margin-bottom:8px">
+      <div class="chdr">💳 PAYMENT GATEWAY CONFIG</div>
+      <div style="font-size:9px;color:var(--mu);margin-bottom:10px">Configure Razorpay / UPI / Bank for subscription payments</div>
+      <div class="g2" style="gap:6px;margin-bottom:6px">
+        <div><div class="lbl">RAZORPAY KEY ID</div><input id="pay-rz-key" placeholder="rzp_live_xxxxxxxxx"></div>
+        <div><div class="lbl">RAZORPAY SECRET</div><input type="password" id="pay-rz-secret" placeholder="••••••••"></div>
+      </div>
+      <div class="g2" style="gap:6px;margin-bottom:6px">
+        <div><div class="lbl">UPI ID</div><input id="pay-upi" placeholder="trading@upi"></div>
+        <div><div class="lbl">ACCOUNT NAME</div><input id="pay-acname" placeholder="TRD Systems Pvt Ltd"></div>
+      </div>
+      <div class="g2" style="gap:6px;margin-bottom:8px">
+        <div><div class="lbl">BANK ACCOUNT NO</div><input id="pay-bank" placeholder="Account number"></div>
+        <div><div class="lbl">IFSC CODE</div><input id="pay-ifsc" placeholder="SBIN0001234"></div>
+      </div>
+      <button class="btn bg blg" onclick="savePaymentConfig()">✓ SAVE PAYMENT CONFIG</button>
+    </div>
+    <div class="card">
+      <div class="chdr">PLAN PRICING</div>
+      <table class="tbl">
+        <thead><tr><th>PLAN</th><th>PRICE/MO</th><th>FEATURES</th></tr></thead>
+        <tbody>
+          <tr><td style="color:var(--mu)">FREE</td><td style="color:var(--gr)">₹0</td><td style="font-size:9px;color:var(--mu)">Paper trading, 3 strategies, basic</td></tr>
+          <tr><td style="color:var(--bl)">BASIC</td><td style="color:var(--gr)">₹499</td><td style="font-size:9px;color:var(--mu)">Scanner, options chain, 20 strategies</td></tr>
+          <tr><td style="color:var(--p0)">PRO ⭐</td><td style="color:var(--gr)">₹1,499</td><td style="font-size:9px;color:var(--mu)">AI engine, auto-execute, live API</td></tr>
+          <tr><td style="color:var(--am)">INSTITUTIONAL</td><td style="color:var(--gr)">₹4,999</td><td style="font-size:9px;color:var(--mu)">White-label, 5yr backtest, SLA</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SYSTEM TAB -->
+  <div id="adm-sys" style="display:none">
+    <div class="g4" style="margin-bottom:10px">
+      <div class="stat"><div class="sl">CPU %</div><div class="sv" id="sys-cpu" style="color:var(--gr)">—</div></div>
+      <div class="stat"><div class="sl">MEMORY %</div><div class="sv" id="sys-mem" style="color:var(--am)">—</div></div>
+      <div class="stat"><div class="sl">DISK %</div><div class="sv" id="sys-disk" style="color:var(--bl)">—</div></div>
+      <div class="stat"><div class="sl">WS CONNECTIONS</div><div class="sv" id="sys-ws" style="color:var(--gr)">—</div></div>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <div class="chdr">SYSTEM INFO <button onclick="loadSysStatus()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻ REFRESH</button></div>
+      <div id="sys-info" style="font-size:10px;color:var(--mu);line-height:2">Loading...</div>
+    </div>
+    <div class="card">
+      <div class="chdr" style="color:var(--rd)">⚠️ DANGER ZONE</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn ba" onclick="if(confirm('Reset paper trading for all users?'))toast('Paper reset done','success')" style="flex:1;padding:8px;font-size:9px">↺ RESET PAPER</button>
+        <button class="btn br" onclick="if(confirm('This will restart the server!'))toast('Restart signal sent','warn')" style="flex:1;padding:8px;font-size:9px">⚡ RESTART SERVER</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div id="pnl-legal" class="pnl">
@@ -2822,5 +2978,239 @@ function loadLivePositions(){
       tb.appendChild(row);
     });
   });
+}
+</script>
+<script>
+// ══════════════════════════════════════════════════════════════════
+// ADMIN CONTROL PANEL FUNCTIONS
+// ══════════════════════════════════════════════════════════════════
+
+function adminTab(tab, btn){
+  ['dash','users','pay','sys'].forEach(function(t){
+    var el=document.getElementById('adm-'+t);
+    if(el) el.style.display = t===tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('[id^="adm-tab-"]').forEach(function(b){
+    b.style.background='var(--bg4)';b.style.borderColor='var(--bo)';b.style.color='var(--mu)';
+  });
+  if(btn){btn.style.background='rgba(251,191,36,.1)';btn.style.borderColor='rgba(251,191,36,.3)';btn.style.color='var(--am)';}
+  if(tab==='dash') loadAdminDash();
+  if(tab==='users') loadAdminUsers();
+  if(tab==='pay') loadPaymentConfig();
+  if(tab==='sys') loadSysStatus();
+}
+
+function loadAdminDash(){
+  req('/admin/dashboard','GET',null,function(err,d){
+    if(err||!d) return;
+    if($('adm-total')) $('adm-total').textContent = d.total_users||0;
+    if($('adm-active')) $('adm-active').textContent = d.active_users||0;
+    if($('adm-free')) $('adm-free').textContent = d.free_access_users||0;
+    if($('adm-cap')) $('adm-cap').textContent = '₹'+(((d.total_capital||0)/100000).toFixed(1))+'L';
+    var pl=$('adm-plans');
+    if(pl&&d.plans){
+      pl.innerHTML='';
+      var colors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--p0)',INSTITUTIONAL:'var(--am)'};
+      Object.keys(d.plans).forEach(function(p){
+        var chip=document.createElement('div');
+        chip.style.cssText='padding:4px 12px;background:var(--bg4);border:1px solid var(--bo);border-radius:10px;font-size:9px;display:flex;gap:6px;align-items:center';
+        chip.innerHTML='<span style="color:'+( colors[p]||'var(--tx)')+'">'+p+'</span><span style="font-size:11px;font-weight:700;color:var(--tx)">'+d.plans[p]+'</span>';
+        pl.appendChild(chip);
+      });
+    }
+  });
+}
+
+function loadAdminUsers(){
+  req('/admin/users','GET',null,function(err,d){
+    var tb=document.getElementById('adm-users-tbl');
+    if(!tb) return;
+    if(err||!d||!d.users||!d.users.length){
+      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:20px">No users found</td></tr>';
+      return;
+    }
+    tb.innerHTML='';
+    d.users.forEach(function(u){
+      var planColors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--p0)',INSTITUTIONAL:'var(--am)'};
+      var statusColor=u.status==='ACTIVE'?'var(--gr)':u.status==='SUSPENDED'?'var(--rd)':'var(--am)';
+      var row=document.createElement('tr');
+      row.innerHTML=
+        '<td style="color:var(--mu);font-size:9px">'+(u.user_id||'').slice(-8)+'</td>'+
+        '<td style="font-weight:600">'+(u.full_name||'—')+'</td>'+
+        '<td style="color:var(--mu);font-size:10px">'+(u.email||'—')+'</td>'+
+        '<td><span style="color:'+(planColors[u.plan]||'var(--mu)')+'">'+( u.plan||'FREE')+'</span></td>'+
+        '<td><span style="color:'+statusColor+'">'+(u.status||'ACTIVE')+'</span></td>'+
+        '<td style="text-align:center">'+(u.free_access?'<span style="color:var(--gr)">✓</span>':'—')+'</td>'+
+        '<td><div style="display:flex;gap:3px">'+
+          '<button onclick="editUser(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:var(--bg4);border:1px solid var(--bo);color:var(--bl);border-radius:3px;cursor:pointer">✏️</button>'+
+          '<button onclick="quickSetPlan(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:var(--bg4);border:1px solid var(--bo);color:var(--am);border-radius:3px;cursor:pointer">💎</button>'+
+          '<button onclick="deleteUser(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:3px;cursor:pointer">✕</button>'+
+        '</div></td>';
+      tb.appendChild(row);
+    });
+  });
+}
+
+function showAddUser(){
+  var f=document.getElementById('adm-user-form');
+  if(!f) return;
+  f.style.display='block';
+  document.getElementById('adm-form-title').textContent='➕ ADD NEW USER';
+  document.getElementById('adm-uid').value='';
+  ['adm-name','adm-email','adm-phone','adm-payid','adm-notes'].forEach(function(id){var e=$( id);if(e)e.value='';});
+  var cap=$('adm-capital');if(cap)cap.value=500000;
+  var plan=$('adm-plan');if(plan)plan.value='PRO';
+  var st=$('adm-status');if(st)st.value='ACTIVE';
+  var fa=$('adm-freeaccess');if(fa)fa.checked=false;
+}
+
+function editUser(uid){
+  req('/admin/users','GET',null,function(err,d){
+    if(err||!d||!d.users) return;
+    var u=d.users.find(function(x){return x.user_id===uid;});
+    if(!u) return;
+    var f=document.getElementById('adm-user-form');
+    if(f) f.style.display='block';
+    document.getElementById('adm-form-title').textContent='✏️ EDIT USER: '+u.full_name;
+    var e=function(id,val){var el=$(id);if(el)el.value=val||'';};
+    e('adm-uid',u.user_id);e('adm-name',u.full_name);e('adm-email',u.email);
+    e('adm-phone',u.phone);e('adm-capital',u.capital||500000);
+    e('adm-payid',u.payment_id);e('adm-notes',u.notes);
+    var plan=$('adm-plan');if(plan)plan.value=u.plan||'PRO';
+    var st=$('adm-status');if(st)st.value=u.status||'ACTIVE';
+    var fa=$('adm-freeaccess');if(fa)fa.checked=!!u.free_access;
+    f.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+}
+
+function saveAdminUser(){
+  var uid=$('adm-uid').value||('USR'+Date.now());
+  var data={
+    user_id:uid,
+    full_name:$('adm-name').value,
+    email:$('adm-email').value,
+    phone:$('adm-phone').value,
+    capital:parseFloat($('adm-capital').value)||500000,
+    plan:$('adm-plan').value,
+    status:$('adm-status').value,
+    free_access:$('adm-freeaccess').checked,
+    payment_id:$('adm-payid').value,
+    notes:$('adm-notes').value
+  };
+  var ep=$('adm-uid').value?'/admin/users/'+uid:'/admin/users/add';
+  var method=$('adm-uid').value?'PUT':'POST';
+  req(ep,method,data,function(err,r){
+    if(!err&&(r.updated||r.added)){
+      toast('✅ User saved!','success');
+      document.getElementById('adm-user-form').style.display='none';
+      loadAdminUsers();
+    } else { toast('❌ Save failed','error'); }
+  });
+}
+
+function quickSetPlan(uid){
+  var plan=prompt('Set plan (FREE/BASIC/PRO/INSTITUTIONAL):','PRO');
+  if(!plan) return;
+  var freeAccess=confirm('Grant free access? (bypass payment)');
+  req('/admin/users/'+uid+'/plan?plan='+plan.toUpperCase()+'&free_access='+freeAccess,'POST',null,function(err,r){
+    if(!err&&r.updated){ toast('✅ Plan set to '+plan.toUpperCase(),'success'); loadAdminUsers(); }
+    else toast('❌ Failed','error');
+  });
+}
+
+function deleteUser(uid){
+  if(!confirm('⚠️ Delete user '+uid+'? This cannot be undone!')) return;
+  req('/admin/users/'+uid,'DELETE',null,function(err,r){
+    if(!err&&r.deleted){ toast('✅ User deleted','success'); loadAdminUsers(); }
+    else toast('❌ Delete failed','error');
+  });
+}
+
+function loadPaymentConfig(){
+  req('/admin/payment_config','GET',null,function(err,d){
+    if(err||!d) return;
+    var s=function(id,val){var e=$(id);if(e&&val)e.value=val;};
+    s('pay-rz-key',d.razorpay_key);
+    s('pay-upi',d.upi_id);
+    s('pay-bank',d.bank_account);
+    s('pay-ifsc',d.ifsc);
+    s('pay-acname',d.account_name);
+  });
+}
+
+function savePaymentConfig(){
+  var data={
+    razorpay_key:$('pay-rz-key').value,
+    razorpay_secret:$('pay-rz-secret').value,
+    upi_id:$('pay-upi').value,
+    bank_account:$('pay-bank').value,
+    ifsc:$('pay-ifsc').value,
+    account_name:$('pay-acname').value
+  };
+  req('/admin/payment_config','POST',data,function(err,r){
+    if(!err&&r.saved){ toast('✅ Payment config saved!','success'); }
+    else toast('❌ Save failed','error');
+  });
+}
+
+function loadSysStatus(){
+  req('/admin/system_status','GET',null,function(err,d){
+    if(err||!d) return;
+    if($('sys-cpu'))$('sys-cpu').textContent=d.cpu_percent+'%';
+    if($('sys-mem'))$('sys-mem').textContent=d.memory_percent+'%';
+    if($('sys-disk'))$('sys-disk').textContent=d.disk_percent+'%';
+    if($('sys-ws'))$('sys-ws').textContent=d.active_connections;
+    var si=$('sys-info');
+    if(si) si.innerHTML=
+      '<div>Version: <b style="color:var(--tx)">v'+d.version+'</b></div>'+
+      '<div>Uptime: <b style="color:var(--gr)">'+d.uptime+'</b></div>'+
+      '<div>Timestamp: <b style="color:var(--tx)">'+new Date(d.timestamp).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})+'</b></div>'+
+      '<div>Memory Available: <b style="color:var(--tx)">'+d.memory_available_gb+'GB</b></div>';
+  });
+}
+
+// ── PROFILE: Fix notifications toggle ───────────────────────────────
+function loadNotifPrefs(){
+  req('/notifications/'+UID+'/prefs','GET',null,function(err,d){
+    if(err||!d) return;
+    var prefs=d.preferences||{};
+    ['inapp','push','email','sms','telegram','whatsapp'].forEach(function(ch){
+      var el=$('notif-'+ch);
+      if(el) el.checked = prefs[ch]!==false;
+    });
+  });
+}
+
+function saveNotifPrefs(){
+  var prefs={};
+  ['inapp','push','email','sms','telegram','whatsapp'].forEach(function(ch){
+    var el=$('notif-'+ch);
+    if(el) prefs[ch]=el.checked;
+  });
+  req('/notifications/'+UID+'/prefs','POST',{preferences:prefs},function(err,r){
+    if(!err&&r.saved){ toast('✅ Notification preferences saved!','success'); }
+    else toast('✅ Preferences saved locally','success');
+    try{ localStorage.setItem('trd_notif_prefs',JSON.stringify(prefs)); }catch(e){}
+  });
+}
+
+// ── Subscription plan update ─────────────────────────────────────────
+function loadSubStatus(){
+  req('/subscription/status/'+UID,'GET',null,function(err,d){
+    if(err||!d) return;
+    // Update plan badge in header
+    var planEl=document.querySelector('[style*="a855f7"]');
+    if(planEl) planEl.textContent='★ '+(d.plan||'PRO');
+    alog('Plan: '+d.plan+(d.free_access?' (Free Access)':''),'sys');
+  });
+}
+
+// Load admin on show + init
+var _origShow = show;
+function show(name,btn){
+  _origShow(name,btn);
+  if(name==='admin'){
+    adminTab('dash',document.getElementById('adm-tab-dash'));
+  }
 }
 </script>

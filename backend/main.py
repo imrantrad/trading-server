@@ -2196,3 +2196,225 @@ async def serve_website():
         with open(website_path, "r") as f:
             return HTMLResponse(f.read())
     return HTMLResponse("<h1>Website not found</h1>")
+
+# ════════════════════════════════════════════════════════════════════════════
+# ADMIN SYSTEM — Full Control Panel
+# ════════════════════════════════════════════════════════════════════════════
+
+import hashlib
+
+# In-memory store (replace with DB in production)
+_admin_users = {
+    "admin": {
+        "password_hash": hashlib.sha256("admin123".encode()).hexdigest(),
+        "role": "SUPER_ADMIN",
+        "name": "System Admin"
+    }
+}
+
+_all_users = {
+    "USR124535215": {
+        "user_id": "USR124535215",
+        "full_name": "Demo Trader",
+        "email": "demo@trading.app",
+        "phone": "+91 9876543210",
+        "plan": "PRO",
+        "capital": 500000,
+        "status": "ACTIVE",
+        "broker": "ZERODHA",
+        "free_access": False,
+        "created_at": "2026-04-01",
+        "payment_id": "PAY_DEMO_001",
+        "notes": ""
+    }
+}
+
+_payment_configs = {
+    "razorpay_key": "",
+    "razorpay_secret": "",
+    "upi_id": "",
+    "bank_account": "",
+    "ifsc": "",
+    "account_name": ""
+}
+
+class AdminAuth(BaseModel):
+    username: str
+    password: str
+
+class UserUpdate(BaseModel):
+    user_id: str
+    full_name: str = ""
+    email: str = ""
+    phone: str = ""
+    plan: str = "FREE"
+    capital: float = 500000
+    status: str = "ACTIVE"
+    free_access: bool = False
+    notes: str = ""
+    payment_id: str = ""
+
+class PaymentConfig(BaseModel):
+    razorpay_key: str = ""
+    razorpay_secret: str = ""
+    upi_id: str = ""
+    bank_account: str = ""
+    ifsc: str = ""
+    account_name: str = ""
+
+@app.post("/admin/login")
+def admin_login(auth: AdminAuth):
+    user = _admin_users.get(auth.username)
+    if not user:
+        return {"success": False, "error": "Invalid credentials"}
+    ph = hashlib.sha256(auth.password.encode()).hexdigest()
+    if ph != user["password_hash"]:
+        return {"success": False, "error": "Invalid credentials"}
+    return {
+        "success": True,
+        "role": user["role"],
+        "name": user["name"],
+        "token": hashlib.sha256(f"{auth.username}{ph}".encode()).hexdigest()[:16]
+    }
+
+@app.get("/admin/dashboard")
+def admin_dashboard():
+    users = list(_all_users.values())
+    plans = {}
+    for u in users:
+        p = u.get("plan","FREE")
+        plans[p] = plans.get(p,0) + 1
+    return {
+        "total_users": len(users),
+        "active_users": len([u for u in users if u.get("status")=="ACTIVE"]),
+        "plans": plans,
+        "total_capital": sum(u.get("capital",0) for u in users),
+        "free_access_users": len([u for u in users if u.get("free_access")]),
+        "server_status": "ONLINE",
+        "version": "v12.3.0",
+        "uptime": "99.9%"
+    }
+
+@app.get("/admin/users")
+def admin_get_users():
+    return {"users": list(_all_users.values()), "count": len(_all_users)}
+
+@app.post("/admin/users/add")
+def admin_add_user(user: UserUpdate):
+    uid = user.user_id or f"USR{int(datetime.now().timestamp())}"
+    _all_users[uid] = {
+        "user_id": uid,
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone": user.phone,
+        "plan": user.plan,
+        "capital": user.capital,
+        "status": user.status,
+        "free_access": user.free_access,
+        "notes": user.notes,
+        "payment_id": user.payment_id,
+        "created_at": datetime.now().strftime("%Y-%m-%d"),
+        "broker": "ZERODHA"
+    }
+    return {"added": True, "user_id": uid, "message": f"User {user.full_name} added"}
+
+@app.put("/admin/users/{user_id}")
+def admin_update_user(user_id: str, user: UserUpdate):
+    if user_id not in _all_users:
+        _all_users[user_id] = {}
+    _all_users[user_id].update({
+        "user_id": user_id,
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone": user.phone,
+        "plan": user.plan,
+        "capital": user.capital,
+        "status": user.status,
+        "free_access": user.free_access,
+        "notes": user.notes,
+        "payment_id": user.payment_id,
+        "updated_at": datetime.now().isoformat()
+    })
+    return {"updated": True, "user_id": user_id}
+
+@app.delete("/admin/users/{user_id}")
+def admin_delete_user(user_id: str):
+    if user_id in _all_users:
+        del _all_users[user_id]
+        return {"deleted": True, "user_id": user_id}
+    return {"deleted": False, "error": "User not found"}
+
+@app.post("/admin/users/{user_id}/plan")
+def admin_set_plan(user_id: str, plan: str = "PRO", free_access: bool = False):
+    if user_id not in _all_users:
+        _all_users[user_id] = {"user_id": user_id}
+    _all_users[user_id]["plan"] = plan
+    _all_users[user_id]["free_access"] = free_access
+    _all_users[user_id]["plan_set_by"] = "ADMIN"
+    _all_users[user_id]["plan_set_at"] = datetime.now().isoformat()
+    return {"updated": True, "user_id": user_id, "plan": plan, "free_access": free_access}
+
+@app.post("/admin/users/{user_id}/status")
+def admin_set_status(user_id: str, status: str = "ACTIVE"):
+    if user_id in _all_users:
+        _all_users[user_id]["status"] = status
+        return {"updated": True, "status": status}
+    return {"error": "User not found"}
+
+@app.get("/admin/payment_config")
+def get_payment_config():
+    # Mask sensitive data
+    cfg = dict(_payment_configs)
+    if cfg.get("razorpay_secret"): cfg["razorpay_secret"] = "****"
+    return cfg
+
+@app.post("/admin/payment_config")
+def set_payment_config(cfg: PaymentConfig):
+    _payment_configs.update({
+        "razorpay_key": cfg.razorpay_key,
+        "razorpay_secret": cfg.razorpay_secret,
+        "upi_id": cfg.upi_id,
+        "bank_account": cfg.bank_account,
+        "ifsc": cfg.ifsc,
+        "account_name": cfg.account_name,
+        "updated_at": datetime.now().isoformat()
+    })
+    return {"saved": True, "message": "Payment config updated"}
+
+@app.get("/admin/system_status")
+def admin_system_status():
+    import psutil, os
+    try:
+        cpu = psutil.cpu_percent(interval=0.1)
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+    except:
+        cpu, mem, disk = 0, type('M',(),{'percent':30,'available':1024**3})(), type('D',(),{'percent':50})()
+    return {
+        "cpu_percent": cpu,
+        "memory_percent": getattr(mem,'percent',30),
+        "memory_available_gb": round(getattr(mem,'available',1024**3)/1024**3, 2),
+        "disk_percent": getattr(disk,'percent',50),
+        "active_connections": len(getattr(ws_manager,'active',[])),
+        "uptime": "99.9%",
+        "version": "12.3.0",
+        "timestamp": datetime.now().isoformat()
+    }
+
+# ── Subscription endpoint (user-facing) ──────────────────────────────
+@app.get("/subscription/status/{user_id}")
+def get_subscription_status(user_id: str):
+    user = _all_users.get(user_id, {})
+    return {
+        "user_id": user_id,
+        "plan": user.get("plan", "FREE"),
+        "status": user.get("status", "ACTIVE"),
+        "free_access": user.get("free_access", False),
+        "capital": user.get("capital", 500000),
+        "features": {
+            "FREE":  ["paper_trading","basic_backtest","3_strategies","nlp_orders"],
+            "BASIC": ["paper_trading","scanner","options_chain","20_strategies","6m_backtest","reports"],
+            "PRO":   ["everything","ai_engine","auto_execute","live_api","unlimited_strategies","12m_backtest","all_notifications"],
+            "INSTITUTIONAL": ["everything","5yr_backtest","white_label","custom_api","admin_dashboard","sla"]
+        }.get(user.get("plan","FREE"), [])
+    }
