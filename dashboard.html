@@ -773,7 +773,7 @@ textarea{resize:vertical;min-height:55px}
 
 
 <!-- PROFESSIONAL CHART MODAL -->
-<div id="chart-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);flex-direction:column">
+<div id="chart-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:#00000a;flex-direction:column">
   <div style="background:var(--bg2);border-bottom:1px solid var(--bo);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:8px">
@@ -1882,11 +1882,14 @@ function generateOHLC(sym, tf, periods) {
 
   var tfSecs = { '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
   // Ensure enough candles for full view
-  if(tf==='1'&&periods<500) periods=500;
-  if(tf==='5'&&periods<200) periods=200;
-  if(tf==='15'&&periods<100) periods=100;
-  if(tf==='30'&&periods<80) periods=80;
-  if(tf==='D'&&periods<365) periods=365;
+  if(tf==='1')  periods=Math.max(periods,600);   // 10 hrs
+  if(tf==='5')  periods=Math.max(periods,450);   // 6 trading days
+  if(tf==='15') periods=Math.max(periods,200);   // 7 trading days
+  if(tf==='30') periods=Math.max(periods,160);   // 10 trading days
+  if(tf==='60') periods=Math.max(periods,120);   // 3 months
+  if(tf==='240')periods=Math.max(periods,180);   // 6 months
+  if(tf==='D')  periods=Math.max(periods,365);   // 1 year
+  if(tf==='W')  periods=Math.max(periods,104);   // 2 years
   var secs = tfSecs[tf] || 86400;
 
   var vol = currentBase * (sym==='NIFTY'?0.0005:sym==='BANKNIFTY'?0.0008:0.0006);
@@ -1894,6 +1897,19 @@ function generateOHLC(sym, tf, periods) {
 
   for(var i = periods; i >= 0; i--) {
     var t = now - (i * secs);
+    
+    // Skip weekends for intraday charts
+    if(tf !== 'D' && tf !== 'W') {
+      var tDate = new Date(t * 1000 + 5.5*60*60*1000); // IST
+      var tDow = tDate.getUTCDay();
+      var tHour = tDate.getUTCHours();
+      var tMin = tDate.getUTCMinutes();
+      // Skip Saturday/Sunday
+      if(tDow === 0 || tDow === 6) continue;
+      // Skip before 9:15 AM IST (3:45 UTC) and after 3:30 PM IST (10:00 UTC)
+      var tUTCMins = tHour * 60 + tMin;
+      if(tUTCMins < 225 || tUTCMins > 600) continue; // 3:45 to 10:00 UTC
+    }
     // Skip weekends for daily
     if(tf === 'D' || tf === 'W') {
       var d = new Date(t * 1000);
@@ -2022,7 +2038,9 @@ function loadChartData() {
   }, 300);
 
   // Fetch deterministic historical data from server
-  req('/market/historical/' + chartSym + '?interval=' + chartTF + '&limit=300', 'GET', null, function(err, d) {
+  var histLimit = {'1':600,'5':450,'15':200,'30':160,'60':120,'240':180,'D':365,'W':104};
+  var lim = histLimit[chartTF] || 300;
+  req('/market/historical/' + chartSym + '?interval=' + chartTF + '&limit='+lim, 'GET', null, function(err, d) {
     if(err || !d || !d.candles || d.candles.length < 5) return;
     try {
       candleSeries.setData(d.candles);
