@@ -717,7 +717,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- Subscription / Plans -->
-    <div class="prof-menu-item" onclick="swProf('sub',null)">
+    <div class="prof-menu-item" onclick="openSubModal()">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💎</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Subscription Plans</div>
@@ -1097,6 +1097,17 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 
+<!-- SUBSCRIPTION MODAL -->
+<div id="pmodal-sub" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.97);overflow-y:auto">
+  <div style="max-width:480px;margin:0 auto;padding:16px">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px">
+      <button onclick="document.getElementById('pmodal-sub').style.display='none';document.body.style.overflow=''" style="background:var(--bg3);border:1px solid var(--bo);color:var(--gr);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer">&#8249;</button>
+      <div style="font-size:15px;font-weight:700">&#128142; Subscription Plans</div>
+    </div>
+    <div id="pmodal-sub-cards" style="display:flex;flex-direction:column;gap:12px"></div>
+  </div>
+</div>
+
 <!-- MY ACCOUNT MODAL -->
 <div id="pmodal-account" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.97);overflow-y:auto">
   <div style="max-width:480px;margin:0 auto;padding:16px">
@@ -1335,6 +1346,38 @@ function openMyAccount(){
   }catch(e){}
   var m=document.getElementById('pmodal-account');
   if(m){ m.style.display='block'; m.scrollTop=0; }
+  document.body.style.overflow='hidden';
+}
+
+
+function openSubModal(){
+  var pc=document.getElementById('pmodal-sub-cards');
+  if(pc&&!pc.children.length){
+    var plans=[
+      ['FREE','FREE','Rs 0/mo','#94a3b8','Paper trading|3 strategies|Basic backtest'],
+      ['BASIC','BASIC','Rs 499/mo','#4f8ef7','Scanner|Options chain|20 strategies'],
+      ['PRO','PRO','Rs 1499/mo','#a855f7','AI Engine|Live API|Unlimited strategies'],
+      ['INST','INSTITUTIONAL','Rs 4999/mo','#fbbf24','White-label|5yr backtest|SLA']
+    ];
+    plans.forEach(function(p){
+      var d=document.createElement('div');
+      d.style.cssText='background:var(--bg3);border:2px solid var(--bo);border-radius:12px;padding:16px';
+      var feats=p[4].split('|').map(function(f){
+        return '<div style="font-size:11px;color:var(--mu);padding:2px 0">✓ '+f+'</div>';
+      }).join('');
+      d.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:10px"><b style="font-size:14px;color:'+p[3]+'">'+p[1]+'</b><b style="font-size:13px">'+p[2]+'</b></div>'+feats+'<button data-plan="'+p[0]+'" class="sub-select-btn" style="width:100%;margin-top:12px;padding:10px;background:transparent;border:1px solid '+p[3]+';color:'+p[3]+';border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit">SELECT</button>';
+      pc.appendChild(d);
+    });
+    pc.querySelectorAll('.sub-select-btn').forEach(function(btn){
+      btn.onclick=function(){
+        upgradePlan(this.getAttribute('data-plan'));
+        document.getElementById('pmodal-sub').style.display='none';
+        document.body.style.overflow='';
+      };
+    });
+  }
+  var m=document.getElementById('pmodal-sub');
+  if(m){m.style.display='block';m.scrollTop=0;}
   document.body.style.overflow='hidden';
 }
 
