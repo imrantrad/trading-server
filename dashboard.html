@@ -707,7 +707,7 @@ input:focus, select:focus, textarea:focus {
     <div style="font-size:8px;letter-spacing:2px;color:var(--mu);padding:4px 8px 10px;text-transform:uppercase">Account</div>
 
     <!-- My Account -->
-    <div class="prof-menu-item" onclick="swProf('set',null)">
+    <div class="prof-menu-item" onclick="openMyAccount()">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👤</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">My Account</div>
@@ -1097,6 +1097,35 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 
+<!-- MY ACCOUNT MODAL -->
+<div id="pmodal-account" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.97);overflow-y:auto">
+  <div style="max-width:480px;margin:0 auto;padding:16px">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px">
+      <button onclick="document.getElementById('pmodal-account').style.display='none';document.body.style.overflow=''" style="background:var(--bg3);border:1px solid var(--bo);color:var(--gr);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer">‹</button>
+      <div style="font-size:15px;font-weight:700">👤 My Account</div>
+    </div>
+    <div class="card">
+      <div class="g2" style="gap:10px;margin-bottom:10px">
+        <div><div class="lbl">FULL NAME</div><input id="ma-name" placeholder="Your name"></div>
+        <div><div class="lbl">PHONE</div><input id="ma-phone" placeholder="+91 9876543210"></div>
+      </div>
+      <div class="g2" style="gap:10px;margin-bottom:10px">
+        <div><div class="lbl">CAPITAL ₹</div><input type="number" id="ma-cap" value="500000"></div>
+        <div><div class="lbl">RISK % PER TRADE</div><input type="number" id="ma-risk" value="1"></div>
+      </div>
+      <div class="g2" style="gap:10px;margin-bottom:14px">
+        <div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="ma-loss" value="3"></div>
+        <div><div class="lbl">DEFAULT BROKER</div>
+          <select id="ma-broker">
+            <option>ZERODHA</option><option>ANGEL</option><option>FYERS</option><option>UPSTOX</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn bg blg" style="width:100%" onclick="saveProfMA()">✓ SAVE SETTINGS</button>
+    </div>
+  </div>
+</div>
+
 <!-- BROKER API MODAL -->
 <div id="broker-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,10,.95);backdrop-filter:blur(10px);overflow-y:auto">
   <div style="max-width:500px;margin:20px auto;padding:16px">
@@ -1289,6 +1318,43 @@ function bellClick(){
 }
 
 // ── BROKER API ──────────────────────────────────────────────────────────────
+
+
+function openMyAccount(){
+  // Load saved values
+  try{
+    var s=localStorage.getItem('trd_profile_'+UID);
+    if(s){ var d=JSON.parse(s);
+      var n=document.getElementById('ma-name'); if(n&&d.full_name) n.value=d.full_name;
+      var p=document.getElementById('ma-phone'); if(p&&d.phone) p.value=d.phone;
+      var c=document.getElementById('ma-cap'); if(c&&d.capital) c.value=d.capital;
+      var r=document.getElementById('ma-risk'); if(r&&d.risk_per_trade) r.value=d.risk_per_trade;
+      var l=document.getElementById('ma-loss'); if(l&&d.max_daily_loss) l.value=d.max_daily_loss;
+      var b=document.getElementById('ma-broker'); if(b&&d.broker) b.value=d.broker;
+    }
+  }catch(e){}
+  var m=document.getElementById('pmodal-account');
+  if(m){ m.style.display='block'; m.scrollTop=0; }
+  document.body.style.overflow='hidden';
+}
+
+function saveProfMA(){
+  var data={
+    full_name: document.getElementById('ma-name').value||'Demo Trader',
+    phone: document.getElementById('ma-phone').value||'',
+    capital: parseFloat(document.getElementById('ma-cap').value)||500000,
+    risk_per_trade: parseFloat(document.getElementById('ma-risk').value)||1,
+    max_daily_loss: parseFloat(document.getElementById('ma-loss').value)||3,
+    broker: document.getElementById('ma-broker').value||'ZERODHA'
+  };
+  try{ localStorage.setItem('trd_profile_'+UID, JSON.stringify(data)); }catch(e){}
+  updateProfileUI(data);
+  req('/users/'+UID,'PUT',data,function(err,r){
+    toast('✅ Profile saved!','success');
+  });
+  document.getElementById('pmodal-account').style.display='none';
+  document.body.style.overflow='';
+}
 
 function openBrokerModal(){
   var m=document.getElementById('broker-modal');
