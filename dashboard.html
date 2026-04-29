@@ -4352,7 +4352,7 @@ function loadOptionsChain(){
       rows+='<tr style="'+(isAtm?'background:rgba(255,220,0,.06);font-weight:700':'')+'"><td style="color:var(--gr)">'+( ce.price||0)+'</td><td>'+(ce.delta||0)+'</td><td style="color:var(--rd)">'+(ce.theta||0)+'</td><td style="text-align:center;font-weight:700">'+(isAtm?'⭐':'')+s+'</td><td style="color:var(--rd)">'+(pe.theta||0)+'</td><td>'+(pe.delta||0)+'</td><td style="color:var(--rd)">'+(pe.price||0)+'</td></tr>';
     });
     rows+='</tbody></table>';
-    if(out) out.innerHTML='<div style="font-size:10px;color:var(--mu);margin-bottom:8px">Spot:₹'+d.spot+' ATM:'+atm+' VIX:'+vix+'%</div>'+rows;
+    if(out) out.innerHTML='<div style="font-size:10px;color:var(--mu);margin-bottom:8px">Spot:₹'+d.spot+' | ATM:'+d.atm_strike+' | VIX:'+vix+'% | Expiry:'+exp+'d</div>'+rows;
     toast('Chain loaded!','success');
   });
 }
