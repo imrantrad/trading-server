@@ -313,7 +313,7 @@ input:focus, select:focus, textarea:focus {
           </div>
         </div>
       </div>
-      <button class="btn bg blg" onclick="calcGreeks()" style="width:100%">⚡ CALCULATE GREEKS</button>
+      <button class="btn bg blg" onclick="calcGreeksNew()" style="width:100%">⚡ CALCULATE GREEKS</button>
     </div>
 
     <!-- Greeks Output -->
@@ -4281,5 +4281,83 @@ function loadSubStatus(){
 }
 
 // Load admin on show + init
+
+
+// ── OPTIONS TAB FUNCTIONS ─────────────────────────────────────────────────
+function optTab(tab,btn){
+  ['greeks','chain','payoff','iv'].forEach(function(t){
+    var el=document.getElementById('opt-'+t);
+    if(el) el.style.display=(t===tab)?'block':'none';
+  });
+  document.querySelectorAll('[id^="opt-tab-"]').forEach(function(b){
+    b.style.background='var(--bg4)';b.style.borderColor='var(--bo)';b.style.color='var(--mu)';
+  });
+  if(btn){btn.style.background='rgba(251,191,36,.1)';btn.style.borderColor='rgba(251,191,36,.3)';btn.style.color='var(--am)';}
+}
+
+function calcGreeksNew(){
+  var spot=parseFloat(document.getElementById('g-spot').value)||24000;
+  var strike=parseFloat(document.getElementById('g-strike').value)||24000;
+  var exp=parseInt(document.getElementById('g-exp').value)||7;
+  var iv=parseFloat(document.getElementById('g-iv').value)||15;
+  var rate=parseFloat(document.getElementById('g-rate').value)||6.5;
+  var otype=(document.getElementById('gbt-PE')&&document.getElementById('gbt-PE').classList.contains('active'))?'PE':'CE';
+  req('/options/greeks?spot='+spot+'&strike='+strike+'&expiry_days='+exp+'&iv='+iv+'&rate='+rate+'&option_type='+otype,'GET',null,function(err,d){
+    if(err||!d){toast('Greeks API error','error');return;}
+    var out=document.getElementById('greeks-out');
+    if(out) out.style.display='block';
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+    set('g-price','₹'+d.price);
+    set('g-delta',d.delta);
+    set('g-gamma',d.gamma);
+    set('g-theta',d.theta+'/day');
+    set('g-vega',d.vega);
+    set('g-rho',d.rho);
+    set('g-intrinsic','₹'+d.intrinsic_value);
+    set('g-timevalue','₹'+d.time_value);
+    var mEl=document.getElementById('g-money');
+    if(mEl){mEl.textContent=d.moneyness;mEl.style.color=d.moneyness==='ITM'?'var(--gr)':d.moneyness==='OTM'?'var(--rd)':'var(--am)';}
+    set('g-total','₹'+d.total_premium);
+    toast('✅ Greeks calculated!','success');
+  });
+}
+
+function loadOptionsChain(){
+  var spot=parseFloat((document.getElementById('ch-i')||{}).value)||24000;
+  var exp=parseInt((document.getElementById('ch-exp')||{}).value)||7;
+  var vix=parseFloat((document.getElementById('ch-vix')||{}).value)||15;
+  var out=document.getElementById('chain-out');
+  if(out) out.innerHTML='<div style="text-align:center;color:var(--mu);padding:16px">Loading...</div>';
+  req('/options/chain?spot='+spot+'&expiry_days='+exp+'&vix='+vix,'GET',null,function(err,d){
+    if(err||!d){if(out)out.innerHTML='<div style="color:var(--rd);padding:12px">Error</div>';return;}
+    var atm=d.atm_strike;
+    var strikes={};
+    d.chain.forEach(function(o){if(!strikes[o.strike])strikes[o.strike]={};strikes[o.strike][o.option_type]=o;});
+    var rows='<table class="tbl" style="font-size:9px"><thead><tr><th style="color:var(--gr)">CE ₹</th><th style="color:var(--gr)">Δ</th><th style="color:var(--gr)">Θ</th><th>STRIKE</th><th style="color:var(--rd)">Θ</th><th style="color:var(--rd)">Δ</th><th style="color:var(--rd)">PE ₹</th></tr></thead><tbody>';
+    Object.keys(strikes).sort(function(a,b){return b-a;}).forEach(function(s){
+      var ce=strikes[s].CE||{};var pe=strikes[s].PE||{};
+      var isAtm=parseInt(s)===atm;
+      rows+='<tr style="'+(isAtm?'background:rgba(255,220,0,.06);font-weight:700':'')+'"><td style="color:var(--gr)">'+( ce.price||0)+'</td><td>'+(ce.delta||0)+'</td><td style="color:var(--rd)">'+(ce.theta||0)+'</td><td style="text-align:center;font-weight:700">'+(isAtm?'⭐':'')+s+'</td><td style="color:var(--rd)">'+(pe.theta||0)+'</td><td>'+(pe.delta||0)+'</td><td style="color:var(--rd)">'+(pe.price||0)+'</td></tr>';
+    });
+    rows+='</tbody></table>';
+    if(out) out.innerHTML='<div style="font-size:10px;color:var(--mu);margin-bottom:8px">Spot:₹'+d.spot+' ATM:'+atm+' VIX:'+vix+'%</div>'+rows;
+    toast('Chain loaded!','success');
+  });
+}
+
+function calcIV(){
+  var mkt=parseFloat((document.getElementById('iv-mkt')||{}).value)||100;
+  var spot=parseFloat((document.getElementById('iv-spot')||{}).value)||24000;
+  var strike=parseFloat((document.getElementById('iv-strike')||{}).value)||24000;
+  var exp=parseInt((document.getElementById('iv-exp')||{}).value)||7;
+  var otype=(document.getElementById('ivbt-PE')&&document.getElementById('ivbt-PE').classList.contains('active'))?'PE':'CE';
+  req('/options/iv?market_price='+mkt+'&spot='+spot+'&strike='+strike+'&expiry_days='+exp+'&option_type='+otype,'GET',null,function(err,d){
+    if(err||!d){toast('IV error','error');return;}
+    var out=document.getElementById('iv-out');var res=document.getElementById('iv-result');
+    if(out) out.style.display='block';
+    if(res){res.textContent=d.iv_pct+'%';res.style.color=d.iv_pct>20?'var(--rd)':d.iv_pct>15?'var(--am)':'var(--gr)';}
+    toast('IV: '+d.iv_pct+'%','success');
+  });
+}
 
 </script>
