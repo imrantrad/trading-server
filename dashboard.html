@@ -2109,6 +2109,62 @@ function runBT(){
 
 // STRATEGIES
 function toggleNLP(){var e=$('nlp-bld');if(e)e.style.display=e.style.display==='none'?'block':'none';}
+
+// ── STRATEGY → ORDER ENTRY + NLP FILL ────────────────────────────────────────
+function applyStrategyToOrderEntry(s, paperMode){
+  var inst = (s.instrument||s.symbol||'NIFTY').split('/')[0].toUpperCase();
+  var action = (s.action||s.entry_action||s.trade_type||'BUY').toUpperCase();
+  var otype = (s.option_type||s.type||'CE').toUpperCase();
+  var lots = parseInt(s.quantity||s.lots||s.default_lots||1);
+  var sl = parseFloat(s.stop_loss||s.sl||s.stoploss||100);
+  var tgt = parseFloat(s.target||s.target_points||s.tgt||200);
+  var name = s.name||s.strategy_name||'Strategy';
+  var desc = s.description||s.conditions||s.entry_conditions||'';
+  
+  if(paperMode){
+    // Fill PAPER TEST order entry
+    setPaperInst(inst, document.getElementById('pbi-'+inst));
+    setPaperAction(action);
+    setPaperType(otype);
+    var pl=$('paper-lots'); if(pl) pl.value=lots;
+    var ps=$('paper-sl'); if(ps) ps.value=sl;
+    var pt=$('paper-tgt'); if(pt) pt.value=tgt;
+    showPaperTab('trade', document.getElementById('pt-trade-btn'));
+  } else {
+    // Fill TRADE order entry
+    setInst(inst, document.getElementById('bi-'+inst));
+    // Set BUY/SELL
+    document.querySelectorAll('[id^="ba-"]').forEach(function(b){b.classList.remove('active');});
+    var ab=document.getElementById('ba-'+action);
+    if(ab) ab.classList.add('active');
+    // Set CE/PE/FUT
+    document.querySelectorAll('[id^="bo-"]').forEach(function(b){b.classList.remove('active');});
+    var ob=document.getElementById('bo-'+otype);
+    if(ob) ob.classList.add('active');
+    // Set lots, SL, target
+    var le=$('lots-input')||$('lots'); if(le) le.value=lots;
+    var se=$('sl-input')||$('stoploss'); if(se) se.value=sl;
+    var te=$('tgt-input')||$('target'); if(te) te.value=tgt;
+    show('trade', null);
+  }
+  
+  // Fill NLP textarea with full action plan
+  var nlp = document.getElementById('nlp-in');
+  if(nlp){
+    var txt = action.toLowerCase()+' '+inst+' '+otype+
+      ' '+lots+' lots'+
+      ' sl '+sl+
+      ' target '+tgt;
+    if(desc) txt += '\n'+desc;
+    if(s.timeframe) txt += '\ntimeframe: '+s.timeframe;
+    if(s.exit_conditions) txt += '\nexit: '+s.exit_conditions;
+    if(s.indicators) txt += '\nindicators: '+s.indicators;
+    nlp.value = txt;
+  }
+  
+  toast('✅ '+name+' loaded → Order Entry + NLP filled','success');
+}
+
 function loadBuiltin(){
   req('/strategies/builtin','GET',null,function(err,d){
     var list=$('strat-list');if(!list)return;
@@ -2124,7 +2180,7 @@ function loadBuiltin(){
       var b2=document.createElement('button');b2.className='btn ba';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='PAPER TEST';
       var sname=s.name;b2.onclick=function(){if(confirm('Start 15-day paper test for '+sname+'?')){req('/ai/paper_test/'+sid+'?days=1','POST',null,function(err,r){toast(err?'Paper test needs AI endpoint':'Paper test started for '+sname,'info');});}};
       var b3=document.createElement('button');b3.className='btn bb';b3.style.cssText='padding:4px 10px;font-size:8px';b3.textContent='USE';
-      var sinst=(s.instrument||'NIFTY').split('/')[0];b3.onclick=function(){setInst(sinst,document.createElement('div'));show('trade',null);};
+      b3.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat);};})(s);
       btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(b3);div.appendChild(btns);
       list.appendChild(div);
     });
