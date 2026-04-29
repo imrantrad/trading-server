@@ -1795,6 +1795,7 @@ function show(name, btn) {
   if(name==='risk')loadRisk();
   if(name==='jnl'){loadTrades();loadJnlStats();}
   if(name==='ai')loadAIStatus();
+  if(name==='legal'){ setTimeout(restoreLegalSign,100); }
   if(name==='admin'){
     // Admin: check token
     try{
@@ -2175,7 +2176,40 @@ function loadAudit(){req('/security/audit?limit=20','GET',null,function(err,d){v
 
 // LEGAL
 function showLegal(type){req('/legal/'+type,'GET',null,function(err,d){var card=$('legal-card');if(!card)return;if(err||!d){card.innerHTML='<div class="chdr">ERROR</div><div style="color:var(--rd)">Failed to load</div>';return;}var h='<div class="chdr">'+type.toUpperCase().replace(/_/g,' ')+'</div>';if(d.title)h+='<div style="font-size:13px;font-weight:700;color:var(--gr);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bo)">'+d.title+'</div>';if(d.sections)d.sections.forEach(function(s){h+='<div style="margin-bottom:10px;padding:8px;background:var(--bg4);border-radius:4px;border-left:3px solid var(--am)"><div style="font-size:9px;font-weight:700;color:var(--am);margin-bottom:4px">'+s.heading+'</div><div style="font-size:9px;color:var(--mu);line-height:1.7">'+s.content+'</div></div>';});card.innerHTML=h;});}
-function signRisk(){var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$(id);return e&&e.checked;});if(!all){toast('Check all boxes!','error');return;}var box=$('sig-box');if(!box)return;box.style.display='block';box.innerHTML='<div style="color:var(--gr);font-size:12px;font-weight:700;margin-bottom:4px">DIGITALLY SIGNED</div><div style="font-size:9px;color:var(--mu)">Time: '+new Date().toLocaleString('en-IN')+'</div><div style="font-size:9px;color:var(--mu)">User: Demo | Plan: PRO</div>';toast('Signed!','success');}
+function signRisk(){
+  var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$(id);return e&&e.checked;});
+  if(!all){toast('Check all boxes first!','error');return;}
+  var ts = new Date().toLocaleString('en-IN');
+  var sigData = {signed:true, time:ts, user:UID, plan:'PRO'};
+  try{ localStorage.setItem('trd_legal_sign_'+UID, JSON.stringify(sigData)); }catch(e){}
+  var box=$('sig-box');
+  if(box){
+    box.style.display='block';
+    box.innerHTML='<div style="color:var(--gr);font-size:12px;font-weight:700;margin-bottom:6px">✅ DIGITALLY SIGNED</div>'
+      +'<div style="font-size:10px;color:var(--mu);line-height:1.8">Time: '+ts+'<br>User ID: '+UID+'<br>Plan: PRO</div>';
+  }
+  toast('Legal documents signed & saved!','success');
+}
+
+function restoreLegalSign(){
+  try{
+    var s=localStorage.getItem('trd_legal_sign_'+UID);
+    if(!s) return;
+    var d=JSON.parse(s);
+    if(!d.signed) return;
+    // Auto-check all boxes
+    ['ck1','ck2','ck3','ck4'].forEach(function(id){
+      var e=$(id); if(e) e.checked=true;
+    });
+    // Show signed box
+    var box=$('sig-box');
+    if(box){
+      box.style.display='block';
+      box.innerHTML='<div style="color:var(--gr);font-size:12px;font-weight:700;margin-bottom:6px">✅ DIGITALLY SIGNED</div>'
+        +'<div style="font-size:10px;color:var(--mu);line-height:1.8">Time: '+d.time+'<br>User ID: '+UID+'<br>Plan: PRO</div>';
+    }
+  }catch(e){}
+}
 
 // PROFILE
 function swProf(tab,btn){
