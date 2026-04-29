@@ -801,7 +801,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- About -->
-    <div class="prof-menu-item" onclick="swProf('about',null)" style="opacity:.9">
+    <div class="prof-menu-item" onclick="document.getElementById('pmodal-about').style.display='block';document.getElementById('pmodal-about').scrollTop=0;document.body.style.overflow='hidden'" style="opacity:.9">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">ℹ️</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">About TRD</div>
@@ -1096,6 +1096,30 @@ input:focus, select:focus, textarea:focus {
   </div>
 </div>
 
+
+<!-- ABOUT TRD MODAL -->
+<div id="pmodal-about" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.97);overflow-y:auto">
+  <div style="max-width:480px;margin:0 auto;padding:16px">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px">
+      <button onclick="document.getElementById('pmodal-about').style.display='none';document.body.style.overflow=''" style="background:var(--bg3);border:1px solid var(--bo);color:var(--gr);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer">&#8249;</button>
+      <div style="font-size:15px;font-weight:700">&#8505; About TRD</div>
+    </div>
+    <div style="text-align:center;padding:20px 0">
+      <div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#00ff88,#4f8ef7);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#000;margin:0 auto 14px">T</div>
+      <div style="font-size:22px;font-weight:700;margin-bottom:4px">TRD v12.3</div>
+      <div style="font-size:11px;color:var(--mu);margin-bottom:24px">Institutional Derivative Trading System</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--mu)">Version</span><span style="font-size:12px;font-weight:700">v12.3.0</span></div>
+      <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--mu)">Build</span><span style="font-size:12px;font-weight:700">2026.04.29</span></div>
+      <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--mu)">Server</span><span style="font-size:12px;font-weight:700">AWS eu-north-1</span></div>
+      <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--mu)">API Endpoints</span><span style="font-size:12px;font-weight:700;color:#00ff88">154+</span></div>
+      <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--mu)">Strategies</span><span style="font-size:12px;font-weight:700;color:#00ff88">10 Built-in</span></div>
+      <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--mu)">Uptime</span><span style="font-size:12px;font-weight:700;color:#00ff88">99.9%</span></div>
+    </div>
+    <div style="padding:12px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:8px;font-size:10px;color:var(--mu);line-height:1.8;text-align:center">&#9888; Not SEBI registered. Educational purposes only.<br>Trade responsibly. Past performance is not indicative of future results.</div>
+  </div>
+</div>
 
 <!-- DASHBOARD SETTINGS MODAL -->
 <div id="pmodal-dash" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.97);overflow-y:auto">
