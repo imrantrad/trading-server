@@ -1568,7 +1568,7 @@ function connectWS() {
       wsRetries = 0;
       $('api-dot').style.background = 'var(--gr)';
       $('api-lbl').textContent = 'LIVE ●';
-      alog('WebSocket connected - Live data streaming!', 'ok');
+      alog('● LIVE connected','ok');
     };
     
     wsConn.onmessage = function(e) {
@@ -1595,14 +1595,14 @@ function connectWS() {
     };
     
     wsConn.onclose = function() {
-      $('api-lbl').textContent = 'RECONNECTING';
       wsRetries++;
-      // Exponential backoff
-      var delay = Math.min(1000 * Math.pow(2, wsRetries), 30000);
-      setTimeout(function() {
-        if(wsRetries < 10) connectWS();
-        else fallbackToPolling();
-      }, delay);
+      if(wsRetries >= 3) {
+        // Give up on WebSocket, use polling silently
+        fallbackToPolling();
+        return;
+      }
+      var delay = Math.min(2000 * wsRetries, 10000);
+      setTimeout(connectWS, delay);
     };
   } catch(e) {
     fallbackToPolling();
@@ -1610,7 +1610,7 @@ function connectWS() {
 }
 
 function fallbackToPolling() {
-  alog('WebSocket unavailable - using polling', 'info');
+  
   loadStats();
   loadMkt();
   setInterval(loadStats, 20000);
