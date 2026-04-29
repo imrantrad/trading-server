@@ -4497,11 +4497,11 @@ function loadOptionsChain(){
     var rows='<table class="tbl" style="font-size:9px"><thead><tr><th style="color:var(--gr)">CE ₹</th><th style="color:var(--gr)">Δ</th><th style="color:var(--gr)">Θ</th><th>STRIKE</th><th style="color:var(--rd)">Θ</th><th style="color:var(--rd)">Δ</th><th style="color:var(--rd)">PE ₹</th></tr></thead><tbody>';
     Object.keys(strikes).sort(function(a,b){return b-a;}).forEach(function(s){
       var ce=strikes[s].CE||{};var pe=strikes[s].PE||{};
-      var isAtm=parseInt(s)===atm;
+      var atm2=d.atm_strike||Math.round(parseFloat(document.getElementById('ch-i').value||24000)/50)*50;var isAtm=parseInt(s)===atm2;
       rows+='<tr style="'+(isAtm?'background:rgba(255,220,0,.06);font-weight:700':'')+'"><td style="color:var(--gr)">'+( ce.price||0)+'</td><td>'+(ce.delta||0)+'</td><td style="color:var(--rd)">'+(ce.theta||0)+'</td><td style="text-align:center;font-weight:700">'+(isAtm?'⭐':'')+s+'</td><td style="color:var(--rd)">'+(pe.theta||0)+'</td><td>'+(pe.delta||0)+'</td><td style="color:var(--rd)">'+(pe.price||0)+'</td></tr>';
     });
     rows+='</tbody></table>';
-    if(out) out.innerHTML='<div style="font-size:10px;color:var(--mu);margin-bottom:8px">Spot:₹'+d.spot+' | ATM:'+d.atm_strike+' | VIX:'+vix+'% | Expiry:'+exp+'d</div>'+rows;
+    var atmVal=d.atm_strike||Math.round(spot/50)*50;if(out) out.innerHTML='<div style="font-size:10px;color:var(--mu);margin-bottom:8px">Spot:₹'+d.spot+' | ATM:'+atmVal+' | VIX:'+vix+'% | Expiry:'+exp+'d</div>'+rows;
     toast('Chain loaded!','success');
   });
 }
