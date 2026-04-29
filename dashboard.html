@@ -1406,6 +1406,25 @@ function openDashModal(){
 }
 
 function saveDashSettings(){
+  var tabs=['trade','paper','risk','scan','opts','bt','jnl','rep','calc','ai','admin','legal'];
+  var tabNames={'trade':'TRADE','paper':'PAPER TEST','risk':'RISK','scan':'SCANNER','opts':'OPTIONS','bt':'BACKTEST','jnl':'JOURNAL','rep':'REPORTS','calc':'CALC','ai':'AI ENGINE','admin':'ADMIN','legal':'LEGAL'};
+  var visible=[];
+  tabs.forEach(function(t){
+    var cb=document.getElementById('pdash-'+t);
+    if(cb&&cb.checked) visible.push(t);
+  });
+  // Apply visibility to tab buttons
+  document.querySelectorAll('.tab').forEach(function(btn){
+    var oc=btn.getAttribute('onclick')||'';
+    var isVisible=false;
+    tabs.forEach(function(t){
+      if(oc.indexOf("'"+t+"'")>=0 && visible.indexOf(t)>=0) isVisible=true;
+    });
+    if(oc.indexOf("'trade'")>=0||oc.indexOf("'paper'")>=0) isVisible=true; // always show
+    if(oc) btn.style.display=isVisible?'':'none';
+  });
+  // Save to localStorage
+  try{localStorage.setItem('trd_dash_settings',JSON.stringify(visible));}catch(e){}
   toast('Settings saved!','success');
   document.getElementById('pmodal-dash').style.display='none';
   document.body.style.overflow='';
