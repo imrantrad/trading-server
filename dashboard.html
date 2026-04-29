@@ -2641,7 +2641,9 @@ function startLiveTicks(cdata) {
     lastCandle.high = Math.max(lastCandle.high, tick);
     lastCandle.low = Math.min(lastCandle.low, tick);
 
-    try { candleSeries.update(lastCandle); } catch(e){}
+    try { // Use current time for live tick
+    lastCandle.time = Math.floor(Date.now()/1000);
+    candleSeries.update(lastCandle); } catch(e){}
 
     var ltpEl=$('chart-ltp');
     if(ltpEl){ ltpEl.textContent='₹'+tick.toFixed(2); ltpEl.style.color=tick>=lastCandle.open?'var(--gr)':'var(--rd)'; }
@@ -2651,7 +2653,7 @@ function startLiveTicks(cdata) {
     var pxEl=$('px-'+chartSym);
     if(pxEl) pxEl.textContent=tick.toFixed(2);
 
-  }, 1500); // Every 1.5 seconds live tick
+  }, 800); // Fast live tick
 }
 
 function showFallbackChart() {
