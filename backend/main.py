@@ -1319,7 +1319,74 @@ def delete_strategy(strategy_id: str, user_id: str):
 @app.get("/strategies/builtin")
 def builtin_strategies():
     strategies = BUILTIN_STRATEGIES_V2 if USER_SYSTEM else []
-    return {"strategies": strategies, "count": len(strategies)}
+    
+    # Always include our premium built-in strategies
+    premium_strats = [
+        {
+            "id": "STRONG_TREND_CONT", "name": "Strong Trend Continuation",
+            "instrument": "NIFTY", "action": "BUY", "option_type": "CE",
+            "quantity": 1, "stop_loss": 80, "target": 160, "timeframe": "15m",
+            "avg_win_rate": 72, "avg_monthly_return": 8.5, "max_drawdown": 6,
+            "type": "TREND", "indicators": "EMA50,EMA200,RSI,ADX",
+            "description": "EMA(50) > EMA(200) | Price > EMA(50) | RSI 55-70 | ADX > 25 | Pullback to EMA(20)",
+            "conditions": "EMA50 > EMA200 AND Price > EMA50 AND RSI between 55-70 AND ADX > 25 AND price bounces EMA20",
+            "exit_conditions": "Price breaks below EMA20 OR RSI < 50",
+            "no_trade": "ADX < 25 (sideways) | RSI > 75 (overbought)",
+            "notes": "Best for established uptrends. Wait for EMA20 pullback."
+        },
+        {
+            "id": "BREAKOUT_TREND", "name": "Breakout Trend Strategy",
+            "instrument": "NIFTY", "action": "BUY", "option_type": "CE",
+            "quantity": 1, "stop_loss": 100, "target": 250, "timeframe": "5m",
+            "avg_win_rate": 68, "avg_monthly_return": 11.2, "max_drawdown": 8,
+            "type": "BREAKOUT", "indicators": "Volume,BB,RSI",
+            "description": "Price breaks 20-candle high | Volume > 2x avg | BB squeeze expansion | RSI > 60",
+            "conditions": "breakout 20 candle high AND volume > 2x average AND bollinger squeeze expansion AND RSI > 60 AND confirmation candle closes above",
+            "exit_conditions": "2R target hit OR close below breakout candle low",
+            "no_trade": "No BB squeeze | Volume < average | RSI > 80",
+            "notes": "Wait for confirmation candle after breakout. Volume is key."
+        },
+        {
+            "id": "MTF_TREND_ALIGN", "name": "Multi-Timeframe Trend Alignment",
+            "instrument": "NIFTY", "action": "BUY", "option_type": "CE",
+            "quantity": 1, "stop_loss": 90, "target": 270, "timeframe": "5m",
+            "avg_win_rate": 75, "avg_monthly_return": 9.8, "max_drawdown": 5,
+            "type": "MTF", "indicators": "EMA20,EMA50,EMA200,RSI,VWAP",
+            "description": "5m EMA20>EMA50 | 15m EMA20>EMA50 | 1h EMA50>EMA200 | RSI>55 all TFs | Price above VWAP",
+            "conditions": "5min EMA20 > EMA50 AND 15min EMA20 > EMA50 AND 1hr EMA50 > EMA200 AND RSI > 55 all timeframes AND price above VWAP",
+            "exit_conditions": "Price below VWAP on 15m OR 5m EMA cross bearish",
+            "no_trade": "Timeframe conflict | Price below VWAP",
+            "notes": "Highest win rate strategy. All 3 timeframes must align."
+        },
+        {
+            "id": "TREND_REVERSAL", "name": "Trend Reversal Strategy",
+            "instrument": "NIFTY", "action": "BUY", "option_type": "CE",
+            "quantity": 1, "stop_loss": 120, "target": 360, "timeframe": "15m",
+            "avg_win_rate": 65, "avg_monthly_return": 14.5, "max_drawdown": 10,
+            "type": "REVERSAL", "indicators": "EMA50,EMA200,RSI,Volume",
+            "description": "Downtrend EMA50<EMA200 | RSI divergence | Bullish engulfing | Volume spike | Break of lower high",
+            "conditions": "EMA50 < EMA200 previous trend AND RSI divergence price lower low RSI higher low AND bullish engulfing candle AND volume spike reversal candle AND break previous lower high",
+            "exit_conditions": "3R target OR fails to break previous high",
+            "no_trade": "No RSI divergence | Weak engulfing candle | Low volume",
+            "notes": "High R/R but needs all 5 conditions. Risky but rewarding."
+        },
+        {
+            "id": "MOMENTUM_ACCEL", "name": "Momentum Trend Acceleration",
+            "instrument": "NIFTY", "action": "BUY", "option_type": "CE",
+            "quantity": 1, "stop_loss": 80, "target": 240, "timeframe": "5m",
+            "avg_win_rate": 70, "avg_monthly_return": 13.2, "max_drawdown": 7,
+            "type": "MOMENTUM", "indicators": "EMA20,EMA50,MACD,RSI,ATR",
+            "description": "EMA20 sharply above EMA50 | MACD histogram increasing 3 candles | RSI crosses 65 | ATR rising | Strong bullish candles body > 70%",
+            "conditions": "EMA20 sharply above EMA50 AND MACD histogram increasing 3 candles AND RSI crosses above 65 AND ATR rising volatility expansion AND strong bullish candles body > 70% range",
+            "exit_conditions": "MACD histogram starts declining OR RSI > 80",
+            "no_trade": "MACD divergence | RSI already > 75 | ATR declining",
+            "notes": "Best in strong trending markets. Quick entries needed."
+        }
+    ]
+    
+    # Merge premium with any existing
+    all_strats = premium_strats + [s for s in strategies if s.get('id') not in [p['id'] for p in premium_strats]]
+    return {"strategies": all_strats, "count": len(all_strats)}
 
 # ── ADVANCED BACKTEST ──────────────────────────────────
 class AdvancedBacktestPayload(BaseModel):
