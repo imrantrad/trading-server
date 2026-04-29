@@ -706,7 +706,7 @@ input:focus, select:focus, textarea:focus {
     <div style="font-size:8px;letter-spacing:2px;color:var(--mu);padding:4px 8px 10px;text-transform:uppercase">Account</div>
 
     <!-- My Account -->
-    <div class="prof-menu-item" onclick="swProf('set',null)">
+    <div class="prof-menu-item" onclick="openModal('account')">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👤</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">My Account</div>
@@ -716,7 +716,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- Subscription / Plans -->
-    <div class="prof-menu-item" onclick="swProf('sub',null)">
+    <div class="prof-menu-item" onclick="openModal('sub')">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💎</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Subscription Plans</div>
@@ -758,7 +758,7 @@ input:focus, select:focus, textarea:focus {
     <div style="font-size:8px;letter-spacing:2px;color:var(--mu);padding:14px 8px 10px;text-transform:uppercase">Customisation</div>
 
     <!-- Themes -->
-    <div class="prof-menu-item" onclick="swProf('th',null)">
+    <div class="prof-menu-item" onclick="openModal('th')">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎨</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Themes</div>
@@ -768,7 +768,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- Dashboard Settings -->
-    <div class="prof-menu-item" onclick="swProf('dash',null)">
+    <div class="prof-menu-item" onclick="openModal('dash')">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎛️</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Dashboard Settings</div>
@@ -800,7 +800,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- About -->
-    <div class="prof-menu-item" onclick="swProf('about',null)" style="opacity:.9">
+    <div class="prof-menu-item" onclick="openModal('about')" style="opacity:.9">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">ℹ️</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">About TRD</div>
@@ -1096,6 +1096,96 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 
+
+<!-- ALL PROFILE MODALS -->
+
+<!-- MY ACCOUNT MODAL -->
+<div id="modal-account" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,10,.95);backdrop-filter:blur(10px);overflow-y:auto">
+  <div style="max-width:500px;margin:20px auto;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bo)">
+      <div style="font-size:16px;font-weight:700">👤 My Account</div>
+      <button onclick="closeModal('account')" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div class="card">
+      <div class="g2" style="gap:10px;margin-bottom:10px">
+        <div><div class="lbl">FULL NAME</div><input id="pf-n" placeholder="Your name"></div>
+        <div><div class="lbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div>
+      </div>
+      <div class="g2" style="gap:10px;margin-bottom:10px">
+        <div><div class="lbl">CAPITAL ₹</div><input type="number" id="pf-c" value="500000"></div>
+        <div><div class="lbl">RISK %</div><input type="number" id="pf-r" value="1"></div>
+      </div>
+      <div class="g2" style="gap:10px;margin-bottom:14px">
+        <div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="pf-ml" value="3"></div>
+        <div><div class="lbl">DEFAULT BROKER</div><select id="pf-b"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option><option>UPSTOX</option></select></div>
+      </div>
+      <button class="btn bg blg" onclick="saveProf();closeModal('account')" style="width:100%">✓ SAVE SETTINGS</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUBSCRIPTION MODAL -->
+<div id="modal-sub" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,10,.95);backdrop-filter:blur(10px);overflow-y:auto">
+  <div style="max-width:500px;margin:20px auto;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bo)">
+      <div style="font-size:16px;font-weight:700">💎 Subscription Plans</div>
+      <button onclick="closeModal('sub')" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div id="plan-cards" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+</div>
+
+<!-- THEMES MODAL -->
+<div id="modal-th" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,10,.95);backdrop-filter:blur(10px);overflow-y:auto">
+  <div style="max-width:500px;margin:20px auto;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bo)">
+      <div style="font-size:16px;font-weight:700">🎨 Themes</div>
+      <button onclick="closeModal('th')" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div id="theme-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD SETTINGS MODAL -->
+<div id="modal-dash" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,10,.95);backdrop-filter:blur(10px);overflow-y:auto">
+  <div style="max-width:500px;margin:20px auto;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bo)">
+      <div style="font-size:16px;font-weight:700">🎛️ Dashboard Settings</div>
+      <button onclick="closeModal('dash')" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div class="card">
+      <div style="font-size:10px;color:var(--mu);margin-bottom:12px;line-height:1.7">Show/hide tabs based on your plan.</div>
+      <div id="tab-visibility-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button class="btn bg blg" onclick="saveUIConfig();closeModal('dash')" style="width:100%;margin-top:12px">✓ SAVE SETTINGS</button>
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT MODAL -->
+<div id="modal-about" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,10,.95);backdrop-filter:blur(10px);overflow-y:auto">
+  <div style="max-width:500px;margin:20px auto;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bo)">
+      <div style="font-size:16px;font-weight:700">ℹ️ About TRD</div>
+      <button onclick="closeModal('about')" style="background:var(--bg3);border:1px solid var(--bo);color:var(--mu);width:32px;height:32px;border-radius:6px;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div class="card" style="text-align:center;padding:24px 16px">
+      <div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--gr),var(--bl));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#000;margin:0 auto 14px">T</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:4px">TRD v12.3</div>
+      <div style="font-size:11px;color:var(--mu);margin-bottom:20px">Institutional Derivative Trading System</div>
+      <div style="display:flex;flex-direction:column;gap:8px;text-align:left">
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Version</span><span style="font-size:11px;font-weight:600">v12.3.0</span></div>
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Build</span><span style="font-size:11px;font-weight:600">2026.04.29</span></div>
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Server</span><span style="font-size:11px;font-weight:600">AWS eu-north-1</span></div>
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">API Endpoints</span><span style="font-size:11px;font-weight:600;color:var(--gr)">154+</span></div>
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Strategies</span><span style="font-size:11px;font-weight:600;color:var(--gr)">10 Built-in</span></div>
+        <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:12px;display:flex;justify-content:space-between"><span style="color:var(--mu);font-size:10px">Uptime</span><span style="font-size:11px;font-weight:600;color:var(--gr)">99.9%</span></div>
+      </div>
+      <div style="margin-top:16px;padding:10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:8px;font-size:9px;color:var(--mu);line-height:1.7">⚠️ Not SEBI registered. Educational purposes only. Trade responsibly.</div>
+    </div>
+  </div>
+</div>
+
+
 <!-- BROKER API MODAL -->
 <div id="broker-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,10,.95);backdrop-filter:blur(10px);overflow-y:auto">
   <div style="max-width:500px;margin:20px auto;padding:16px">
@@ -1288,6 +1378,39 @@ function bellClick(){
 }
 
 // ── BROKER API ──────────────────────────────────────────────────────────────
+
+
+// ── UNIFIED MODAL SYSTEM ──────────────────────────────────────────────────────
+var _openModals = [];
+
+function openModal(id){
+  var m = document.getElementById('modal-'+id);
+  if(!m) return;
+  m.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  _openModals.push(id);
+  // Load data
+  if(id==='sub') setTimeout(buildPlanCards, 50);
+  if(id==='th') setTimeout(buildThemeCards, 50);
+  if(id==='dash') setTimeout(buildTabVisibilityList, 50);
+  if(id==='account') setTimeout(loadSavedProfile, 50);
+  // Close on backdrop click
+  m.onclick = function(e){ if(e.target===m) closeModal(id); };
+}
+
+function closeModal(id){
+  var m = document.getElementById('modal-'+id);
+  if(m) m.style.display = 'none';
+  _openModals = _openModals.filter(function(x){ return x!==id; });
+  if(_openModals.length === 0) document.body.style.overflow = '';
+}
+
+// Close all modals on Escape
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape' && _openModals.length > 0){
+    closeModal(_openModals[_openModals.length-1]);
+  }
+});
 
 function openBrokerModal(){
   var m=document.getElementById('broker-modal');
