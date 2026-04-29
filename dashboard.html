@@ -2007,19 +2007,137 @@ function toggleNLPGuide(){
   if(g) g.style.display = g.style.display==='none' ? 'block' : 'none';
 }
 
-function nlpParse() {
-  var text=gv('nlp-in').trim();if(!text){toast('Type a strategy','warn');return;}
-  req('/strategy','POST',{text:text},function(err,r){
-    if(err){toast('NLP error: '+err,'error');return;}
-    var out=$('nlp-out');
-    if(out){out.style.display='block';var parts=[];Object.keys(r).forEach(function(k){if(r[k]&&k!=='timestamp')parts.push(k+': '+r[k]);});out.textContent=parts.slice(0,8).join(' | ');}
-    if(r.instrument)setInst(r.instrument,$('bi-'+r.instrument)||document.createElement('div'));
-    if(r.action)setAction(r.action);
-    if(r.option_type)setType(r.option_type);
-    if(r.quantity&&$('f-lots'))$('f-lots').value=r.quantity;
-    if(r.risk_metrics){if(r.risk_metrics.stoploss_points&&$('f-sl'))$('f-sl').value=r.risk_metrics.stoploss_points;if(r.risk_metrics.target_points&&$('f-tgt'))$('f-tgt').value=r.risk_metrics.target_points;}
-    toast('NLP auto-filled!','success');
-  });
+function nlpParse(){
+  var text = (document.getElementById('nlp-in').value||'').trim();
+  if(!text){toast('Strategy likhiye pehle!','warn');return;}
+  
+  var outEl = document.getElementById('nlp-out');
+  if(outEl){
+    outEl.style.display='block';
+    outEl.innerHTML='<div style="color:var(--am);font-size:10px">🧠 Analyzing strategy...</div>';
+  }
+  
+  // Advanced local NLP parser
+  var t = text.toLowerCase();
+  var result = {
+    instrument:'NIFTY', action:'BUY', option_type:'CE',
+    lots:1, stop_loss:100, target:200,
+    order_type:'MARKET', product_type:'MIS',
+    timeframe:'5m', trailing_sl:0,
+    conditions:[], filters:[], exit:[], no_trade:[]
+  };
+  
+  // ── INSTRUMENT ──
+  if(/banknifty|bank nifty/.test(t)) result.instrument='BANKNIFTY';
+  else if(/finnifty|fin nifty/.test(t)) result.instrument='FINNIFTY';
+  else if(/sensex/.test(t)) result.instrument='SENSEX';
+  else result.instrument='NIFTY';
+  
+  // ── ACTION ──
+  if(/\bsell\b|bearish|put|short/.test(t)) result.action='SELL';
+  else result.action='BUY';
+  
+  // ── OPTION TYPE ──
+  if(/\bput\b|\bpe\b/.test(t)) result.option_type='PE';
+  else if(/\bfut\b|\bfuture/.test(t)) result.option_type='FUT';
+  else result.option_type='CE';
+  
+  // ── LOTS ──
+  var lotsM = t.match(/([0-9]+)\s*(?:lot|lots)/);
+  if(lotsM) result.lots = parseInt(lotsM[1]);
+  
+  // ── SL ──
+  var slM = t.match(/(?:sl|stop.?loss|stoploss)[\s:=]*([0-9.]+)/);
+  if(slM) result.stop_loss = parseFloat(slM[1]);
+  
+  // ── TARGET ──
+  var tgtM = t.match(/(?:target|tgt|tp)[\s:=]*([0-9.]+)/);
+  if(tgtM) result.target = parseFloat(tgtM[1]);
+  
+  // ── RISK:REWARD from "2R" or "3R" ──
+  var rrM = t.match(/([0-9.]+)\s*r(?::|\s)/);
+  if(rrM && result.stop_loss) result.target = result.stop_loss * parseFloat(rrM[1]);
+  
+  // ── TRAILING SL ──
+  var tslM = t.match(/trail(?:ing)?[\s.]*(?:sl|stop)?[\s:=]*([0-9.]+)/);
+  if(tslM) result.trailing_sl = parseFloat(tslM[1]);
+  
+  // ── TIMEFRAME ──
+  if(/\b1m\b|1.min|1 min/.test(t)) result.timeframe='1m';
+  else if(/\b5m\b|5.min|5 min/.test(t)) result.timeframe='5m';
+  else if(/\b15m\b|15.min/.test(t)) result.timeframe='15m';
+  else if(/\b30m\b|30.min/.test(t)) result.timeframe='30m';
+  else if(/\b1h\b|1.hour/.test(t)) result.timeframe='1h';
+  
+  // ── ENTRY CONDITIONS ──
+  if(/ema.*cross|cross.*ema/.test(t)) result.conditions.push('EMA Crossover');
+  if(/ema.*20.*>.*ema.*50|bullish ema/.test(t)) result.conditions.push('EMA20 > EMA50');
+  if(/multi.?time|mtf/.test(t)) result.conditions.push('Multi-Timeframe Confirmation');
+  if(/rsi\s*>\s*([0-9]+)/.test(t)){var rm=t.match(/rsi\s*>\s*([0-9]+)/);result.conditions.push('RSI > '+rm[1]);}
+  if(/rsi\s*<\s*([0-9]+)/.test(t)){var rm2=t.match(/rsi\s*<\s*([0-9]+)/);result.conditions.push('RSI < '+rm2[1]);}
+  if(/macd.*signal|signal.*macd/.test(t)) result.conditions.push('MACD > Signal Line');
+  if(/macd.*histogram.*increas/.test(t)) result.conditions.push('MACD Histogram increasing');
+  if(/atr.*average|volatility check/.test(t)) result.conditions.push('ATR > 20-period avg');
+  if(/bollinger.*expand|bb.*expand/.test(t)) result.conditions.push('BB Width expanding');
+  if(/volume.*1\.5|1\.5.*volume/.test(t)) result.conditions.push('Volume > 1.5x avg');
+  if(/volume.*increas/.test(t)) result.conditions.push('Volume increasing');
+  if(/breakout.*high|20.candle.*high/.test(t)) result.conditions.push('Breakout 20-candle high');
+  if(/above.*resistance|resistance.*break/.test(t)) result.conditions.push('Close above resistance');
+  if(/vwap/.test(t)) result.conditions.push('Price above VWAP');
+  if(/demand.?zone|institutional/.test(t)) result.conditions.push('Near institutional demand zone');
+  if(/bid.*ask|delta.*pos/.test(t)) result.conditions.push('Order flow: Bid > Ask');
+  if(/9:?30|9:?15/.test(t)) result.filters.push('Time: 9:30 AM - 2:30 PM only');
+  if(/1%.?capital|risk.*1%/.test(t)) result.filters.push('Risk < 1% capital');
+  if(/max.*3.*trade|3.*trade.*day/.test(t)) result.filters.push('Max 3 trades/day');
+  
+  // ── NO TRADE CONDITIONS ──
+  if(/sideways|flat.*ema|ema.*flat/.test(t)) result.no_trade.push('Sideways market (EMA flat)');
+  if(/low.?volume/.test(t)) result.no_trade.push('Low volume zone');
+  if(/high.*spread|slippage/.test(t)) result.no_trade.push('High spread/slippage');
+  
+  // ── Apply to order entry ──
+  setInst(result.instrument, document.getElementById('bi-'+result.instrument));
+  document.querySelectorAll('[id^="ba-"]').forEach(function(b){b.classList.remove('active');});
+  var ab=document.getElementById('ba-'+result.action);
+  if(ab) ab.classList.add('active');
+  document.querySelectorAll('[id^="bo-"]').forEach(function(b){b.classList.remove('active');});
+  var ob=document.getElementById('bo-'+result.option_type);
+  if(ob) ob.classList.add('active');
+  var le=document.getElementById('lots-input')||document.getElementById('lots');
+  if(le) le.value=result.lots;
+  var se=document.getElementById('stoploss'); if(se) se.value=result.stop_loss;
+  var te=document.getElementById('target'); if(te) te.value=result.target;
+  var tse=document.getElementById('trailing-sl'); if(tse) tse.value=result.trailing_sl;
+  var tfe=document.getElementById('order-tf'); if(tfe) tfe.value=result.timeframe;
+  var tage=document.getElementById('order-tag'); if(tage) tage.value='Multi-Condition Strategy';
+  calcRR();
+  
+  // ── Show parsed output ──
+  if(outEl){
+    var html2='<div style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:8px">✅ STRATEGY PARSED</div>';
+    html2+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px;margin-bottom:10px">';
+    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">INSTRUMENT</div><div style="font-weight:700">'+result.instrument+'</div></div>';
+    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">ACTION</div><div style="font-weight:700;color:'+(result.action==='BUY'?'var(--gr)':'var(--rd)')+'">'+result.action+' '+result.option_type+'</div></div>';
+    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">LOTS</div><div style="font-weight:700">'+result.lots+'</div></div>';
+    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">R/R</div><div style="font-weight:700;color:var(--gr)">1:'+(result.target/result.stop_loss).toFixed(1)+'</div></div>';
+    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">STOP LOSS</div><div style="font-weight:700;color:var(--rd)">'+result.stop_loss+' pts</div></div>';
+    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">TARGET</div><div style="font-weight:700;color:var(--gr)">'+result.target+' pts</div></div>';
+    html2+='</div>';
+    if(result.conditions.length){
+      html2+='<div style="font-size:9px;font-weight:700;color:var(--am);margin-bottom:4px">ENTRY CONDITIONS ('+result.conditions.length+')</div>';
+      result.conditions.forEach(function(c){html2+='<div style="font-size:9px;color:var(--mu);padding:2px 0">✓ '+c+'</div>';});
+    }
+    if(result.filters.length){
+      html2+='<div style="font-size:9px;font-weight:700;color:var(--bl);margin:6px 0 4px">FILTERS ('+result.filters.length+')</div>';
+      result.filters.forEach(function(c){html2+='<div style="font-size:9px;color:var(--mu);padding:2px 0">🔒 '+c+'</div>';});
+    }
+    if(result.no_trade.length){
+      html2+='<div style="font-size:9px;font-weight:700;color:var(--rd);margin:6px 0 4px">NO-TRADE CONDITIONS</div>';
+      result.no_trade.forEach(function(c){html2+='<div style="font-size:9px;color:var(--mu);padding:2px 0">❌ '+c+'</div>';});
+    }
+    outEl.innerHTML=html2;
+  }
+  toast('✅ Strategy parsed! '+result.conditions.length+' conditions found','success');
 }
 function nlpExec(){nlpParse();setTimeout(execTrade,800);}
 
