@@ -2094,6 +2094,29 @@ function nlpParse(){
   if(/sideways|flat.*ema|ema.*flat/.test(t)) result.no_trade.push('Sideways market (EMA flat)');
   if(/low.?volume/.test(t)) result.no_trade.push('Low volume zone');
   if(/high.*spread|slippage/.test(t)) result.no_trade.push('High spread/slippage');
+  if(/vix.*>.*22|vix.*high/.test(t)) result.no_trade.push('VIX > 22 (high volatility)');
+  if(/adx.*<.*25|adx.*low/.test(t)) result.no_trade.push('ADX < 25 (no trend)');
+  if(/daily.*loss.*5|5.*drawdown/.test(t)) result.no_trade.push('Daily 5% drawdown limit hit');
+  if(/max.*2.*trade|2.*trade.*day/.test(t)) result.filters.push('Max 2 trades/day');
+  if(/max.*5.*trade|5.*trade.*day/.test(t)) result.filters.push('Max 5 trades/day');
+
+  // Phase detection
+  if(/phase.*1|adx.*ema.*vix/.test(t)) result.conditions.push('Phase 1: ADX+EMA+VIX pre-check');
+  if(/9:30|9.30.?am|930/.test(t)) result.filters.push('Entry time: 9:30 AM only');
+  if(/10:30|10.30.?am|1030/.test(t)) result.filters.push('Auto square-off: 10:30 AM');
+  if(/atm.*strike|at.the.money/.test(t)){result.conditions.push('ATM Strike: round(Spot/50)*50');}
+  if(/atm.*weekly|weekly.*expiry/.test(t)) result.conditions.push('Weekly expiry ATM CE');
+  if(/9:15|9.15.*open|opening.*price/.test(t)) result.conditions.push('LTP >= 9:15 AM opening price');
+  if(/vix.*<.*22|vix.*22/.test(t)) result.conditions.push('VIX < 22');
+  if(/vix.*>.*20/.test(t)) result.conditions.push('If VIX>20: reduce position 50%');
+  if(/adx.*>.*25|adx.*25/.test(t)) result.conditions.push('ADX(14) > 25');
+  if(/bid.ask.*<.*0.5|liquidity|slippage.*0.5/.test(t)) result.conditions.push('Bid-Ask Spread < 0.5%');
+  if(/entry.*price.*\+.*30|price.*30.*trail/.test(t)) result.conditions.push('Trail SL: if +30pts → SL to +10pts');
+  if(/5%.*gain|tp.*1\.05|target.*5%/.test(t)){result.target=Math.round(result.stop_loss*1.25); result.conditions.push('TP = Entry * 1.05 (5% gain)');}
+  if(/4%.*loss|sl.*0\.96|stop.*4%/.test(t)){result.conditions.push('SL = Entry * 0.96 (4% loss)');}
+  if(/atr.*guard|change.*<.*atr/.test(t)) result.conditions.push('ATR Guard: price change < ATR(14)*2');
+  if(/sma.*volume|volume.*sma/.test(t)) result.conditions.push('Volume > SMA(Volume,5)*1.5');
+  if(/daily.*5%|capital.*0\.05|5%.*drawdown/.test(t)) result.filters.push('Daily drawdown limit: 5% capital');
   
   // ── Apply to order entry ──
   setInst(result.instrument, document.getElementById('bi-'+result.instrument));
