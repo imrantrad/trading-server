@@ -2366,16 +2366,7 @@ function generateOHLC(sym, tf, periods) {
   if(tf==='240')periods=Math.max(periods,180);
   if(tf==='D')  periods=Math.max(periods,365);
   if(tf==='W')  periods=Math.max(periods,104); // 2 years
-    if(_ancMs > _utcNow) _ancMs -= 86400000;
-    // Skip weekends
-    var _wd;
-    for(var _i=0;_i<7;_i++){
-      _wd = new Date(_ancMs).getUTCDay();
-      if(_wd>=1 && _wd<=5) break;
-      _ancMs -= 86400000;
-    }
-  }
-  var now = Math.floor(_ancMs/1000);
+
 
   var tfSecs = { '1s':1, '5s':5, '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
   // Periods handled in anchor section above
