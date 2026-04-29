@@ -759,7 +759,7 @@ input:focus, select:focus, textarea:focus {
     <div style="font-size:8px;letter-spacing:2px;color:var(--mu);padding:14px 8px 10px;text-transform:uppercase">Customisation</div>
 
     <!-- Themes -->
-    <div class="prof-menu-item" onclick="swProf('th',null)">
+    <div class="prof-menu-item" onclick="openThModal()">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎨</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Themes</div>
@@ -1097,6 +1097,17 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 
+<!-- THEMES MODAL -->
+<div id="pmodal-th" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.97);overflow-y:auto">
+  <div style="max-width:480px;margin:0 auto;padding:16px">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px">
+      <button onclick="document.getElementById('pmodal-th').style.display='none';document.body.style.overflow=''" style="background:var(--bg3);border:1px solid var(--bo);color:var(--gr);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer">&#8249;</button>
+      <div style="font-size:15px;font-weight:700">&#127912; Themes</div>
+    </div>
+    <div id="pmodal-th-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+  </div>
+</div>
+
 <!-- SUBSCRIPTION MODAL -->
 <div id="pmodal-sub" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.97);overflow-y:auto">
   <div style="max-width:480px;margin:0 auto;padding:16px">
@@ -1349,6 +1360,41 @@ function openMyAccount(){
   document.body.style.overflow='hidden';
 }
 
+
+
+function openThModal(){
+  var tc=document.getElementById('pmodal-th-cards');
+  if(tc&&!tc.children.length){
+    var themes=[
+      ['dark','DARK','Default','#00ff88'],
+      ['midnight','MIDNIGHT','Deep blue','#00ffcc'],
+      ['matrix','MATRIX','Hacker','#00ff44'],
+      ['purple','COSMIC','Violet','#a855f7'],
+      ['neon','NEON','Cyberpunk','#ff00cc'],
+      ['light','LIGHT','Clean','#059669']
+    ];
+    themes.forEach(function(t){
+      var d=document.createElement('div');
+      d.style.cssText='border:2px solid var(--bo);border-radius:10px;padding:14px;text-align:center;cursor:pointer;transition:border-color .2s';
+      d.innerHTML='<div style="width:30px;height:30px;border-radius:50%;background:'+t[3]+';margin:0 auto 8px;box-shadow:0 0 12px '+t[3]+'66"></div><div style="font-size:10px;font-weight:700">'+t[1]+'</div><div style="font-size:9px;color:var(--mu);margin-top:2px">'+t[2]+'</div>';
+      d.setAttribute('data-theme', t[0]);
+      d.setAttribute('data-color', t[3]);
+      tc.appendChild(d);
+    });
+    tc.querySelectorAll('[data-theme]').forEach(function(el){
+      el.onmouseover=function(){ this.style.borderColor=this.getAttribute('data-color'); };
+      el.onmouseout=function(){ this.style.borderColor='var(--bo)'; };
+      el.onclick=function(){
+        applyTh(this.getAttribute('data-theme'), null);
+        this.style.borderColor=this.getAttribute('data-color');
+        toast('Theme applied!','success');
+      };
+    });
+  }
+  var m=document.getElementById('pmodal-th');
+  if(m){m.style.display='block';m.scrollTop=0;}
+  document.body.style.overflow='hidden';
+}
 
 function openSubModal(){
   var pc=document.getElementById('pmodal-sub-cards');
