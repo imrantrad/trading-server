@@ -717,7 +717,7 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- Subscription / Plans -->
-    <div class="prof-menu-item" onclick="openSubModal()">
+    <div class="prof-menu-item" onclick="swProf('sub',null)">
       <div style="width:40px;height:40px;border-radius:12px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💎</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">Subscription Plans</div>
@@ -1126,17 +1126,6 @@ input:focus, select:focus, textarea:focus {
   </div>
 </div>
 
-<!-- SUBSCRIPTION PLANS MODAL -->
-<div id="pmodal-sub" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,10,.97);overflow-y:auto">
-  <div style="max-width:480px;margin:0 auto;padding:16px">
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 0 16px;border-bottom:1px solid var(--bo);margin-bottom:16px">
-      <button onclick="document.getElementById('pmodal-sub').style.display='none';document.body.style.overflow=''" style="background:var(--bg3);border:1px solid var(--bo);color:var(--gr);width:36px;height:36px;border-radius:8px;font-size:20px;cursor:pointer">‹</button>
-      <div style="font-size:15px;font-weight:700">💎 Subscription Plans</div>
-    </div>
-    <div id="pmodal-sub-cards" style="display:flex;flex-direction:column;gap:12px"></div>
-  </div>
-</div>
-
 <!-- BROKER API MODAL -->
 <div id="broker-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,10,.95);backdrop-filter:blur(10px);overflow-y:auto">
   <div style="max-width:500px;margin:20px auto;padding:16px">
@@ -1330,32 +1319,6 @@ function bellClick(){
 
 // ── BROKER API ──────────────────────────────────────────────────────────────
 
-
-
-function openSubModal(){
-  var pc=document.getElementById('pmodal-sub-cards');
-  if(pc && pc.innerHTML===''){
-    var plans=[
-      {id:'FREE',name:'FREE',price:'₹0/mo',color:'var(--mu)',features:['Paper trading ₹5L virtual','3 built-in strategies','1 month backtest','NLP order entry','Journal + Calculator']},
-      {id:'BASIC',name:'BASIC',price:'₹499/mo',color:'var(--bl)',features:['Everything in FREE','20 strategies','6 month backtest','Scanner + Options chain','Reports + Alerts']},
-      {id:'PRO',name:'PRO ⭐',price:'₹1,499/mo',color:'var(--p0)',features:['Everything in BASIC','AI Engine full access','Auto-execute engine','Live broker API','Unlimited strategies','12 month backtest']},
-      {id:'INSTITUTIONAL',name:'INSTITUTIONAL',price:'₹4,999/mo',color:'var(--am)',features:['Everything in PRO','5 year backtest','White-label option','Custom integrations','Admin dashboard','SLA guarantee']}
-    ];
-    plans.forEach(function(p){
-      var d=document.createElement('div');
-      var isCurrent = p.id==='PRO';
-      d.style.cssText='background:var(--bg3);border:2px solid '+(isCurrent?p.color:'var(--bo)')+';border-radius:12px;padding:18px;position:relative';
-      if(isCurrent) d.innerHTML+='<div style="position:absolute;top:12px;right:12px;font-size:8px;padding:3px 10px;background:'+p.color+';color:#000;border-radius:10px;font-weight:700">ACTIVE</div>';
-      d.innerHTML+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px"><div style="font-size:16px;font-weight:700;color:'+p.color+'">'+p.name+'</div><div style="font-size:16px;font-weight:700">'+p.price+'</div></div>';
-      d.innerHTML+='<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px">'+p.features.map(function(f){return '<div style="font-size:11px;color:var(--mu);display:flex;gap:6px"><span style="color:var(--gr)">✓</span>'+f+'</div>';}).join('')+'</div>';
-      d.innerHTML+='<button onclick="upgradePlan(''+p.id+'');document.getElementById('pmodal-sub').style.display='none';document.body.style.overflow=''" style="width:100%;padding:11px;background:'+(isCurrent?p.color:'transparent')+';border:1px solid '+p.color+';color:'+(isCurrent?'#000':p.color)+';border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">'+(isCurrent?'✓ CURRENT PLAN':'SELECT '+p.name)+'</button>';
-      pc.appendChild(d);
-    });
-  }
-  var m=document.getElementById('pmodal-sub');
-  if(m){m.style.display='block';m.scrollTop=0;}
-  document.body.style.overflow='hidden';
-}
 
 function openMyAccount(){
   // Load saved values
