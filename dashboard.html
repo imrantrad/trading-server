@@ -6469,3 +6469,171 @@ function aiTab(tab, btn){
   if(tab==='signals') setTimeout(checkMLStatus, 500);
 }
 </script>
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// ML ENGINE JS — XGBoost + RandomForest + GradientBoosting
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Load ML status on startup
+function loadMLStatus(){
+  req('/ml/status','GET',null,function(err,d){
+    var el=document.getElementById('ml-status-bar');
+    if(!d||err){
+      if(el) el.innerHTML='<span style="color:var(--rd)">ML libraries not available</span>';
+      return;
+    }
+    if(el){
+      el.innerHTML=
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+        +'<span style="padding:2px 8px;border-radius:10px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);font-size:9px">✅ XGBoost</span>'
+        +'<span style="padding:2px 8px;border-radius:10px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);color:var(--bl);font-size:9px">✅ RandomForest</span>'
+        +'<span style="padding:2px 8px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:var(--p0);font-size:9px">✅ GradBoost</span>'
+        +(d.trained_symbols&&d.trained_symbols.length?'<span style="padding:2px 8px;border-radius:10px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);color:var(--am);font-size:9px">Trained: '+d.trained_symbols.join(', ')+'</span>':'')
+        +'</div>'
+        +'<div style="font-size:9px;color:var(--mu);margin-top:4px">24 features · Time-series CV · Ensemble voting</div>';
+    }
+  });
+}
+
+function trainMLModel(){
+  var sym=(document.getElementById('ml-train-sym')||{}).value||'NIFTY';
+  var days=parseInt((document.getElementById('ml-train-days')||{}).value)||365;
+  var btn=document.querySelector('[onclick="trainMLModel()"]');
+  if(btn){btn.textContent='⏳ Training...';btn.disabled=true;}
+  toast('Training '+sym+' model... (~30s)','info');
+  
+  req('/ml/train','POST',{symbols:[sym],days:days},function(err,r){
+    if(btn){btn.textContent='🧠 TRAIN MODEL';btn.disabled=false;}
+    if(err||!r){toast('Training failed','error');return;}
+    
+    var res=r.results&&r.results[sym];
+    if(!res||res.error){toast('Error: '+(res&&res.error||'Unknown'),'error');return;}
+    
+    // Show results
+    var resultEl=document.getElementById('ml-result');
+    if(resultEl) resultEl.style.display='block';
+    
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+    set('ml-xgb-acc',(res.models&&res.models.xgboost&&res.models.xgboost.accuracy||0)+'%');
+    set('ml-rf-acc',(res.models&&res.models.random_forest&&res.models.random_forest.accuracy||0)+'%');
+    set('ml-ens-acc',res.ensemble_accuracy+'%');
+    
+    // Feature importance
+    var fiEl=document.getElementById('ml-feature-importance');
+    if(fiEl&&res.top_features){
+      var html2='<div style="font-size:10px;font-weight:700;color:var(--mu);margin-bottom:6px">TOP FEATURES:</div>';
+      Object.entries(res.top_features).sort(function(a,b){return b[1]-a[1];}).forEach(function(entry){
+        var pct=entry[1];
+        html2+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+          +'<div style="width:80px;font-size:9px;color:var(--mu)">'+entry[0]+'</div>'
+          +'<div style="flex:1;height:5px;background:var(--bg4);border-radius:3px">'
+          +'<div style="height:100%;width:'+Math.min(100,pct*5)+'%;background:var(--p0);border-radius:3px"></div></div>'
+          +'<div style="font-size:9px;color:var(--p0)">'+pct+'%</div>'
+          +'</div>';
+      });
+      fiEl.innerHTML=html2;
+    }
+    
+    toast('✅ Model trained! Ensemble: '+res.ensemble_accuracy+'% accuracy','success');
+    
+    // Auto predict after training
+    setTimeout(function(){mlPredict(sym);}, 500);
+    loadMLStatus();
+  });
+}
+
+function mlPredict(sym){
+  if(!sym) sym=(document.getElementById('ml-train-sym')||{}).value||'NIFTY';
+  req('/ml/predict/'+sym,'GET',null,function(err,d){
+    if(err||!d) return;
+    
+    var resultEl=document.getElementById('ml-result');
+    if(resultEl) resultEl.style.display='block';
+    
+    var sigBox=document.getElementById('ml-signal-box');
+    if(sigBox){
+      var ac=d.signal==='BUY'?'var(--gr)':d.signal==='SELL'?'var(--rd)':'var(--am)';
+      var bg=d.signal==='BUY'?'rgba(0,255,136,.08)':d.signal==='SELL'?'rgba(255,51,102,.08)':'rgba(251,191,36,.08)';
+      sigBox.style.background=bg;
+      sigBox.style.border='1px solid '+ac;
+      sigBox.style.borderRadius='8px';
+      sigBox.innerHTML=
+        '<div style="font-size:24px;font-weight:800;color:'+ac+'">'+d.signal+'</div>'
+        +'<div style="font-size:12px;color:var(--mu);margin:4px 0">Confidence: <b style="color:'+ac+'">'+d.confidence+'%</b></div>'
+        +'<div style="font-size:10px;color:var(--mu)">Probability: '+d.probability+'% | '+d.model_type+'</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:10px">'
+        +'<div style="background:rgba(0,0,0,.2);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">RSI</div><b>'+(d.indicators&&d.indicators.RSI||'—')+'</b></div>'
+        +'<div style="background:rgba(0,0,0,.2);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">ADX</div><b>'+(d.indicators&&d.indicators.ADX||'—')+'</b></div>'
+        +'<div style="background:rgba(0,0,0,.2);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">MACD</div><b>'+(d.indicators&&d.indicators.MACD_hist||'—')+'</b></div>'
+        +'</div>';
+    }
+    
+    // Model votes
+    var votesEl=document.getElementById('ml-model-votes');
+    if(votesEl&&d.model_votes){
+      var html2='<div style="font-size:9px;font-weight:700;color:var(--mu);margin-bottom:4px">MODEL VOTES:</div>'
+        +'<div style="display:flex;gap:6px">';
+      Object.entries(d.model_votes).forEach(function(entry){
+        var pred=entry[1].prediction;
+        var prob=entry[1].probability;
+        var c=pred===1?'var(--gr)':'var(--rd)';
+        html2+='<div style="flex:1;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:6px;text-align:center">'
+          +'<div style="font-size:8px;color:var(--mu)">'+entry[0].replace('_',' ').toUpperCase()+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+c+'">'+(pred===1?'BUY':'SELL')+'</div>'
+          +'<div style="font-size:8px;color:var(--mu)">'+prob+'%</div>'
+          +'</div>';
+      });
+      html2+='</div>';
+      votesEl.innerHTML=html2;
+    }
+  });
+}
+
+function mlScanAll(){
+  toast('ML scanning all instruments...','info');
+  req('/ml/scan_all','POST',{symbols:['NIFTY','BANKNIFTY','FINNIFTY']},'POST',null,function(err,d){
+    if(err||!d){toast('Scan failed','error');return;}
+    toast('ML Scan: '+d.buy_count+' BUY, '+d.sell_count+' SELL, '+d.wait_count+' WAIT','success');
+    if(d.signals) renderSignalCards(d.signals);
+  });
+}
+
+// Override scanAllSignals to include ML
+var _origScanAll = scanAllSignals;
+function scanAllSignals(){
+  _origScanAll();
+  loadMLStatus();
+}
+
+// Auto-load ML status when AI tab opens
+var _origLoadAIAll = loadAIEngineAll;
+function loadAIEngineAll(){
+  _origLoadAIAll();
+  loadMLStatus();
+}
+
+// Fix mlScanAll POST
+function mlScanAll(){
+  toast('ML scanning all instruments...','info');
+  req('/ml/scan_all','POST',{symbols:['NIFTY','BANKNIFTY','FINNIFTY']},function(err,d){
+    if(err||!d){toast('Scan failed - train a model first','warn');return;}
+    toast('ML Scan complete: '+d.buy_count+' BUY · '+d.sell_count+' SELL · '+d.wait_count+' WAIT','success');
+    if(d.signals){
+      // Convert ml signals to display format
+      var converted={};
+      Object.keys(d.signals).forEach(function(sym){
+        var s=d.signals[sym];
+        converted[sym]={
+          signal:s.signal, action:s.signal,
+          confidence:s.confidence,
+          rsi:s.indicators&&s.indicators.RSI,
+          adx:s.indicators&&s.indicators.ADX,
+          regime:'ML_SIGNAL',
+          ml_model:s.model_type
+        };
+      });
+      renderSignalCards(converted);
+    }
+  });
+}
+</script>
