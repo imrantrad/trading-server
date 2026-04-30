@@ -1177,10 +1177,58 @@ input:focus, select:focus, textarea:focus {
   <!-- PAPER STRATEGIES TAB -->
   <div id="paper-tab-strats" style="display:none">
     <div style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:10px">★ STRATEGIES FOR PAPER TEST</div>
-    <div style="display:flex;gap:6px;margin-bottom:10px">
-      <button class="btn bg" onclick="loadPaperStrats('builtin')" style="flex:1;padding:8px;font-size:9px">BUILT-IN</button>
-      <button class="btn bb" onclick="loadPaperStrats('my')" style="flex:1;padding:8px;font-size:9px">MY STRATEGIES</button>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button class="btn bg" onclick="loadPaperStrats('builtin')" style="flex:1;padding:7px;font-size:9px">★ BUILT-IN</button>
+      <button class="btn bb" onclick="loadPaperStrats('my')" style="flex:1;padding:7px;font-size:9px">📂 MY</button>
+      <button class="btn" onclick="loadPaperStrats('ai')" style="flex:1;padding:7px;font-size:9px;border-color:var(--am);color:var(--am)">🤖 AI</button>
     </div>
+
+    <!-- ADVANCED PAPER TRADING -->
+    <div style="background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--gr);margin-bottom:12px">⚡ ADVANCED PAPER EXECUTE</div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">STRATEGY</div>
+          <select id="adv-strategy" style="width:100%">
+            <option value="STRADDLE">STRADDLE</option>
+            <option value="STRANGLE">STRANGLE</option>
+            <option value="IRON_CONDOR">IRON CONDOR</option>
+            <option value="ORB_930">ORB 9:30</option>
+            <option value="CONFLUENCE_930">9:30 Confluence</option>
+          </select>
+        </div>
+        <div><div class="lbl">INSTRUMENT</div>
+          <select id="adv-inst" style="width:100%">
+            <option value="NIFTY">NIFTY</option>
+            <option value="BANKNIFTY">BANKNIFTY</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">SPOT PRICE</div><input type="number" id="adv-spot" value="24000"></div>
+        <div><div class="lbl">TIME EXIT</div>
+          <select id="adv-time-exit" style="width:100%">
+            <option value="10:30">10:30 AM</option>
+            <option value="11:30">11:30 AM</option>
+            <option value="15:30" selected>3:30 PM</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">MAX TRADES/DAY</div><input type="number" id="adv-max-trades" value="5"></div>
+        <div><div class="lbl">LOTS</div><input type="number" id="adv-lots" value="1"></div>
+      </div>
+      <button class="btn bg blg" onclick="executeAdvPaper()" style="width:100%;margin-bottom:6px">⚡ EXECUTE MULTI-LEG</button>
+      <button class="btn bb" onclick="scheduleAdvPaper()" style="width:100%;margin-bottom:6px;font-size:10px">⏰ SCHEDULE AT 9:30 AM</button>
+      <button class="btn br" onclick="closeAllAdvPaper()" style="width:100%;font-size:10px">✕ CLOSE ALL POSITIONS</button>
+      <div id="adv-status" style="margin-top:8px;font-size:10px;color:var(--mu)"></div>
+    </div>
+
+    <!-- LIVE ADVANCED POSITIONS -->
+    <div class="card" style="margin-bottom:8px">
+      <div class="chdr">ACTIVE POSITIONS <button onclick="loadAdvSummary()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻ REFRESH</button></div>
+      <div id="adv-positions" style="font-size:10px;color:var(--mu);padding:8px">No active positions</div>
+    </div>
+
     <div id="paper-strat-list" style="display:flex;flex-direction:column;gap:8px">
       <div style="color:var(--mu);text-align:center;padding:20px;font-size:10px">Click BUILT-IN or MY STRATEGIES to load</div>
     </div>
