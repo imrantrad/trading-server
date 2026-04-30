@@ -1411,11 +1411,14 @@ class AdvancedBacktestPayload(BaseModel):
 
 @app.post("/backtest/advanced")
 def advanced_backtest(payload: AdvancedBacktestPayload):
-    if not USER_SYSTEM: return {"error":"Not loaded"}
-    result = run_advanced_backtest(
-        payload.strategy, payload.capital, payload.months,
-        payload.quantity, payload.sl_pct, payload.target_pct)
-    return result
+    """Run backtest - works for all strategies including My Strategies and AI Gen5"""
+    try:
+        result = run_advanced_backtest(
+            payload.strategy, payload.capital, payload.months,
+            payload.quantity, payload.sl_pct, payload.target_pct)
+        return result
+    except Exception as e:
+        return {"error": str(e), "strategy": payload.strategy}
 
 @app.get("/backtest/strategies/all")
 def all_backtest_strategies():
