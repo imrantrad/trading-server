@@ -6607,26 +6607,39 @@ function loadAIEngineAll(){
 
 // Fix mlScanAll POST
 function mlScanAll(){
-  toast('ML scanning all instruments...','info');
-  req('/ml/scan_all','POST',{symbols:['NIFTY','BANKNIFTY','FINNIFTY']},function(err,d){
-    if(err||!d){toast('Scan failed - train a model first','warn');return;}
-    toast('ML Scan complete: '+d.buy_count+' BUY · '+d.sell_count+' SELL · '+d.wait_count+' WAIT','success');
-    if(d.signals){
-      // Convert ml signals to display format
-      var converted={};
-      Object.keys(d.signals).forEach(function(sym){
-        var s=d.signals[sym];
-        converted[sym]={
-          signal:s.signal, action:s.signal,
-          confidence:s.confidence,
-          rsi:s.indicators&&s.indicators.RSI,
-          adx:s.indicators&&s.indicators.ADX,
-          regime:'ML_SIGNAL',
-          ml_model:s.model_type
-        };
-      });
-      renderSignalCards(converted);
-    }
-  });
+  toast('ML scanning... (first time trains ~30s)','info');
+  var cards=document.getElementById('ai-signal-cards');
+  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:20px">🧠 ML models scanning...<br><span style="font-size:9px;color:var(--mu)">First run auto-trains models (~30s)</span></div>';
+  
+  // Use XMLHttpRequest with longer timeout
+  var x=new XMLHttpRequest();
+  x.open('POST', window.API+'/ml/scan_all', true);
+  x.setRequestHeader('Content-Type','application/json');
+  x.setRequestHeader('bypass-tunnel-reminder','true');
+  x.timeout=120000; // 2 min timeout for training
+  x.onload=function(){
+    try{
+      var d=JSON.parse(x.responseText);
+      if(d.error){toast('ML Error: '+d.error,'error');return;}
+      toast('ML Scan: '+d.buy_count+' BUY · '+d.sell_count+' SELL · '+d.wait_count+' WAIT','success');
+      if(d.signals){
+        var converted={};
+        Object.keys(d.signals).forEach(function(sym){
+          var s=d.signals[sym];
+          converted[sym]={
+            signal:s.signal||'WAIT', action:s.signal||'WAIT',
+            confidence:Math.round(s.confidence||0),
+            rsi:s.indicators&&s.indicators.RSI||'—',
+            adx:s.indicators&&s.indicators.ADX||'—',
+            regime:'ML·'+(s.ensemble_accuracy||0)+'%acc',
+            ml_accuracy:s.ensemble_accuracy
+          };
+        });
+        renderSignalCards(converted);
+      }
+    }catch(e){toast('Scan parse error','error');}
+  };
+  x.onerror=x.ontimeout=function(){toast('ML scan timeout - server busy','error');};
+  x.send(JSON.stringify({symbols:['NIFTY','BANKNIFTY','FINNIFTY']}));
 }
 </script>
