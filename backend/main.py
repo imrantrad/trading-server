@@ -3346,12 +3346,14 @@ async def ml_train(request: Request):
 
 @app.get("/ml/predict/{symbol}")
 def ml_predict_endpoint(symbol: str = "NIFTY"):
-    """Get ML model prediction for a symbol"""
+    """Get ML model prediction - auto-trains if not trained"""
     if not ML_AVAILABLE:
         return {"error": "ML not available", "signal": "WAIT", "confidence": 0}
     try:
-        result = ml_predict(symbol)
-        return result
+        model = get_model(symbol)
+        if not model.trained:
+            model.train(days=365)
+        return model.predict()
     except Exception as e:
         return {"error": str(e), "signal": "WAIT", "confidence": 0}
 
@@ -3396,7 +3398,7 @@ def ml_features(symbol: str = "NIFTY"):
 
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
-    """Scan all instruments with ML models"""
+    """Scan all instruments with ML models - auto-trains if needed"""
     if not ML_AVAILABLE:
         return {"error": "ML not available"}
     data = await request.json()
@@ -3405,9 +3407,13 @@ async def ml_scan_all(request: Request):
     results = {}
     for sym in symbols:
         try:
-            results[sym] = ml_predict(sym)
+            model = get_model(sym)
+            # Auto-train if not trained
+            if not model.trained:
+                model.train(days=365)
+            results[sym] = model.predict()
         except Exception as e:
-            results[sym] = {"error": str(e), "signal": "WAIT"}
+            results[sym] = {"error": str(e), "signal": "WAIT", "confidence": 0}
     
     # Find best signal
     buy_signals = [(s,r) for s,r in results.items() if r.get("signal")=="BUY"]
