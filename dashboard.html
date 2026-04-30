@@ -1074,121 +1074,176 @@ input:focus, select:focus, textarea:focus {
 
 
 <!-- PAPER TEST PANEL -->
-<div id="pnl-paper" class="pnl" style="display:none">
+<div id="pnl-paper" class="pnl" style="padding:0">
 
-  <!-- Header bar -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:6px 10px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px">
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#001a0e,#000d07);padding:10px 14px;border-bottom:1px solid rgba(0,255,136,.15);display:flex;align-items:center;justify-content:space-between">
     <div style="display:flex;align-items:center;gap:8px">
       <span style="width:8px;height:8px;border-radius:50%;background:var(--gr);display:inline-block;animation:pulse 2s infinite"></span>
-      <span style="font-size:11px;font-weight:700;color:var(--gr)">PAPER TEST</span>
+      <span style="font-size:12px;font-weight:700;color:var(--gr)">PAPER TEST</span>
       <span style="font-size:10px;color:var(--mu)">Virtual ₹5L · No real money</span>
     </div>
+    <div id="pt-daily-status" style="font-size:9px;color:var(--mu)">Daily: 0/5 trades</div>
+  </div>
+
+  <!-- Stats strip -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);background:var(--bg3);border-bottom:1px solid var(--bo)">
+    <div style="padding:8px;text-align:center;border-right:1px solid var(--bo)"><div style="font-size:8px;color:var(--mu)">P&L</div><div id="pt-pnl" style="font-size:14px;font-weight:700;color:var(--am)">₹+0</div></div>
+    <div style="padding:8px;text-align:center;border-right:1px solid var(--bo)"><div style="font-size:8px;color:var(--mu)">TRADES</div><div id="pt-trades" style="font-size:14px;font-weight:700;color:var(--bl)">0</div></div>
+    <div style="padding:8px;text-align:center;border-right:1px solid var(--bo)"><div style="font-size:8px;color:var(--mu)">WIN RATE</div><div id="pt-wr" style="font-size:14px;font-weight:700;color:var(--gr)">0%</div></div>
+    <div style="padding:8px;text-align:center"><div style="font-size:8px;color:var(--mu)">CAPITAL</div><div id="pt-cap" style="font-size:13px;font-weight:700;color:var(--am)">₹5.0L</div></div>
   </div>
 
   <!-- Sub-tabs -->
-  <div style="display:flex;gap:6px;margin-bottom:10px">
-    <button id="pt-trade-btn" onclick="showPaperTab('trade',this)" style="flex:1;padding:8px;font-size:10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--gr);border-radius:5px;cursor:pointer;font-family:inherit;font-weight:700">📝 ORDER ENTRY</button>
-    <button id="pt-pos-btn" onclick="showPaperTab('pos',this)" style="flex:1;padding:8px;font-size:10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer;font-family:inherit">📊 POSITIONS</button>
-    <button id="pt-strats-btn" onclick="showPaperTab('strats',this)" style="flex:1;padding:8px;font-size:10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer;font-family:inherit">★ STRATEGIES</button>
+  <div style="display:flex;background:var(--bg2);border-bottom:1px solid var(--bo)">
+    <button id="pt-trade-btn" class="tab active" onclick="showPaperTab('trade',this)" style="flex:1;padding:10px;font-size:10px">📝 ORDER</button>
+    <button id="pt-pos-btn" class="tab" onclick="showPaperTab('pos',this);loadPaperPositions()" style="flex:1;padding:10px;font-size:10px">📊 POSITIONS</button>
+    <button id="pt-strats-btn" class="tab" onclick="showPaperTab('strats',this)" style="flex:1;padding:10px;font-size:10px">★ STRATEGY</button>
   </div>
 
-  <!-- PAPER TRADE TAB -->
-  <div id="paper-tab-trade">
-    <!-- Stats -->
-    <div class="g4" style="margin-bottom:6px">
-      <div class="stat" style="padding:6px 4px"><div class="sl">PAPER P&L</div><div class="sv" id="pt-pnl" style="color:var(--am);font-size:14px">₹+0</div></div>
-      <div class="stat" style="padding:6px 4px"><div class="sl">TRADES</div><div class="sv" id="pt-trades" style="color:var(--bl);font-size:14px">0</div></div>
-      <div class="stat" style="padding:6px 4px"><div class="sl">WIN RATE</div><div class="sv" id="pt-wr" style="color:var(--gr);font-size:14px">0%</div></div>
-      <div class="stat" style="padding:6px 4px"><div class="sl">VIRTUAL CAP</div><div class="sv" id="pt-cap" style="color:var(--am);font-size:13px">₹5.0L</div></div>
+  <!-- ── ORDER ENTRY TAB ── -->
+  <div id="paper-tab-trade" style="padding:12px">
+
+    <div class="card" style="margin-bottom:8px">
+      <!-- Instrument -->
+      <div style="margin-bottom:8px">
+        <div class="lbl">INSTRUMENT</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="tog ta" id="pbi-NIFTY" onclick="setPaperInst('NIFTY',this)">NIFTY</button>
+          <button class="tog" id="pbi-BANKNIFTY" onclick="setPaperInst('BANKNIFTY',this)">BANKNIFTY</button>
+          <button class="tog" id="pbi-FINNIFTY" onclick="setPaperInst('FINNIFTY',this)">FINNIFTY</button>
+          <button class="tog" id="pbi-SENSEX" onclick="setPaperInst('SENSEX',this)">SENSEX</button>
+        </div>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <!-- Action -->
+        <div>
+          <div class="lbl">ACTION</div>
+          <div style="display:flex;gap:4px">
+            <button class="tog ta" id="pba-BUY" onclick="setPaperAction('BUY')" style="flex:1;color:var(--gr)">BUY</button>
+            <button class="tog" id="pba-SELL" onclick="setPaperAction('SELL')" style="flex:1;color:var(--rd)">SELL</button>
+          </div>
+        </div>
+        <!-- Type -->
+        <div>
+          <div class="lbl">TYPE</div>
+          <div style="display:flex;gap:4px">
+            <button class="tog ta" id="pbt-CE" onclick="setPaperType('CE')" style="flex:1">CE</button>
+            <button class="tog" id="pbt-PE" onclick="setPaperType('PE')" style="flex:1">PE</button>
+            <button class="tog" id="pbt-FUT" onclick="setPaperType('FUT')" style="flex:1">FUT</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">STRIKE</div><input type="number" id="ppf-strike" value="24000" placeholder="Strike"></div>
+        <div><div class="lbl">LOTS</div><input type="number" id="ppf-lots" value="1" min="1"></div>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">ENTRY PRICE ₹</div><input type="number" id="ppf-price" value="100" placeholder="Premium"></div>
+        <div><div class="lbl">EXPIRY</div>
+          <select id="ppf-exp">
+            <option value="WEEKLY">WEEKLY</option>
+            <option value="MONTHLY">MONTHLY</option>
+            <option value="NEXT_WEEKLY">NEXT WEEKLY</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">STOP LOSS (pts)</div><input type="number" id="ppf-sl" value="30" placeholder="pts"></div>
+        <div><div class="lbl">TARGET (pts)</div><input type="number" id="ppf-tgt" value="60" placeholder="pts"></div>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">TRAILING SL</div><input type="number" id="ppf-trail" value="0" placeholder="0=off"></div>
+        <div><div class="lbl">TIME EXIT</div>
+          <select id="ppf-time-exit">
+            <option value="">None</option>
+            <option value="10:30">10:30 AM</option>
+            <option value="11:30">11:30 AM</option>
+            <option value="15:30">3:30 PM</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- R/R Display -->
+      <div style="display:flex;justify-content:space-between;padding:8px;background:var(--bg4);border-radius:6px;margin-bottom:10px;font-size:10px">
+        <span style="color:var(--mu)">Risk/Reward</span>
+        <span id="pt-rr" style="font-weight:700;color:var(--gr)">1:2.00</span>
+        <span style="color:var(--mu)">Max Loss</span>
+        <span id="pt-maxloss" style="font-weight:700;color:var(--rd)">₹1,500</span>
+      </div>
+
+      <button id="pt-exec-btn" onclick="execPaperTrade()" class="btn bg blg" style="width:100%;font-size:12px">
+        📄 EXECUTE PAPER BUY NIFTY CE
+      </button>
     </div>
 
-    <div class="g2" style="gap:10px">
-      <!-- Order Entry -->
-      <div class="card" style="padding:10px">
-        <div class="chdr" style="margin-bottom:6px">ORDER ENTRY</div>
-        <div style="margin-bottom:6px">
-          <div class="lbl">INSTRUMENT</div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap">
-            <button class="tog ta" id="pbi-NIFTY" onclick="setPaperInst('NIFTY',this)">NIFTY</button>
-            <button class="tog" id="pbi-BANKNIFTY" onclick="setPaperInst('BANKNIFTY',this)">BANKNIFTY</button>
-            <button class="tog" id="pbi-FINNIFTY" onclick="setPaperInst('FINNIFTY',this)">FINNIFTY</button>
-          </div>
-        </div>
-
-        <div class="g2" style="gap:6px;margin-bottom:8px">
-          <div>
-            <div class="lbl">ACTION</div>
-            <div style="display:flex;gap:4px">
-              <button class="tog tg" id="pba-BUY" onclick="setPaperAction('BUY')">BUY</button>
-              <button class="tog" id="pba-SELL" onclick="setPaperAction('SELL')">SELL</button>
-            </div>
-          </div>
-          <div>
-            <div class="lbl">TYPE</div>
-            <div style="display:flex;gap:4px">
-              <button class="tog tb" id="pbt-CE" onclick="setPaperType('CE')">CE</button>
-              <button class="tog" id="pbt-PE" onclick="setPaperType('PE')">PE</button>
-              <button class="tog" id="pbt-FUT" onclick="setPaperType('FUT')">FUT</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="g2" style="gap:6px;margin-bottom:6px">
-          <div><div class="lbl">STRIKE</div><input type="number" id="ppf-strike" placeholder="23900"></div>
-          <div><div class="lbl">LOTS</div><input type="number" id="ppf-lots" value="1"></div>
-        </div>
-        <div class="g2" style="gap:6px;margin-bottom:6px">
-          <div><div class="lbl">ENTRY PRICE</div><input type="number" id="ppf-price" placeholder="Premium"></div>
-          <div><div class="lbl">EXPIRY</div><select id="ppf-exp"><option>WEEKLY</option><option>MONTHLY</option></select></div>
-        </div>
-        <div class="g2" style="gap:6px;margin-bottom:10px">
-          <div><div class="lbl">STOP LOSS (pts)</div><input type="number" id="ppf-sl" value="100"></div>
-          <div><div class="lbl">TARGET (pts)</div><input type="number" id="ppf-tgt" value="200"></div>
-        </div>
-
-        <button class="btn blg bg" id="paper-exec-btn" onclick="execPaperTrade()">📄 EXECUTE PAPER BUY NIFTY CE</button>
-      </div>
-
-      <!-- Paper Log -->
-      <div class="card">
-        <div class="chdr">PAPER LOG <button onclick="var l=$('paper-log');if(l)l.innerHTML=''" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">CLR</button></div>
-        <div id="paper-log" style="max-height:220px;overflow-y:auto;font-size:10px;line-height:1.8">
-          <div style="color:var(--mu);text-align:center;padding:20px">No paper trades yet</div>
-        </div>
-      </div>
+    <!-- Paper log -->
+    <div class="card">
+      <div class="chdr">PAPER LOG <button onclick="var l=$('paper-log');if(l)l.innerHTML=''" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">CLR</button></div>
+      <div id="paper-log" style="font-size:9px;color:var(--mu);max-height:120px;overflow-y:auto;line-height:1.8">No paper trades yet</div>
     </div>
   </div>
 
-  <!-- PAPER POSITIONS TAB -->
-  <div id="paper-tab-pos" style="display:none">
+  <!-- ── POSITIONS TAB ── -->
+  <div id="paper-tab-pos" style="display:none;padding:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--gr)">📄 PAPER POSITIONS ONLY</div>
-      <button class="btn bg" onclick="loadPaperPositions()" style="padding:5px 10px;font-size:9px">↻ REFRESH</button>
+      <div style="font-size:11px;font-weight:700;color:var(--gr)">📄 PAPER POSITIONS</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn bg" onclick="loadPaperPositions()" style="padding:5px 10px;font-size:9px">↻ REFRESH</button>
+        <button class="btn br" onclick="closeAllPaperPositions()" style="padding:5px 10px;font-size:9px">✕ CLOSE ALL</button>
+      </div>
     </div>
+
+    <!-- P&L Summary -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">
+      <div class="stat"><div class="sl">OPEN P&L</div><div class="sv" id="pt-open-pnl" style="color:var(--am)">₹0</div></div>
+      <div class="stat"><div class="sl">CLOSED P&L</div><div class="sv" id="pt-closed-pnl" style="color:var(--gr)">₹0</div></div>
+      <div class="stat"><div class="sl">NET P&L</div><div class="sv" id="pt-net-pnl" style="color:var(--gr)">₹0</div></div>
+    </div>
+
     <div style="overflow-x:auto">
       <table class="tbl">
-        <thead><tr><th>ID</th><th>INST</th><th>TYPE</th><th>LOTS</th><th>ENTRY</th><th>LTP</th><th>P&L</th><th>ACT</th></tr></thead>
-        <tbody id="paper-pos-tbl"><tr><td colspan="8" style="text-align:center;color:var(--mu);padding:20px">No paper positions yet</td></tr></tbody>
+        <thead>
+          <tr>
+            <th>INST</th><th>TYPE</th><th>K</th><th>LOTS</th>
+            <th>ENTRY</th><th>LTP</th><th>SL</th><th>TGT</th>
+            <th>P&L</th><th>ACT</th>
+          </tr>
+        </thead>
+        <tbody id="paper-pos-tbl">
+          <tr><td colspan="10" style="text-align:center;color:var(--mu);padding:20px">No paper positions yet</td></tr>
+        </tbody>
       </table>
     </div>
-    <div style="margin-top:8px;padding:8px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:6px;font-size:9px;color:var(--gr)">ℹ️ Only paper positions shown here. Live positions → TRADE tab → 📈 POSITIONS</div>
+
+    <!-- Closed trades -->
+    <div class="card" style="margin-top:10px">
+      <div class="chdr">TRADE HISTORY <button onclick="loadPaperHistory()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">LOAD</button></div>
+      <div id="pt-history" style="font-size:9px;color:var(--mu)">Click LOAD to see history</div>
+    </div>
   </div>
 
-  <!-- PAPER STRATEGIES TAB -->
-  <div id="paper-tab-strats" style="display:none">
-    <div style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:10px">★ STRATEGIES FOR PAPER TEST</div>
-    <div style="display:flex;gap:6px;margin-bottom:8px">
+  <!-- ── STRATEGIES TAB ── -->
+  <div id="paper-tab-strats" style="display:none;padding:12px">
+
+    <!-- Strategy type selector -->
+    <div style="display:flex;gap:4px;margin-bottom:10px">
       <button class="btn bg" onclick="loadPaperStrats('builtin')" style="flex:1;padding:7px;font-size:9px">★ BUILT-IN</button>
       <button class="btn bb" onclick="loadPaperStrats('my')" style="flex:1;padding:7px;font-size:9px">📂 MY</button>
       <button class="btn" onclick="loadPaperStrats('ai')" style="flex:1;padding:7px;font-size:9px;border-color:var(--am);color:var(--am)">🤖 AI</button>
     </div>
 
-    <!-- ADVANCED PAPER TRADING -->
-    <div style="background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:14px;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:700;color:var(--gr);margin-bottom:12px">⚡ ADVANCED PAPER EXECUTE</div>
+    <!-- ADVANCED PAPER EXECUTE -->
+    <div style="background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--gr);margin-bottom:10px">⚡ ADVANCED EXECUTE</div>
       <div class="g2" style="gap:8px;margin-bottom:8px">
         <div><div class="lbl">STRATEGY</div>
-          <select id="adv-strategy" style="width:100%">
+          <select id="adv-strategy">
             <option value="STRADDLE">STRADDLE</option>
             <option value="STRANGLE">STRANGLE</option>
             <option value="IRON_CONDOR">IRON CONDOR</option>
@@ -1197,16 +1252,16 @@ input:focus, select:focus, textarea:focus {
           </select>
         </div>
         <div><div class="lbl">INSTRUMENT</div>
-          <select id="adv-inst" style="width:100%">
+          <select id="adv-inst">
             <option value="NIFTY">NIFTY</option>
             <option value="BANKNIFTY">BANKNIFTY</option>
           </select>
         </div>
       </div>
       <div class="g2" style="gap:8px;margin-bottom:8px">
-        <div><div class="lbl">SPOT PRICE</div><input type="number" id="adv-spot" value="24000"></div>
+        <div><div class="lbl">SPOT</div><input type="number" id="adv-spot" value="24000"></div>
         <div><div class="lbl">TIME EXIT</div>
-          <select id="adv-time-exit" style="width:100%">
+          <select id="adv-time-exit">
             <option value="10:30">10:30 AM</option>
             <option value="11:30">11:30 AM</option>
             <option value="15:30" selected>3:30 PM</option>
@@ -1219,62 +1274,62 @@ input:focus, select:focus, textarea:focus {
       </div>
       <button class="btn bg blg" onclick="executeAdvPaper()" style="width:100%;margin-bottom:6px">⚡ EXECUTE MULTI-LEG</button>
       <button class="btn bb" onclick="scheduleAdvPaper()" style="width:100%;margin-bottom:6px;font-size:10px">⏰ SCHEDULE AT 9:30 AM</button>
-      <button class="btn br" onclick="closeAllAdvPaper()" style="width:100%;font-size:10px">✕ CLOSE ALL POSITIONS</button>
+      <button class="btn br" onclick="closeAllAdvPaper()" style="width:100%;font-size:10px">✕ CLOSE ALL</button>
       <div id="adv-status" style="margin-top:8px;font-size:10px;color:var(--mu)"></div>
     </div>
 
-    <!-- CONDITION CHECK -->
+    <!-- LIVE CONDITION CHECK -->
     <div style="background:rgba(79,142,247,.05);border:1px solid rgba(79,142,247,.2);border-radius:10px;padding:12px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700;color:var(--bl)">📊 LIVE CONDITION CHECK</div>
-        <button onclick="loadConditions()" style="font-size:9px;padding:3px 10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">↻ CHECK NOW</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--bl)">📊 LIVE CONDITIONS</div>
+        <button onclick="loadConditions()" style="font-size:9px;padding:3px 10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">↻ CHECK</button>
       </div>
       <div id="condition-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
-        <div style="text-align:center;padding:10px;color:var(--mu);font-size:10px;grid-column:span 2">Click CHECK NOW</div>
+        <div style="text-align:center;padding:8px;color:var(--mu);font-size:10px;grid-column:span 2">Click CHECK</div>
       </div>
-      <div id="signal-box" style="display:none;margin-top:10px;padding:10px;border-radius:8px;text-align:center"></div>
+      <div id="signal-box" style="display:none;margin-top:8px;padding:10px;border-radius:8px;text-align:center"></div>
     </div>
 
     <!-- ATM CALCULATOR -->
     <div style="background:rgba(251,191,36,.04);border:1px solid rgba(251,191,36,.15);border-radius:10px;padding:12px;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:10px">🎯 ATM STRIKE CALCULATOR</div>
+      <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:8px">🎯 ATM STRIKE</div>
       <div class="g2" style="gap:8px;margin-bottom:8px">
         <div><div class="lbl">INSTRUMENT</div>
-          <select id="atm-inst" style="width:100%">
-            <option value="NIFTY">NIFTY</option>
-            <option value="BANKNIFTY">BANKNIFTY</option>
-          </select>
+          <select id="atm-inst"><option value="NIFTY">NIFTY</option><option value="BANKNIFTY">BANKNIFTY</option></select>
         </div>
         <div style="display:flex;align-items:flex-end">
-          <button class="btn ba blg" onclick="loadATM()" style="width:100%;padding:9px">🎯 GET ATM</button>
+          <button class="btn ba blg" onclick="loadATM()" style="width:100%;padding:8px;font-size:10px">🎯 GET ATM</button>
         </div>
       </div>
-      <div id="atm-result" style="font-size:11px;color:var(--mu)">Select instrument and click GET ATM</div>
+      <div id="atm-result" style="font-size:11px;color:var(--mu)">Select and click GET ATM</div>
     </div>
 
-    <!-- TRADE HISTORY + EXPORT -->
+    <!-- ACTIVE ADVANCED POSITIONS -->
     <div class="card" style="margin-bottom:8px">
-      <div class="chdr">📋 TRADE HISTORY
-        <div style="display:flex;gap:6px">
+      <div class="chdr">ACTIVE POSITIONS <button onclick="loadAdvSummary()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button></div>
+      <div id="adv-positions" style="font-size:10px;color:var(--mu)">No active positions</div>
+    </div>
+
+    <!-- TRADE HISTORY + CSV -->
+    <div class="card" style="margin-bottom:8px">
+      <div class="chdr">📋 HISTORY
+        <div style="display:flex;gap:4px">
           <button onclick="loadTradeHistory()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button>
           <button onclick="exportCSV()" style="font-size:8px;padding:2px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:3px;cursor:pointer">⬇ CSV</button>
         </div>
       </div>
-      <div id="trade-history-list" style="font-size:10px;color:var(--mu)">No closed trades yet</div>
+      <div id="trade-history-list" style="font-size:10px;color:var(--mu)">No closed trades</div>
     </div>
 
-    <!-- LIVE ADVANCED POSITIONS -->
-    <div class="card" style="margin-bottom:8px">
-      <div class="chdr">ACTIVE POSITIONS <button onclick="loadAdvSummary()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻ REFRESH</button></div>
-      <div id="adv-positions" style="font-size:10px;color:var(--mu);padding:8px">No active positions</div>
-    </div>
-
+    <!-- Strategy list -->
     <div id="paper-strat-list" style="display:flex;flex-direction:column;gap:8px">
-      <div style="color:var(--mu);text-align:center;padding:20px;font-size:10px">Click BUILT-IN or MY STRATEGIES to load</div>
+      <div style="color:var(--mu);text-align:center;padding:20px;font-size:10px">Click BUILT-IN / MY / AI to load strategies</div>
     </div>
+
   </div>
 
 </div>
+
 <!-- LIVE POSITIONS PANEL -->
 <div id="pnl-livepos" class="pnl" style="display:none">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:10px;background:var(--bg3);border:1px solid rgba(0,255,136,.2);border-radius:8px">
@@ -4840,4 +4895,113 @@ function exportCSV(){
   window.open(window.API+'/paper/v2/export_csv','_blank');
   toast('CSV download started!','success');
 }
+
+// ── PAPER TEST COMPLETE FUNCTIONS ─────────────────────────────────────────────
+
+// R/R auto-calc for paper order entry
+function updatePaperRR(){
+  var sl = parseFloat((document.getElementById('ppf-sl')||{}).value)||30;
+  var tgt = parseFloat((document.getElementById('ppf-tgt')||{}).value)||60;
+  var price = parseFloat((document.getElementById('ppf-price')||{}).value)||100;
+  var lots = parseInt((document.getElementById('ppf-lots')||{}).value)||1;
+  var rr = (tgt/sl).toFixed(2);
+  var maxLoss = sl * lots * 50;
+  var rrEl = document.getElementById('pt-rr');
+  var mlEl = document.getElementById('pt-maxloss');
+  if(rrEl){ rrEl.textContent='1:'+rr; rrEl.style.color=rr>=2?'var(--gr)':rr>=1.5?'var(--am)':'var(--rd)'; }
+  if(mlEl) mlEl.textContent='₹'+maxLoss.toLocaleString();
+}
+
+// Update execute button text
+function updatePaperExecBtn(){
+  var btn = document.getElementById('pt-exec-btn');
+  if(!btn) return;
+  var a = window.PAPER_ACT||'BUY';
+  var i = window.PAPER_INST||'NIFTY';
+  var t = window.PAPER_TYP||'CE';
+  btn.textContent='📄 EXECUTE PAPER '+a+' '+i+' '+t;
+  btn.style.background = a==='BUY'?'var(--gr)':'var(--rd)';
+  btn.style.color = '#000';
+}
+
+// Override setPaperAction/Inst/Type to also update button
+var _origSPA = setPaperAction;
+function setPaperAction(a){
+  if(typeof _origSPA==='function') _origSPA(a);
+  document.querySelectorAll('[id^="pba-"]').forEach(function(b){b.classList.remove('ta');});
+  var ab=document.getElementById('pba-'+a);
+  if(ab) ab.classList.add('ta');
+  updatePaperExecBtn();
+}
+
+function setPaperType(t){
+  window.PAPER_TYP=t;
+  document.querySelectorAll('[id^="pbt-"]').forEach(function(b){b.classList.remove('ta');});
+  var tb=document.getElementById('pbt-'+t);
+  if(tb) tb.classList.add('ta');
+  updatePaperExecBtn();
+}
+
+function setPaperInst(i,el){
+  window.PAPER_INST=i;
+  document.querySelectorAll('[id^="pbi-"]').forEach(function(b){b.classList.remove('ta');});
+  if(el) el.classList.add('ta');
+  updatePaperExecBtn();
+  // Auto-update spot price
+  if(window.prices&&window.prices[i]){
+    var sp=document.getElementById('adv-spot');
+    if(sp) sp.value=Math.round(window.prices[i]);
+  }
+}
+
+// Close all paper positions
+function closeAllPaperPositions(){
+  if(!confirm('Close all paper positions?')) return;
+  req('/paper/close_all','POST',{uid:UID},function(err,r){
+    toast('All positions closed','success');
+    loadPaperPositions();
+  });
+}
+
+// Load paper trade history
+function loadPaperHistory(){
+  req('/paper/v2/trade_history','GET',null,function(err,d){
+    var el=document.getElementById('pt-history');
+    if(!el) return;
+    if(err||!d||!d.trades||!d.trades.length){
+      el.innerHTML='<div style="color:var(--mu);padding:8px">No closed trades</div>';
+      return;
+    }
+    var html2='<div style="font-size:9px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">TRADES</div><b>'+d.total_trades+'</b></div>'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">WIN RATE</div><b style="color:var(--gr)">'+d.win_rate+'%</b></div>'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">NET P&L</div><b style="color:'+(d.total_pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+d.total_pnl+'</b></div>'
+      +'</div>';
+    d.trades.slice().reverse().slice(0,8).forEach(function(t){
+      var c=t.pnl>=0?'var(--gr)':'var(--rd)';
+      html2+='<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bo);font-size:9px">'
+        +'<div>'+t.action+' '+t.instrument+' '+t.option_type+'</div>'
+        +'<div><span style="color:'+c+'">₹'+Math.round(t.pnl||0)+'</span>'
+        +' <span style="font-size:8px;color:var(--mu)">'+t.close_reason+'</span></div></div>';
+    });
+    el.innerHTML=html2;
+  });
+}
+
+// Auto-update paper order entry R/R when inputs change
+(function(){
+  function setupPaperListeners(){
+    ['ppf-sl','ppf-tgt','ppf-price','ppf-lots'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.addEventListener('input', updatePaperRR);
+    });
+    updatePaperRR();
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', setupPaperListeners);
+  } else {
+    setTimeout(setupPaperListeners, 500);
+  }
+})();
+
 </script>
