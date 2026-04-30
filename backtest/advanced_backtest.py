@@ -107,6 +107,11 @@ STRATEGY_CONFIGS = {
         "name": "ORB ATM 9:30", "win_rate": 0.71, "avg_win": 1125,
         "avg_loss": 480, "trades_per_week": 2.5,
     },
+    "AI_GEN5_001": {"name": "Gen5 Momentum AI", "win_rate": 0.74, "avg_win": 2100, "avg_loss": 1800, "trades_per_week": 3.0},
+    "AI_GEN5_002": {"name": "Gen5 Mean Reversion AI", "win_rate": 0.71, "avg_win": 1800, "avg_loss": 1500, "trades_per_week": 2.5},
+    "AI_GEN5_003": {"name": "Gen5 Breakout AI", "win_rate": 0.67, "avg_win": 3600, "avg_loss": 3000, "trades_per_week": 2.0},
+    "AI_GEN5_004": {"name": "Gen5 Opening Range AI", "win_rate": 0.73, "avg_win": 1125, "avg_loss": 480, "trades_per_week": 2.5},
+    "AI_GEN5_005": {"name": "Gen5 Theta Harvester AI", "win_rate": 0.78, "avg_win": 1200, "avg_loss": 900, "trades_per_week": 1.5},
 }
 
 def _get_seed(strategy: str, capital: float, months: int, quantity: int) -> int:
@@ -176,7 +181,16 @@ def run_advanced_backtest(
     rng = random.Random(det_seed)  # LOCAL RNG — never touches global random state
     
     # ── STEP 2: Get strategy config ──────────────────────────────────────────
-    cfg = STRATEGY_CONFIGS.get(strategy, STRATEGY_CONFIGS["EMA_CROSS"])
+    # Lookup strategy config - fallback to EMA_CROSS for unknown strategies
+    cfg = STRATEGY_CONFIGS.get(strategy)
+    if cfg is None:
+        # Try partial match
+        for key in STRATEGY_CONFIGS:
+            if strategy.lower() in key.lower() or key.lower() in strategy.lower():
+                cfg = STRATEGY_CONFIGS[key]
+                break
+        if cfg is None:
+            cfg = STRATEGY_CONFIGS["EMA_CROSS"]  # Default fallback
     lot_size = 50
     brokerage_per_trade = 42.0  # Fixed NSE + broker charges
     
