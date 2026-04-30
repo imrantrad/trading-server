@@ -466,7 +466,11 @@ input:focus, select:focus, textarea:focus {
             <option value="AI_GEN5_004">Gen5 Opening Range AI (WR:73%)</option>
             <option value="AI_GEN5_005">Gen5 Theta Harvester AI (WR:78%)</option>
           </optgroup>
+          <optgroup label="── MY STRATEGIES ──" id="bt-my-optgroup">
+            <option value="">Loading...</option>
+          </optgroup>
         </select>
+        <button onclick="loadBtStrategies()" style="width:100%;margin-top:4px;padding:5px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">↻ Load All Strategies</button>
       </div>
 
       <div class="g2" style="gap:8px;margin-bottom:8px">
@@ -5198,6 +5202,33 @@ function loadPaperHistory(){
 
 var _btHistory = [];
 
+
+function loadBtStrategies(){
+  req('/backtest/strategies/all','GET',null,function(err,d){
+    if(err||!d) return;
+    var og=document.getElementById('bt-my-optgroup');
+    if(!og) return;
+    og.innerHTML='';
+    // Filter to show only non-builtin strategies
+    var builtins=['STR_','EMA_','RSI_','BOLLINGER_'];
+    var myStrats=d.strategies.filter(function(s){
+      return !builtins.some(function(b){return s.id.startsWith(b);});
+    });
+    if(!myStrats.length){
+      og.innerHTML='<option disabled>No custom strategies</option>';
+      return;
+    }
+    myStrats.forEach(function(s){
+      var opt=document.createElement('option');
+      opt.value=s.id;
+      opt.textContent=s.name+' (WR:'+s.win_rate+'%)';
+      og.appendChild(opt);
+    });
+    toast(d.count+' strategies loaded','success');
+  });
+}
+// Auto-load on backtest tab open
+
 function btTab(tab, btn){
   ['run','compare','history'].forEach(function(t){
     var el=document.getElementById('bt-'+t);
@@ -5208,6 +5239,7 @@ function btTab(tab, btn){
     if(b){b.style.background=t===tab?'rgba(251,191,36,.1)':'var(--bg4)';b.style.borderColor=t===tab?'rgba(251,191,36,.3)':'var(--bo)';b.style.color=t===tab?'var(--am)':'var(--mu)';}
   });
   if(tab==='history') renderBtHistory();
+  if(tab==='run') loadBtStrategies();
 }
 
 function runBT(){
