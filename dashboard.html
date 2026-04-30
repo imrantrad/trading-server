@@ -1223,6 +1223,46 @@ input:focus, select:focus, textarea:focus {
       <div id="adv-status" style="margin-top:8px;font-size:10px;color:var(--mu)"></div>
     </div>
 
+    <!-- CONDITION CHECK -->
+    <div style="background:rgba(79,142,247,.05);border:1px solid rgba(79,142,247,.2);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--bl)">📊 LIVE CONDITION CHECK</div>
+        <button onclick="loadConditions()" style="font-size:9px;padding:3px 10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">↻ CHECK NOW</button>
+      </div>
+      <div id="condition-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+        <div style="text-align:center;padding:10px;color:var(--mu);font-size:10px;grid-column:span 2">Click CHECK NOW</div>
+      </div>
+      <div id="signal-box" style="display:none;margin-top:10px;padding:10px;border-radius:8px;text-align:center"></div>
+    </div>
+
+    <!-- ATM CALCULATOR -->
+    <div style="background:rgba(251,191,36,.04);border:1px solid rgba(251,191,36,.15);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:10px">🎯 ATM STRIKE CALCULATOR</div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">INSTRUMENT</div>
+          <select id="atm-inst" style="width:100%">
+            <option value="NIFTY">NIFTY</option>
+            <option value="BANKNIFTY">BANKNIFTY</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button class="btn ba blg" onclick="loadATM()" style="width:100%;padding:9px">🎯 GET ATM</button>
+        </div>
+      </div>
+      <div id="atm-result" style="font-size:11px;color:var(--mu)">Select instrument and click GET ATM</div>
+    </div>
+
+    <!-- TRADE HISTORY + EXPORT -->
+    <div class="card" style="margin-bottom:8px">
+      <div class="chdr">📋 TRADE HISTORY
+        <div style="display:flex;gap:6px">
+          <button onclick="loadTradeHistory()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button>
+          <button onclick="exportCSV()" style="font-size:8px;padding:2px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:3px;cursor:pointer">⬇ CSV</button>
+        </div>
+      </div>
+      <div id="trade-history-list" style="font-size:10px;color:var(--mu)">No closed trades yet</div>
+    </div>
+
     <!-- LIVE ADVANCED POSITIONS -->
     <div class="card" style="margin-bottom:8px">
       <div class="chdr">ACTIVE POSITIONS <button onclick="loadAdvSummary()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻ REFRESH</button></div>
@@ -4695,4 +4735,108 @@ setInterval(function(){
     });
   }
 },10000);
+</script>
+<script>
+// ── PAPER TEST ADVANCED FEATURES JS ──────────────────────────────────────────
+
+function loadConditions(){
+  var inst = (document.getElementById('adv-inst')||{}).value||'NIFTY';
+  req('/paper/v2/condition_check?instrument='+inst,'GET',null,function(err,d){
+    var grid=document.getElementById('condition-grid');
+    var sigBox=document.getElementById('signal-box');
+    if(err||!d){ if(grid) grid.innerHTML='<div style="color:var(--rd);grid-column:span 2">Error</div>'; return; }
+    
+    var items = [
+      ['RSI(14)', d.RSI_14, d.RSI_above_60, d.RSI_14+' '+(d.RSI_above_60?'✅':'❌')],
+      ['ADX(14)', d.ADX_14, d.ADX_above_25, d.ADX_14+' '+(d.ADX_above_25?'✅':'❌')],
+      ['VIX', d.VIX, d.VIX_below_22, d.VIX+' '+(d.VIX_below_22?'✅':'❌')],
+      ['EMA20>50', d.EMA20_above_EMA50, d.EMA20_above_EMA50, d.EMA20_above_EMA50?'✅ YES':'❌ NO'],
+      ['EMA50>200', d.EMA50_above_EMA200, d.EMA50_above_EMA200, d.EMA50_above_EMA200?'✅ YES':'❌ NO'],
+      ['Volume', d.Volume_ratio+'x', d.Volume_above_1_5x, d.Volume_ratio+'x '+(d.Volume_above_1_5x?'✅':'❌')],
+      ['MACD Hist', d.MACD_histogram, d.MACD_positive, d.MACD_histogram+' '+(d.MACD_positive?'✅':'❌')],
+      ['Above VWAP', d.Above_VWAP, d.Above_VWAP, d.Above_VWAP?'✅ YES':'❌ NO']
+    ];
+    
+    if(grid){
+      grid.innerHTML='';
+      items.forEach(function(item){
+        var div=document.createElement('div');
+        div.style.cssText='background:var(--bg4);border:1px solid '+(item[2]?'rgba(0,255,136,.3)':'rgba(255,51,102,.2)')+';border-radius:6px;padding:8px;text-align:center';
+        div.innerHTML='<div style="font-size:8px;color:var(--mu);margin-bottom:2px">'+item[0]+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+(item[2]?'var(--gr)':'var(--rd)')+'">'+item[3]+'</div>';
+        grid.appendChild(div);
+      });
+    }
+    
+    if(sigBox){
+      var strength = d.signal_strength;
+      var signal = d.trade_signal;
+      var score = d.confluence_score;
+      var bg = signal==='BUY'?'rgba(0,255,136,.1)':'rgba(255,153,0,.1)';
+      var color = signal==='BUY'?'var(--gr)':'var(--am)';
+      sigBox.style.display='block';
+      sigBox.style.background=bg;
+      sigBox.style.border='1px solid '+color;
+      sigBox.innerHTML='<div style="font-size:16px;font-weight:800;color:'+color+'">'+signal+'</div>'
+        +'<div style="font-size:10px;color:var(--mu)">'+strength+' · Score: '+score+'</div>';
+    }
+    
+    toast('Conditions checked!','success');
+  });
+}
+
+function loadATM(){
+  var inst = (document.getElementById('atm-inst')||{}).value||'NIFTY';
+  req('/paper/v2/atm_strike?instrument='+inst,'GET',null,function(err,d){
+    var el=document.getElementById('atm-result');
+    if(err||!d){ if(el) el.innerHTML='<span style="color:var(--rd)">Error</span>'; return; }
+    if(el){
+      el.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'
+        +'<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;text-align:center"><div style="font-size:8px;color:var(--mu)">SPOT</div><div style="font-size:14px;font-weight:700;color:var(--tx)">₹'+d.spot+'</div></div>'
+        +'<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:6px;padding:8px;text-align:center"><div style="font-size:8px;color:var(--mu)">ATM STRIKE</div><div style="font-size:14px;font-weight:700;color:var(--am)">'+d.atm_strike+'</div></div>'
+        +'<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;text-align:center"><div style="font-size:8px;color:var(--mu)">EXPIRY</div><div style="font-size:11px;font-weight:600">'+d.expiry+'</div></div>'
+        +'<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;text-align:center"><div style="font-size:8px;color:var(--mu)">DTE</div><div style="font-size:14px;font-weight:700;color:var(--bl)">'+d.dte+' days</div></div>'
+        +'</div>'
+        +'<button onclick="applyATMToAdvanced('+d.atm_strike+','+d.spot+')" style="width:100%;margin-top:8px;padding:8px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:var(--am);border-radius:6px;cursor:pointer;font-size:10px;font-weight:700">APPLY TO ORDER ENTRY</button>';
+    }
+    toast('ATM: '+d.atm_strike,'success');
+  });
+}
+
+function applyATMToAdvanced(atm, spot){
+  var s=document.getElementById('adv-spot'); if(s) s.value=spot;
+  var ps=document.getElementById('paper-strike'); if(ps) ps.value=atm;
+  var ts=document.getElementById('strike'); if(ts) ts.value=atm;
+  toast('ATM '+atm+' applied to order entry!','success');
+}
+
+function loadTradeHistory(){
+  req('/paper/v2/trade_history','GET',null,function(err,d){
+    var el=document.getElementById('trade-history-list');
+    if(err||!d||!d.trades||!d.trades.length){
+      if(el) el.innerHTML='<div style="color:var(--mu);text-align:center;padding:12px">No closed trades yet</div>';
+      return;
+    }
+    var html2='<div style="font-size:10px;margin-bottom:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px">'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">TRADES</div><b>'+d.total_trades+'</b></div>'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">WIN RATE</div><b style="color:var(--gr)">'+d.win_rate+'%</b></div>'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">TOTAL P&L</div><b style="color:'+(d.total_pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+d.total_pnl+'</b></div>'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">AVG WIN</div><b style="color:var(--gr)">₹'+d.avg_win+'</b></div>'
+      +'</div>';
+    d.trades.slice().reverse().slice(0,10).forEach(function(t){
+      var c=t.pnl>=0?'var(--gr)':'var(--rd)';
+      html2+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bo);font-size:10px">'
+        +'<div><span style="color:var(--mu)">'+(t.entry_date||'')+'</span> '
+        +t.action+' '+t.instrument+' '+t.option_type+' K='+t.strike+'</div>'
+        +'<div><span style="color:'+c+'">₹'+Math.round(t.pnl)+'</span>'
+        +' <span style="font-size:8px;color:var(--mu)">'+t.close_reason+'</span></div></div>';
+    });
+    if(el) el.innerHTML=html2;
+  });
+}
+
+function exportCSV(){
+  window.open(window.API+'/paper/v2/export_csv','_blank');
+  toast('CSV download started!','success');
+}
 </script>

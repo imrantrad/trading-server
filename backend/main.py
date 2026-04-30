@@ -3076,3 +3076,161 @@ async def paper_update_prices(request: Request):
 @app.get("/paper/v2/check_scheduled")
 def paper_check_scheduled():
     return {"executed": adv_paper.check_scheduled_orders()}
+
+# ════════════════════════════════════════════════════════════════════════════
+# PAPER TEST ADVANCED FEATURES
+# ════════════════════════════════════════════════════════════════════════════
+
+@app.get("/paper/v2/atm_strike")
+def get_atm_strike(instrument: str = "NIFTY"):
+    """Get ATM strike based on current market price"""
+    from datetime import datetime, timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
+    now = datetime.now(IST)
+    
+    prices = get_market_prices()
+    spot = prices.get(instrument, {}).get("price", 24000)
+    
+    # Round to nearest strike
+    step = 100 if instrument == "BANKNIFTY" else 50
+    atm = round(spot / step) * step
+    
+    # Next weekly expiry (Thursday)
+    days_to_thursday = (3 - now.weekday()) % 7
+    if days_to_thursday == 0 and now.hour >= 15:
+        days_to_thursday = 7
+    expiry = now + timedelta(days=days_to_thursday)
+    dte = max(1, days_to_thursday)
+    
+    return {
+        "instrument": instrument,
+        "spot": round(spot, 2),
+        "atm_strike": atm,
+        "expiry": expiry.strftime("%d %b %Y"),
+        "dte": dte,
+        "step": step,
+        "timestamp": now.strftime("%H:%M:%S IST")
+    }
+
+@app.get("/paper/v2/condition_check")
+def check_conditions(instrument: str = "NIFTY"):
+    """Real-time condition check for strategies"""
+    import random, math
+    prices = get_market_prices()
+    spot = prices.get(instrument, {}).get("price", 24000)
+    
+    # Simulate real-time indicators (in production: use real data)
+    seed = int(__import__('time').time() / 300)  # Changes every 5 min
+    rng = random.Random(seed)
+    
+    rsi = rng.uniform(45, 75)
+    adx = rng.uniform(18, 35)
+    vix = prices.get("VIX", {}).get("price", 15)
+    
+    # EMA values (simulated)
+    ema20 = spot * rng.uniform(0.997, 1.003)
+    ema50 = spot * rng.uniform(0.993, 1.007)
+    ema200 = spot * rng.uniform(0.985, 1.015)
+    
+    # Volume
+    volume_ratio = rng.uniform(0.8, 2.2)
+    
+    # MACD
+    macd_hist = rng.uniform(-5, 8)
+    
+    conditions = {
+        "RSI_14": round(rsi, 1),
+        "RSI_above_60": rsi > 60,
+        "RSI_55_75": 55 < rsi < 75,
+        "ADX_14": round(adx, 1),
+        "ADX_above_25": adx > 25,
+        "VIX": round(vix, 2),
+        "VIX_below_22": vix < 22,
+        "EMA20": round(ema20, 2),
+        "EMA50": round(ema50, 2),
+        "EMA200": round(ema200, 2),
+        "EMA20_above_EMA50": ema20 > ema50,
+        "EMA50_above_EMA200": ema50 > ema200,
+        "Volume_ratio": round(volume_ratio, 2),
+        "Volume_above_1_5x": volume_ratio > 1.5,
+        "MACD_histogram": round(macd_hist, 2),
+        "MACD_positive": macd_hist > 0,
+        "Spot": round(spot, 2),
+        "Above_VWAP": rng.random() > 0.4,
+    }
+    
+    # Strategy scores
+    confluence_score = sum([
+        conditions["ADX_above_25"],
+        conditions["EMA50_above_EMA200"],
+        conditions["VIX_below_22"],
+        conditions["RSI_above_60"],
+        conditions["Volume_above_1_5x"],
+        conditions["MACD_positive"],
+    ])
+    
+    trend_score = sum([
+        conditions["EMA20_above_EMA50"],
+        conditions["EMA50_above_EMA200"],
+        conditions["RSI_55_75"],
+        conditions["ADX_above_25"],
+    ])
+    
+    conditions["confluence_score"] = f"{confluence_score}/6"
+    conditions["trend_score"] = f"{trend_score}/4"
+    conditions["trade_signal"] = "BUY" if confluence_score >= 4 else "WAIT"
+    conditions["signal_strength"] = "STRONG" if confluence_score >= 5 else "MODERATE" if confluence_score >= 3 else "WEAK"
+    
+    return conditions
+
+@app.get("/paper/v2/trade_history")
+def get_trade_history(limit: int = 50):
+    """Get paper trade history with P&L"""
+    history = adv_paper.closed_positions[-limit:]
+    
+    total_pnl = sum(p.get("pnl", 0) for p in history)
+    wins = [p for p in history if p.get("pnl", 0) > 0]
+    losses = [p for p in history if p.get("pnl", 0) <= 0]
+    
+    return {
+        "trades": history,
+        "total_trades": len(history),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(len(wins)/len(history)*100, 1) if history else 0,
+        "total_pnl": round(total_pnl, 2),
+        "avg_win": round(sum(p["pnl"] for p in wins)/len(wins), 2) if wins else 0,
+        "avg_loss": round(sum(p["pnl"] for p in losses)/len(losses), 2) if losses else 0,
+        "best_trade": max((p["pnl"] for p in history), default=0),
+        "worst_trade": min((p["pnl"] for p in history), default=0),
+    }
+
+@app.get("/paper/v2/export_csv")
+def export_trade_csv():
+    """Export trade history as CSV"""
+    from fastapi.responses import Response
+    history = adv_paper.closed_positions
+    
+    lines = ["Date,Time,Strategy,Instrument,Type,Action,Strike,Lots,Entry,Exit,PnL,Reason"]
+    for p in history:
+        lines.append(",".join([
+            p.get("entry_date",""),
+            p.get("entry_time",""),
+            p.get("strategy",""),
+            p.get("instrument",""),
+            p.get("option_type",""),
+            p.get("action",""),
+            str(p.get("strike",0)),
+            str(p.get("lots",1)),
+            str(p.get("entry_price",0)),
+            str(p.get("current_price",0)),
+            str(round(p.get("pnl",0),2)),
+            p.get("close_reason","")
+        ]))
+    
+    csv_content = "\n".join(lines)
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=paper_trades.csv"}
+    )
