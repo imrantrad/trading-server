@@ -3313,3 +3313,110 @@ def export_trade_csv():
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=paper_trades.csv"}
     )
+
+# ════════════════════════════════════════════════════════════════════════════
+# ML ENGINE ENDPOINTS — XGBoost + RandomForest + GradientBoosting
+# ════════════════════════════════════════════════════════════════════════════
+try:
+    from ai_engine.ml_engine import get_model, train_all, predict_signal as ml_predict
+    ML_AVAILABLE = True
+except Exception as _ml_err:
+    ML_AVAILABLE = False
+    print(f"ML Engine: {_ml_err}")
+
+@app.post("/ml/train")
+async def ml_train(request: Request):
+    """Train ML models for specified symbols"""
+    if not ML_AVAILABLE:
+        return {"error": "ML libraries not available", "install": "pip install scikit-learn xgboost"}
+    data = await request.json()
+    symbols = data.get("symbols", ["NIFTY", "BANKNIFTY"])
+    days = int(data.get("days", 365))
+    
+    results = {}
+    for sym in symbols:
+        try:
+            model = get_model(sym)
+            r = model.train(days=days)
+            results[sym] = r
+        except Exception as e:
+            results[sym] = {"error": str(e)}
+    
+    return {"trained": True, "results": results, "symbols": list(results.keys())}
+
+@app.get("/ml/predict/{symbol}")
+def ml_predict_endpoint(symbol: str = "NIFTY"):
+    """Get ML model prediction for a symbol"""
+    if not ML_AVAILABLE:
+        return {"error": "ML not available", "signal": "WAIT", "confidence": 0}
+    try:
+        result = ml_predict(symbol)
+        return result
+    except Exception as e:
+        return {"error": str(e), "signal": "WAIT", "confidence": 0}
+
+@app.get("/ml/status")
+def ml_status():
+    """Get ML engine status and model metrics"""
+    if not ML_AVAILABLE:
+        return {"available": False, "message": "Install scikit-learn and xgboost"}
+    
+    from ai_engine.ml_engine import _models, HAS_XGB, HAS_SKL
+    status = {
+        "available": True,
+        "xgboost": HAS_XGB,
+        "sklearn": HAS_SKL,
+        "model_type": "XGBoost + RandomForest + GradientBoosting Ensemble",
+        "features": 24,
+        "trained_symbols": list(_models.keys()),
+        "models_loaded": len(_models),
+    }
+    
+    for sym, model in _models.items():
+        if model.trained:
+            status[f"{sym}_accuracy"] = model.metrics.get("ensemble_accuracy", 0)
+            status[f"{sym}_last_trained"] = model.last_trained
+    
+    return status
+
+@app.get("/ml/feature_importance/{symbol}")
+def ml_features(symbol: str = "NIFTY"):
+    """Get feature importance from trained model"""
+    if not ML_AVAILABLE:
+        return {"error": "ML not available"}
+    from ai_engine.ml_engine import _models
+    model = _models.get(symbol)
+    if not model or not model.trained:
+        return {"error": f"Model for {symbol} not trained yet. Call /ml/train first."}
+    return {
+        "symbol": symbol,
+        "feature_importance": model.feature_importance,
+        "top_5": dict(sorted(model.feature_importance.items(), key=lambda x:-x[1])[:5])
+    }
+
+@app.post("/ml/scan_all")
+async def ml_scan_all(request: Request):
+    """Scan all instruments with ML models"""
+    if not ML_AVAILABLE:
+        return {"error": "ML not available"}
+    data = await request.json()
+    symbols = data.get("symbols", ["NIFTY", "BANKNIFTY", "FINNIFTY"])
+    
+    results = {}
+    for sym in symbols:
+        try:
+            results[sym] = ml_predict(sym)
+        except Exception as e:
+            results[sym] = {"error": str(e), "signal": "WAIT"}
+    
+    # Find best signal
+    buy_signals = [(s,r) for s,r in results.items() if r.get("signal")=="BUY"]
+    buy_signals.sort(key=lambda x: x[1].get("confidence",0), reverse=True)
+    
+    return {
+        "signals": results,
+        "best_signal": buy_signals[0] if buy_signals else None,
+        "buy_count": len([r for r in results.values() if r.get("signal")=="BUY"]),
+        "sell_count": len([r for r in results.values() if r.get("signal")=="SELL"]),
+        "wait_count": len([r for r in results.values() if r.get("signal")=="WAIT"]),
+    }

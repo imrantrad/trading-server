@@ -748,9 +748,61 @@ input:focus, select:focus, textarea:focus {
     </div>
 
     <!-- Signal History -->
-    <div class="card">
+    <div class="card" style="margin-bottom:10px">
       <div class="chdr">📜 SIGNAL HISTORY <button onclick="loadSignalHistory()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button></div>
       <div id="ai-signal-history" style="font-size:10px;color:var(--mu)">No signals yet today</div>
+    </div>
+
+    <!-- ML ENGINE SECTION -->
+    <div style="background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(79,142,247,.08));border:1px solid rgba(168,85,247,.25);border-radius:10px;padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--p0)">🤖 ML ENGINE</div>
+          <div style="font-size:9px;color:var(--mu)">XGBoost · RandomForest · GradientBoosting</div>
+        </div>
+        <div id="ml-status-badge" style="font-size:9px;padding:3px 10px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:var(--p0)">NOT TRAINED</div>
+      </div>
+      
+      <!-- Train -->
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">SYMBOLS TO TRAIN</div>
+          <select id="ml-train-syms" multiple style="height:70px;width:100%">
+            <option value="NIFTY" selected>NIFTY</option>
+            <option value="BANKNIFTY" selected>BANKNIFTY</option>
+            <option value="FINNIFTY">FINNIFTY</option>
+          </select>
+        </div>
+        <div><div class="lbl">TRAINING DATA</div>
+          <select id="ml-train-days">
+            <option value="180">6 Months</option>
+            <option value="365" selected>1 Year</option>
+            <option value="730">2 Years</option>
+          </select>
+          <button onclick="trainML()" class="btn" style="width:100%;margin-top:6px;padding:8px;background:linear-gradient(135deg,rgba(168,85,247,.2),rgba(79,142,247,.2));border-color:var(--p0);color:var(--p0);font-size:10px;font-weight:700">🧠 TRAIN MODELS</button>
+        </div>
+      </div>
+
+      <!-- ML Accuracy display -->
+      <div id="ml-accuracy-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;display:none">
+      </div>
+
+      <!-- ML Predict -->
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button onclick="mlScanAll()" class="btn bg" style="flex:1;padding:9px;font-size:10px">🔍 ML SCAN ALL</button>
+        <button onclick="mlPredict(document.getElementById('ai-scan-inst').value)" class="btn bb" style="flex:1;padding:9px;font-size:10px">📡 ML SIGNAL</button>
+      </div>
+
+      <!-- ML Results -->
+      <div id="ml-results" style="display:none">
+        <div style="font-size:10px;font-weight:700;color:var(--p0);margin-bottom:8px">ML PREDICTIONS</div>
+        <div id="ml-signal-cards" style="display:flex;flex-direction:column;gap:6px"></div>
+        
+        <!-- Feature Importance -->
+        <div class="card" style="margin-top:10px">
+          <div class="chdr">📊 TOP FEATURES (XGBoost)</div>
+          <div id="ml-features" style="font-size:10px;color:var(--mu)"></div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -6012,4 +6064,184 @@ function loadAIEngineAll(){
     });
   }, 500);
 }
+</script>
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// ML ENGINE JS — XGBoost + RandomForest + GradientBoosting
+// ══════════════════════════════════════════════════════════════════════════════
+
+function loadMLStatus(){
+  req('/ml/status','GET',null,function(err,d){
+    var el=document.getElementById('ml-status-bar');
+    if(!el) return;
+    if(err||!d||!d.available){
+      el.innerHTML='<span style="color:var(--rd)">❌ ML not available — run: pip install scikit-learn xgboost</span>';
+      return;
+    }
+    var trained=d.trained_symbols&&d.trained_symbols.length;
+    el.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<span style="color:var(--gr)">✅ XGBoost: '+(d.xgboost?'Ready':'N/A')+'</span>'
+      +'<span style="color:var(--bl)">sklearn: '+(d.sklearn?'Ready':'N/A')+'</span>'
+      +'<span style="color:var(--mu)">Models: '+d.models_loaded+'</span>'
+      +(trained?'<span style="color:var(--am)">Trained: '+d.trained_symbols.join(', ')+'</span>':'')
+      +'</div>';
+  });
+}
+
+function trainMLModel(){
+  var sym=(document.getElementById('ml-train-sym')||{}).value||'NIFTY';
+  var days=parseInt((document.getElementById('ml-train-days')||{}).value)||365;
+  var btn=document.querySelector('[onclick="trainMLModel()"]');
+  if(btn){btn.textContent='⏳ Training...';btn.disabled=true;}
+  toast('Training '+sym+' model ('+days+' days)...','info');
+
+  req('/ml/train','POST',{symbols:[sym],days:days},function(err,r){
+    if(btn){btn.textContent='🧠 TRAIN MODEL';btn.disabled=false;}
+    if(err||!r||!r.trained){toast('Training failed','error');return;}
+
+    var res=r.results&&r.results[sym];
+    if(!res||res.error){toast('Error: '+(res&&res.error),'error');return;}
+
+    // Show results
+    document.getElementById('ml-result').style.display='block';
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+
+    var models=res.models||{};
+    set('ml-xgb-acc',(models.xgboost&&models.xgboost.accuracy||0)+'%');
+    set('ml-rf-acc',(models.random_forest&&models.random_forest.accuracy||0)+'%');
+    set('ml-ens-acc',res.ensemble_accuracy+'%');
+
+    // Feature importance
+    var fi=res.top_features||{};
+    var fiEl=document.getElementById('ml-feature-importance');
+    if(fiEl){
+      fiEl.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--mu);margin-bottom:6px">TOP FEATURES (XGBoost):</div>'
+        +Object.keys(fi).map(function(k){
+          var pct=fi[k];
+          return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+            +'<div style="width:80px;font-size:9px;color:var(--mu)">'+k+'</div>'
+            +'<div style="flex:1;height:6px;background:var(--bg4);border-radius:3px">'
+            +'<div style="width:'+Math.min(pct*3,100)+'%;height:100%;background:var(--p0);border-radius:3px"></div></div>'
+            +'<div style="width:35px;font-size:9px;font-weight:700;color:var(--p0)">'+pct+'%</div>'
+            +'</div>';
+        }).join('');
+    }
+
+    toast('✅ '+sym+' model trained! Ensemble: '+res.ensemble_accuracy+'%','success');
+
+    // Auto-predict after training
+    setTimeout(function(){ mlPredict(sym); }, 500);
+    loadMLStatus();
+  });
+}
+
+function mlPredict(sym){
+  sym = sym || (document.getElementById('ml-train-sym')||{}).value||'NIFTY';
+  req('/ml/predict/'+sym,'GET',null,function(err,d){
+    if(err||!d){toast('Prediction error','error');return;}
+
+    var box=document.getElementById('ml-signal-box');
+    if(box){
+      var ac=d.signal==='BUY'?'var(--gr)':d.signal==='SELL'?'var(--rd)':'var(--mu)';
+      var bg=d.signal==='BUY'?'rgba(0,255,136,.08)':d.signal==='SELL'?'rgba(255,51,102,.08)':'rgba(255,255,255,.03)';
+      box.style.background=bg;
+      box.style.border='1px solid '+ac;
+      box.style.borderRadius='8px';
+      box.innerHTML=
+        '<div style="font-size:22px;font-weight:800;color:'+ac+'">'+d.signal+'</div>'
+        +'<div style="font-size:11px;color:var(--mu);margin-top:4px">Confidence: <b style="color:'+ac+'">'+d.confidence+'%</b></div>'
+        +'<div style="font-size:10px;color:var(--mu)">Probability: '+d.probability+'% | Model: '+d.model_type+'</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:10px">'
+        +['RSI','ADX','MACD_hist'].map(function(k){
+          var v=d.indicators&&d.indicators[k];
+          return '<div style="background:rgba(0,0,0,.2);padding:6px;border-radius:4px">'
+            +'<div style="font-size:8px;color:var(--mu)">'+k+'</div>'
+            +'<b style="font-size:11px">'+(v!==undefined?v:'—')+'</b></div>';
+        }).join('')
+        +'</div>';
+    }
+
+    // Model votes
+    var votesEl=document.getElementById('ml-model-votes');
+    if(votesEl&&d.model_votes){
+      votesEl.innerHTML='<div style="font-size:9px;font-weight:700;color:var(--mu);margin-bottom:6px">MODEL VOTES:</div>'
+        +Object.keys(d.model_votes).map(function(m){
+          var mv=d.model_votes[m];
+          var c=mv.probability>=55?'var(--gr)':mv.probability<=45?'var(--rd)':'var(--mu)';
+          return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bo);font-size:10px">'
+            +'<span style="color:var(--mu)">'+m+'</span>'
+            +'<span style="color:'+c+'">'+mv.probability+'% → <b>'+(mv.prediction?'BUY':'SELL')+'</b></span>'
+            +'</div>';
+        }).join('');
+    }
+
+    document.getElementById('ml-result').style.display='block';
+    toast('ML Signal: '+d.signal+' ('+d.confidence+'% conf)','success');
+  });
+}
+
+function mlScanAll(){
+  var btn=document.querySelector('[onclick="mlScanAll()"]');
+  if(btn){btn.textContent='⏳ Scanning...';btn.disabled=true;}
+  toast('ML scanning all instruments...','info');
+
+  req('/ml/scan_all','POST',{symbols:['NIFTY','BANKNIFTY','FINNIFTY']},'POST',null,function(err,d){
+    if(btn){btn.textContent='⚡ ML SCAN ALL';btn.disabled=false;}
+  });
+
+  // Correct request
+  var x=new XMLHttpRequest();
+  x.open('POST',window.API+'/ml/scan_all',true);
+  x.setRequestHeader('Content-Type','application/json');
+  x.setRequestHeader('bypass-tunnel-reminder','true');
+  x.timeout=30000;
+  x.onload=function(){
+    if(btn){btn.textContent='⚡ ML SCAN ALL';btn.disabled=false;}
+    try{
+      var d=JSON.parse(x.responseText);
+      if(!d.signals){toast('Scan failed','error');return;}
+
+      var cards=document.getElementById('ai-signal-cards');
+      if(cards) cards.innerHTML='';
+
+      Object.keys(d.signals).forEach(function(sym){
+        var s=d.signals[sym];
+        if(!s||s.error) return;
+        var ac=s.signal==='BUY'?'var(--gr)':s.signal==='SELL'?'var(--rd)':'var(--mu)';
+        var card=document.createElement('div');
+        card.style.cssText='background:var(--bg3);border:1px solid var(--bo);border-left:4px solid '+ac+';border-radius:8px;padding:12px';
+        card.innerHTML=
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+          +'<div><div style="font-size:13px;font-weight:700">'+sym+'</div>'
+          +'<div style="font-size:9px;color:var(--mu)">ML Ensemble</div></div>'
+          +'<div style="text-align:right">'
+          +'<div style="font-size:18px;font-weight:800;color:'+ac+'">'+s.signal+'</div>'
+          +'<div style="font-size:9px;color:var(--mu)">Conf: '+s.confidence+'%</div></div></div>'
+          +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">'
+          +['RSI','ADX','MACD_hist'].map(function(k){
+            var v=s.indicators&&s.indicators[k];
+            return '<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center">'
+              +'<div style="font-size:8px;color:var(--mu)">'+k+'</div>'
+              +'<b style="font-size:10px">'+(v!==undefined?v:'—')+'</b></div>';
+          }).join('')+'</div>'
+          +(s.signal!=='WAIT'?'<button onclick="executeAISignal(\''+sym+'\',\''+s.signal+'\')" class="btn '+(s.signal==='BUY'?'bg':'br')+'" style="width:100%;padding:7px;font-size:10px">'+s.signal+' PAPER</button>':'');
+        if(cards) cards.appendChild(card);
+        _signalHistory.unshift({inst:sym,signal:s,ts:new Date().toLocaleTimeString('en-IN')});
+      });
+
+      renderSignalHistory();
+      var best=d.best_signal;
+      toast('✅ ML Scan: '+d.buy_count+' BUY · '+d.sell_count+' SELL · '+d.wait_count+' WAIT'+(best?' | Best: '+best[0]:''),'success');
+    }catch(e){toast('Parse error','error');}
+  };
+  x.onerror=function(){if(btn){btn.textContent='⚡ ML SCAN ALL';btn.disabled=false;}toast('Scan failed','error');};
+  x.send(JSON.stringify({symbols:['NIFTY','BANKNIFTY','FINNIFTY']}));
+}
+
+// Auto-load ML status when AI tab opens
+var _origLoadAIEngineAll = typeof loadAIEngineAll==='function' ? loadAIEngineAll : function(){};
+loadAIEngineAll = function(){
+  _origLoadAIEngineAll();
+  loadMLStatus();
+};
 </script>
