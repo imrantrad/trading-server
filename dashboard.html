@@ -417,23 +417,210 @@ input:focus, select:focus, textarea:focus {
 </div>
 
 <div id="pnl-bt" class="pnl">
-  <!-- Backtest strategy source buttons -->
-  <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-    <div style="font-size:9px;color:var(--mu);width:100%;margin-bottom:2px;letter-spacing:1px">SELECT FROM:</div>
-    <button class="btn bg" style="flex:1;padding:8px;font-size:9px" onclick="show('strats',null);loadBuiltin()">★ BUILT-IN</button>
-    <button class="btn bb" style="flex:1;padding:8px;font-size:9px" onclick="show('strats',null);loadMy()">📂 MY STRATEGIES</button>
-    <button class="btn ba" style="flex:1;padding:8px;font-size:9px" onclick="show('strats',null);toggleNLP()">◆ NLP BUILDER</button>
-    <button class="btn bg" style="flex:1;padding:8px;font-size:9px;border-color:var(--am);color:var(--am);background:#1a0e00" onclick="show('strats',null);loadAIApprovedStrats()">🤖 AI STRATEGIES</button>
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#0a0d18,#001428);padding:10px 14px;border-bottom:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:space-between;margin:-10px -10px 12px">
+    <div style="font-size:13px;font-weight:700;color:var(--bl)">📊 BACKTEST ENGINE</div>
+    <div style="font-size:9px;color:var(--mu)">Deterministic · Per-day consistent</div>
   </div>
-  <div class="card"><div class="chdr">ADVANCED BACKTEST</div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="lbl">STRATEGY</div><select id="bt-s"><option value="STR_IRON_CONDOR_WEEKLY">Iron Condor (78%)</option><option value="STR_MAX_PAIN_EXPIRY">Max Pain (76%)</option><option value="STR_THETA_DECAY">Theta Decay (72%)</option><option value="STR_GAP_FADE">Gap Fade (74%)</option><option value="STR_PCR_REVERSAL">PCR Reversal (71%)</option><option value="STR_ORB">ORB (68%)</option><option value="EMA_CROSS">EMA Cross</option><option value="RSI_MEAN_REVERSION">RSI MR</option></select></div>
-      <div><div class="lbl">CAPITAL</div><input type="number" id="bt-c" value="100000"></div>
+
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:12px">
+    <button class="btn ba" id="bt-tab-run" onclick="btTab('run',this)" style="flex:1;padding:7px;font-size:9px">⚡ RUN</button>
+    <button class="btn" id="bt-tab-compare" onclick="btTab('compare',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🔀 COMPARE</button>
+    <button class="btn" id="bt-tab-history" onclick="btTab('history',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">📋 HISTORY</button>
+  </div>
+
+  <!-- RUN TAB -->
+  <div id="bt-run">
+    <div class="card" style="margin-bottom:10px">
+      <!-- Strategy Select -->
+      <div style="margin-bottom:8px">
+        <div class="lbl">STRATEGY</div>
+        <select id="bt-s" style="width:100%;margin-top:4px">
+          <optgroup label="── BUILT-IN ──">
+            <option value="STR_THETA_DECAY">Weekly Theta Decay (WR:72%)</option>
+            <option value="STR_ORB">Opening Range Breakout (WR:68%)</option>
+            <option value="STR_IRON_CONDOR_WEEKLY">Weekly Iron Condor (WR:78%)</option>
+            <option value="STR_VWAP_PULLBACK">VWAP Pullback (WR:65%)</option>
+            <option value="STR_GAP_FADE">Gap Fade Strategy (WR:74%)</option>
+            <option value="STR_BANKNIFTY_SCALP">BankNifty Power Hour (WR:62%)</option>
+            <option value="STR_PCR_REVERSAL">PCR Extreme Reversal (WR:71%)</option>
+            <option value="STR_MAX_PAIN_EXPIRY">Max Pain Expiry (WR:76%)</option>
+            <option value="STR_SUPERTREND_EMA">Supertrend+EMA Combo (WR:63%)</option>
+            <option value="STR_FII_MOMENTUM">FII Flow Momentum (WR:69%)</option>
+          </optgroup>
+          <optgroup label="── PREMIUM ──">
+            <option value="STRONG_TREND_CONT">Strong Trend Continuation (WR:72%)</option>
+            <option value="BREAKOUT_TREND">Breakout Trend (WR:68%)</option>
+            <option value="MTF_TREND_ALIGN">Multi-Timeframe Alignment (WR:75%)</option>
+            <option value="TREND_REVERSAL">Trend Reversal (WR:65%)</option>
+            <option value="MOMENTUM_ACCEL">Momentum Acceleration (WR:70%)</option>
+            <option value="CONFLUENCE_930">9:30 AM Confluence (WR:73%)</option>
+            <option value="ORB_ATM_930">ORB ATM 9:30 (WR:71%)</option>
+          </optgroup>
+          <optgroup label="── AI GEN5 ──">
+            <option value="AI_GEN5_001">Gen5 Momentum AI (WR:74%)</option>
+            <option value="AI_GEN5_002">Gen5 Mean Reversion AI (WR:71%)</option>
+            <option value="AI_GEN5_003">Gen5 Breakout AI (WR:67%)</option>
+            <option value="AI_GEN5_004">Gen5 Opening Range AI (WR:73%)</option>
+            <option value="AI_GEN5_005">Gen5 Theta Harvester AI (WR:78%)</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">CAPITAL ₹</div><input type="number" id="bt-c" value="100000" step="10000"></div>
+        <div><div class="lbl">LOTS</div><input type="number" id="bt-l" value="1" min="1"></div>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">PERIOD</div>
+          <select id="bt-m">
+            <option value="1">1 Month</option>
+            <option value="3" selected>3 Months</option>
+            <option value="6">6 Months</option>
+            <option value="12">12 Months</option>
+          </select>
+        </div>
+        <div><div class="lbl">SL %</div>
+          <select id="bt-sl">
+            <option value="1.0">1% (Conservative)</option>
+            <option value="1.5" selected>1.5% (Moderate)</option>
+            <option value="2.0">2% (Aggressive)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">TARGET %</div>
+          <select id="bt-tgt">
+            <option value="1.5">1.5% (1:1 R/R)</option>
+            <option value="2.0" selected>2% (1:1.33)</option>
+            <option value="3.0">3% (1:2 R/R)</option>
+            <option value="4.5">4.5% (1:3 R/R)</option>
+          </select>
+        </div>
+        <div><div class="lbl">POSITION SIZE</div>
+          <select id="bt-pos-size">
+            <option value="fixed">Fixed (1 lot)</option>
+            <option value="pct" selected>% of Capital</option>
+            <option value="kelly">Kelly Criterion</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="bt-btn" onclick="runBT()" class="btn bg blg" style="width:100%;font-size:12px">⚡ RUN BACKTEST</button>
     </div>
-    <div class="g2" style="gap:6px;margin-bottom:8px"><div><div class="lbl">PERIOD</div><select id="bt-m"><option value="1">1 Month</option><option value="3" selected>3 Months</option><option value="6">6 Months</option><option value="12">12 Months</option></select></div><div><div class="lbl">LOTS</div><input type="number" id="bt-l" value="1"></div></div>
-    <button class="btn bg blg" id="bt-btn" onclick="runBT()">RUN BACKTEST + DATE CALENDAR</button>
-    <div id="bt-res" style="display:none;margin-top:10px"></div>
+
+    <!-- Results -->
+    <div id="bt-res" style="display:none">
+
+      <!-- Key metrics -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px">
+        <div class="stat"><div class="sl">TOTAL P&L</div><div class="sv" id="bt-pnl" style="font-size:18px">—</div></div>
+        <div class="stat"><div class="sl">RETURN %</div><div class="sv" id="bt-ret" style="font-size:18px">—</div></div>
+        <div class="stat"><div class="sl">WIN RATE</div><div class="sv" id="bt-wr">—</div></div>
+        <div class="stat"><div class="sl">TOTAL TRADES</div><div class="sv" id="bt-tot">—</div></div>
+        <div class="stat"><div class="sl">MAX DRAWDOWN</div><div class="sv" id="bt-dd" style="color:var(--rd)">—</div></div>
+        <div class="stat"><div class="sl">SHARPE RATIO</div><div class="sv" id="bt-sharpe">—</div></div>
+        <div class="stat"><div class="sl">PROFIT FACTOR</div><div class="sv" id="bt-pf">—</div></div>
+        <div class="stat"><div class="sl">MAX CONSEC LOSS</div><div class="sv" id="bt-mcl" style="color:var(--rd)">—</div></div>
+      </div>
+
+      <!-- P&L Equity Curve Chart -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">📈 EQUITY CURVE</div>
+        <div id="bt-equity-chart" style="height:150px;position:relative"></div>
+      </div>
+
+      <!-- Monthly breakdown -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">📅 MONTHLY BREAKDOWN</div>
+        <div id="bt-monthly" style="display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+
+      <!-- Trade Calendar -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">🗓️ DATE-WISE P&L CALENDAR</div>
+        <div id="bt-calendar" style="display:flex;flex-wrap:wrap;gap:3px;font-size:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;font-size:9px;color:var(--mu)">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:rgba(0,255,136,.3);border-radius:2px;display:inline-block"></span>Profit</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:rgba(255,51,102,.3);border-radius:2px;display:inline-block"></span>Loss</span>
+        </div>
+      </div>
+
+      <!-- Trade List -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">📋 TRADE LIST
+          <button onclick="exportBtCSV()" style="font-size:8px;padding:2px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:3px;cursor:pointer">⬇ CSV</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl" style="font-size:9px">
+            <thead><tr><th>DATE</th><th>TRADES</th><th>W/L</th><th>GROSS P&L</th><th>NET P&L</th><th>CUMULATIVE</th></tr></thead>
+            <tbody id="bt-trade-list"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Position Sizing Recommendation -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">💰 POSITION SIZING</div>
+        <div id="bt-position-sizing" style="font-size:10px;line-height:2;color:var(--mu)"></div>
+      </div>
+
+    </div>
   </div>
+
+  <!-- COMPARE TAB -->
+  <div id="bt-compare" style="display:none">
+    <div class="card" style="margin-bottom:10px">
+      <div class="chdr">🔀 COMPARE 2 STRATEGIES</div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">STRATEGY A</div>
+          <select id="bt-cmp-a" style="width:100%">
+            <option value="STR_THETA_DECAY">Theta Decay</option>
+            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor</option>
+            <option value="STR_ORB">ORB</option>
+            <option value="CONFLUENCE_930">9:30 Confluence</option>
+            <option value="MTF_TREND_ALIGN">MTF Alignment</option>
+          </select>
+        </div>
+        <div><div class="lbl">STRATEGY B</div>
+          <select id="bt-cmp-b" style="width:100%">
+            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor</option>
+            <option value="STR_THETA_DECAY">Theta Decay</option>
+            <option value="BREAKOUT_TREND">Breakout Trend</option>
+            <option value="ORB_ATM_930">ORB ATM 9:30</option>
+            <option value="AI_GEN5_001">Gen5 Momentum AI</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">CAPITAL</div><input type="number" id="bt-cmp-cap" value="100000"></div>
+        <div><div class="lbl">PERIOD</div>
+          <select id="bt-cmp-m">
+            <option value="1">1 Month</option>
+            <option value="3" selected>3 Months</option>
+            <option value="6">6 Months</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="runCompare()" class="btn bg blg" style="width:100%">🔀 COMPARE NOW</button>
+    </div>
+    <div id="bt-compare-result" style="display:none"></div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div id="bt-history" style="display:none">
+    <div class="card">
+      <div class="chdr">📋 BACKTEST HISTORY</div>
+      <div id="bt-history-list" style="font-size:10px;color:var(--mu)">
+        <div style="text-align:center;padding:20px">Run a backtest to see history</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div id="pnl-strats" class="pnl">
@@ -5004,4 +5191,300 @@ function loadPaperHistory(){
   }
 })();
 
+</script><script>
+// ══════════════════════════════════════════════════════════════════════════════
+// BACKTEST ENGINE JS — Complete
+// ══════════════════════════════════════════════════════════════════════════════
+
+var _btHistory = [];
+
+function btTab(tab, btn){
+  ['run','compare','history'].forEach(function(t){
+    var el=document.getElementById('bt-'+t);
+    if(el) el.style.display=t===tab?'block':'none';
+  });
+  ['run','compare','history'].forEach(function(t){
+    var b=document.getElementById('bt-tab-'+t);
+    if(b){b.style.background=t===tab?'rgba(251,191,36,.1)':'var(--bg4)';b.style.borderColor=t===tab?'rgba(251,191,36,.3)':'var(--bo)';b.style.color=t===tab?'var(--am)':'var(--mu)';}
+  });
+  if(tab==='history') renderBtHistory();
+}
+
+function runBT(){
+  var s=gv('bt-s')||'STR_THETA_DECAY';
+  var c=nv('bt-c')||100000;
+  var m=iv('bt-m')||3;
+  var l=iv('bt-l')||1;
+  var sl=parseFloat((document.getElementById('bt-sl')||{}).value)||1.5;
+  var tgt=parseFloat((document.getElementById('bt-tgt')||{}).value)||2.0;
+  
+  var btn=document.getElementById('bt-btn');
+  if(btn){btn.textContent='⏳ Running...';btn.disabled=true;}
+  
+  req('/backtest/advanced','POST',{strategy:s,capital:c,months:m,quantity:l,sl_pct:sl,target_pct:tgt},function(err,r){
+    if(btn){btn.textContent='⚡ RUN BACKTEST';btn.disabled=false;}
+    if(err||!r){toast('Backtest error','error');return;}
+    renderBtResults(r, s, c, m);
+    // Save to history
+    _btHistory.unshift({strategy:s,capital:c,months:m,result:r,ts:new Date().toLocaleTimeString('en-IN')});
+    if(_btHistory.length>20) _btHistory.pop();
+  });
+}
+
+function renderBtResults(r, strategy, capital, months){
+  var res=document.getElementById('bt-res');
+  if(res) res.style.display='block';
+  
+  var pnl=r.total_net_pnl||r.net_pnl||0;
+  var ret=((pnl/capital)*100).toFixed(2);
+  var wr=r.win_rate||0;
+  var wins=r.total_wins||0, losses=r.total_losses||0;
+  var dd=r.max_drawdown_pct||r.max_drawdown||0;
+  var sharpe=r.sharpe_ratio||r.sharpe||0;
+  var pf=r.profit_factor||0;
+  var trades=r.total_trades||0;
+  
+  // Max consecutive losses
+  var daily=r.daily_results||[];
+  var mcl=0,curr=0;
+  daily.forEach(function(d){
+    if(d.net_pnl<0||d.gross_pnl<0){curr++;mcl=Math.max(mcl,curr);}else curr=0;
+  });
+  
+  var set=function(id,v,color){
+    var el=document.getElementById(id);
+    if(el){el.textContent=v;if(color)el.style.color=color;}
+  };
+  
+  set('bt-pnl',(pnl>=0?'₹+':'₹-')+Math.abs(Math.round(pnl)).toLocaleString(), pnl>=0?'var(--gr)':'var(--rd)');
+  set('bt-ret',ret+'%', parseFloat(ret)>=0?'var(--gr)':'var(--rd)');
+  set('bt-wr',Math.round(wr)+'% ('+wins+'W/'+losses+'L)', wr>=60?'var(--gr)':wr>=50?'var(--am)':'var(--rd)');
+  set('bt-tot',trades+' trades','var(--tx)');
+  set('bt-dd','-'+Math.abs(dd).toFixed(1)+'%','var(--rd)');
+  set('bt-sharpe',typeof sharpe==='number'?sharpe.toFixed(2):'—', sharpe>=1?'var(--gr)':sharpe>=0?'var(--am)':'var(--rd)');
+  set('bt-pf',pf?pf.toFixed(2)+'x':'—', pf>=1.5?'var(--gr)':pf>=1?'var(--am)':'var(--rd)');
+  set('bt-mcl',mcl+' days','var(--rd)');
+  
+  // Equity curve
+  renderEquityCurve(daily, capital);
+  
+  // Monthly breakdown
+  renderMonthly(r.monthly_breakdown||r.monthly||[]);
+  
+  // Calendar
+  renderCalendar(daily);
+  
+  // Trade list
+  renderTradeList(daily);
+  
+  // Position sizing
+  renderPositionSizing(r, capital, wr, dd);
+  
+  toast('✅ Backtest complete!','success');
+  window.scrollTo(0,0);
+}
+
+function renderEquityCurve(daily, capital){
+  var chart=document.getElementById('bt-equity-chart');
+  if(!chart||!daily.length) return;
+  
+  var w=chart.offsetWidth||300, h=140;
+  var data=daily.filter(function(d){return d.cumulative!==undefined;});
+  if(!data.length) return;
+  
+  var vals=data.map(function(d){return parseFloat(d.cumulative)||0;});
+  var minV=Math.min.apply(null,vals)-100;
+  var maxV=Math.max.apply(null,vals)+100;
+  var range=maxV-minV||1;
+  
+  var svg='<svg width="100%" height="'+h+'" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">';
+  // Zero line
+  var zeroY=h-((0-minV)/range*h);
+  svg+='<line x1="0" y1="'+zeroY+'" x2="'+w+'" y2="'+zeroY+'" stroke="rgba(255,255,255,.1)" stroke-width="1" stroke-dasharray="4"/>';
+  
+  // Area fill
+  var pts=data.map(function(d,i){
+    var x=i/(data.length-1)*w;
+    var y=h-((parseFloat(d.cumulative)||0)-minV)/range*h;
+    return x+','+y;
+  });
+  
+  var area='M0,'+h+' L'+pts.join(' L')+' L'+w+','+h+' Z';
+  var lastVal=vals[vals.length-1];
+  svg+='<path d="'+area+'" fill="'+(lastVal>=0?'rgba(0,255,136,.08)':'rgba(255,51,102,.08)')+'" stroke="none"/>';
+  svg+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+(lastVal>=0?'#00ff88':'#ff3366')+'" stroke-width="2"/>';
+  
+  // Labels
+  svg+='<text x="4" y="14" fill="#64748b" font-size="9">+₹'+Math.round(maxV).toLocaleString()+'</text>';
+  svg+='<text x="4" y="'+(h-4)+'" fill="#64748b" font-size="9">₹'+Math.round(minV).toLocaleString()+'</text>';
+  svg+='</svg>';
+  chart.innerHTML=svg;
+}
+
+function renderMonthly(monthly){
+  var el=document.getElementById('bt-monthly');
+  if(!el) return;
+  if(!monthly.length){el.innerHTML='<div style="color:var(--mu);font-size:10px">No monthly data</div>';return;}
+  el.innerHTML='';
+  monthly.forEach(function(m){
+    var pnl=m.net_pnl||m.pnl||0;
+    var ret=m.return_pct||0;
+    var trades=m.total_trades||m.trades||0;
+    var color=pnl>=0?'var(--gr)':'var(--rd)';
+    var barW=Math.min(100,Math.abs(ret)*10)+'%';
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bo)';
+    row.innerHTML='<div style="width:60px;font-size:10px;font-weight:600;flex-shrink:0">'+m.month+'</div>'
+      +'<div style="flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden">'
+      +'<div style="height:100%;width:'+barW+';background:'+color+';border-radius:3px"></div></div>'
+      +'<div style="width:70px;text-align:right;font-size:10px;font-weight:700;color:'+color+'">₹'+Math.round(pnl).toLocaleString()+'</div>'
+      +'<div style="width:35px;text-align:right;font-size:9px;color:var(--mu)">'+trades+'T</div>';
+    el.appendChild(row);
+  });
+}
+
+function renderCalendar(daily){
+  var cal=document.getElementById('bt-calendar');
+  if(!cal) return;
+  cal.innerHTML='';
+  daily.filter(function(d){return d.trades>0;}).forEach(function(d){
+    var pnl=d.net_pnl||d.gross_pnl||0;
+    var dt=d.date||'';
+    var dd=document.createElement('div');
+    dd.style.cssText='padding:3px 5px;border-radius:3px;cursor:pointer;text-align:center;min-width:36px;'
+      +'background:'+(pnl>=0?'rgba(0,255,136,.15)':'rgba(255,51,102,.15)')+';'
+      +'border:1px solid '+(pnl>=0?'rgba(0,255,136,.3)':'rgba(255,51,102,.3)');
+    dd.title=dt+': ₹'+Math.round(pnl);
+    dd.innerHTML='<div>'+dt.slice(5)+'</div><div style="font-weight:700;color:'+(pnl>=0?'var(--gr)':'var(--rd)')+'">'+
+      (pnl>=0?'+':'')+Math.round(pnl/1000)+'k</div>';
+    cal.appendChild(dd);
+  });
+}
+
+function renderTradeList(daily){
+  var tb=document.getElementById('bt-trade-list');
+  if(!tb) return;
+  tb.innerHTML='';
+  daily.filter(function(d){return d.trades>0;}).forEach(function(d){
+    var pnl=d.net_pnl||d.gross_pnl||0;
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+d.date+'</td><td>'+d.trades+'</td>'
+      +'<td style="color:var(--gr)">'+d.wins+'W</td>'
+      +'<td style="color:'+(d.gross_pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+Math.round(d.gross_pnl||0)+'</td>'
+      +'<td style="color:'+(pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+Math.round(pnl)+'</td>'
+      +'<td>₹'+Math.round(d.cumulative||0)+'</td>';
+    tb.appendChild(tr);
+  });
+}
+
+function renderPositionSizing(r, capital, wr, dd){
+  var el=document.getElementById('bt-position-sizing');
+  if(!el) return;
+  var risk_per_trade = capital * 0.01; // 1% risk
+  var kelly = Math.max(0, (wr/100 - (1-wr/100)/(r.profit_factor||1))).toFixed(2);
+  var rec_lots = Math.max(1, Math.floor(capital/50000));
+  el.innerHTML=
+    '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'
+    +'<div style="background:var(--bg4);padding:8px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">1% Risk/Trade</div><b>₹'+Math.round(risk_per_trade).toLocaleString()+'</b></div>'
+    +'<div style="background:var(--bg4);padding:8px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">Kelly %</div><b style="color:var(--am)">'+(kelly*100).toFixed(1)+'%</b></div>'
+    +'<div style="background:var(--bg4);padding:8px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">Rec. Lots</div><b style="color:var(--gr)">'+rec_lots+' lots</b></div>'
+    +'<div style="background:var(--bg4);padding:8px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">Max DD Risk</div><b style="color:var(--rd)">₹'+Math.round(capital*0.05).toLocaleString()+'</b></div>'
+    +'</div>';
+}
+
+function renderBtHistory(){
+  var el=document.getElementById('bt-history-list');
+  if(!el) return;
+  if(!_btHistory.length){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--mu)">No history yet</div>';return;}
+  el.innerHTML='';
+  _btHistory.forEach(function(h,i){
+    var pnl=h.result.total_net_pnl||h.result.net_pnl||0;
+    var div=document.createElement('div');
+    div.style.cssText='padding:10px;border-bottom:1px solid var(--bo);cursor:pointer';
+    div.innerHTML='<div style="display:flex;justify-content:space-between"><b>'+h.strategy+'</b>'
+      +'<span style="color:'+(pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+Math.round(pnl).toLocaleString()+'</span></div>'
+      +'<div style="font-size:9px;color:var(--mu)">'+h.months+'m · ₹'+h.capital.toLocaleString()+' · '+h.ts+'</div>';
+    div.onclick=function(){renderBtResults(h.result,h.strategy,h.capital,h.months);btTab('run',document.getElementById('bt-tab-run'));};
+    el.appendChild(div);
+  });
+}
+
+function runCompare(){
+  var a=document.getElementById('bt-cmp-a').value;
+  var b=document.getElementById('bt-cmp-b').value;
+  var cap=nv('bt-cmp-cap')||100000;
+  var m=iv('bt-cmp-m')||3;
+  
+  var res=document.getElementById('bt-compare-result');
+  if(res){res.style.display='block';res.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">⏳ Comparing...</div>';}
+  
+  var results={};
+  function done(name, r){
+    results[name]=r;
+    if(Object.keys(results).length===2){
+      renderCompare(results[a],results[b],a,b,cap);
+    }
+  }
+  
+  req('/backtest/advanced','POST',{strategy:a,capital:cap,months:m,quantity:1},function(err,r){
+    done(a, err?null:r);
+  });
+  req('/backtest/advanced','POST',{strategy:b,capital:cap,months:m,quantity:1},function(err,r){
+    done(b, err?null:r);
+  });
+}
+
+function renderCompare(rA, rB, nameA, nameB, capital){
+  var el=document.getElementById('bt-compare-result');
+  if(!el) return;
+  if(!rA||!rB){el.innerHTML='<div style="color:var(--rd)">Compare failed</div>';return;}
+  
+  var metrics=[
+    ['Total P&L','total_net_pnl','net_pnl','₹',true],
+    ['Return %',null,null,'%',true],
+    ['Win Rate','win_rate',null,'%',true],
+    ['Total Trades','total_trades',null,'',true],
+    ['Max Drawdown','max_drawdown_pct','max_drawdown','%',false],
+    ['Sharpe','sharpe_ratio','sharpe','',true],
+    ['Profit Factor','profit_factor',null,'x',true],
+  ];
+  
+  var html2='<div class="card"><div class="chdr">COMPARISON: '+nameA+' vs '+nameB+'</div>';
+  html2+='<table class="tbl" style="font-size:10px"><thead><tr><th>METRIC</th><th style="color:var(--bl)">'+nameA.slice(0,12)+'</th><th style="color:var(--am)">'+nameB.slice(0,12)+'</th><th>WINNER</th></tr></thead><tbody>';
+  
+  metrics.forEach(function(m){
+    var vA=0,vB=0;
+    if(m[0]==='Return %'){
+      vA=((rA.total_net_pnl||rA.net_pnl||0)/capital*100);
+      vB=((rB.total_net_pnl||rB.net_pnl||0)/capital*100);
+    } else {
+      vA=parseFloat(rA[m[1]]||rA[m[2]]||0);
+      vB=parseFloat(rB[m[1]]||rB[m[2]]||0);
+    }
+    var winA = m[4] ? vA>=vB : vA<=vB;
+    html2+='<tr><td>'+m[0]+'</td>'
+      +'<td style="color:'+(winA?'var(--gr)':'var(--mu)')+'">'+m[3]+vA.toFixed(1)+'</td>'
+      +'<td style="color:'+(!winA?'var(--gr)':'var(--mu)')+'">'+m[3]+vB.toFixed(1)+'</td>'
+      +'<td>'+(winA?'<span style="color:var(--bl)">A</span>':'<span style="color:var(--am)">B</span>')+'</td></tr>';
+  });
+  html2+='</tbody></table></div>';
+  el.innerHTML=html2;
+  toast('Comparison complete!','success');
+}
+
+function exportBtCSV(){
+  var daily=document.querySelectorAll('#bt-trade-list tr');
+  if(!daily.length){toast('Run backtest first','warn');return;}
+  var csv='Date,Trades,Wins,Gross P&L,Net P&L,Cumulative\n';
+  daily.forEach(function(row){
+    var cells=row.querySelectorAll('td');
+    if(cells.length) csv+=Array.from(cells).map(function(c){return c.textContent;}).join(',')+'\n';
+  });
+  var blob=new Blob([csv],{type:'text/csv'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='backtest_results.csv';
+  a.click();
+  toast('CSV downloaded!','success');
+}
 </script>
