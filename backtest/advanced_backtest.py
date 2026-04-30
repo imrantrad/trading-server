@@ -110,11 +110,30 @@ STRATEGY_CONFIGS = {
 }
 
 def _get_seed(strategy: str, capital: float, months: int, quantity: int) -> int:
-    """Generate deterministic seed - includes current year-month for time-relevant results."""
-    from datetime import datetime as _dt3
-    ym = _dt3.now().strftime("%Y-%m")  # Changes each month
-    key = f"{strategy}|{capital}|{months}|{quantity}|{ym}"
-    return int(hashlib.sha256(key.encode()).hexdigest()[:8], 16)
+    """
+    Generate deterministic seed per month.
+    Each calendar month gets same results regardless of 'months' parameter.
+    So April always = same trades whether you run 1m or 3m backtest.
+    """
+    from datetime import datetime as _dt3, timedelta
+    today = _dt3.now().date()
+    seeds_by_month = {}
+    
+    # Generate seed for each month in range
+    for i in range(months):
+        # Get date for that month
+        d = today.replace(day=1)
+        for _ in range(i):
+            d = (d - timedelta(days=1)).replace(day=1)
+        ym = d.strftime("%Y-%m")
+        key = f"{strategy}|{capital}|{quantity}|{ym}"
+        seeds_by_month[ym] = int(hashlib.sha256(key.encode()).hexdigest()[:8], 16)
+    
+    # Return combined seed (XOR of all month seeds)
+    combined = 0
+    for s in seeds_by_month.values():
+        combined ^= s
+    return combined
 
 def _get_trading_days(months: int, end_date: date = None) -> List[date]:
     """
@@ -209,14 +228,19 @@ def run_advanced_backtest(
         # Use stable probability based on weekly frequency
         daily_prob = trades_per_week / 5.0
         
-        # Deterministic "did we trade today" decision
-        if rng.random() < daily_prob:
+        # Per-day deterministic RNG — same result for this date regardless of backtest range
+        day_key = f"{strategy}|{capital}|{quantity}|{day.strftime('%Y-%m-%d')}"
+        day_seed = int(hashlib.sha256(day_key.encode()).hexdigest()[:8], 16)
+        day_rng = random.Random(day_seed)  # Isolated per-day RNG
+        
+        # Deterministic "did we trade today" decision — based on day only
+        if day_rng.random() < daily_prob:
             # How many trades today (1-3 max)
             max_daily = max(1, round(trades_per_week / 5.0 * 2))
-            day_trades = rng.randint(1, max(1, max_daily))
+            day_trades = day_rng.randint(1, max(1, max_daily))
             
             for t in range(day_trades):
-                # Win or loss — seeded, deterministic
+                # Win or loss — seeded per day, deterministic
                 is_win = rng.random() < win_rate
                 
                 if is_win:
