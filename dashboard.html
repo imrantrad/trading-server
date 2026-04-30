@@ -4002,16 +4002,17 @@ function loadPaperStrats(type){
   var psl = document.getElementById('paper-strat-list');
   if(!psl) return;
   psl.innerHTML = '<div style="color:var(--mu);text-align:center;padding:16px">Loading...</div>';
-  var ep = type==='my' ? '/strategies/user/'+UID : '/strategies/builtin';
+  var ep = type==='my' ? '/strategies/user/'+UID : type==='ai' ? '/ai/strategies/approved' : '/strategies/builtin';
   req(ep,'GET',null,function(err,d){
     if(err||!d){ psl.innerHTML='<div style="color:var(--rd);padding:12px">Failed to load</div>'; return; }
-    var strats = d.strategies || d.user_strategies || [];
+    var strats = d.strategies || d.user_strategies || d.approved_strategies || [];
     if(!strats.length){ psl.innerHTML='<div style="color:var(--mu);text-align:center;padding:20px;font-size:10px">No strategies found</div>'; return; }
     psl.innerHTML='';
     strats.forEach(function(s){
       var div=document.createElement('div');
       div.style.cssText='background:var(--bg3);border:1px solid var(--bo);border-left:3px solid var(--gr);border-radius:8px;padding:12px;margin-bottom:6px';
-      div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div><div style="font-size:12px;font-weight:700">'+(s.name||s.strategy_name||'Strategy')+'</div><div style="font-size:9px;color:var(--mu);margin-top:2px">'+(s.instrument||'NIFTY')+' · WR: '+(s.avg_win_rate||s.win_rate||0)+'%</div></div></div>';
+      var isAI = type==='ai'||s.source==='AI_ENGINE_V5'||s.ai_score;
+div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div><div style="font-size:12px;font-weight:700">'+(isAI?'<span style="font-size:8px;padding:2px 6px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);color:var(--am);border-radius:4px;margin-right:4px">🤖 AI</span>':'')+(s.name||s.strategy_name||'Strategy')+'</div><div style="font-size:9px;color:var(--mu);margin-top:2px">'+(s.instrument||'NIFTY')+' · WR: '+(s.avg_win_rate||s.win_rate||0)+'%</div></div></div>';
       var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';
       var b1=document.createElement('button');b1.className='btn ba';b1.style.cssText='flex:1;padding:6px;font-size:9px';b1.textContent='📄 PAPER TRADE';
       var inst=(s.instrument||'NIFTY').split('/')[0];
