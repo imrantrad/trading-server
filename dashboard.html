@@ -692,48 +692,172 @@ input:focus, select:focus, textarea:focus {
   </div>
 </div>
 
-<div id="pnl-ai" class="pnl">
-  <div class="g4"><div class="stat"><div class="sl">ENGINE</div><div class="sv" id="ai-st" style="color:var(--gr);font-size:11px">LOADING</div></div><div class="stat"><div class="sl">SYNTHESIZED</div><div class="sv" id="ai-syn" style="color:var(--bl)">0</div></div><div class="stat"><div class="sl">APPROVED</div><div class="sv" id="ai-apr" style="color:var(--gr)">0</div></div><div class="stat"><div class="sl">SIGNALS TODAY</div><div class="sv" id="ai-sig" style="color:var(--am)">0</div></div></div>
-  <div class="card" style="border-color:var(--gr)20">
-    <div class="chdr" style="color:var(--gr)">AI ENGINE - Genetic Algorithm + LSTM + RL</div>
-    <div style="font-size:9px;margin-bottom:10px"><div>Genetic Algorithm — Strategy Evolution</div><div>LSTM — Pattern Discovery</div><div>RL (PPO) — Self-Optimization</div><div>15-Day Paper Test Required</div></div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-      <div><div class="lbl">INSTRUMENT</div><select id="ai-i" style="width:120px"><option>NIFTY</option><option>BANKNIFTY</option></select></div>
-      <div><div class="lbl">VIX</div><input type="number" id="ai-vix" value="19.5" style="width:80px"></div>
+<div id="pnl-ai" class="pnl" style="padding:0">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#0a001a,#14001f,#001428);padding:10px 14px;border-bottom:1px solid rgba(168,85,247,.2);display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--p0)">🧠 AI ENGINE v5</div>
+      <div style="font-size:9px;color:var(--mu)">Genetic Algorithm · Multi-TF · Institutional Grade</div>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-    <button class="btn bg" onclick="evolve()">🧬 EVOLVE</button>
-    <button class="btn bb" onclick="getSignal()">⚡ SIGNAL</button>
-    <button class="btn bp" onclick="getRegime()">🔍 REGIME</button>
-    <button class="btn ba" onclick="loadAIStrats()">★ ALL</button>
-    <button class="btn bg" onclick="loadApprovedStrats()">✅ APPROVED</button>
+    <div id="ai-engine-status" style="font-size:9px;padding:4px 10px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:var(--p0)">LOADING...</div>
   </div>
-  <!-- AUTO-EXECUTE CONFIG -->
-  <div style="background:var(--bg4);border:1px solid var(--gr)20;border-radius:6px;padding:10px;margin-bottom:8px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-size:9px;font-weight:700;color:var(--gr)">⚡ AUTO-EXECUTE ENGINE</div>
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-        <span style="font-size:9px;color:var(--mu)">ENABLE</span>
-        <div id="ae-toggle-wrap" style="width:36px;height:20px;background:var(--bg3);border:1px solid var(--bo);border-radius:10px;position:relative;cursor:pointer" onclick="toggleAutoExec()">
-          <div id="ae-toggle-dot" style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--mu);transition:all .2s"></div>
+
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:4px;padding:10px 10px 0;background:var(--bg2)">
+    <button class="btn" id="ai-tab-signals" onclick="aiTab('signals',this)" style="flex:1;padding:7px;font-size:9px;background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.3);color:var(--p0)">📡 SIGNALS</button>
+    <button class="btn" id="ai-tab-strategies" onclick="aiTab('strategies',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🧬 STRATEGIES</button>
+    <button class="btn" id="ai-tab-regime" onclick="aiTab('regime',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">📊 REGIME</button>
+    <button class="btn" id="ai-tab-autoexec" onclick="aiTab('autoexec',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">⚡ AUTO</button>
+  </div>
+
+  <div style="padding:10px">
+
+  <!-- ══ SIGNALS TAB ══ -->
+  <div id="ai-signals">
+
+    <!-- Multi-instrument scanner -->
+    <div class="card" style="margin-bottom:10px">
+      <div class="chdr">📡 LIVE SIGNAL SCANNER</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <button class="btn bg" onclick="scanAllSignals()" style="flex:1;padding:8px;font-size:10px">🔍 SCAN ALL</button>
+        <button class="btn bb" onclick="scanSignal(document.getElementById('ai-scan-inst').value)" style="flex:1;padding:8px;font-size:10px">📡 SINGLE</button>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">INSTRUMENT</div>
+          <select id="ai-scan-inst">
+            <option value="NIFTY">NIFTY 50</option>
+            <option value="BANKNIFTY">BANK NIFTY</option>
+            <option value="FINNIFTY">FIN NIFTY</option>
+            <option value="SENSEX">SENSEX</option>
+          </select>
         </div>
-      </label>
+        <div><div class="lbl">VIX FILTER</div>
+          <select id="ai-vix">
+            <option value="0">All VIX</option>
+            <option value="15" selected>VIX < 22</option>
+            <option value="22">VIX < 22 only</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Signal cards grid -->
+      <div id="ai-signal-cards" style="display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;color:var(--mu);padding:16px;font-size:10px">Click SCAN ALL to get live signals</div>
+      </div>
     </div>
-    <div class="g2" style="gap:6px">
-      <div><div class="lbl">MIN CONFIDENCE %</div><input type="number" id="ae-conf" value="75" min="60" max="95" style="width:100%"></div>
-      <div><div class="lbl">MAX LOTS</div><input type="number" id="ae-lots" value="1" min="1" max="5" style="width:100%"></div>
+
+    <!-- Signal History -->
+    <div class="card">
+      <div class="chdr">📜 SIGNAL HISTORY <button onclick="loadSignalHistory()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button></div>
+      <div id="ai-signal-history" style="font-size:10px;color:var(--mu)">No signals yet today</div>
     </div>
-    <div class="g2" style="gap:6px;margin-top:6px">
-      <div><div class="lbl">DAILY SIGNAL LIMIT</div><input type="number" id="ae-limit" value="3" min="1" max="10" style="width:100%"></div>
-      <div><div class="lbl">MODE</div><select id="ae-mode" style="width:100%"><option>PAPER</option><option>LIVE</option></select></div>
-    </div>
-    <button class="btn bg blg" onclick="saveAutoExec()" style="margin-top:8px">✓ SAVE AUTO-EXECUTE CONFIG</button>
-    <div style="font-size:8px;color:var(--rd);margin-top:6px">⚠️ Live mode mein sirf tab use karein jab aap confident ho. Circuit breaker always active!</div>
+
   </div>
+
+  <!-- ══ STRATEGIES TAB ══ -->
+  <div id="ai-strategies" style="display:none">
+
+    <!-- Engine Status -->
+    <div class="card" style="margin-bottom:10px">
+      <div class="chdr">🧬 GENETIC ALGORITHM ENGINE</div>
+      <div id="ai-engine-info" style="font-size:10px;color:var(--mu);margin-bottom:10px">Loading engine status...</div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">GENERATIONS</div><div id="ai-gen-count" style="font-size:20px;font-weight:700;color:var(--p0)">—</div></div>
+        <div><div class="lbl">BEST WIN RATE</div><div id="ai-best-wr" style="font-size:20px;font-weight:700;color:var(--gr)">—</div></div>
+        <div><div class="lbl">STRATEGIES</div><div id="ai-strat-count" style="font-size:20px;font-weight:700;color:var(--bl)">—</div></div>
+        <div><div class="lbl">APPROVED</div><div id="ai-approved-count" style="font-size:20px;font-weight:700;color:var(--am)">—</div></div>
+      </div>
+      <button onclick="evolveAI()" class="btn" style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(168,85,247,.2),rgba(79,142,247,.2));border-color:var(--p0);color:var(--p0);font-size:11px;font-weight:700">🧬 EVOLVE NEW GENERATION</button>
+    </div>
+
+    <!-- Strategy filter tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:8px">
+      <button class="btn bg" onclick="loadAIStrats('all')" style="flex:1;padding:6px;font-size:9px">ALL</button>
+      <button class="btn" onclick="loadAIStrats('approved')" style="flex:1;padding:6px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">✅ APPROVED</button>
+      <button class="btn" onclick="loadAIStrats('testing')" style="flex:1;padding:6px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🧪 TESTING</button>
+    </div>
+    <div id="ai-str-list" style="display:flex;flex-direction:column;gap:8px"></div>
+
   </div>
-  <div id="ai-sig-box" style="display:none" class="card"></div>
-  <div id="ai-reg-box" style="display:none" class="card"></div>
-  <div id="ai-str-list" style="display:flex;flex-direction:column;gap:8px"></div>
+
+  <!-- ══ REGIME TAB ══ -->
+  <div id="ai-regime" style="display:none">
+
+    <div class="card" style="margin-bottom:10px">
+      <div class="chdr">📊 MARKET REGIME DETECTION</div>
+      <button onclick="detectRegime()" class="btn bg blg" style="width:100%;margin-bottom:10px">🔍 DETECT CURRENT REGIME</button>
+      <div id="ai-reg-box" style="display:none"></div>
+    </div>
+
+    <!-- Regime history -->
+    <div class="card" style="margin-bottom:10px">
+      <div class="chdr">📈 REGIME INDICATORS</div>
+      <div id="ai-regime-indicators" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+        <div style="text-align:center;color:var(--mu);padding:12px;font-size:10px;grid-column:span 2">Click DETECT to load</div>
+      </div>
+    </div>
+
+    <!-- Strategy recommendation based on regime -->
+    <div class="card">
+      <div class="chdr">💡 REGIME-BASED RECOMMENDATIONS</div>
+      <div id="ai-regime-recs" style="font-size:10px;color:var(--mu)">Detect regime first</div>
+    </div>
+
+  </div>
+
+  <!-- ══ AUTO-EXECUTE TAB ══ -->
+  <div id="ai-autoexec" style="display:none">
+
+    <!-- Toggle -->
+    <div style="background:rgba(168,85,247,.05);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div style="font-size:13px;font-weight:700">⚡ AUTO-EXECUTE</div>
+          <div style="font-size:9px;color:var(--mu)">AI signals → automatic paper orders</div>
+        </div>
+        <div id="ae-toggle-wrap" onclick="toggleAutoExec()" style="width:44px;height:24px;border-radius:12px;background:var(--bg4);border:1px solid var(--bo);cursor:pointer;position:relative;transition:background .3s">
+          <div id="ae-toggle-dot" style="width:18px;height:18px;border-radius:50%;background:var(--mu);position:absolute;top:2px;left:2px;transition:all .3s"></div>
+        </div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">MIN CONFIDENCE %</div><input type="number" id="ae-conf" value="75" min="50" max="99"></div>
+        <div><div class="lbl">MAX LOTS</div><input type="number" id="ae-lots" value="1" min="1" max="10"></div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">DAILY SIGNAL LIMIT</div><input type="number" id="ae-limit" value="3" min="1" max="10"></div>
+        <div><div class="lbl">MODE</div>
+          <select id="ae-mode">
+            <option value="PAPER" selected>📄 Paper Only (Safe)</option>
+            <option value="LIVE">⚡ Live (Real Money)</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">SL %</div><input type="number" id="ae-sl" value="1.5" step="0.5"></div>
+        <div><div class="lbl">TARGET %</div><input type="number" id="ae-tgt" value="3.0" step="0.5"></div>
+      </div>
+      <button onclick="saveAutoExec()" class="btn bg blg" style="width:100%">✓ SAVE AUTO-EXECUTE CONFIG</button>
+    </div>
+
+    <!-- AI P&L Tracker -->
+    <div class="card" style="margin-bottom:10px">
+      <div class="chdr">💰 AI P&L TRACKER <button onclick="loadAIPnL()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button></div>
+      <div id="ai-pnl-tracker" style="font-size:10px;color:var(--mu)">No AI trades yet</div>
+    </div>
+
+    <!-- Strategy Performance Monitor -->
+    <div class="card">
+      <div class="chdr">📊 STRATEGY PERFORMANCE MONITOR</div>
+      <div id="ai-perf-monitor" style="font-size:10px;color:var(--mu)">
+        <div style="text-align:center;padding:16px">Click ↻ to load performance data</div>
+      </div>
+      <button onclick="loadAIPerformance()" style="width:100%;margin-top:8px;padding:8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:6px;cursor:pointer;font-size:10px">📊 LOAD PERFORMANCE</button>
+    </div>
+
+  </div>
+
+  </div><!-- end padding div -->
 </div>
 
 <div id="pnl-admin" class="pnl">
@@ -2237,7 +2361,7 @@ function show(name, btn) {
   if(name==='pos')loadPos();
   if(name==='risk')loadRisk();
   if(name==='jnl'){loadTrades();loadJnlStats();}
-  if(name==='ai')loadAIStatus();
+  if(name==='ai'){loadAIEngineAll();}
   if(name==='legal'){ setTimeout(restoreLegalSign,100); }
   if(name==='admin'){
     // Admin: check token
@@ -5518,5 +5642,374 @@ function exportBtCSV(){
   a.download='backtest_results.csv';
   a.click();
   toast('CSV downloaded!','success');
+}
+</script>
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// AI ENGINE v5 — Complete JS
+// ══════════════════════════════════════════════════════════════════════════════
+
+var _signalHistory = [];
+var _aiAutoEnabled = false;
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function aiTab(tab, btn){
+  ['signals','strategies','regime','autoexec'].forEach(function(t){
+    var el=document.getElementById('ai-'+t);
+    if(el) el.style.display=t===tab?'block':'none';
+  });
+  ['signals','strategies','regime','autoexec'].forEach(function(t){
+    var b=document.getElementById('ai-tab-'+t);
+    if(b){b.style.background=t===tab?'rgba(168,85,247,.1)':'var(--bg4)';b.style.borderColor=t===tab?'rgba(168,85,247,.3)':'var(--bo)';b.style.color=t===tab?'var(--p0)':'var(--mu)';}
+  });
+  if(tab==='strategies') loadAIStatus();
+  if(tab==='autoexec') loadAutoExecConfig();
+}
+
+// ── Load AI Status ────────────────────────────────────────────────────────────
+function loadAIStatus(){
+  req('/ai/status','GET',null,function(err,d){
+    if(err||!d) return;
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+    set('ai-engine-status', d.active?'● ACTIVE':'○ IDLE');
+    set('ai-gen-count', d.generation||0);
+    set('ai-best-wr', (d.best_win_rate||0).toFixed(1)+'%');
+    set('ai-strat-count', d.total_strategies||0);
+    set('ai-approved-count', d.approved_count||0);
+    
+    var info=document.getElementById('ai-engine-info');
+    if(info) info.innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px">'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">Engine</div><b style="color:var(--p0)">Genetic Algorithm v5</b></div>'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">Population</div><b>'+(d.population_size||20)+'</b></div>'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">Indicators</div><b style="font-size:9px">EMA,RSI,MACD,BB,ATR,VWAP,ADX</b></div>'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">TF Coverage</div><b style="font-size:9px">1m·5m·15m·1h·D</b></div>'
+      +'</div>';
+  });
+}
+
+// ── Scan Signals ──────────────────────────────────────────────────────────────
+function scanAllSignals(){
+  var insts=['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'];
+  var cards=document.getElementById('ai-signal-cards');
+  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">🔍 Scanning all instruments...</div>';
+  
+  var results={};
+  insts.forEach(function(inst){
+    req('/ai/signal/'+inst,'GET',null,function(err,d){
+      results[inst]=err?null:d;
+      if(Object.keys(results).length===insts.length){
+        renderSignalCards(results);
+      }
+    });
+  });
+}
+
+function scanSignal(inst){
+  var cards=document.getElementById('ai-signal-cards');
+  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">📡 Scanning '+inst+'...</div>';
+  req('/ai/signal/'+inst,'GET',null,function(err,d){
+    if(err||!d){
+      if(cards) cards.innerHTML='<div style="color:var(--rd);padding:12px">Signal error</div>';
+      return;
+    }
+    var obj={};obj[inst]=d;
+    renderSignalCards(obj);
+    // Add to history
+    _signalHistory.unshift({inst:inst,signal:d,ts:new Date().toLocaleTimeString('en-IN')});
+    renderSignalHistory();
+  });
+}
+
+function renderSignalCards(results){
+  var cards=document.getElementById('ai-signal-cards');
+  if(!cards) return;
+  cards.innerHTML='';
+  
+  Object.keys(results).forEach(function(inst){
+    var d=results[inst];
+    if(!d) return;
+    
+    var action=d.signal||d.action||'WAIT';
+    var conf=d.confidence||d.confidence_score||0;
+    var price=window.prices&&window.prices[inst]?window.prices[inst]:0;
+    
+    var ac=action==='BUY'?'var(--gr)':action==='SELL'?'var(--rd)':'var(--mu)';
+    var confColor=conf>=75?'var(--gr)':conf>=60?'var(--am)':'var(--rd)';
+    var confBg=conf>=75?'rgba(0,255,136,.1)':conf>=60?'rgba(251,191,36,.1)':'rgba(255,51,102,.1)';
+    
+    var card=document.createElement('div');
+    card.style.cssText='background:var(--bg3);border:1px solid '+(action!=='WAIT'?ac:'var(--bo)')+';border-left:4px solid '+ac+';border-radius:8px;padding:12px';
+    card.innerHTML=
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+      +'<div><div style="font-size:13px;font-weight:700">'+inst+'</div>'
+      +'<div style="font-size:10px;color:var(--mu)">₹'+(price?price.toFixed(2):'—')+'</div></div>'
+      +'<div style="text-align:right">'
+      +'<div style="font-size:16px;font-weight:800;color:'+ac+'">'+action+'</div>'
+      +'<div style="font-size:9px;padding:2px 8px;border-radius:10px;background:'+confBg+';color:'+confColor+'">'+conf+'% confidence</div>'
+      +'</div></div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">REGIME</div><div style="font-size:10px;font-weight:600">'+(d.regime||'—')+'</div></div>'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">RSI</div><div style="font-size:10px;font-weight:600">'+(d.rsi||'—')+'</div></div>'
+      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">ADX</div><div style="font-size:10px;font-weight:600">'+(d.adx||'—')+'</div></div>'
+      +'</div>';
+    
+    if(action!=='WAIT'){
+      card.innerHTML+='<div style="display:flex;gap:6px">'
+        +'<button onclick="executeAISignal(\''+inst+'\',\''+action+'\')" class="btn '+(action==='BUY'?'bg':'br')+'" style="flex:1;padding:8px;font-size:10px">'+action+' PAPER</button>'
+        +'<button onclick="addToWatchlist(\''+inst+'\')" style="flex:1;padding:8px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer">+ WATCH</button>'
+        +'</div>';
+    }
+    
+    cards.appendChild(card);
+    _signalHistory.unshift({inst:inst,signal:d,ts:new Date().toLocaleTimeString('en-IN')});
+  });
+  
+  renderSignalHistory();
+  toast('✅ Signals scanned!','success');
+}
+
+function renderSignalHistory(){
+  var el=document.getElementById('ai-signal-history');
+  if(!el||!_signalHistory.length) return;
+  el.innerHTML='';
+  _signalHistory.slice(0,10).forEach(function(h){
+    var d=h.signal;
+    var action=d.signal||d.action||'WAIT';
+    var conf=d.confidence||0;
+    var ac=action==='BUY'?'var(--gr)':action==='SELL'?'var(--rd)':'var(--mu)';
+    var div=document.createElement('div');
+    div.style.cssText='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bo);font-size:10px';
+    div.innerHTML='<div><span style="color:var(--mu)">'+h.ts+'</span> <b>'+h.inst+'</b></div>'
+      +'<div><span style="color:'+ac+';font-weight:700">'+action+'</span>'
+      +' <span style="color:var(--mu)">'+conf+'%</span></div>';
+    el.appendChild(div);
+  });
+}
+
+// ── Execute AI Signal ─────────────────────────────────────────────────────────
+function executeAISignal(inst, action){
+  var spot=window.prices&&window.prices[inst]?window.prices[inst]:24000;
+  var atm=Math.round(spot/50)*50;
+  req('/paper/v2/execute_strategy','POST',{
+    strategy:'AI_SIGNAL_'+action,
+    spot:spot, instrument:inst,
+    time_exit:'15:30', max_trades:5, lots:1
+  },function(err,r){
+    if(!err&&r&&r.success) toast('✅ AI Signal executed on paper!','success');
+    else toast('Execute failed','error');
+  });
+}
+
+// ── Evolve Strategies ─────────────────────────────────────────────────────────
+function evolveAI(){
+  var btn=document.querySelector('[onclick="evolveAI()"]');
+  if(btn){btn.textContent='⏳ Evolving...';btn.disabled=true;}
+  req('/ai/evolve','POST',{population_size:20,generations:5},function(err,r){
+    if(btn){btn.textContent='🧬 EVOLVE NEW GENERATION';btn.disabled=false;}
+    if(err||!r){toast('Evolve error','error');return;}
+    toast('✅ Generation evolved! '+r.new_strategies+' new strategies','success');
+    loadAIStatus();
+    loadAIStrats('all');
+  });
+}
+
+// ── Load AI Strategies ────────────────────────────────────────────────────────
+function loadAIStrats(type){
+  var ep = type==='approved' ? '/ai/strategies/approved' : '/ai/strategies';
+  req(ep,'GET',null,function(err,d){
+    var list=document.getElementById('ai-str-list');
+    if(!list) return;
+    var strats=d&&(d.strategies||d.approved_strategies)||[];
+    if(!strats.length){list.innerHTML='<div style="color:var(--mu);text-align:center;padding:16px">No strategies found</div>';return;}
+    list.innerHTML='';
+    strats.forEach(function(s){
+      var wr=s.avg_win_rate||s.win_rate||0;
+      var score=s.ai_score||Math.round(wr);
+      var color=score>=75?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
+      var div=document.createElement('div');
+      div.style.cssText='background:var(--bg3);border:1px solid var(--bo);border-left:3px solid '+color+';border-radius:8px;padding:12px;margin-bottom:6px';
+      div.innerHTML=
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+        +'<div><div style="font-size:12px;font-weight:700">'+(s.name||s.strategy_name||'AI Strategy')+'</div>'
+        +'<div style="font-size:9px;color:var(--mu)">'+(s.instrument||'NIFTY')+' · '+(s.type||'AI')+'</div></div>'
+        +'<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+color+'">'+wr+'%</div>'
+        +'<div style="font-size:8px;color:var(--mu)">Win Rate</div></div></div>'
+        +'<div style="font-size:9px;color:var(--mu);margin-bottom:8px;line-height:1.6">'+(s.description||'')+'</div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button onclick="applyStrategyToOrderEntry('+JSON.stringify(s).replace(/'/g,"\\'")+')" class="btn bb" style="flex:1;padding:6px;font-size:9px">USE</button>'
+        +'<button onclick="runAIBacktest(\''+s.id+'\')" class="btn ba" style="flex:1;padding:6px;font-size:9px">BACKTEST</button>'
+        +'<button onclick="aiPaperTest(\''+s.id+'\')" class="btn bg" style="flex:1;padding:6px;font-size:9px">PAPER</button>'
+        +'</div>';
+      list.appendChild(div);
+    });
+  });
+}
+
+function runAIBacktest(id){
+  show('bt',null);
+  var sel=document.getElementById('bt-s');
+  if(sel) sel.value=id;
+  toast('Strategy set in backtest - click RUN','info');
+}
+
+function aiPaperTest(id){
+  show('paper',null);
+  toast('Opening Paper Test...','info');
+}
+
+// ── Detect Regime ─────────────────────────────────────────────────────────────
+function detectRegime(){
+  req('/ai/regime','GET',null,function(err,d){
+    if(err||!d){toast('Regime detection failed','error');return;}
+    
+    var box=document.getElementById('ai-reg-box');
+    if(box){
+      box.style.display='block';
+      var rc={'BULLISH':'var(--gr)','BEARISH':'var(--rd)','SIDEWAYS':'var(--am)','VOLATILE':'var(--p0)'};
+      var regime=d.regime||'UNKNOWN';
+      var color=rc[regime]||'var(--tx)';
+      box.innerHTML=
+        '<div style="text-align:center;padding:16px;background:rgba(0,0,0,.2);border-radius:8px;margin-bottom:10px">'
+        +'<div style="font-size:28px;font-weight:800;color:'+color+'">'+regime+'</div>'
+        +'<div style="font-size:10px;color:var(--mu);margin-top:4px">'+(d.description||'')+'</div>'
+        +'<div style="font-size:10px;margin-top:6px;color:'+color+'">Confidence: '+(d.confidence||0)+'%</div>'
+        +'</div>';
+    }
+    
+    // Render indicators
+    var indEl=document.getElementById('ai-regime-indicators');
+    if(indEl&&d.indicators){
+      indEl.innerHTML='';
+      Object.keys(d.indicators).forEach(function(k){
+        var v=d.indicators[k];
+        var div=document.createElement('div');
+        div.style.cssText='background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;text-align:center';
+        var isGood=v.signal==='BULLISH'||v.value>50;
+        div.innerHTML='<div style="font-size:8px;color:var(--mu)">'+k+'</div>'
+          +'<div style="font-size:12px;font-weight:700;color:'+(isGood?'var(--gr)':'var(--rd)')+'">'+
+          (typeof v.value==='number'?v.value.toFixed(1):v.value)+'</div>'
+          +'<div style="font-size:8px;color:var(--mu)">'+(v.signal||'')+'</div>';
+        indEl.appendChild(div);
+      });
+    }
+    
+    // Regime-based recommendations
+    var recEl=document.getElementById('ai-regime-recs');
+    if(recEl){
+      var recs={
+        'BULLISH':['✅ Trend continuation CE trades','✅ Bull spreads (debit)','✅ ORB long on breakouts','❌ Avoid shorting'],
+        'BEARISH':['✅ Trend continuation PE trades','✅ Bear spreads (debit)','✅ VWAP rejection shorts','❌ Avoid buying dips'],
+        'SIDEWAYS':['✅ Iron Condor / Straddle short','✅ Theta decay strategies','✅ Range-bound scalping','❌ Avoid directional plays'],
+        'VOLATILE':['✅ Buy straddle/strangle','✅ Wide Iron Condor','✅ Reduce position size 50%','❌ Avoid SL-heavy strategies']
+      };
+      var regime=d.regime||'SIDEWAYS';
+      var list=recs[regime]||recs['SIDEWAYS'];
+      recEl.innerHTML=list.map(function(r){
+        return '<div style="padding:5px 0;font-size:11px;border-bottom:1px solid var(--bo)">'+r+'</div>';
+      }).join('');
+    }
+    
+    toast('Regime: '+d.regime,'success');
+  });
+}
+
+// ── Auto-Execute ──────────────────────────────────────────────────────────────
+function toggleAutoExec(){
+  _aiAutoEnabled=!_aiAutoEnabled;
+  var wrap=document.getElementById('ae-toggle-wrap');
+  var dot=document.getElementById('ae-toggle-dot');
+  if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
+  if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
+  toast(_aiAutoEnabled?'Auto-Execute ON':'Auto-Execute OFF',_aiAutoEnabled?'success':'info');
+}
+
+function loadAutoExecConfig(){
+  req('/ai/auto_execute/config/'+UID,'GET',null,function(err,d){
+    if(err||!d) return;
+    _aiAutoEnabled=d.enabled||false;
+    var wrap=document.getElementById('ae-toggle-wrap');
+    var dot=document.getElementById('ae-toggle-dot');
+    if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
+    if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
+    var s=function(id,v){var e=document.getElementById(id);if(e&&v!==undefined)e.value=v;};
+    s('ae-conf',Math.round((d.min_confidence||0.75)*100));
+    s('ae-lots',d.max_lots||1);
+    s('ae-limit',d.daily_limit||3);
+    if(d.mode){var m=document.getElementById('ae-mode');if(m)m.value=d.mode;}
+  });
+}
+
+function saveAutoExec(){
+  var conf=parseFloat((document.getElementById('ae-conf')||{}).value)||75;
+  var lots=parseInt((document.getElementById('ae-lots')||{}).value)||1;
+  var limit=parseInt((document.getElementById('ae-limit')||{}).value)||3;
+  var mode=(document.getElementById('ae-mode')||{}).value||'PAPER';
+  var sl=parseFloat((document.getElementById('ae-sl')||{}).value)||1.5;
+  var tgt=parseFloat((document.getElementById('ae-tgt')||{}).value)||3.0;
+  
+  req('/ai/auto_execute/config','POST',{
+    user_id:UID, enabled:_aiAutoEnabled,
+    min_confidence:conf/100, max_lots:lots,
+    daily_limit:limit, mode:mode,
+    sl_pct:sl, target_pct:tgt
+  },function(err,r){
+    if(!err&&r&&r.saved) toast('✅ Auto-execute config saved!','success');
+    else toast('Save failed','error');
+  });
+}
+
+// ── AI P&L Tracker ────────────────────────────────────────────────────────────
+function loadAIPnL(){
+  req('/paper/v2/summary','GET',null,function(err,d){
+    var el=document.getElementById('ai-pnl-tracker');
+    if(!el) return;
+    if(err||!d){el.innerHTML='<div style="color:var(--rd)">Error</div>';return;}
+    el.innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">TOTAL P&L</div><b style="color:'+(d.total_pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+d.total_pnl+'</b></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">ACTIVE</div><b>'+d.active_positions+'</b></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">CLOSED</div><b>'+d.closed_positions+'</b></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">DAILY TRADES</div><b>'+d.daily_trades+'</b></div>'
+      +'</div>';
+  });
+}
+
+// ── Strategy Performance Monitor ─────────────────────────────────────────────
+function loadAIPerformance(){
+  req('/ai/strategies/approved','GET',null,function(err,d){
+    var el=document.getElementById('ai-perf-monitor');
+    if(!el) return;
+    var strats=d&&d.strategies||[];
+    if(!strats.length){el.innerHTML='<div style="color:var(--mu);padding:10px">No approved strategies</div>';return;}
+    var html2='<table class="tbl" style="font-size:9px"><thead><tr><th>STRATEGY</th><th>WR%</th><th>SCORE</th><th>TYPE</th></tr></thead><tbody>';
+    strats.forEach(function(s){
+      var wr=s.avg_win_rate||s.win_rate||0;
+      var score=s.ai_score||Math.round(wr);
+      var color=score>=75?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
+      html2+='<tr><td style="font-size:9px">'+(s.name||s.id).slice(0,20)+'</td>'
+        +'<td style="color:'+color+'">'+wr+'%</td>'
+        +'<td style="color:'+color+'">'+score+'</td>'
+        +'<td style="font-size:8px;color:var(--mu)">'+(s.type||'AI')+'</td></tr>';
+    });
+    html2+='</tbody></table>';
+    el.innerHTML=html2;
+    toast('Performance loaded!','success');
+  });
+}
+
+function addToWatchlist(inst){
+  toast(inst+' added to watchlist','success');
+}
+
+// Load AI status on tab open
+function loadAIEngineAll(){
+  loadAIStatus();
+  setTimeout(function(){
+    req('/ai/status','GET',null,function(err,d){
+      var el=document.getElementById('ai-engine-status');
+      if(el&&d) el.textContent=d.active?'● ACTIVE':'○ READY';
+    });
+  }, 500);
 }
 </script>
