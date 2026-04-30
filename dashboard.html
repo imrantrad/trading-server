@@ -6245,3 +6245,227 @@ loadAIEngineAll = function(){
   loadMLStatus();
 };
 </script>
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// ML ENGINE JS — XGBoost + RandomForest + GradientBoosting
+// ══════════════════════════════════════════════════════════════════════════════
+
+function trainML(){
+  var symsEl = document.getElementById('ml-train-syms');
+  var days = parseInt((document.getElementById('ml-train-days')||{}).value)||365;
+  var syms = symsEl ? Array.from(symsEl.selectedOptions).map(function(o){return o.value;}) : ['NIFTY','BANKNIFTY'];
+  
+  var badge = document.getElementById('ml-status-badge');
+  if(badge){badge.textContent='⏳ TRAINING...';badge.style.color='var(--am)';}
+  toast('🧠 Training ML models... (~30 sec)','info');
+  
+  req('/ml/train','POST',{symbols:syms, days:days},function(err,d){
+    if(err||!d){
+      if(badge){badge.textContent='❌ FAILED';badge.style.color='var(--rd)';}
+      toast('Training failed','error');
+      return;
+    }
+    if(badge){badge.textContent='✅ TRAINED';badge.style.color='var(--gr)';}
+    
+    // Show accuracy cards
+    var cards = document.getElementById('ml-accuracy-cards');
+    if(cards){
+      cards.style.display='grid';
+      cards.innerHTML='';
+      Object.keys(d.results).forEach(function(sym){
+        var r = d.results[sym];
+        if(r.error) return;
+        var acc = r.ensemble_accuracy||0;
+        var color = acc>=70?'var(--gr)':acc>=60?'var(--am)':'var(--rd)';
+        cards.innerHTML += '<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;text-align:center">'
+          +'<div style="font-size:8px;color:var(--mu)">'+sym+'</div>'
+          +'<div style="font-size:16px;font-weight:800;color:'+color+'">'+acc+'%</div>'
+          +'<div style="font-size:8px;color:var(--mu)">Ensemble</div></div>';
+        
+        // Individual model cards
+        if(r.models){
+          ['xgboost','random_forest','gradient_boost'].forEach(function(m){
+            var ma = (r.models[m]||{}).accuracy||0;
+            var mc = ma>=70?'var(--gr)':ma>=60?'var(--am)':'var(--rd)';
+            var ml = {'xgboost':'XGB','random_forest':'RF','gradient_boost':'GB'}[m]||m;
+            cards.innerHTML += '<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;text-align:center">'
+              +'<div style="font-size:8px;color:var(--mu)">'+sym+' '+ml+'</div>'
+              +'<div style="font-size:16px;font-weight:800;color:'+mc+'">'+ma+'%</div>'
+              +'<div style="font-size:8px;color:var(--mu)">Accuracy</div></div>';
+          });
+        }
+      });
+    }
+    
+    toast('✅ Models trained! Check accuracy above.','success');
+  });
+}
+
+function mlScanAll(){
+  var syms = ['NIFTY','BANKNIFTY','FINNIFTY'];
+  var res = document.getElementById('ml-results');
+  var cards = document.getElementById('ml-signal-cards');
+  if(res) res.style.display='block';
+  if(cards) cards.innerHTML='<div style="color:var(--am);text-align:center;padding:12px">🔍 Running ML models...</div>';
+  toast('Running ML predictions...','info');
+  
+  req('/ml/scan_all','POST',{symbols:syms},function(err,d){
+    if(err||!d){
+      if(cards) cards.innerHTML='<div style="color:var(--rd)">Error - train models first</div>';
+      toast('ML scan failed - train first','error');
+      return;
+    }
+    renderMLSignals(d.signals);
+    toast('✅ ML scan complete! Buy:'+d.buy_count+' Sell:'+d.sell_count+' Wait:'+d.wait_count,'success');
+  });
+}
+
+function mlPredict(sym){
+  var res = document.getElementById('ml-results');
+  var cards = document.getElementById('ml-signal-cards');
+  if(res) res.style.display='block';
+  if(cards) cards.innerHTML='<div style="color:var(--am);text-align:center;padding:12px">📡 ML predicting '+sym+'...</div>';
+  
+  req('/ml/predict/'+sym,'GET',null,function(err,d){
+    if(err||!d){
+      if(cards) cards.innerHTML='<div style="color:var(--rd)">Error - train model first</div>';
+      toast('ML predict failed','error');
+      return;
+    }
+    var obj={}; obj[sym]=d;
+    renderMLSignals(obj);
+    loadMLFeatures(sym);
+  });
+}
+
+function renderMLSignals(signals){
+  var cards = document.getElementById('ml-signal-cards');
+  if(!cards) return;
+  cards.innerHTML='';
+  
+  Object.keys(signals).forEach(function(sym){
+    var d = signals[sym];
+    if(d.error){ 
+      cards.innerHTML += '<div style="padding:8px;color:var(--rd);font-size:10px">'+sym+': '+d.error+'</div>';
+      return;
+    }
+    var action = d.signal||'WAIT';
+    var conf = d.confidence||0;
+    var prob = d.probability||0;
+    var acc = d.ensemble_accuracy||0;
+    var ac = action==='BUY'?'var(--gr)':action==='SELL'?'var(--rd)':'var(--mu)';
+    var confBg = conf>=60?'rgba(0,255,136,.08)':conf>=40?'rgba(251,191,36,.08)':'rgba(100,116,139,.08)';
+    
+    var inds = d.indicators||{};
+    var votes = d.model_votes||{};
+    
+    var card = document.createElement('div');
+    card.style.cssText = 'background:'+confBg+';border:1px solid rgba(168,85,247,.2);border-left:4px solid '+ac+';border-radius:8px;padding:12px';
+    
+    // Header
+    card.innerHTML = 
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+      +'<div><div style="font-size:14px;font-weight:800">'+sym+'</div>'
+      +'<div style="font-size:9px;color:var(--mu)">'+d.model_type+'</div></div>'
+      +'<div style="text-align:right">'
+      +'<div style="font-size:18px;font-weight:800;color:'+ac+'">'+action+'</div>'
+      +'<div style="font-size:9px;color:var(--mu)">Prob: '+prob+'%</div></div></div>'
+      
+      // Model votes
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px">'
+      +Object.keys(votes).map(function(m){
+        var v=votes[m];
+        var vc=v.prediction===1?'var(--gr)':'var(--rd)';
+        var ml={'xgboost':'XGB','random_forest':'RF','gradient_boost':'GB'}[m]||m;
+        return '<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:5px;padding:6px;text-align:center">'
+          +'<div style="font-size:8px;color:var(--mu)">'+ml+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+vc+'">'+(v.prediction===1?'BUY':'SELL')+'</div>'
+          +'<div style="font-size:8px;color:var(--mu)">'+v.probability+'%</div></div>';
+      }).join('')
+      +'</div>'
+      
+      // Indicators
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px">'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">RSI</div><div style="font-size:10px;font-weight:700;color:'+(inds.RSI>60?'var(--gr)':inds.RSI<40?'var(--rd)':'var(--am)')+'">'+inds.RSI+'</div></div>'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">ADX</div><div style="font-size:10px;font-weight:700;color:'+(inds.ADX>25?'var(--gr)':'var(--rd)')+'">'+inds.ADX+'</div></div>'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">BB Pos</div><div style="font-size:10px;font-weight:700">'+inds.BB_pos+'</div></div>'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">MACD</div><div style="font-size:10px;font-weight:700;color:'+(inds.MACD_hist>0?'var(--gr)':'var(--rd)')+'">'+inds.MACD_hist+'</div></div>'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">Vol</div><div style="font-size:10px;font-weight:700">'+inds.Vol_ratio+'x</div></div>'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">Model Acc</div><div style="font-size:10px;font-weight:700;color:var(--gr)">'+acc+'%</div></div>'
+      +'</div>'
+      
+      // Confidence bar
+      +'<div style="margin-bottom:10px">'
+      +'<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--mu);margin-bottom:3px"><span>Confidence</span><span>'+conf+'%</span></div>'
+      +'<div style="height:6px;background:var(--bg4);border-radius:3px"><div style="height:100%;width:'+Math.min(conf,100)+'%;background:'+ac+';border-radius:3px;transition:width .5s"></div></div></div>'
+      
+      // Action buttons
+      +(action!=='WAIT'?
+        '<div style="display:flex;gap:6px">'
+        +'<button onclick="executeMLSignal(\''+sym+'\',\''+action+'\')" class="btn '+(action==='BUY'?'bg':'br')+'" style="flex:1;padding:8px;font-size:10px">'+action+' PAPER</button>'
+        +'<button onclick="mlPredict(\''+sym+'\')" style="flex:1;padding:8px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer">↻ REFRESH</button>'
+        +'</div>':
+        '<button onclick="mlPredict(\''+sym+'\')" style="width:100%;padding:8px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer">↻ REFRESH PREDICTION</button>'
+      );
+    
+    cards.appendChild(card);
+  });
+}
+
+function loadMLFeatures(sym){
+  req('/ml/feature_importance/'+sym,'GET',null,function(err,d){
+    var el=document.getElementById('ml-features');
+    if(!el||err||!d||d.error) return;
+    var sorted=Object.entries(d.feature_importance||{}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+    var maxVal=sorted[0]?sorted[0][1]:1;
+    el.innerHTML=sorted.map(function(f){
+      var pct=f[1];
+      var w=Math.round(pct/maxVal*100)+'%';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--bo)">'
+        +'<div style="width:80px;font-size:9px;color:var(--mu)">'+f[0]+'</div>'
+        +'<div style="flex:1;height:6px;background:var(--bg4);border-radius:3px"><div style="height:100%;width:'+w+';background:var(--p0);border-radius:3px"></div></div>'
+        +'<div style="width:30px;font-size:9px;text-align:right">'+pct+'%</div>'
+        +'</div>';
+    }).join('');
+  });
+}
+
+function executeMLSignal(sym, action){
+  var spot = window.prices&&window.prices[sym]?window.prices[sym]:24000;
+  req('/paper/v2/execute_strategy','POST',{
+    strategy:'ML_SIGNAL_'+action,
+    spot:spot, instrument:sym,
+    time_exit:'15:30', max_trades:3, lots:1
+  },function(err,r){
+    if(!err&&r&&r.success) toast('✅ ML Signal executed on paper!','success');
+    else toast('Execute failed - check daily limits','error');
+  });
+}
+
+// Check ML status on load
+function checkMLStatus(){
+  req('/ml/status','GET',null,function(err,d){
+    var badge=document.getElementById('ml-status-badge');
+    if(!badge) return;
+    if(err||!d||!d.available){
+      badge.textContent='⚠️ INSTALL LIBS';
+      badge.style.color='var(--rd)';
+      return;
+    }
+    if(d.models_loaded>0){
+      badge.textContent='✅ '+d.models_loaded+' MODELS READY';
+      badge.style.color='var(--gr)';
+    } else {
+      badge.textContent='🔴 NOT TRAINED';
+      badge.style.color='var(--am)';
+    }
+  });
+}
+
+// Override aiTab to check ML status
+var _origAiTab = aiTab;
+function aiTab(tab, btn){
+  _origAiTab(tab, btn);
+  if(tab==='signals') setTimeout(checkMLStatus, 500);
+}
+</script>
