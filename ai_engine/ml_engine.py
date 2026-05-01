@@ -307,21 +307,21 @@ class TRDMLModel:
         # Latest indicators
         row = df.iloc[-1]
         return {
-            "symbol": self.symbol,
-            "signal": signal,
-            "confidence": confidence,
-            "probability": round(avg_proba*100, 1),
-            "model_votes": votes,
-            "ensemble_accuracy": self.metrics.get("ensemble_accuracy", 0),
+            "symbol": str(self.symbol),
+            "signal": str(signal),
+            "confidence": float(confidence),
+            "probability": float(round(avg_proba*100, 1)),
+            "model_votes": {k: {"prediction": int(v["prediction"]), "probability": float(v["probability"])} for k,v in votes.items()},
+            "ensemble_accuracy": float(self.metrics.get("ensemble_accuracy", 0)),
             "indicators": {
-                "RSI": round(row["rsi_14"], 1),
-                "ADX": round(row["adx"], 1),
-                "MACD_hist": round(row["macd_hist"], 2),
-                "BB_pos": round(row["bb_pos"], 2),
-                "Vol_ratio": round(row["vol_ratio"], 2),
-                "EMA20_50": round(row["ema20_50"]*100, 2),
+                "RSI": float(round(row["rsi_14"], 1)),
+                "ADX": float(round(row["adx"], 1)),
+                "MACD_hist": float(round(row["macd_hist"], 2)),
+                "BB_pos": float(round(row["bb_pos"], 2)),
+                "Vol_ratio": float(round(row["vol_ratio"], 2)),
+                "EMA20_50": float(round(row["ema20_50"]*100, 2)),
             },
-            "feature_importance": self.metrics.get("top_features", {}),
+            "feature_importance": {k: float(v) for k,v in self.metrics.get("top_features", {}).items()},
             "model_type": "XGBoost+RF+GB Ensemble" if HAS_XGB else "RF+GB Ensemble",
             "note": "Based on simulated OHLCV. Production needs real NSE data feed."
         }

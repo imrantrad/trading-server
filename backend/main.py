@@ -3419,10 +3419,21 @@ async def ml_scan_all(request: Request):
     buy_signals = [(s,r) for s,r in results.items() if r.get("signal")=="BUY"]
     buy_signals.sort(key=lambda x: x[1].get("confidence",0), reverse=True)
     
+    # Ensure all values are JSON serializable
+    clean_results = {}
+    for sym, r in results.items():
+        try:
+            import json
+            json.dumps(r)  # test serializable
+            clean_results[sym] = r
+        except:
+            clean_results[sym] = {"signal":"WAIT","confidence":0,"error":"serialize_error"}
+    
     return {
-        "signals": results,
-        "best_signal": buy_signals[0] if buy_signals else None,
-        "buy_count": len([r for r in results.values() if r.get("signal")=="BUY"]),
-        "sell_count": len([r for r in results.values() if r.get("signal")=="SELL"]),
-        "wait_count": len([r for r in results.values() if r.get("signal")=="WAIT"]),
+        "signals": clean_results,
+        "best_signal": {"symbol":buy_signals[0][0],"signal":buy_signals[0][1]} if buy_signals else None,
+        "buy_count": len([r for r in clean_results.values() if r.get("signal")=="BUY"]),
+        "sell_count": len([r for r in clean_results.values() if r.get("signal")=="SELL"]),
+        "wait_count": len([r for r in clean_results.values() if r.get("signal")=="WAIT"]),
+        "total": len(clean_results)
     }
