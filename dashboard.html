@@ -692,7 +692,7 @@ input:focus, select:focus, textarea:focus {
   </div>
 </div>
 
-<div id="pnl-ai" class="pnl" style="padding:0">
+<div id="pnl-ai" class="pnl">
 
   <!-- Header -->
   <div style="background:linear-gradient(135deg,#0a001a,#14001f,#001428);padding:10px 14px;border-bottom:1px solid rgba(168,85,247,.2);display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
@@ -711,7 +711,7 @@ input:focus, select:focus, textarea:focus {
     <button class="btn" id="ai-tab-autoexec" onclick="aiTab('autoexec',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">⚡ AUTO</button>
   </div>
 
-  <div style="padding:10px">
+  <div style="padding:10px;min-height:300px">
 
   <!-- ══ SIGNALS TAB ══ -->
   <div id="ai-signals">
@@ -5706,16 +5706,28 @@ var _aiAutoEnabled = false;
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function aiTab(tab, btn){
+  // Hide all panels
   ['signals','strategies','regime','autoexec'].forEach(function(t){
     var el=document.getElementById('ai-'+t);
     if(el) el.style.display=t===tab?'block':'none';
   });
+  // Reset all tab buttons
   ['signals','strategies','regime','autoexec'].forEach(function(t){
     var b=document.getElementById('ai-tab-'+t);
-    if(b){b.style.background=t===tab?'rgba(168,85,247,.1)':'var(--bg4)';b.style.borderColor=t===tab?'rgba(168,85,247,.3)':'var(--bo)';b.style.color=t===tab?'var(--p0)':'var(--mu)';}
+    if(!b) return;
+    if(t===tab){
+      b.style.background='rgba(168,85,247,.1)';
+      b.style.borderColor='rgba(168,85,247,.3)';
+      b.style.color='var(--p0)';
+    } else {
+      b.style.background='var(--bg4)';
+      b.style.borderColor='var(--bo)';
+      b.style.color='var(--mu)';
+    }
   });
-  if(tab==='strategies') loadAIStatus();
-  if(tab==='autoexec') loadAutoExecConfig();
+  if(tab==='strategies'){setTimeout(loadAIStatus,100);}
+  if(tab==='autoexec'){setTimeout(loadAutoExecConfig,100);}
+  if(tab==='signals'){setTimeout(loadMLStatus,100);}
 }
 
 // ── Load AI Status ────────────────────────────────────────────────────────────
