@@ -1081,10 +1081,10 @@ input:focus, select:focus {
     </div>
 
     <!-- Strategy filter tabs -->
-    <div style="display:flex;gap:4px;margin-bottom:8px">
-      <button class="btn bg" onclick="loadAIStrats('all')" style="flex:1;padding:6px;font-size:9px">ALL</button>
-      <button class="btn" onclick="loadAIStrats('approved')" style="flex:1;padding:6px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">✅ APPROVED</button>
-      <button class="btn" onclick="loadAIStrats('testing')" style="flex:1;padding:6px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🧪 TESTING</button>
+    <div style="display:flex;gap:4px;margin-bottom:8px" id="ai-strat-filter-btns">
+      <button class="btn" id="ai-filter-all" onclick="loadAIStrats('all')" style="flex:1;padding:6px;font-size:9px;background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.4);color:var(--p0)">ALL</button>
+      <button class="btn" id="ai-filter-approved" onclick="loadAIStrats('approved')" style="flex:1;padding:6px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">✅ APPROVED</button>
+      <button class="btn" id="ai-filter-testing" onclick="loadAIStrats('testing')" style="flex:1;padding:6px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🧪 TESTING</button>
     </div>
     <div id="ai-str-list" style="display:flex;flex-direction:column;gap:8px"></div>
 
@@ -5956,12 +5956,22 @@ function addToWatchlist(inst){ toast(inst+' added to watchlist','info'); }
 
 // ── Load AI Strategies ────────────────────────────────────────────────────────
 function loadAIStrats(type){
-  var ep = type==='approved' ? '/ai/strategies/approved' : '/ai/strategies';
+  // Highlight active filter button
+  ['all','approved','testing'].forEach(function(t){
+    var b=document.querySelector('[onclick="loadAIStrats(\''+t+'\')"]');
+    if(b){b.style.background=t===type?'rgba(168,85,247,.15)':'var(--bg4)';b.style.borderColor=t===type?'rgba(168,85,247,.4)':'var(--bo)';b.style.color=t===type?'var(--p0)':'var(--mu)';}
+  });
+  var ep = '/ai/strategies/approved';
   var list=document.getElementById('ai-str-list');
   if(list) list.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">Loading...</div>';
   req(ep,'GET',null,function(err,d){
     if(!list) return;
-    var strats=(d&&(d.strategies||d.approved_strategies))||[];
+    var allStrats=(d&&(d.strategies||d.approved_strategies))||[];
+    // Filter by type
+    var strats = allStrats;
+    if(type==='approved') strats = allStrats.filter(function(s){return s.approved!==false;});
+    if(type==='testing') strats = allStrats.filter(function(s){return s.approved===false||s.type==='TESTING';});
+    if(type==='all') strats = allStrats;
     if(!strats.length){list.innerHTML='<div style="color:var(--mu);text-align:center;padding:16px">No strategies found</div>';return;}
     list.innerHTML='';
     strats.forEach(function(s){

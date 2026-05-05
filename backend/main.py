@@ -1749,12 +1749,36 @@ def ai_get_strategies(status: str = None, min_wr: float = 0):
     ]
     if status == "approved":
         return {"strategies": gen5, "count": len(gen5)}
+    # Add testing/experimental strategies
+    testing_strats = [
+        {"id":"AI_TEST_001","name":"EMA Crossover Neural","instrument":"NIFTY","action":"BUY","option_type":"CE",
+         "quantity":1,"stop_loss":60,"target":150,"timeframe":"5m","avg_win_rate":63,"ai_score":71,
+         "type":"TESTING","approved":False,
+         "description":"Neural-inspired EMA cross with volume confirmation - in testing phase",
+         "conditions":"EMA9 > EMA20 + volume 1.2x + RSI > 50"},
+        {"id":"AI_TEST_002","name":"Gap Fill Strategy AI","instrument":"BANKNIFTY","action":"BUY","option_type":"CE",
+         "quantity":1,"stop_loss":100,"target":220,"timeframe":"15m","avg_win_rate":61,"ai_score":68,
+         "type":"TESTING","approved":False,
+         "description":"Gap fill detection with momentum filter - experimental",
+         "conditions":"Gap > 0.3% + RSI < 60 + VWAP support"},
+        {"id":"AI_TEST_003","name":"VIX Spike Reversal AI","instrument":"NIFTY","action":"BUY","option_type":"CE",
+         "quantity":1,"stop_loss":80,"target":180,"timeframe":"1h","avg_win_rate":59,"ai_score":65,
+         "type":"TESTING","approved":False,
+         "description":"Trades reversal after VIX spike above 20 - under observation",
+         "conditions":"VIX > 20 + VIX declining + RSI < 40 + price near support"},
+    ]
+    
+    all_strats = gen5 + testing_strats
+    
+    if status == "testing":
+        return {"strategies": testing_strats, "count": len(testing_strats)}
+    
     try:
         if ENTERPRISE:
             more = ai_engine.get_strategies(status, min_wr)
-            gen5.extend(more)
+            all_strats.extend(more)
     except: pass
-    return {"strategies": gen5, "count": len(gen5)}
+    return {"strategies": all_strats, "count": len(all_strats)}
 
 @app.get("/ai/strategies/approved")
 def ai_approved():
