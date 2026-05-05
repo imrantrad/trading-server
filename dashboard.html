@@ -3321,7 +3321,22 @@ function loadBuiltin(){
 }
 function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){var list=$('strat-list');if(!list)return;var strats=(d&&d.user_strategies)||[];if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="toggleNLP()">CREATE WITH NLP</button></div>';return;}list.innerHTML='';strats.forEach(function(s){var div=document.createElement('div');div.className='card';div.style.borderLeft='3px solid var(--bl)';var sid=s.id;div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div></div><div style="font-size:9px;color:var(--mu)">'+s.instrument+' | SL:'+s.sl_value+' TGT:'+s.target_value+'</div>';var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';var b1=document.createElement('button');b1.className='btn bg';b1.style.cssText='padding:4px 10px;font-size:8px';b1.textContent='BT';b1.onclick=function(){$('bt-s').value=sid;show('bt',null);};var b2=document.createElement('button');b2.className='btn br';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='DELETE';b2.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};btns.appendChild(b1);btns.appendChild(b2);div.appendChild(btns);list.appendChild(div);});});}
 function parseNLPStrat(){var text=gv('ns-nlp').trim();if(!text){toast('Type strategy','warn');return;}req('/strategies/from_nlp','POST',{user_id:UID,nlp_text:text},function(err,r){if(err){toast('NLP failed','error');return;}var s=r.strategy||{},p=r.parsed||{};if(s.name&&$('ns-nm'))$('ns-nm').value=s.name;if(p.instrument&&$('ns-i'))$('ns-i').value=p.instrument;if(s.sl_value&&$('ns-sl'))$('ns-sl').value=s.sl_value;if(s.target_value&&$('ns-tg'))$('ns-tg').value=s.target_value;if(s.entry_conditions&&$('ns-en'))$('ns-en').value=(s.entry_conditions||[]).join('\n');var box=$('ns-parsed');if(box){box.style.display='block';box.textContent='Parsed: '+JSON.stringify(p).slice(0,100);}toast('Auto-filled!','success');});}
-function saveStrat(){var entry=(gv('ns-en')||'').split('\n').filter(function(l){return l.trim();});req('/strategies/save','POST',{user_id:UID,name:gv('ns-nm')||'My Strategy',instrument:gv('ns-i')||'NIFTY',entry_conditions:entry,sl_value:nv('ns-sl')||100,target_value:nv('ns-tg')||200,quantity:1,nlp_input:gv('ns-nlp')},function(err,r){if(r&&r.strategy_id){toast('Strategy saved!','success');$('nlp-bld').style.display='none';loadMy();}else toast('Save failed','error');});}
+function saveStrat(){var entry=(gv('ns-en')||'').split('\n').filter(function(l){return l.trim();});req('/strategies/save','POST',{
+    user_id:UID,
+    name:gv('ns-nm')||'My Strategy',
+    instrument:gv('ns-i')||'NIFTY',
+    timeframe:gv('ns-tf')||'5m',
+    entry_conditions:entry||[],
+    exit_conditions:[],
+    sl_type:'POINTS',
+    sl_value:nv('ns-sl')||100,
+    target_type:'POINTS',
+    target_value:nv('ns-tg')||200,
+    quantity:1,
+    risk_per_trade:0.01,
+    tags:[],
+    is_public:false
+  },function(err,r){if(r&&r.strategy_id){toast('Strategy saved!','success');$('nlp-bld').style.display='none';loadMy();}else toast('Save failed','error');});}
 
 // JOURNAL
 function saveJnl(){
@@ -5680,7 +5695,7 @@ function runBT(){
   var btn=document.getElementById('bt-btn');
   if(btn){btn.textContent='⏳ Running...';btn.disabled=true;}
   
-  req('/backtest/advanced','POST',{strategy:s,capital:c,months:m,quantity:l,sl_pct:sl,target_pct:tgt},function(err,r){
+  req('/backtest/advanced','POST',{strategy:s,capital:c,months:m,quantity:l,sl_pct:sl,target_pct:tgt,run_monte_carlo:false,run_walk_forward:false},function(err,r){
     if(btn){btn.textContent='⚡ RUN BACKTEST';btn.disabled=false;}
     if(err||!r){toast('Backtest error','error');return;}
     renderBtResults(r, s, c, m);
@@ -5885,10 +5900,10 @@ function runCompare(){
     }
   }
   
-  req('/backtest/advanced','POST',{strategy:a,capital:cap,months:m,quantity:1},function(err,r){
+  req('/backtest/advanced','POST',{strategy:a,capital:cap,months:m,quantity:1,sl_pct:1.5,target_pct:2.0},function(err,r){
     done(a, err?null:r);
   });
-  req('/backtest/advanced','POST',{strategy:b,capital:cap,months:m,quantity:1},function(err,r){
+  req('/backtest/advanced','POST',{strategy:b,capital:cap,months:m,quantity:1,sl_pct:1.5,target_pct:2.0},function(err,r){
     done(b, err?null:r);
   });
 }
