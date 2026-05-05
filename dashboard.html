@@ -2796,7 +2796,8 @@ function show(name, btn) {
   if(name==='pos')loadPos();
   if(name==='risk')loadRisk();
   if(name==='jnl'){loadTrades();loadJnlStats();}
-  if(name==='ai'){loadAIEngineAll();}
+  if(name==='ai'){
+    setTimeout(function(){loadAIStrats('all');loadAIStatus();loadMLStatus();}, 300);loadAIEngineAll();}
   if(name==='legal'){ setTimeout(restoreLegalSign,100); }
   if(name==='admin'){
     // Admin: check token
@@ -6873,20 +6874,36 @@ function adminAction(action){
 // ══════════════════════════════════════════════════════════════════════════════
 var TRD_STORAGE_KEY = 'trd_v12_settings';
 
+var _memStore = {};  // Memory fallback if localStorage blocked
+
 function trdSave(key, value){
+  _memStore[key] = value;  // Always save to memory
   try {
     var all = JSON.parse(localStorage.getItem(TRD_STORAGE_KEY)||'{}');
     all[key] = value;
     all['_saved'] = new Date().toISOString();
     localStorage.setItem(TRD_STORAGE_KEY, JSON.stringify(all));
-  } catch(e){}
+  } catch(e){
+    try {
+      var all2 = JSON.parse(sessionStorage.getItem(TRD_STORAGE_KEY)||'{}');
+      all2[key] = value;
+      sessionStorage.setItem(TRD_STORAGE_KEY, JSON.stringify(all2));
+    } catch(e2){}
+  }
 }
 
 function trdLoad(key, defaultVal){
+  // Check memory first (most recent)
+  if(_memStore && _memStore[key] !== undefined) return _memStore[key];
   try {
     var all = JSON.parse(localStorage.getItem(TRD_STORAGE_KEY)||'{}');
-    return all[key] !== undefined ? all[key] : defaultVal;
-  } catch(e){ return defaultVal; }
+    if(all[key] !== undefined){ _memStore[key]=all[key]; return all[key]; }
+  } catch(e){}
+  try {
+    var all2 = JSON.parse(sessionStorage.getItem(TRD_STORAGE_KEY)||'{}');
+    if(all2[key] !== undefined){ _memStore[key]=all2[key]; return all2[key]; }
+  } catch(e2){}
+  return defaultVal;
 }
 
 function trdLoadAll(){
