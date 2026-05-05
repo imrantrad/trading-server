@@ -3312,12 +3312,14 @@ function loadBuiltin(){
       var sid=s.id;b1.onclick=function(){$('bt-s').value=sid;show('bt',null);};
       var b2=document.createElement('button');b2.className='btn ba';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='PAPER TEST';
       var sname=s.name;b2.onclick=function(){if(confirm('Start 15-day paper test for '+sname+'?')){req('/ai/paper_test/'+sid+'?days=1','POST',null,function(err,r){toast(err?'Paper test needs AI endpoint':'Paper test started for '+sname,'info');});}};
+      var bcopy2=document.createElement('button');bcopy2.className='btn';bcopy2.style.cssText='padding:4px 8px;font-size:8px;background:rgba(255,255,255,.05);border-color:var(--bo);color:var(--mu)';bcopy2.textContent='📋';
+      bcopy2.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
       var b3=document.createElement('button');b3.className='btn bb';b3.style.cssText='padding:4px 10px;font-size:8px';b3.textContent='USE';
       b3.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat);};})(s);
       var b4=document.createElement('button');b4.className='btn';b4.style.cssText='padding:4px 8px;font-size:10px;background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:var(--am)';b4.textContent='📋';
       b4.title='Copy full strategy logic';
       b4.onclick=(function(strat){return function(){copyStrategy(strat);};})(s);
-      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(b3);btns.appendChild(bCopy);div.appendChild(btns);
+      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(bcopy2);btns.appendChild(b3);btns.appendChild(bCopy);div.appendChild(btns);
       list.appendChild(div);
     });
   });
@@ -4689,6 +4691,115 @@ function execPaperTrade(){
 }
 
 
+
+// ── COPY STRATEGY AS NATURAL LANGUAGE ────────────────────────────────────────
+function copyStrategyText(s){
+  var lines = [];
+  var name = s.name || s.strategy_name || 'Strategy';
+  var inst = s.instrument || 'NIFTY';
+  var action = s.action || s.entry_action || 'BUY';
+  var otype = s.option_type || 'CE';
+  var lots = s.quantity || s.lots || s.default_lots || 1;
+  var sl = s.stop_loss || s.sl || 100;
+  var tgt = s.target || s.target_points || 200;
+  var tf = s.timeframe || '5m';
+  var wr = s.avg_win_rate || s.win_rate || 0;
+  
+  // Header
+  lines.push('=== ' + name.toUpperCase() + ' ===');
+  lines.push('');
+  
+  // Core order command
+  lines.push('📌 ORDER COMMAND:');
+  lines.push(action + ' ' + inst + ' ' + otype + ' ' + lots + ' LOT');
+  lines.push('Stop Loss: ' + sl + ' pts | Target: ' + tgt + ' pts');
+  lines.push('Timeframe: ' + tf + ' | R/R: 1:' + (tgt/sl).toFixed(2));
+  lines.push('');
+  
+  // Entry conditions
+  if(s.conditions || s.entry_conditions){
+    lines.push('📊 ENTRY CONDITIONS:');
+    var conds = (s.conditions || s.entry_conditions || '').split(' AND ');
+    conds.forEach(function(c,i){
+      if(c.trim()) lines.push((i+1)+'. ' + c.trim());
+    });
+    lines.push('');
+  }
+  
+  // Description
+  if(s.description){
+    lines.push('📝 DESCRIPTION:');
+    lines.push(s.description);
+    lines.push('');
+  }
+  
+  // Exit conditions
+  if(s.exit_conditions){
+    lines.push('🚪 EXIT CONDITIONS:');
+    lines.push(s.exit_conditions);
+    lines.push('');
+  }
+  
+  // No-trade conditions
+  if(s.no_trade){
+    lines.push('❌ NO-TRADE CONDITIONS:');
+    lines.push(s.no_trade);
+    lines.push('');
+  }
+  
+  // Indicators
+  if(s.indicators){
+    lines.push('📈 INDICATORS: ' + s.indicators);
+  }
+  
+  // Stats
+  if(wr > 0){
+    lines.push('✅ WIN RATE: ' + wr + '%');
+  }
+  if(s.ai_score){
+    lines.push('🤖 AI SCORE: ' + s.ai_score + '/100');
+  }
+  if(s.avg_monthly_return){
+    lines.push('💰 AVG MONTHLY RETURN: ' + s.avg_monthly_return + '%');
+  }
+  
+  // Notes
+  if(s.notes){
+    lines.push('');
+    lines.push('💡 NOTES: ' + s.notes);
+  }
+  
+  var text = lines.join('\n');
+  
+  // Copy to clipboard
+  try {
+    navigator.clipboard.writeText(text).then(function(){
+      toast('✅ Strategy copied to clipboard!','success');
+    }).catch(function(){
+      fallbackCopy(text);
+    });
+  } catch(e){
+    fallbackCopy(text);
+  }
+  
+  return text;
+}
+
+function fallbackCopy(text){
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    toast('✅ Strategy copied!','success');
+  } catch(e){
+    toast('Copy failed - long press to copy','warn');
+  }
+  document.body.removeChild(ta);
+}
+
 function loadPaperStrats(type){
   var psl = document.getElementById('paper-strat-list');
   if(!psl) return;
@@ -4705,6 +4816,12 @@ function loadPaperStrats(type){
       var isAI = type==='ai'||s.source==='AI_ENGINE_V5'||s.ai_score;
 div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div><div style="font-size:12px;font-weight:700">'+(isAI?'<span style="font-size:8px;padding:2px 6px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);color:var(--am);border-radius:4px;margin-right:4px">🤖 AI</span>':'')+(s.name||s.strategy_name||'Strategy')+'</div><div style="font-size:9px;color:var(--mu);margin-top:2px">'+(s.instrument||'NIFTY')+' · WR: '+(s.avg_win_rate||s.win_rate||0)+'%</div></div></div>';
       var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';
+      // Copy button
+      var bcopy=document.createElement('button');
+      bcopy.className='btn';
+      bcopy.style.cssText='padding:6px 10px;font-size:9px;background:rgba(255,255,255,.05);border-color:var(--bo);color:var(--mu)';
+      bcopy.textContent='📋 COPY';
+      bcopy.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
       var b1=document.createElement('button');b1.className='btn ba';b1.style.cssText='flex:1;padding:6px;font-size:9px';b1.textContent='📄 PAPER TRADE';
       var inst=(s.instrument||'NIFTY').split('/')[0];
       b1.onclick=function(){
@@ -6218,6 +6335,7 @@ function renderAIStratCards(list, strats, type){
         +'</div>';
       // Store strategy data on div for event delegation
       div.dataset.strategyJson = JSON.stringify(s);
+      div.querySelector('.ai-copy-btn').onclick = function(){ copyStrategyText(JSON.parse(this.closest('[data-strategy-json]').dataset.strategyJson)); };
       div.querySelector('.ai-use-btn').onclick = function(){ applyStrategyToOrderEntry(JSON.parse(this.closest('[data-strategy-json]').dataset.strategyJson)); };
       div.querySelector('.ai-bt-btn').onclick = function(){ showBt(); };
       div.querySelector('.ai-pt-btn').onclick = function(){ showPaper(); };
