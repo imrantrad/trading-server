@@ -5812,7 +5812,7 @@ function loadAIStrats(type){
         +'<div style="font-size:9px;color:var(--mu);margin-bottom:8px;line-height:1.6">'+(s.description||s.conditions||'')+'</div>'
         +'<div style="display:flex;gap:6px">'
         +'<button onclick="applyStrategyToOrderEntry('+JSON.stringify(s)+')" class="btn bb" style="flex:1;padding:6px;font-size:9px">USE</button>'
-        +'<button onclick="show('bt',null);setTimeout(function(){var el=document.getElementById('bt-s');if(el)el.value=''+s.id+'';},300)" class="btn ba" style="flex:1;padding:6px;font-size:9px">BACKTEST</button>'
+        +'<button onclick="show('bt',null)" data-sid="'+s.id+'" class="btn ba" style="flex:1;padding:6px;font-size:9px">BACKTEST</button>'
         +'<button onclick="show('paper',null)" class="btn bg" style="flex:1;padding:6px;font-size:9px">PAPER</button>'
         +'</div>';
       list.appendChild(div);
