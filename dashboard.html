@@ -477,7 +477,8 @@ input:focus, select:focus {
     <div style="display:flex;flex-direction:column;gap:8px">
       <div class="card">
         <div class="chdr">NLP ORDER ENTRY
-  <div style="display:flex;gap:6px;align-items:center">
+  <div style="display:flex;gap:5px;align-items:center">
+    <button onclick="startVoiceInput()" id="nlp-mic-btn" title="Voice Input" style="font-size:13px;padding:2px 8px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">🎤</button>
     <button onclick="toggleNLPSize()" id="nlp-resize-btn" title="Expand/Collapse" style="font-size:11px;padding:2px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">⤢ MAX</button>
     <button onclick="clearNLP()" title="Clear" style="font-size:11px;padding:2px 8px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">✕</button>
   </div>
@@ -3326,7 +3327,55 @@ function loadBuiltin(){
     });
   });
 }
-function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){var list=$('strat-list');if(!list)return;var strats=(d&&d.user_strategies)||[];if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="toggleNLP()">CREATE WITH NLP</button></div>';return;}list.innerHTML='';strats.forEach(function(s){var div=document.createElement('div');div.className='card';div.style.borderLeft='3px solid var(--bl)';var sid=s.id;div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div></div><div style="font-size:9px;color:var(--mu)">'+s.instrument+' | SL:'+s.sl_value+' TGT:'+s.target_value+'</div>';var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';var b1=document.createElement('button');b1.className='btn bg';b1.style.cssText='padding:4px 10px;font-size:8px';b1.textContent='BT';b1.onclick=function(){$('bt-s').value=sid;show('bt',null);};var b2=document.createElement('button');b2.className='btn br';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='DELETE';b2.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};btns.appendChild(b1);btns.appendChild(b2);div.appendChild(btns);list.appendChild(div);});});}
+function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){
+  var list=$('strat-list');if(!list)return;
+  var strats=(d&&d.user_strategies)||[];
+  if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="toggleNLP()">CREATE WITH NLP</button></div>';return;}
+  list.innerHTML='';
+  strats.forEach(function(s){
+    var div=document.createElement('div');div.className='card';div.style.borderLeft='3px solid var(--bl)';
+    var sid=s.id||s.strategy_id||'';
+    div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px">'
+      +'<div><div style="font-size:11px;font-weight:700">'+(s.name||'My Strategy')+'</div>'
+      +'<div style="font-size:9px;color:var(--mu)">'+(s.instrument||'NIFTY')+' | SL:'+(s.sl_value||0)+' TGT:'+(s.target_value||0)+'</div></div></div>';
+    var btns=document.createElement('div');btns.style.cssText='display:flex;gap:5px;margin-top:8px';
+    // USE
+    var bUse=document.createElement('button');bUse.className='btn bb';bUse.style.cssText='flex:1;padding:5px 6px;font-size:8px';bUse.textContent='USE';
+    bUse.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat);};})(s);
+    // BT
+    var bBt=document.createElement('button');bBt.className='btn bg';bBt.style.cssText='padding:5px 8px;font-size:8px';bBt.textContent='BT';
+    bBt.onclick=function(){var sel=document.getElementById('bt-s');if(sel)sel.value=sid;show('bt',null);};
+    // COPY 📋
+    var bCp=document.createElement('button');bCp.style.cssText='padding:5px 8px;font-size:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:5px;cursor:pointer;color:#fff';bCp.title='Copy strategy logic';bCp.textContent='📋';
+    bCp.onclick=(function(strat){return function(){
+      // Build copy text for MY STRATEGIES
+      var lines=['=== '+( strat.name||'My Strategy').toUpperCase()+' ===',''];
+      lines.push('📌 ORDER:');
+      lines.push((strat.action||'BUY')+' '+(strat.instrument||'NIFTY')+' '+(strat.option_type||'CE'));
+      lines.push('SL: '+(strat.sl_value||strat.stop_loss||0)+' pts | Target: '+(strat.target_value||strat.target||0)+' pts');
+      if(strat.timeframe) lines.push('Timeframe: '+strat.timeframe);
+      lines.push('');
+      if(strat.entry_conditions&&strat.entry_conditions.length){
+        lines.push('📊 ENTRY CONDITIONS:');
+        strat.entry_conditions.forEach(function(c,i){lines.push((i+1)+'. '+c);});
+        lines.push('');
+      }
+      if(strat.description){lines.push('📝 '+strat.description);lines.push('');}
+      if(strat.exit_conditions&&strat.exit_conditions.length){
+        lines.push('🚪 EXIT:');
+        strat.exit_conditions.forEach(function(c){lines.push('• '+c);});
+      }
+      var txt=lines.join('\n');
+      try{navigator.clipboard.writeText(txt).then(function(){toast('✅ Strategy copied!','success');});}
+      catch(e){var ta=document.createElement('textarea');ta.value=txt;ta.style='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('✅ Copied!','success');}
+    };})(s);
+    // DELETE
+    var bDel=document.createElement('button');bDel.style.cssText='padding:5px 8px;font-size:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);border-radius:5px;cursor:pointer;color:var(--rd)';bDel.textContent='🗑️';
+    bDel.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};
+    btns.appendChild(bUse);btns.appendChild(bBt);btns.appendChild(bCp);btns.appendChild(bDel);
+    div.appendChild(btns);list.appendChild(div);
+  });
+});}
 function parseNLPStrat(){var text=gv('ns-nlp').trim();if(!text){toast('Type strategy','warn');return;}req('/strategies/from_nlp','POST',{user_id:UID,nlp_text:text},function(err,r){if(err){toast('NLP failed','error');return;}var s=r.strategy||{},p=r.parsed||{};if(s.name&&$('ns-nm'))$('ns-nm').value=s.name;if(p.instrument&&$('ns-i'))$('ns-i').value=p.instrument;if(s.sl_value&&$('ns-sl'))$('ns-sl').value=s.sl_value;if(s.target_value&&$('ns-tg'))$('ns-tg').value=s.target_value;if(s.entry_conditions&&$('ns-en'))$('ns-en').value=(s.entry_conditions||[]).join('\n');var box=$('ns-parsed');if(box){box.style.display='block';box.textContent='Parsed: '+JSON.stringify(p).slice(0,100);}toast('Auto-filled!','success');});}
 function saveStrat(){var entry=(gv('ns-en')||'').split('\n').filter(function(l){return l.trim();});req('/strategies/save','POST',{
     user_id:UID,
@@ -7132,6 +7181,81 @@ function clearNLP(){
   var out = document.getElementById('nlp-out');
   if(out) out.style.display = 'none';
   toast('NLP cleared','info');
+}
+
+
+// ── VOICE INPUT FOR NLP ───────────────────────────────────────────────────────
+var _voiceActive = false;
+var _recognition = null;
+
+function startVoiceInput(){
+  var btn = document.getElementById('nlp-mic-btn');
+  var ta = document.getElementById('nlp-in');
+  
+  // Check browser support
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    toast('Voice not supported in this browser. Use Chrome/Safari.','warn');
+    return;
+  }
+  
+  if(_voiceActive){
+    // Stop recording
+    if(_recognition) _recognition.stop();
+    return;
+  }
+  
+  _recognition = new SpeechRecognition();
+  _recognition.continuous = true;
+  _recognition.interimResults = true;
+  _recognition.lang = 'en-IN';  // Indian English
+  
+  var finalTranscript = ta ? ta.value : '';
+  var interimTranscript = '';
+  
+  _recognition.onstart = function(){
+    _voiceActive = true;
+    if(btn){
+      btn.textContent = '🔴';
+      btn.style.background = 'rgba(255,51,102,.2)';
+      btn.style.borderColor = 'var(--rd)';
+      btn.style.animation = 'pulse 1s infinite';
+    }
+    toast('🎤 Listening... Bol kar apni strategy describe karo','info');
+  };
+  
+  _recognition.onresult = function(e){
+    interimTranscript = '';
+    for(var i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal){
+        finalTranscript += e.results[i][0].transcript + ' ';
+      } else {
+        interimTranscript += e.results[i][0].transcript;
+      }
+    }
+    if(ta) ta.value = finalTranscript + interimTranscript;
+    // Auto-scroll to bottom
+    if(ta) ta.scrollTop = ta.scrollHeight;
+  };
+  
+  _recognition.onerror = function(e){
+    _voiceActive = false;
+    if(btn){ btn.textContent='🎤'; btn.style.animation=''; btn.style.background='rgba(255,51,102,.08)'; }
+    if(e.error==='not-allowed') toast('Microphone access denied. Please allow mic in browser settings.','error');
+    else if(e.error==='no-speech') toast('No speech detected. Try again.','warn');
+    else toast('Voice error: '+e.error,'error');
+  };
+  
+  _recognition.onend = function(){
+    _voiceActive = false;
+    if(btn){ btn.textContent='🎤'; btn.style.animation=''; btn.style.background='rgba(255,51,102,.08)'; btn.style.borderColor='rgba(255,51,102,.2)'; }
+    if(finalTranscript.trim()){
+      toast('✅ Voice input captured! Click PARSE to analyze.','success');
+    }
+    _recognition = null;
+  };
+  
+  _recognition.start();
 }
 
 </script>
