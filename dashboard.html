@@ -4387,6 +4387,92 @@ function pollNotifCount() {
 // Feature init handled in IIFE
 
 </script>
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PERSISTENCE ENGINE — Save all settings to localStorage
+// ══════════════════════════════════════════════════════════════════════════════
+var TRD_STORAGE_KEY = 'trd_v12_settings';
+
+function trdSave(key, value){
+  try {
+    var all = JSON.parse(localStorage.getItem(TRD_STORAGE_KEY)||'{}');
+    all[key] = value;
+    all['_saved'] = new Date().toISOString();
+    localStorage.setItem(TRD_STORAGE_KEY, JSON.stringify(all));
+  } catch(e){}
+}
+
+function trdLoad(key, defaultVal){
+  try {
+    var all = JSON.parse(localStorage.getItem(TRD_STORAGE_KEY)||'{}');
+    return all[key] !== undefined ? all[key] : defaultVal;
+  } catch(e){ return defaultVal; }
+}
+
+function trdLoadAll(){
+  // Auto-execute config
+  try {
+    var ae = trdLoad('auto_exec', null);
+    if(ae){
+      _aiAutoEnabled = ae.enabled || false;
+      var set = function(id,v){ var e=document.getElementById(id); if(e&&v!==undefined) e.value=v; };
+      set('ae-conf', ae.min_confidence);
+      set('ae-lots', ae.max_lots);
+      set('ae-limit', ae.daily_limit);
+      set('ae-sl', ae.sl_pct);
+      set('ae-tgt', ae.target_pct);
+      if(ae.mode){ var m=document.getElementById('ae-mode'); if(m) m.value=ae.mode; }
+      var wrap=document.getElementById('ae-toggle-wrap');
+      var dot=document.getElementById('ae-toggle-dot');
+      if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
+      if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
+    }
+  } catch(e){}
+
+  // Paper test settings
+  try {
+    var pt = trdLoad('paper_settings', null);
+    if(pt){
+      if(pt.inst){ setPaperInst(pt.inst, document.getElementById('pbi-'+pt.inst)); }
+      if(pt.action){ setPaperAction(pt.action); }
+      if(pt.type){ setPaperType(pt.type); }
+    }
+  } catch(e){}
+
+  // Order entry settings
+  try {
+    var oe = trdLoad('order_entry', null);
+    if(oe){
+      var fields = ['stoploss','target','trailing-sl','order-tf','order-type','product-type','order-tag'];
+      fields.forEach(function(f){
+        if(oe[f]){ var el=document.getElementById(f); if(el) el.value=oe[f]; }
+      });
+    }
+  } catch(e){}
+
+  // Trade mode
+  try {
+    var mode = trdLoad('trade_mode', 'PAPER');
+    window.TRADE_MODE = mode;
+  } catch(e){}
+}
+
+// Auto-save order entry on change
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    trdLoadAll();
+    // Setup auto-save listeners
+    ['stoploss','target','trailing-sl','order-tf','order-type','product-type','order-tag'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.addEventListener('change', function(){
+        var oe = trdLoad('order_entry', {});
+        oe[id] = el.value;
+        trdSave('order_entry', oe);
+      });
+    });
+  }, 800);
+});
+
 </body>
 </html>
 
@@ -5958,10 +6044,11 @@ function addToWatchlist(inst){ toast(inst+' added to watchlist','info'); }
 function loadAIStrats(type){
   // Highlight active filter button
   ['all','approved','testing'].forEach(function(t){
-    var b=document.querySelector('[onclick="loadAIStrats(\''+t+'\')"]');
+    var b=document.getElementById('ai-filter-'+t);
     if(b){b.style.background=t===type?'rgba(168,85,247,.15)':'var(--bg4)';b.style.borderColor=t===type?'rgba(168,85,247,.4)':'var(--bo)';b.style.color=t===type?'var(--p0)':'var(--mu)';}
   });
-  var ep = '/ai/strategies/approved';
+  var ep = type==='approved' ? '/ai/strategies/approved' : '/ai/strategies/approved';
+  // All types use same endpoint - filter client side
   var list=document.getElementById('ai-str-list');
   if(list) list.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">Loading...</div>';
   req(ep,'GET',null,function(err,d){
@@ -6069,7 +6156,23 @@ function toggleAutoExec(){
   toast(_aiAutoEnabled?'⚡ Auto-Execute ON':'Auto-Execute OFF',_aiAutoEnabled?'success':'info');
 }
 
-function loadAutoExecConfig(){ /* config loads from backend if needed */ }
+function loadAutoExecConfig(){
+  var ae = trdLoad('auto_exec', null);
+  if(ae){
+    _aiAutoEnabled = ae.enabled || false;
+    var set = function(id,v){ var e=document.getElementById(id); if(e&&v!==undefined) e.value=v; };
+    set('ae-conf', ae.min_confidence);
+    set('ae-lots', ae.max_lots);
+    set('ae-limit', ae.daily_limit);
+    set('ae-sl', ae.sl_pct);
+    set('ae-tgt', ae.target_pct);
+    if(ae.mode){ var m=document.getElementById('ae-mode'); if(m) m.value=ae.mode; }
+    var wrap=document.getElementById('ae-toggle-wrap');
+    var dot=document.getElementById('ae-toggle-dot');
+    if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
+    if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
+  }
+}
 
 function saveAutoExec(){
   var conf = parseInt((document.getElementById('ae-conf')||{}).value)||75;
@@ -6090,10 +6193,16 @@ function saveAutoExec(){
     saved_at: new Date().toLocaleString('en-IN')
   };
 
-  // Save to localStorage
-  try {
-    localStorage.setItem('trd_auto_exec_config', JSON.stringify(config));
-  } catch(e) {}
+  // Save to localStorage using persistence engine
+  trdSave('auto_exec', {
+    enabled: config.enabled,
+    min_confidence: config.min_confidence,
+    max_lots: config.max_lots,
+    daily_limit: config.daily_limit,
+    mode: config.mode,
+    sl_pct: config.sl_pct,
+    target_pct: config.target_pct
+  });
 
   // Save to backend
   req('/ai/auto_execute/config','POST',{
