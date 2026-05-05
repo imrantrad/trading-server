@@ -6100,7 +6100,13 @@ function loadAIStrats(type){
     if(type==='testing') strats = allStrats.filter(function(s){return s.approved===false||s.type==='TESTING';});
     if(type==='all') strats = allStrats;
     if(!strats.length){list.innerHTML='<div style="color:var(--mu);text-align:center;padding:16px">No strategies found</div>';return;}
+    renderAIStratCards(list, strats, type);
+  });
+}
+
+function renderAIStratCards(list, strats, type){
     list.innerHTML='';
+    if(!strats.length){list.innerHTML='<div style="color:var(--mu);text-align:center;padding:16px">No '+type+' strategies</div>';return;}
     strats.forEach(function(s){
       var wr=s.avg_win_rate||s.win_rate||0;
       var score=s.ai_score||Math.round(wr);
@@ -6126,7 +6132,6 @@ function loadAIStrats(type){
       list.appendChild(div);
     });
     toast(strats.length+' AI strategies loaded!','success');
-  });
 }
 
 // ── Evolve ────────────────────────────────────────────────────────────────────
