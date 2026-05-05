@@ -904,7 +904,7 @@ input:focus, select:focus {
     <textarea id="ns-nlp" rows="3" placeholder="buy nifty atm if rsi under 30 ema crossover sl 100 target 300"></textarea>
     <button class="btn bg blg" onclick="parseNLPStrat()" style="margin-top:6px;margin-bottom:8px">PARSE AND AUTO-FILL</button>
     <div id="ns-parsed" style="display:none;background:#001a0e;border:1px solid var(--gr)30;border-radius:4px;padding:6px;font-size:8px;margin-bottom:8px;color:var(--gr)"></div>
-    <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">NAME</div><input id="ns-nm" placeholder="Strategy name"></div><div><div class="lbl">INST</div><select id="ns-i"><option>NIFTY</option><option>BANKNIFTY</option></select></div></div>
+    <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">NAME</div><input id="ns-nm" placeholder="Strategy name"></div><div><div class="lbl">INST</div><select id="ns-i"><option value="NIFTY">NIFTY</option><option value="BANKNIFTY">BANKNIFTY</option><option value="FINNIFTY">FINNIFTY</option><option value="SENSEX">SENSEX</option></select></div></div>
     <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">SL PTS</div><input type="number" id="ns-sl" value="100"></div><div><div class="lbl">TGT PTS</div><input type="number" id="ns-tg" value="200"></div></div>
     <div><div class="lbl">ENTRY CONDITIONS</div><textarea id="ns-en" rows="2" placeholder="RSI below 30, EMA crossover..."></textarea></div>
     <div style="display:flex;gap:6px;margin-top:8px"><button class="btn bg" onclick="saveStrat()" style="flex:1">SAVE</button><button class="btn ba" onclick="show('bt',null)" style="flex:1">BACKTEST</button><button class="btn br" onclick="toggleNLP()">X</button></div>
@@ -3038,7 +3038,20 @@ function nlpParse(){
 function _renderNLPResult(r, text, outEl){
   // Apply to order entry
   var order = r.order || {};
-  if(order.asset) setInst(order.asset, document.getElementById('bi-'+order.asset));
+  if(order.asset){
+    setInst(order.asset, document.getElementById('bi-'+order.asset));
+    // Also update NLP builder instrument dropdown
+    var nsI = document.getElementById('ns-i');
+    if(nsI){
+      for(var opt=0;opt<nsI.options.length;opt++){
+        if(nsI.options[opt].value===order.asset||nsI.options[opt].text===order.asset){
+          nsI.selectedIndex=opt; break;
+        }
+      }
+      // If not found, set value directly
+      nsI.value = order.asset;
+    }
+  }
   if(order.side){
     document.querySelectorAll('[id^="ba-"]').forEach(function(b){b.classList.remove('active');});
     var ab=document.getElementById('ba-'+order.side);if(ab)ab.classList.add('active');
@@ -7490,7 +7503,16 @@ function rollbackToVersion(stratId, versionNum){
 // ── SAVE MY STRATEGY ──────────────────────────────────────────────────────────
 function saveStrat(){
   var name = (gv('ns-nm')||'').trim();
+  // Get instrument - prefer from NLP parse result, fallback to dropdown
   var inst = gv('ns-i') || 'NIFTY';
+  // Check if NLP parsed a different instrument
+  var nlpInstEl = document.querySelector('[id^="bi-"].ta') || document.querySelector('[id^="ba-"].ta');
+  var parsedInst = null;
+  document.querySelectorAll('[id^="bi-"]').forEach(function(b){
+    if(b.classList.contains('ta')||b.classList.contains('active'))
+      parsedInst = b.id.replace('bi-','');
+  });
+  if(parsedInst) inst = parsedInst;
   var sl   = parseFloat(gv('ns-sl')) || 100;
   var tgt  = parseFloat(gv('ns-tg')) || 200;
   var nlpText = (gv('ns-nlp') || gv('nlp-in') || '').trim();
