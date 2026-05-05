@@ -7506,69 +7506,68 @@ function rollbackToVersion(stratId, versionNum){
 // ── SAVE MY STRATEGY ──────────────────────────────────────────────────────────
 function saveStrat(){
   var name = (gv('ns-nm')||'').trim();
-  // Get instrument from last NLP parse result
-  var inst = 'NIFTY';
-  if(window._lastNLPResult && window._lastNLPResult.order && window._lastNLPResult.order.asset){
-    inst = window._lastNLPResult.order.asset;
-  } else {
-    inst = gv('ns-i') || 'NIFTY';
-  }
-  // Read from _lastNLPResult if fresh parse
-  if(freshParse && window._lastNLPResult){
-    var _ord = window._lastNLPResult.order || {};
-    inst  = _ord.asset || gv('ns-i') || 'NIFTY';
-    sl    = _ord.sl   || parseFloat(gv('ns-sl')) || 100;
-    tgt   = _ord.tp   || parseFloat(gv('ns-tg')) || 200;
-    tf    = window._lastNLPResult.timeframe || '5m';
-    act   = _ord.side || 'BUY';
-    otype = _ord.option_type || 'CE';
-    lots  = _ord.lots || 1;
-  } else {
-    // Parse inline from text
-    var tl = nlpText.toLowerCase();
-    if(tl.includes('banknifty')) inst='BANKNIFTY';
-    else if(tl.includes('finnifty')) inst='FINNIFTY';
-    else if(tl.includes('sensex')) inst='SENSEX';
-    else inst = gv('ns-i') || 'NIFTY';
-    if(tl.includes('sell')) act='SELL';
-    if(tl.includes(' pe ')) otype='PE';
-    var slM=tl.match(/stop.?loss[:\s]+(\d+)/); if(slM) sl=parseInt(slM[1]);
-    var tgM=tl.match(/target[:\s]+(\d+)/); if(tgM) tgt=parseInt(tgM[1]);
-    var tfM=tl.match(/timeframe[:\s]+([0-9]+(?:min|m|h))/i);
-    if(tfM) tf=tfM[1].toLowerCase().replace('min','m');
-    else {
-      var tf3=tl.match(/\b(3min|3m|5m|15m|1h)\b/); 
-      if(tf3) tf=tf3[1].replace('min','m');
-    }
-    sl  = sl  || parseFloat(gv('ns-sl')) || 100;
-    tgt = tgt || parseFloat(gv('ns-tg')) || 200;
-  }
+  if(name.length < 2){ toast('Enter strategy name first','warn'); return; }
+
   var nlpText = (gv('ns-nlp') || gv('nlp-in') || '').trim();
-  var entry = (gv('ns-en') || '').trim();
+  var tl = nlpText.toLowerCase();
 
-  if(!name){ toast('Please enter a strategy name','warn'); return; }
-  if(!nlpText && !entry){ toast('Add NLP text or entry conditions','warn'); return; }
+  // Parse instrument directly from text
+  var inst = 'NIFTY';
+  if(tl.indexOf('banknifty') >= 0) inst = 'BANKNIFTY';
+  else if(tl.indexOf('finnifty') >= 0) inst = 'FINNIFTY';
+  else if(tl.indexOf('sensex') >= 0) inst = 'SENSEX';
+  else if(window._lastNLPResult && window._lastNLPResult.order && window._lastNLPResult.order.asset)
+    inst = window._lastNLPResult.order.asset;
+  else inst = gv('ns-i') || 'NIFTY';
 
-  // Parse entry conditions
-  var conditions = [];
-  // Try from NLP output panel first
-  document.querySelectorAll('#nlp-out div').forEach(function(el){
-    var t = el.textContent.replace(/^[✓\s]+/,'').trim();
-    if(t && t.length > 3 && !t.startsWith('NLP') && !t.startsWith('STRATEGY')
-       && !t.startsWith('INSTRUMENT') && !t.startsWith('ACTION')
-       && !t.startsWith('💡') && !t.startsWith('🔧') && !t.startsWith('📊')
-       && !t.startsWith('FILTER') && !t.startsWith('EXIT'))
-      conditions.push(t);
-  });
-  // Fallback to textarea
-  if(!conditions.length && entry){
-    conditions = entry.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  // Parse order params from text
+  var act = tl.indexOf('sell') >= 0 ? 'SELL' : 'BUY';
+  var otype = tl.indexOf(' pe ') >= 0 ? 'PE' : 'CE';
+  var lots = 1;
+  var lotsM = tl.match(/(\d+)\s*lot/); if(lotsM) lots = parseInt(lotsM[1]);
+  var sl = 100, tgt = 200;
+  var slM = tl.match(/stop.?loss[:\s]+(\d+)/); if(slM) sl = parseInt(slM[1]);
+  var tgM = tl.match(/target[:\s]+(\d+)/); if(tgM) tgt = parseInt(tgM[1]);
+  sl = sl || parseFloat(gv('ns-sl')) || 100;
+  tgt = tgt || parseFloat(gv('ns-tg')) || 200;
+
+  // Parse timeframe
+  var tf = '5m';
+  var tfMap = {'3min':'3m','5min':'5m','15min':'15m','1min':'1m','30min':'30m',
+               '3m':'3m','5m':'5m','15m':'15m','1m':'1m','1h':'1h','3MIN':'3m'};
+  var tfFound = tl.match(/timeframe[:\s]+([0-9]+(?:min|m|h))/i);
+  if(tfFound){ tf = tfFound[1].replace(/min/i,'m'); }
+  else {
+    for(var k in tfMap){ if(tl.indexOf(k.toLowerCase()) >= 0){ tf = tfMap[k]; break; } }
   }
+  tf = tf || gv('ns-tf') || '5m';
+
+  // Get entry conditions from NLP output
+  var conditions = [];
+  var nlpOut = document.getElementById('nlp-out');
+  if(nlpOut){
+    nlpOut.querySelectorAll('div').forEach(function(el){
+      var t = el.textContent.replace(/^[✓\s✓]+/,'').trim();
+      if(t && t.length > 3 && t.length < 100 
+         && !t.startsWith('NLP') && !t.startsWith('STRATEGY')
+         && !t.startsWith('INSTRUMENT') && !t.startsWith('ACTION')
+         && !t.startsWith('SL') && !t.startsWith('R/R')
+         && !t.startsWith('💡') && !t.startsWith('🔧')
+         && !t.startsWith('📊') && !t.startsWith('AUTO')
+         && !t.startsWith('FILTER') && !t.startsWith('EXIT'))
+        conditions.push(t);
+    });
+  }
+
+  // Short description - extract from 📝 DESCRIPTION or first line
+  var desc = name;
+  var descM = nlpText.match(/(?:📝\s*DESCRIPTION|description)[:\s]*([^\n📌===]+)/i);
+  if(descM) desc = descM[1].trim().slice(0,120);
 
   var saveBtn = document.querySelector('[onclick="saveStrat()"]');
   if(saveBtn){ saveBtn.textContent='💾 Saving...'; saveBtn.disabled=true; }
 
-  var payload = {
+  req('/strategies/save','POST',{
     user_id: UID,
     name: name,
     instrument: inst,
@@ -7579,52 +7578,27 @@ function saveStrat(){
     sl_value: sl,
     target_type: 'POINTS',
     target_value: tgt,
-    quantity: 1,
+    quantity: lots,
     risk_per_trade: 0.01,
     tags: [],
     is_public: false,
-    description: (function(){
-      // Extract short description, not full text
-      var d = nlpText.match(/📝\s*DESCRIPTION:\s*([^\n]+)/i);
-      if(d) return d[1].trim().slice(0,150);
-      // Use first meaningful line
-      var lines = nlpText.split('\n').filter(function(l){
-        var lt = l.trim();
-        return lt && lt.length > 10 && !lt.startsWith('📌') && !lt.startsWith('===') && !lt.startsWith('BUY') && !lt.startsWith('SELL') && !lt.startsWith('Stop') && !lt.startsWith('Target') && !lt.startsWith('Timeframe');
-      });
-      return lines[0] ? lines[0].trim().slice(0,150) : name;
-    })()
-  };
-
-  req('/strategies/save', 'POST', payload, function(err, r){
+    description: desc,
+    action: act,
+    option_type: otype
+  }, function(err, r){
     if(saveBtn){ saveBtn.textContent='SAVE'; saveBtn.disabled=false; }
     if(err || !r){
-      toast('Save failed - check connection','error');
+      toast('Save failed - server error','error');
       return;
     }
-    // Also save to v2 engine
-    req('/strategies/v2/create','POST',{
-      text: nlpText || name,
-      ast: {AND: conditions.map(function(c){return {CONDITION:c};})},
-      execution: {name:name, instrument:inst, sl:sl, target:tgt, order:inst+' BUY CE'},
-      normalized: conditions
-    }, function(e2, r2){
-      if(!e2 && r2 && r2.strategy_id) trdSave('last_strategy_id', r2.strategy_id);
-    });
-
-    toast('✅ Strategy "'+name+'" saved!','success');
+    toast('✅ "'+name+'" saved! ('+inst+' '+tf+')','success');
     // Clear form
     ['ns-nm','ns-nlp','ns-en'].forEach(function(id){
       var el=document.getElementById(id); if(el) el.value='';
     });
-    var nlpOut=document.getElementById('nlp-out');
-    if(nlpOut) nlpOut.style.display='none';
-    // Refresh MY STRATEGIES
+    var nlpOutEl=document.getElementById('nlp-out');
+    if(nlpOutEl) nlpOutEl.style.display='none';
     loadMy();
-    // Switch to MY tab
-    var myBtn = document.querySelector('[onclick*="loadPaperStrats(\'my\')"]') 
-             || document.querySelector('[onclick*="loadMy"]');
   });
 }
-
 </script>
