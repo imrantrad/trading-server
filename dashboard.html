@@ -3022,165 +3022,192 @@ function nlpParse(){
   if(!text){toast('Strategy likhiye pehle!','warn');return;}
   
   var outEl = document.getElementById('nlp-out');
-  if(outEl){
-    outEl.style.display='block';
-    outEl.innerHTML='<div style="color:var(--am);font-size:10px">🧠 Analyzing strategy...</div>';
-  }
+  if(outEl){outEl.style.display='block';outEl.innerHTML='<div style="color:var(--am);font-size:10px">🧠 Analyzing...</div>';}
   
-  // Advanced local NLP parser
   var t = text.toLowerCase();
   var result = {
+    name:'Custom Strategy',
     instrument:'NIFTY', action:'BUY', option_type:'CE',
     lots:1, stop_loss:100, target:200,
     order_type:'MARKET', product_type:'MIS',
     timeframe:'5m', trailing_sl:0,
     conditions:[], filters:[], exit:[], no_trade:[]
   };
-  
-  // ── INSTRUMENT ──
-  if(/banknifty|bank nifty/.test(t)) result.instrument='BANKNIFTY';
-  else if(/finnifty|fin nifty/.test(t)) result.instrument='FINNIFTY';
-  else if(/sensex/.test(t)) result.instrument='SENSEX';
-  else result.instrument='NIFTY';
-  
-  // ── ACTION ──
-  if(/\bsell\b|bearish|put|short/.test(t)) result.action='SELL';
-  else result.action='BUY';
-  
-  // ── OPTION TYPE ──
-  if(/\bput\b|\bpe\b/.test(t)) result.option_type='PE';
-  else if(/\bfut\b|\bfuture/.test(t)) result.option_type='FUT';
-  else result.option_type='CE';
-  
-  // ── LOTS ──
-  var lotsM = t.match(/([0-9]+)\s*(?:lot|lots)/);
-  if(lotsM) result.lots = parseInt(lotsM[1]);
-  
-  // ── SL ──
-  var slM = t.match(/(?:sl|stop.?loss|stoploss)[\s:=]*([0-9.]+)/);
-  if(slM) result.stop_loss = parseFloat(slM[1]);
-  // Detect "SL = entry - 20" pattern
-  var slEntM = t.match(/sl\s*=\s*entry[\s_-]*([0-9.]+)/);
-  if(slEntM) result.stop_loss = parseFloat(slEntM[1]);
-  // Detect "20 points" as SL
-  var sl20M = t.match(/hard.*stop.*([0-9]+).*point|([0-9]+).*point.*stop/);
-  if(sl20M) result.stop_loss = parseFloat(sl20M[1]||sl20M[2]);
-  
-  // ── TARGET ──
-  var tgtM = t.match(/(?:target|tgt|tp)[\s:=]*([0-9.]+)/);
-  if(tgtM) result.target = parseFloat(tgtM[1]);
-  
-  // ── RISK:REWARD from "2R" or "3R" ──
-  var rrM = t.match(/([0-9.]+)\s*r(?::|\s)/);
-  if(rrM && result.stop_loss) result.target = result.stop_loss * parseFloat(rrM[1]);
-  
-  // ── TRAILING SL ──
-  var tslM = t.match(/trail(?:ing)?[\s.]*(?:sl|stop)?[\s:=]*([0-9.]+)/);
-  if(tslM) result.trailing_sl = parseFloat(tslM[1]);
-  
-  // ── TIMEFRAME ──
-  if(/\b1m\b|1.min|1 min/.test(t)) result.timeframe='1m';
-  else if(/\b5m\b|5.min|5 min/.test(t)) result.timeframe='5m';
-  else if(/\b15m\b|15.min/.test(t)) result.timeframe='15m';
-  else if(/\b30m\b|30.min/.test(t)) result.timeframe='30m';
-  else if(/\b1h\b|1.hour/.test(t)) result.timeframe='1h';
-  
-  // ── ENTRY CONDITIONS ──
-  if(/ema.*cross|cross.*ema/.test(t)) result.conditions.push('EMA Crossover');
-  if(/ema.*20.*>.*ema.*50|bullish ema/.test(t)) result.conditions.push('EMA20 > EMA50');
-  if(/multi.?time|mtf/.test(t)) result.conditions.push('Multi-Timeframe Confirmation');
-  if(/rsi\s*>\s*([0-9]+)/.test(t)){var rm=t.match(/rsi\s*>\s*([0-9]+)/);result.conditions.push('RSI > '+rm[1]);}
-  if(/rsi\s*<\s*([0-9]+)/.test(t)){var rm2=t.match(/rsi\s*<\s*([0-9]+)/);result.conditions.push('RSI < '+rm2[1]);}
-  if(/macd.*signal|signal.*macd/.test(t)) result.conditions.push('MACD > Signal Line');
-  if(/macd.*histogram.*increas/.test(t)) result.conditions.push('MACD Histogram increasing');
-  if(/atr.*average|volatility check/.test(t)) result.conditions.push('ATR > 20-period avg');
-  if(/bollinger.*expand|bb.*expand/.test(t)) result.conditions.push('BB Width expanding');
-  if(/volume.*1\.5|1\.5.*volume/.test(t)) result.conditions.push('Volume > 1.5x avg');
-  if(/volume.*increas/.test(t)) result.conditions.push('Volume increasing');
-  if(/breakout.*high|20.candle.*high/.test(t)) result.conditions.push('Breakout 20-candle high');
-  if(/above.*resistance|resistance.*break/.test(t)) result.conditions.push('Close above resistance');
-  if(/vwap/.test(t)) result.conditions.push('Price above VWAP');
-  if(/demand.?zone|institutional/.test(t)) result.conditions.push('Near institutional demand zone');
-  if(/bid.*ask|delta.*pos/.test(t)) result.conditions.push('Order flow: Bid > Ask');
-  if(/9:?30|9:?15/.test(t)) result.filters.push('Time: 9:30 AM - 2:30 PM only');
-  if(/1%.?capital|risk.*1%/.test(t)) result.filters.push('Risk < 1% capital');
-  if(/max.*3.*trade|3.*trade.*day/.test(t)) result.filters.push('Max 3 trades/day');
-  
-  // ── NO TRADE CONDITIONS ──
-  if(/sideways|flat.*ema|ema.*flat/.test(t)) result.no_trade.push('Sideways market (EMA flat)');
-  if(/low.?volume/.test(t)) result.no_trade.push('Low volume zone');
-  if(/high.*spread|slippage/.test(t)) result.no_trade.push('High spread/slippage');
-  if(/vix.*>.*22|vix.*high/.test(t)) result.no_trade.push('VIX > 22 (high volatility)');
-  if(/adx.*<.*25|adx.*low/.test(t)) result.no_trade.push('ADX < 25 (no trend)');
-  if(/daily.*loss.*5|5.*drawdown/.test(t)) result.no_trade.push('Daily 5% drawdown limit hit');
-  if(/max.*2.*trade|2.*trade.*day/.test(t)) result.filters.push('Max 2 trades/day');
-  if(/max.*5.*trade|5.*trade.*day/.test(t)) result.filters.push('Max 5 trades/day');
 
-  // Phase detection
-  if(/phase.*1|adx.*ema.*vix/.test(t)) result.conditions.push('Phase 1: ADX+EMA+VIX pre-check');
-  if(/9:30|9.30.?am|930/.test(t)) result.filters.push('Entry time: 9:30 AM only');
-  if(/10:30|10.30.?am|1030/.test(t)) result.filters.push('Auto square-off: 10:30 AM');
-  if(/atm.*strike|at.the.money/.test(t)){result.conditions.push('ATM Strike: round(Spot/50)*50');}
-  if(/atm.*weekly|weekly.*expiry/.test(t)) result.conditions.push('Weekly expiry ATM CE');
-  if(/9:15|9.15.*open|opening.*price/.test(t)) result.conditions.push('LTP >= 9:15 AM opening price');
-  if(/vix.*<.*22|vix.*22/.test(t)) result.conditions.push('VIX < 22');
-  if(/vix.*>.*20/.test(t)) result.conditions.push('If VIX>20: reduce position 50%');
-  if(/adx.*>.*25|adx.*25/.test(t)) result.conditions.push('ADX(14) > 25');
-  if(/bid.ask.*<.*0.5|liquidity|slippage.*0.5/.test(t)) result.conditions.push('Bid-Ask Spread < 0.5%');
-  if(/entry.*price.*\+.*30|price.*30.*trail/.test(t)) result.conditions.push('Trail SL: if +30pts → SL to +10pts');
-  if(/5%.*gain|tp.*1\.05|target.*5%/.test(t)){
-    // 5% TP: if SL is 20pts use 45pts target (1:2.25 R/R per strategy)
-    result.target = result.stop_loss===20 ? 45 : Math.round(result.stop_loss*2.25);
-    result.conditions.push('TP = Entry * 1.05 (5% gain) = '+result.target+'pts');
+  // ── DETECT STRUCTURED FORMAT (from copyStrategyText) ─────────────────────
+  var isStructured = text.indexOf('===') >= 0 || text.indexOf('📌') >= 0;
+  
+  if(isStructured){
+    // Extract NAME
+    var nameMatch = text.match(/===\s*([^=]+?)\s*===/);
+    if(nameMatch) result.name = nameMatch[1].trim();
+    
+    // Extract ORDER LINE: "BUY NIFTY CE 1 LOT" or "SELL BANKNIFTY PE"
+    var orderMatch = text.match(/(buy|sell)\s+(nifty|banknifty|finnifty|sensex)\s+(ce|pe|fut)\s*(\d+)?/i);
+    if(orderMatch){
+      result.action = orderMatch[1].toUpperCase();
+      result.instrument = orderMatch[2].toUpperCase();
+      result.option_type = orderMatch[3].toUpperCase();
+      if(orderMatch[4]) result.lots = parseInt(orderMatch[4]);
+    }
+    
+    // Extract SL and Target from "Stop Loss: 80 pts | Target: 200 pts"
+    var slMatch = text.match(/stop\s*loss[:\s]+(\d+)/i);
+    if(slMatch) result.stop_loss = parseInt(slMatch[1]);
+    var tgtMatch = text.match(/target[:\s]+(\d+)/i);
+    if(tgtMatch) result.target = parseInt(tgtMatch[1]);
+    
+    // Extract timeframe
+    var tfMatch = text.match(/timeframe[:\s]+(\w+)/i);
+    if(tfMatch) result.timeframe = tfMatch[1].toLowerCase();
+    
+    // Extract ENTRY CONDITIONS section
+    var condSection = text.match(/📊\s*ENTRY CONDITIONS[:\s]*([\s\S]*?)(?=📝|🚪|📈|✅|🤖|$)/i);
+    if(!condSection) condSection = text.match(/ENTRY CONDITIONS[:\s]*([\s\S]*?)(?=DESCRIPTION|EXIT|INDICATOR|WIN RATE|$)/i);
+    if(condSection){
+      var condText = condSection[1];
+      // Parse numbered conditions: "1. EMA20 sharply above EMA50"
+      var numbered = condText.match(/\d+\.\s*([^\n]+)/g);
+      if(numbered) numbered.forEach(function(c){
+        var clean = c.replace(/^\d+\.\s*/,'').trim();
+        if(clean) result.conditions.push(clean);
+      });
+    }
+    
+    // Extract EXIT CONDITIONS
+    var exitSection = text.match(/🚪\s*EXIT[^:]*:[\s]*([^\n📈✅🤖💰]+)/i);
+    if(exitSection) result.exit.push(exitSection[1].trim());
+    
+    // Extract WIN RATE
+    var wrMatch = text.match(/WIN RATE[:\s]*(\d+)%/i);
+    if(wrMatch) result.win_rate = parseInt(wrMatch[1]);
+    
+    // Extract INDICATORS
+    var indMatch = text.match(/INDICATORS[:\s]*([^\n]+)/i);
+    if(indMatch){
+      indMatch[1].split(',').forEach(function(ind){
+        var i = ind.trim();
+        if(i) result.conditions.push('Indicator: '+i);
+      });
+    }
+    
+    // Extract AVG MONTHLY RETURN
+    var retMatch = text.match(/MONTHLY RETURN[:\s]*([\d.]+)%/i);
+    if(retMatch) result.filters.push('Expected Return: '+retMatch[1]+'%/month');
+    
+  } else {
+    // ── FREE TEXT PARSING ───────────────────────────────────────────────────
+    
+    // INSTRUMENT
+    if(/banknifty|bank nifty/.test(t)) result.instrument='BANKNIFTY';
+    else if(/finnifty/.test(t)) result.instrument='FINNIFTY';
+    else if(/sensex/.test(t)) result.instrument='SENSEX';
+    
+    // ACTION
+    if(/\bsell\b|bearish|short/.test(t)) result.action='SELL';
+    
+    // OPTION TYPE  
+    if(/\bput\b|\bpe\b/.test(t)) result.option_type='PE';
+    else if(/\bfut\b|future/.test(t)) result.option_type='FUT';
+    
+    // LOTS
+    var lotsM=t.match(/(\d+)\s*(?:lot|lots)/);
+    if(lotsM) result.lots=parseInt(lotsM[1]);
+    
+    // SL/Target
+    var slM=t.match(/(?:sl|stop.?loss)[\s:=]*(\d+)/);
+    if(slM) result.stop_loss=parseFloat(slM[1]);
+    var tM=t.match(/(?:target|tgt)[\s:=]*(\d+)/);
+    if(tM) result.target=parseFloat(tM[1]);
+    
+    // R:R
+    var rrM=t.match(/(\d+(?:\.\d+)?)r(?:\s|:)/);
+    if(rrM&&result.stop_loss) result.target=result.stop_loss*parseFloat(rrM[1]);
+    
+    // Trailing SL
+    var tslM=t.match(/trail(?:ing)?[\s.]*(?:sl)?[\s:=]*(\d+)/);
+    if(tslM) result.trailing_sl=parseFloat(tslM[1]);
+    
+    // TIMEFRAME
+    var tfMap={'1m':'1m','5m':'5m','15m':'15m','30m':'30m','1h':'1h','1 hour':'1h','daily':'D','1d':'D'};
+    Object.keys(tfMap).forEach(function(k){if(t.indexOf(k)>=0)result.timeframe=tfMap[k];});
+    
+    // INDICATORS → conditions
+    if(/ema.*cross|cross.*ema/.test(t)) result.conditions.push('EMA Crossover');
+    if(/ema.?20.*>.*ema.?50|ema20>ema50/.test(t)) result.conditions.push('EMA20 > EMA50');
+    if(/ema.?50.*>.*ema.?200/.test(t)) result.conditions.push('EMA50 > EMA200');
+    if(/multi.?time|mtf/.test(t)) result.conditions.push('Multi-Timeframe Confirmation');
+    var rsiAbove=t.match(/rsi\s*>\s*(\d+)/);
+    if(rsiAbove) result.conditions.push('RSI > '+rsiAbove[1]);
+    var rsiBelow=t.match(/rsi\s*<\s*(\d+)/);
+    if(rsiBelow) result.conditions.push('RSI < '+rsiBelow[1]);
+    if(/macd.*signal|signal.*macd/.test(t)) result.conditions.push('MACD > Signal Line');
+    if(/macd.*hist/.test(t)) result.conditions.push('MACD Histogram increasing');
+    if(/atr.*avg|volatility check/.test(t)) result.conditions.push('ATR > 20-period avg');
+    if(/bb.*expand|bollinger.*expand/.test(t)) result.conditions.push('BB Width expanding');
+    if(/volume.*1\.5|1\.5.*volume/.test(t)) result.conditions.push('Volume > 1.5x avg');
+    if(/volume.*2x|2x.*volume/.test(t)) result.conditions.push('Volume > 2x avg');
+    if(/breakout.*high|20.candle.*high/.test(t)) result.conditions.push('Breakout 20-candle high');
+    if(/vwap/.test(t)) result.conditions.push('Price above VWAP');
+    if(/adx.?14.*>.*25|adx.*>.*25/.test(t)) result.conditions.push('ADX(14) > 25');
+    if(/vix.*<.*22/.test(t)) result.conditions.push('VIX < 22');
+    if(/9:?30|atm.*9/.test(t)) result.filters.push('Entry time: 9:30 AM only');
+    if(/10:?30/.test(t)) result.filters.push('Auto exit: 10:30 AM');
+    if(/1%.*capital|risk.*1%/.test(t)) result.filters.push('Risk < 1% capital');
+    if(/max.*3.*trade|3.*trade.*day/.test(t)) result.filters.push('Max 3 trades/day');
+    if(/max.*5.*trade|5.*trade.*day/.test(t)) result.filters.push('Max 5 trades/day');
+    if(/5%.*gain|tp.*1\.05/.test(t)){result.conditions.push('TP = Entry * 1.05 (5% gain)');if(result.stop_loss===20)result.target=45;}
+    if(/4%.*loss|sl.*0\.96/.test(t)) result.conditions.push('SL = Entry * 0.96 (4% loss)');
+    if(/sideways|flat.*ema/.test(t)) result.no_trade.push('Sideways market');
+    if(/low.?volume/.test(t)) result.no_trade.push('Low volume zone');
+    if(/daily.*5%|5%.*drawdown/.test(t)) result.filters.push('Daily 5% drawdown limit');
+    if(/daily.*drawdown/.test(t)) result.filters.push('Daily drawdown protection');
   }
-  if(/4%.*loss|sl.*0\.96|stop.*4%/.test(t)){result.conditions.push('SL = Entry * 0.96 (4% loss)');}
-  if(/atr.*guard|change.*<.*atr/.test(t)) result.conditions.push('ATR Guard: price change < ATR(14)*2');
-  if(/sma.*volume|volume.*sma/.test(t)) result.conditions.push('Volume > SMA(Volume,5)*1.5');
-  if(/daily.*5%|capital.*0\.05|5%.*drawdown/.test(t)) result.filters.push('Daily drawdown limit: 5% capital');
-  
-  // ── Apply to order entry ──
-  setInst(result.instrument, document.getElementById('bi-'+result.instrument));
-  document.querySelectorAll('[id^="ba-"]').forEach(function(b){b.classList.remove('active');});
-  var ab=document.getElementById('ba-'+result.action);
-  if(ab) ab.classList.add('active');
-  document.querySelectorAll('[id^="bo-"]').forEach(function(b){b.classList.remove('active');});
-  var ob=document.getElementById('bo-'+result.option_type);
-  if(ob) ob.classList.add('active');
-  var le=document.getElementById('lots-input')||document.getElementById('lots');
-  if(le) le.value=result.lots;
-  var se=document.getElementById('stoploss'); if(se) se.value=result.stop_loss;
-  var te=document.getElementById('target'); if(te) te.value=result.target;
-  var tse=document.getElementById('trailing-sl'); if(tse) tse.value=result.trailing_sl;
-  var tfe=document.getElementById('order-tf'); if(tfe) tfe.value=result.timeframe;
-  var tage=document.getElementById('order-tag'); if(tage) tage.value='Multi-Condition Strategy';
-  calcRR();
-  
-  // ── Show parsed output ──
+
+  // ── Apply to Order Entry ──────────────────────────────────────────────────
+  try{
+    setInst(result.instrument, document.getElementById('bi-'+result.instrument));
+    document.querySelectorAll('[id^="ba-"]').forEach(function(b){b.classList.remove('active');});
+    var ab=document.getElementById('ba-'+result.action);if(ab)ab.classList.add('active');
+    document.querySelectorAll('[id^="bo-"]').forEach(function(b){b.classList.remove('active');});
+    var ob=document.getElementById('bo-'+result.option_type);if(ob)ob.classList.add('active');
+    var le=document.getElementById('lots-input')||document.getElementById('lots');if(le)le.value=result.lots;
+    var se=document.getElementById('stoploss');if(se)se.value=result.stop_loss;
+    var te=document.getElementById('target');if(te)te.value=result.target;
+    var tse=document.getElementById('trailing-sl');if(tse)tse.value=result.trailing_sl;
+    var tfe=document.getElementById('order-tf');if(tfe)tfe.value=result.timeframe;
+    var tage=document.getElementById('order-tag');if(tage)tage.value=result.name;
+    if(typeof calcRR==='function') calcRR();
+  }catch(e){}
+
+  // ── Display Parsed Output ─────────────────────────────────────────────────
   if(outEl){
-    var html2='<div style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:8px">✅ STRATEGY PARSED</div>';
-    html2+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px;margin-bottom:10px">';
-    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">INSTRUMENT</div><div style="font-weight:700">'+result.instrument+'</div></div>';
-    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">ACTION</div><div style="font-weight:700;color:'+(result.action==='BUY'?'var(--gr)':'var(--rd)')+'">'+result.action+' '+result.option_type+'</div></div>';
-    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">LOTS</div><div style="font-weight:700">'+result.lots+'</div></div>';
-    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">R/R</div><div style="font-weight:700;color:var(--gr)">1:'+(result.target/result.stop_loss).toFixed(1)+'</div></div>';
-    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">STOP LOSS</div><div style="font-weight:700;color:var(--rd)">'+result.stop_loss+' pts</div></div>';
-    html2+='<div style="background:var(--bg4);padding:6px 8px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">TARGET</div><div style="font-weight:700;color:var(--gr)">'+result.target+' pts</div></div>';
+    var html2='<div style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:8px">✅ STRATEGY PARSED'+(isStructured?' (Structured)':' (Free Text)')+'</div>';
+    html2+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:10px">';
+    html2+='<div style="background:var(--bg4);padding:7px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">INSTRUMENT</div><div style="font-weight:700;color:var(--bl)">'+result.instrument+'</div></div>';
+    html2+='<div style="background:var(--bg4);padding:7px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">ACTION</div><div style="font-weight:700;color:'+(result.action==='BUY'?'var(--gr)':'var(--rd)')+'">'+result.action+' '+result.option_type+'</div></div>';
+    html2+='<div style="background:var(--bg4);padding:7px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">SL / TARGET</div><div style="font-weight:700">'+result.stop_loss+' / '+result.target+'</div></div>';
+    html2+='<div style="background:var(--bg4);padding:7px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">R/R</div><div style="font-weight:700;color:var(--gr)">1:'+(result.target/result.stop_loss).toFixed(2)+'</div></div>';
     html2+='</div>';
     if(result.conditions.length){
-      html2+='<div style="font-size:9px;font-weight:700;color:var(--am);margin-bottom:4px">ENTRY CONDITIONS ('+result.conditions.length+')</div>';
-      result.conditions.forEach(function(c){html2+='<div style="font-size:9px;color:var(--mu);padding:2px 0">✓ '+c+'</div>';});
+      html2+='<div style="font-size:9px;font-weight:700;color:var(--am);margin-bottom:4px">ENTRY CONDITIONS ('+result.conditions.length+'):</div>';
+      result.conditions.forEach(function(c){html2+='<div style="font-size:10px;padding:3px 0;border-bottom:1px solid var(--bo)">✓ '+c+'</div>';});
     }
     if(result.filters.length){
-      html2+='<div style="font-size:9px;font-weight:700;color:var(--bl);margin:6px 0 4px">FILTERS ('+result.filters.length+')</div>';
-      result.filters.forEach(function(c){html2+='<div style="font-size:9px;color:var(--mu);padding:2px 0">🔒 '+c+'</div>';});
+      html2+='<div style="font-size:9px;font-weight:700;color:var(--bl);margin:8px 0 4px">FILTERS ('+result.filters.length+'):</div>';
+      result.filters.forEach(function(c){html2+='<div style="font-size:10px;padding:2px 0">🔒 '+c+'</div>';});
+    }
+    if(result.exit.length){
+      html2+='<div style="font-size:9px;font-weight:700;color:var(--rd);margin:8px 0 4px">EXIT CONDITIONS:</div>';
+      result.exit.forEach(function(c){html2+='<div style="font-size:10px;padding:2px 0">🚪 '+c+'</div>';});
     }
     if(result.no_trade.length){
-      html2+='<div style="font-size:9px;font-weight:700;color:var(--rd);margin:6px 0 4px">NO-TRADE CONDITIONS</div>';
-      result.no_trade.forEach(function(c){html2+='<div style="font-size:9px;color:var(--mu);padding:2px 0">❌ '+c+'</div>';});
+      html2+='<div style="font-size:9px;font-weight:700;color:var(--rd);margin:8px 0 4px">NO-TRADE:</div>';
+      result.no_trade.forEach(function(c){html2+='<div style="font-size:10px;padding:2px 0">❌ '+c+'</div>';});
     }
     outEl.innerHTML=html2;
   }
-  toast('✅ Strategy parsed! '+result.conditions.length+' conditions found','success');
+  toast('✅ '+result.conditions.length+' conditions parsed!','success');
 }
 function nlpExec(){nlpParse();setTimeout(execTrade,800);}
 
