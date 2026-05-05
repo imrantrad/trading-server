@@ -4961,10 +4961,12 @@ function copyStrategyText(s){
     lines.push('');
   }
   
-  // Exit conditions
-  if(s.exit_conditions){
+  // Exit conditions - handle string or array
+  var ec = s.exit_conditions || [];
+  if(typeof ec === 'string') ec = [ec];
+  if(ec.length && ec[0]){
     lines.push('🚪 EXIT CONDITIONS:');
-    lines.push(s.exit_conditions);
+    ec.forEach(function(c){if(c&&c.trim())lines.push('• '+c.trim());});
     lines.push('');
   }
   
