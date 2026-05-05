@@ -486,7 +486,7 @@ input:focus, select:focus {
 <div id="nlp-wrap" style="position:relative">
   <textarea id="nlp-in" rows="3" placeholder="buy nifty atm call rsi under 30 sl 100 target 300" style="transition:all .3s;resize:vertical"></textarea>
 </div>
-        <div style="display:flex;gap:6px;margin-top:6px"><button class="btn bb" style="flex:1;padding:7px" onclick="nlpParse()">PARSE</button><button class="btn bg" style="flex:1;padding:7px" onclick="nlpExec()">PARSE+EXEC</button></div>
+        <div style="display:flex;gap:6px;margin-top:6px"><button class="btn bb" style="flex:1;padding:7px" onclick="nlpParse()">PARSE</button><button class="btn bg" style="flex:1;padding:7px" onclick="nlpParseAndFill()">⚡ PARSE & FILL</button></div>
         <div id="nlp-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:6px;font-size:8px;line-height:1.8"></div>
       </div>
       <div class="card">
@@ -3304,7 +3304,19 @@ function _nlpClientParse(text, outEl){
   }
   toast('✅ '+result.conditions.length+' conditions parsed!','success');
 }
-function nlpExec(){nlpParse();setTimeout(execTrade,800);}
+function nlpParseAndFill(){
+  // Parse the strategy text
+  nlpParse();
+  // After parse, scroll to order entry (don't execute)
+  setTimeout(function(){
+    var oe = document.getElementById('order-entry') || document.querySelector('[id^="ba-"]');
+    if(oe) oe.scrollIntoView({behavior:'smooth', block:'center'});
+    toast('✅ Order entry filled from NLP! Review and click EXECUTE when ready.','success');
+  }, 1000);
+}
+
+// Legacy - keep for backward compat
+function nlpExec(){ nlpParseAndFill(); }
 
 // POSITIONS
 function loadPos() {
