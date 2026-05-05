@@ -7438,18 +7438,29 @@ function showStratVersions(strat){
     
     d.versions.slice().reverse().forEach(function(v){
       var isCurrent = v.version === d.current_version;
-      html2+='<div style="background:var(--bg3);border:1px solid '+(isCurrent?'rgba(0,255,136,.3)':'var(--bo)')+';border-radius:8px;padding:10px;margin-bottom:8px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+      var vDiv = document.createElement('div');
+      vDiv.style.cssText='background:var(--bg3);border:1px solid '+(isCurrent?'rgba(0,255,136,.3)':'rgba(255,255,255,.07)')+';border-radius:8px;padding:10px;margin-bottom:8px';
+      var vInner='<div style="display:flex;justify-content:space-between;margin-bottom:6px">'
         +'<div><b>v'+v.version+'</b> '+(isCurrent?'<span style="font-size:8px;padding:1px 6px;background:rgba(0,255,136,.15);color:var(--gr);border-radius:8px">CURRENT</span>':'')+'</div>'
         +'<div style="font-size:9px;color:var(--mu)">'+v.timestamp.slice(0,16).replace('T',' ')+'</div></div>'
         +'<div style="font-size:9px;color:var(--am);margin-bottom:6px">'+v.notes+'</div>'
-        +(v.normalized&&v.normalized.length
-          ?'<div style="font-size:9px;color:var(--mu)">Conditions: '+v.normalized.length+'<br>'+v.normalized.slice(0,2).join(' · ')+'...</div>'
-          :'')
-        +'<div style="display:flex;gap:6px;margin-top:8px">'
-        +'<button onclick="rollbackToVersion(''+d.id+'','+v.version+')" style="flex:1;padding:5px;font-size:9px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">'+(isCurrent?'Current':'↩ Restore v'+v.version)+'</button>'
-        +'</div></div>';
+        +(v.normalized&&v.normalized.length?'<div style="font-size:9px;color:var(--mu)">'+v.normalized.slice(0,2).join(' · ')+'</div>':'');
+      vDiv.innerHTML=vInner;
+      if(!isCurrent){
+        var rBtn=document.createElement('button');
+        rBtn.style.cssText='width:100%;margin-top:8px;padding:5px;font-size:9px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer';
+        rBtn.textContent='↩ Restore v'+v.version;
+        rBtn.dataset.sid=d.id;
+        rBtn.dataset.ver=v.version;
+        rBtn.onclick=function(){rollbackToVersion(this.dataset.sid,parseInt(this.dataset.ver));};
+        vDiv.appendChild(rBtn);
+      }
+      box.innerHTML=''; // rebuild
+      box._vdivs = box._vdivs || [];
+      box._vdivs.push(vDiv);
     });
+    box.innerHTML=html2;
+    if(box._vdivs) box._vdivs.forEach(function(vd){box.appendChild(vd);});
     
     box.innerHTML=html2;
     modal.appendChild(box);
