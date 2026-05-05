@@ -3022,8 +3022,103 @@ function nlpParse(){
   if(!text){toast('Strategy likhiye pehle!','warn');return;}
   
   var outEl = document.getElementById('nlp-out');
-  if(outEl){outEl.style.display='block';outEl.innerHTML='<div style="color:var(--am);font-size:10px">🧠 Analyzing...</div>';}
+  if(outEl){outEl.style.display='block';outEl.innerHTML='<div style="color:var(--am);font-size:10px">🧠 NLP v3.5 analyzing...</div>';}
   
+  // Use NLP v3.5 backend engine
+  req('/nlp/parse','POST',{nlp_text:text, user_id:UID},function(err,r){
+    if(!err && r && r.success){
+      _renderNLPResult(r, text, outEl);
+      return;
+    }
+    // Fallback to client-side parser
+    _nlpClientParse(text, outEl);
+  });
+}
+
+function _renderNLPResult(r, text, outEl){
+  // Apply to order entry
+  var order = r.order || {};
+  if(order.asset) setInst(order.asset, document.getElementById('bi-'+order.asset));
+  if(order.side){
+    document.querySelectorAll('[id^="ba-"]').forEach(function(b){b.classList.remove('active');});
+    var ab=document.getElementById('ba-'+order.side);if(ab)ab.classList.add('active');
+  }
+  if(order.option_type){
+    document.querySelectorAll('[id^="bo-"]').forEach(function(b){b.classList.remove('active');});
+    var ob=document.getElementById('bo-'+order.option_type);if(ob)ob.classList.add('active');
+  }
+  if(order.lots){var le=document.getElementById('lots-input')||document.getElementById('lots');if(le)le.value=order.lots;}
+  if(order.sl){var se=document.getElementById('stoploss');if(se)se.value=order.sl;}
+  if(order.tp){var te=document.getElementById('target');if(te)te.value=order.tp;}
+  if(order.trailing_sl){var tse=document.getElementById('trailing-sl');if(tse)tse.value=order.trailing_sl;}
+  if(r.timeframe&&r.timeframe!=='5m'&&r.timeframe!=='default'){
+    var tfe=document.getElementById('order-tf');if(tfe)tfe.value=r.timeframe;
+  }
+  if(typeof calcRR==='function') calcRR();
+
+  // Render output panel
+  if(!outEl) return;
+  var sc=r.score||0;
+  var scoreColor=sc>=6?'var(--gr)':sc>=3?'var(--am)':'var(--rd)';
+  var readyBadge=r.execute_ready
+    ?'<span style="padding:2px 8px;border-radius:10px;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.3);color:var(--gr);font-size:9px">✅ EXECUTE READY</span>'
+    :'<span style="padding:2px 8px;border-radius:10px;background:rgba(255,153,0,.1);border:1px solid rgba(255,153,0,.3);color:var(--am);font-size:9px">⚠️ NEEDS MORE CONDITIONS</span>';
+
+  var html2='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--gr)">✅ NLP v3.5 — '+r.status+'</div>'
+    +readyBadge+'</div>';
+
+  // Score bar
+  html2+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+    +'<div style="font-size:9px;color:var(--mu)">STRATEGY SCORE</div>'
+    +'<div style="flex:1;height:6px;background:var(--bg4);border-radius:3px">'
+    +'<div style="height:100%;width:'+Math.min(100,sc*10)+'%;background:'+scoreColor+';border-radius:3px"></div></div>'
+    +'<div style="font-size:10px;font-weight:700;color:'+scoreColor+'">'+sc+'/10</div></div>';
+
+  // Order summary
+  html2+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:10px">';
+  html2+='<div style="background:var(--bg4);padding:7px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">INSTRUMENT</div><div style="font-weight:700;color:var(--bl)">'+(order.asset||'NIFTY')+'</div></div>';
+  html2+='<div style="background:var(--bg4);padding:7px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">ACTION</div><div style="font-weight:700;color:'+(order.side==='BUY'?'var(--gr)':'var(--rd)')+'">'+(order.side||'BUY')+' '+(order.option_type||'CE')+'</div></div>';
+  html2+='<div style="background:var(--bg4);padding:7px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">SL / TARGET</div><div style="font-weight:700">'+(order.sl||'—')+' / '+(order.tp||'—')+'</div></div>';
+  html2+='<div style="background:var(--bg4);padding:7px;border-radius:6px"><div style="font-size:8px;color:var(--mu)">TIMEFRAME</div><div style="font-weight:700">'+(r.timeframe||'5m')+'</div></div>';
+  html2+='</div>';
+
+  // Conditions
+  if(r.conditions&&r.conditions.length){
+    html2+='<div style="font-size:9px;font-weight:700;color:var(--am);margin-bottom:6px">📊 CONDITIONS ('+r.condition_count+' valid)</div>';
+    r.conditions.forEach(function(c){
+      var isUnknown=c.startsWith('❓');
+      html2+='<div style="font-size:10px;padding:4px 8px;margin-bottom:3px;border-radius:5px;background:'+(isUnknown?'rgba(255,153,0,.05)':'rgba(0,255,136,.04)')+';border:1px solid '+(isUnknown?'rgba(255,153,0,.15)':'rgba(0,255,136,.1)')+'">'+
+        (isUnknown?c:'✓ '+c)+'</div>';
+    });
+  }
+
+  // Auto-fixes
+  if(r.auto_fixes&&r.auto_fixes.length){
+    html2+='<div style="font-size:9px;font-weight:700;color:var(--bl);margin:8px 0 4px">🔧 AUTO-CORRECTED ('+r.auto_fixes.length+')</div>';
+    r.auto_fixes.forEach(function(f){
+      html2+='<div style="font-size:9px;color:var(--mu);padding:2px 0">'
+        +'<span style="color:var(--rd)">'+f.original+'</span>'
+        +' → <span style="color:var(--gr)">'+f.fixed+'</span>'
+        +' <span style="color:var(--mu)">('+Math.round(f.confidence*100)+'%)</span></div>';
+    });
+  }
+
+  // Suggestions
+  if(r.suggestions&&r.suggestions.length){
+    html2+='<div style="font-size:9px;font-weight:700;color:var(--p0);margin:8px 0 4px">💡 SUGGESTIONS</div>';
+    r.suggestions.forEach(function(s){
+      html2+='<div style="font-size:9px;padding:4px 8px;background:rgba(168,85,247,.05);border:1px solid rgba(168,85,247,.15);border-radius:5px;margin-bottom:3px">'
+        +'<b>Add '+s.indicator+'</b> — '+s.reason+'</div>';
+    });
+  }
+
+  outEl.innerHTML=html2;
+  toast('✅ NLP v3.5: '+r.condition_count+' conditions, score '+r.score+'/10','success');
+}
+
+function _nlpClientParse(text, outEl){
+  // Client-side fallback (old parser logic)
   var t = text.toLowerCase();
   var result = {
     name:'Custom Strategy',

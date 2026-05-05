@@ -3647,3 +3647,44 @@ async def admin_action(request: Request):
         return {"success": True, "message": "Server restarting in 2 seconds..."}
     
     return {"success": False, "error": f"Unknown action: {action}"}
+
+# ════════════════════════════════════════════════════════════════════════════
+# NLP ENGINE V3.5 — Semantic + AST + Auto-correct + Suggestions
+# ════════════════════════════════════════════════════════════════════════════
+try:
+    from ai_engine.nlp_engine_v35 import run_engine as nlp_run_engine
+    NLP_V35 = True
+except Exception as e:
+    NLP_V35 = False
+    print(f"NLP v3.5: {e}")
+
+@app.post("/nlp/parse")
+async def nlp_parse_v35(request: Request):
+    """NLP Engine v3.5 - Semantic + AST + Auto-correct"""
+    data = await request.json()
+    text = data.get("nlp_text") or data.get("text", "")
+    if not text:
+        return {"error": "No text provided"}
+    
+    if NLP_V35:
+        try:
+            result = nlp_run_engine(text)
+            return {
+                "success": True,
+                "engine": "NLP_v3.5",
+                "status": result["status"],
+                "order": result["order"],
+                "timeframe": result["timeframe"],
+                "conditions": result["conditions"],
+                "condition_count": result["condition_count"],
+                "score": result["score"],
+                "execute_ready": result["execute_ready"],
+                "auto_fixes": result["auto_fixes"],
+                "suggestions": result["suggestions"],
+                "ast": result["ast"],
+            }
+        except Exception as e:
+            return {"error": str(e), "success": False}
+    
+    # Fallback basic parser
+    return {"success": False, "error": "NLP v3.5 not loaded"}
