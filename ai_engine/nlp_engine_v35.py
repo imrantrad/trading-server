@@ -230,13 +230,20 @@ def run_engine(text: str) -> dict:
     # Extract conditions from entry section OR numbered list
     entry_text = sec["entry"] if sec["entry"].strip() else text
     lines = []
+    skip_prefixes = ('📌','📝','🚪','📈','✅','💰','===','==','order command',
+                     'buy ','sell ','stop loss','target:','timeframe:','r/r:',
+                     'description','exit condition','no-trade','indicators:',
+                     'win rate','ai score','monthly return','version:')
     for line in entry_text.split("\n"):
         line = line.strip()
         if not line: continue
+        # Skip header/order lines
+        if any(line.lower().startswith(p.lower()) for p in skip_prefixes): continue
+        if len(line) < 4: continue
         # Handle numbered: "1. EMA20 > EMA50" or plain conditions
         if line[0].isdigit():
             line = re.split(r"^\d+[\.\)]\s*", line, maxsplit=1)[-1]
-        if line and len(line) > 2:
+        if line and len(line) > 3:
             lines.append(line.lower())
     
     corrected = []
