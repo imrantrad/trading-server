@@ -3585,7 +3585,7 @@ function parseNLPStrat(){var text=gv('ns-nlp').trim();if(!text){toast('Type stra
         instrument:execution.instrument,
         timeframe:execution.timeframe,
         entry_conditions: finalConditions,
-        exit_conditions: [],
+        exit_conditions: exitConds,
         sl_type:'POINTS', sl_value:execution.sl,
         target_type:'POINTS', target_value:execution.target,
         quantity:1, risk_per_trade:0.01,
@@ -7544,26 +7544,52 @@ function saveStrat(){
   }
   tf = tf || gv('ns-tf') || '5m';
 
-  // Get entry conditions from NLP output
+  // Parse entry conditions directly from pasted text
   var conditions = [];
-  var nlpOut = document.getElementById('nlp-out');
-  if(nlpOut){
-    nlpOut.querySelectorAll('div').forEach(function(el){
-      var t = el.textContent.replace(/^[✓\s✓]+/,'').trim();
-      if(t && t.length > 3 && t.length < 100 
-         && !t.startsWith('NLP') && !t.startsWith('STRATEGY')
-         && !t.startsWith('INSTRUMENT') && !t.startsWith('ACTION')
-         && !t.startsWith('SL') && !t.startsWith('R/R')
-         && !t.startsWith('💡') && !t.startsWith('🔧')
-         && !t.startsWith('📊') && !t.startsWith('AUTO')
-         && !t.startsWith('FILTER') && !t.startsWith('EXIT'))
-        conditions.push(t);
+  
+  // Method 1: Parse from 📊 ENTRY CONDITIONS section in text
+  var entrySection = nlpText.match(/📊\s*ENTRY CONDITIONS[:\s]*([\s\S]*?)(?=📝|🚪|❌|$)/i);
+  if(!entrySection) entrySection = nlpText.match(/ENTRY CONDITIONS[:\s]*([\s\S]*?)(?=DESCRIPTION|EXIT|NO.TRADE|$)/i);
+  if(entrySection){
+    var lines = entrySection[1].split('\n');
+    lines.forEach(function(line){
+      var clean = line.replace(/^\d+[.\)\s]+/,'').trim();
+      if(clean && clean.length > 3 && clean.length < 100) conditions.push(clean);
     });
   }
+  
+  // Method 2: From NLP output panel (if PARSE was clicked)
+  if(!conditions.length){
+    var nlpOut = document.getElementById('nlp-out');
+    if(nlpOut && nlpOut.style.display !== 'none'){
+      nlpOut.querySelectorAll('div').forEach(function(el){
+        var t = el.textContent.replace(/^[✓\s]+/,'').trim();
+        if(t && t.length > 3 && t.length < 100
+           && !t.match(/^(NLP|STRATEGY|INSTRUMENT|ACTION|SL|R\/R|AUTO|FILTER|EXIT|ADD |💡|🔧|📊|Suggest)/))
+          conditions.push(t);
+      });
+    }
+  }
+  
+  // Method 3: From textarea ns-en
+  if(!conditions.length){
+    var nsEn = gv('ns-en') || '';
+    if(nsEn) conditions = nsEn.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  }
 
-  // Short description - extract from 📝 DESCRIPTION or first line
+  // Parse exit conditions from text
+  var exitConds = [];
+  var exitSection = nlpText.match(/🚪\s*EXIT[^:]*:[\s]*([^\n❌📌===]+)/i);
+  if(exitSection) exitConds = [exitSection[1].trim()];
+  
+  // Parse no-trade conditions
+  var noTrade = [];
+  var noTradeSection = nlpText.match(/❌\s*NO.TRADE[^:]*:[\s]*([^\n📌===]+)/i);
+  if(noTradeSection) noTrade = [noTradeSection[1].trim()];
+  
+  // Short description
   var desc = name;
-  var descM = nlpText.match(/(?:📝\s*DESCRIPTION|description)[:\s]*([^\n📌===]+)/i);
+  var descM = nlpText.match(/(?:📝\s*DESCRIPTION)[:\s]*([^\n📌===📊🚪❌]+)/i);
   if(descM) desc = descM[1].trim().slice(0,120);
 
   var saveBtn = document.querySelector('[onclick="saveStrat()"]');
