@@ -3308,18 +3308,13 @@ function loadBuiltin(){
       div.style.borderLeft='3px solid '+(s.avg_win_rate>=70?'var(--gr)':s.avg_win_rate>=65?'var(--am)':'var(--bl)');
       div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div><div style="font-size:11px;font-weight:700">'+s.name+'</div><div style="font-size:8px;color:var(--mu)">'+(s.instrument||'')+' | '+(s.type||'')+'</div></div><div style="text-align:right"><div style="font-size:17px;font-weight:700;color:'+(s.avg_win_rate>=70?'var(--gr)':'var(--am)')+'">'+s.avg_win_rate+'%</div><div style="font-size:8px;color:var(--bl)">'+s.avg_monthly_return+'%/mo | DD:'+s.max_drawdown+'%</div></div></div><div style="font-size:9px;color:var(--mu);margin-bottom:6px">'+s.description+'</div>'+(s.notes?'<div style="font-size:8px;color:var(--am);padding:5px 8px;background:#1a0e00;border-radius:4px;margin-bottom:6px">'+s.notes+'</div>':'');
       var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:6px';
-      var b1=document.createElement('button');b1.className='btn bg';b1.style.cssText='padding:4px 10px;font-size:8px';b1.textContent='BT';
-      var sid=s.id;b1.onclick=function(){$('bt-s').value=sid;show('bt',null);};
-      var b2=document.createElement('button');b2.className='btn ba';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='PAPER TEST';
-      var sname=s.name;b2.onclick=function(){if(confirm('Start 15-day paper test for '+sname+'?')){req('/ai/paper_test/'+sid+'?days=1','POST',null,function(err,r){toast(err?'Paper test needs AI endpoint':'Paper test started for '+sname,'info');});}};
-      var bcopy2=document.createElement('button');bcopy2.className='btn';bcopy2.style.cssText='padding:4px 8px;font-size:8px;background:rgba(255,255,255,.05);border-color:var(--bo);color:var(--mu)';bcopy2.textContent='📋';
-      bcopy2.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
-      var b3=document.createElement('button');b3.className='btn bb';b3.style.cssText='padding:4px 10px;font-size:8px';b3.textContent='USE';
-      b3.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat);};})(s);
-      var b4=document.createElement('button');b4.className='btn';b4.style.cssText='padding:4px 8px;font-size:10px;background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:var(--am)';b4.textContent='📋';
-      b4.title='Copy full strategy logic';
-      b4.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
-      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(bcopy2);btns.appendChild(b3);btns.appendChild(bCopy);div.appendChild(btns);
+      var b1=document.createElement('button');b1.className='btn bg';b1.style.cssText='padding:5px 8px;font-size:8px';b1.textContent='BT';
+      var sid=s.id;b1.onclick=function(){var sel=document.getElementById('bt-s');if(sel)sel.value=sid;show('bt',null);};
+      var b2=document.createElement('button');b2.className='btn ba';b2.style.cssText='padding:5px 8px;font-size:8px';b2.textContent='USE';
+      b2.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat);};})(s);
+      var b3=document.createElement('button');b3.className='btn';b3.style.cssText='padding:5px 8px;font-size:8px;background:rgba(255,255,255,.05);border-color:var(--bo);color:var(--mu)';b3.textContent='📋';b3.title='Copy strategy logic';
+      b3.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
+      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(b3);div.appendChild(btns);
       list.appendChild(div);
     });
   });
@@ -4817,58 +4812,14 @@ function loadPaperStrats(type){
 div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div><div style="font-size:12px;font-weight:700">'+(isAI?'<span style="font-size:8px;padding:2px 6px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);color:var(--am);border-radius:4px;margin-right:4px">🤖 AI</span>':'')+(s.name||s.strategy_name||'Strategy')+'</div><div style="font-size:9px;color:var(--mu);margin-top:2px">'+(s.instrument||'NIFTY')+' · WR: '+(s.avg_win_rate||s.win_rate||0)+'%</div></div></div>';
       var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';
       // Copy button
-      var bcopy=document.createElement('button');
-      bcopy.className='btn';
-      bcopy.style.cssText='padding:6px 10px;font-size:9px;background:rgba(255,255,255,.05);border-color:var(--bo);color:var(--mu)';
-      bcopy.textContent='📋 COPY';
-      bcopy.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
       var b1=document.createElement('button');b1.className='btn ba';b1.style.cssText='flex:1;padding:6px;font-size:9px';b1.textContent='📄 PAPER TRADE';
       var inst=(s.instrument||'NIFTY').split('/')[0];
-      b1.onclick=function(){
-  // 1. Fill Order Entry fields
-  setPaperInst(inst, document.getElementById('pbi-'+inst));
-  // Set action
-  var action = (s.action||s.entry_action||'BUY').toUpperCase();
-  setPaperAction(action);
-  // Set option type
-  var otype = (s.option_type||s.type||'CE').toUpperCase();
-  if(otype==='CE'||otype==='PE'||otype==='FUT') setPaperType(otype);
-  // Set lots
-  var lotsEl = document.getElementById('paper-lots');
-  if(lotsEl) lotsEl.value = s.quantity||s.lots||1;
-  // Set SL and Target
-  var slEl = document.getElementById('paper-sl');
-  var tgtEl = document.getElementById('paper-tgt');
-  if(slEl) slEl.value = s.stop_loss||s.sl||100;
-  if(tgtEl) tgtEl.value = s.target||s.tgt||200;
-
-  // 2. Fill NLP textarea with full strategy action plan
-  var nlpEl = document.getElementById('nlp-in');
-  if(nlpEl){
-    var conditions = s.conditions||s.entry_conditions||s.description||'';
-    var nlpText = (action.toLowerCase()) + ' ' + inst + ' ' + (otype) +
-      ' lots ' + (s.quantity||1) +
-      ' sl ' + (s.stop_loss||100) +
-      ' target ' + (s.target||200);
-    if(conditions) nlpText += '\nconditions: ' + conditions;
-    if(s.exit_conditions) nlpText += '\nexit: ' + s.exit_conditions;
-    if(s.timeframe) nlpText += '\ntimeframe: ' + s.timeframe;
-    nlpEl.value = nlpText;
-    // Expand NLP section
-    var nlpSec = document.getElementById('nlp-section');
-    if(nlpSec) nlpSec.style.display = 'block';
-  }
-
-  // 3. Show order entry tab
-  showPaperTab('trade', document.getElementById('pt-trade-btn'));
-  
-  // 4. Show toast with strategy name
-  var name = s.name||s.strategy_name||'Strategy';
-  toast('✅ ' + name + ' loaded → Order Entry + NLP filled', 'success');
-};
-      var b2=document.createElement('button');b2.className='btn bb';b2.style.cssText='flex:1;padding:6px;font-size:9px';b2.textContent='📊 BACKTEST';
-      var sid=s.id||s.strategy_id;b2.onclick=function(){show('bt',null);if(sid&&$('bt-s'))$('bt-s').value=sid;toast('Strategy loaded for backtest','info');};
-      btns.appendChild(b1);btns.appendChild(b2);div.appendChild(btns);psl.appendChild(div);
+      b1.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat,true);};})(s);
+      var b2=document.createElement('button');b2.className='btn bb';b2.style.cssText='padding:6px 10px;font-size:9px';b2.textContent='USE';
+      b2.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat,false);};})(s);
+      var b3=document.createElement('button');b3.className='btn';b3.style.cssText='padding:6px 8px;font-size:9px;background:rgba(255,255,255,.05);border-color:var(--bo);color:var(--mu)';b3.title='Copy strategy';b3.textContent='📋';
+      b3.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
+      btns.appendChild(b3);btns.appendChild(b2);btns.appendChild(b1);div.appendChild(btns);psl.appendChild(div);
     });
   });
 }
