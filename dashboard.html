@@ -7426,7 +7426,7 @@ function showStratVersions(strat){
     
     // Show modal
     var modal = document.createElement('div');
-    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.id='ver-modal';modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
     
     var box = document.createElement('div');
     box.style.cssText='background:var(--bg2);border:1px solid var(--bo);border-radius:12px;padding:16px;width:100%;max-width:440px;max-height:80vh;overflow-y:auto';
@@ -7462,7 +7462,7 @@ function rollbackToVersion(stratId, versionNum){
   req('/strategies/v2/'+stratId+'/rollback','POST',{version:versionNum},function(err,r){
     if(!err&&r&&r.success){
       toast('✅ Rolled back to v'+versionNum,'success');
-      document.querySelectorAll('div[style*="position:fixed"]').forEach(function(m){m.remove();});
+      var vm=document.getElementById('ver-modal');if(vm)vm.remove();
       loadMy();
     } else {
       toast('Rollback failed','error');
