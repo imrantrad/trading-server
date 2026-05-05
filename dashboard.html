@@ -5664,6 +5664,10 @@ function exportBtCSV(){
 
 
 <script>
+function showBt(){ show('bt',null); }
+function showPaper(){ show('paper',null); }
+
+
 // ══════════════════════════════════════════════════════════════════════════════
 // AI ENGINE v5 + ML ENGINE — Consolidated (no duplicates)
 // ══════════════════════════════════════════════════════════════════════════════
@@ -5812,14 +5816,14 @@ function loadAIStrats(type){
         +'<div style="font-size:9px;color:var(--mu);margin-bottom:8px;line-height:1.6">'+(s.description||s.conditions||'')+'</div>'
         +'<div style="display:flex;gap:6px">'
         +'<button onclick="applyStrategyToOrderEntry('+JSON.stringify(s)+')" class="btn bb" style="flex:1;padding:6px;font-size:9px">USE</button>'
-        +'<button onclick="show('bt',null)" data-sid="'+s.id+'" class="btn ba" style="flex:1;padding:6px;font-size:9px">BACKTEST</button>'
-        +'<button onclick="show('paper',null)" class="btn bg" style="flex:1;padding:6px;font-size:9px">PAPER</button>'
+        +'<button onclick="showBt()" data-sid="'+s.id+'" class="btn ba" style="flex:1;padding:6px;font-size:9px">BACKTEST</button>'
+        +'<button onclick="showPaper()" class="btn bg" style="flex:1;padding:6px;font-size:9px">PAPER</button>'
         +'</div>';
       // Store strategy data on div for event delegation
       div.dataset.strategyJson = JSON.stringify(s);
       div.querySelector('.ai-use-btn').onclick = function(){ applyStrategyToOrderEntry(JSON.parse(this.closest('[data-strategy-json]').dataset.strategyJson)); };
-      div.querySelector('.ai-bt-btn').onclick = function(){ show('bt',null); };
-      div.querySelector('.ai-pt-btn').onclick = function(){ show('paper',null); };
+      div.querySelector('.ai-bt-btn').onclick = function(){ showBt(); };
+      div.querySelector('.ai-pt-btn').onclick = function(){ showPaper(); };
       list.appendChild(div);
     });
     toast(strats.length+' AI strategies loaded!','success');
