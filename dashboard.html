@@ -7513,14 +7513,36 @@ function saveStrat(){
   } else {
     inst = gv('ns-i') || 'NIFTY';
   }
-  var _nlp = window._lastNLPResult || {};
-  var _ord = _nlp.order || {};
-  var sl  = _ord.sl  || parseFloat(gv('ns-sl')) || 100;
-  var tgt = _ord.tp  || parseFloat(gv('ns-tg')) || 200;
-  var tf  = _nlp.timeframe || gv('ns-tf') || '5m';
-  var act = _ord.side || 'BUY';
-  var otype = _ord.option_type || 'CE';
-  var lots = _ord.lots || 1;
+  // Read from _lastNLPResult if fresh parse
+  if(freshParse && window._lastNLPResult){
+    var _ord = window._lastNLPResult.order || {};
+    inst  = _ord.asset || gv('ns-i') || 'NIFTY';
+    sl    = _ord.sl   || parseFloat(gv('ns-sl')) || 100;
+    tgt   = _ord.tp   || parseFloat(gv('ns-tg')) || 200;
+    tf    = window._lastNLPResult.timeframe || '5m';
+    act   = _ord.side || 'BUY';
+    otype = _ord.option_type || 'CE';
+    lots  = _ord.lots || 1;
+  } else {
+    // Parse inline from text
+    var tl = nlpText.toLowerCase();
+    if(tl.includes('banknifty')) inst='BANKNIFTY';
+    else if(tl.includes('finnifty')) inst='FINNIFTY';
+    else if(tl.includes('sensex')) inst='SENSEX';
+    else inst = gv('ns-i') || 'NIFTY';
+    if(tl.includes('sell')) act='SELL';
+    if(tl.includes(' pe ')) otype='PE';
+    var slM=tl.match(/stop.?loss[:\s]+(\d+)/); if(slM) sl=parseInt(slM[1]);
+    var tgM=tl.match(/target[:\s]+(\d+)/); if(tgM) tgt=parseInt(tgM[1]);
+    var tfM=tl.match(/timeframe[:\s]+([0-9]+(?:min|m|h))/i);
+    if(tfM) tf=tfM[1].toLowerCase().replace('min','m');
+    else {
+      var tf3=tl.match(/\b(3min|3m|5m|15m|1h)\b/); 
+      if(tf3) tf=tf3[1].replace('min','m');
+    }
+    sl  = sl  || parseFloat(gv('ns-sl')) || 100;
+    tgt = tgt || parseFloat(gv('ns-tg')) || 200;
+  }
   var nlpText = (gv('ns-nlp') || gv('nlp-in') || '').trim();
   var entry = (gv('ns-en') || '').trim();
 
@@ -7561,7 +7583,17 @@ function saveStrat(){
     risk_per_trade: 0.01,
     tags: [],
     is_public: false,
-    description: nlpText.slice(0, 200)
+    description: (function(){
+      // Extract short description, not full text
+      var d = nlpText.match(/📝\s*DESCRIPTION:\s*([^\n]+)/i);
+      if(d) return d[1].trim().slice(0,150);
+      // Use first meaningful line
+      var lines = nlpText.split('\n').filter(function(l){
+        var lt = l.trim();
+        return lt && lt.length > 10 && !lt.startsWith('📌') && !lt.startsWith('===') && !lt.startsWith('BUY') && !lt.startsWith('SELL') && !lt.startsWith('Stop') && !lt.startsWith('Target') && !lt.startsWith('Timeframe');
+      });
+      return lines[0] ? lines[0].trim().slice(0,150) : name;
+    })()
   };
 
   req('/strategies/save', 'POST', payload, function(err, r){
