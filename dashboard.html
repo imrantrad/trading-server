@@ -3314,7 +3314,10 @@ function loadBuiltin(){
       var sname=s.name;b2.onclick=function(){if(confirm('Start 15-day paper test for '+sname+'?')){req('/ai/paper_test/'+sid+'?days=1','POST',null,function(err,r){toast(err?'Paper test needs AI endpoint':'Paper test started for '+sname,'info');});}};
       var b3=document.createElement('button');b3.className='btn bb';b3.style.cssText='padding:4px 10px;font-size:8px';b3.textContent='USE';
       b3.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat);};})(s);
-      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(b3);div.appendChild(btns);
+      var b4=document.createElement('button');b4.className='btn';b4.style.cssText='padding:4px 8px;font-size:10px;background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:var(--am)';b4.textContent='📋';
+      b4.title='Copy full strategy logic';
+      b4.onclick=(function(strat){return function(){copyStrategy(strat);};})(s);
+      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(b3);btns.appendChild(bCopy);div.appendChild(btns);
       list.appendChild(div);
     });
   });
@@ -5968,6 +5971,79 @@ function exportBtCSV(){
 
 
 <script>
+
+// ── COPY STRATEGY FUNCTION ────────────────────────────────────────────────────
+function copyStrategy(s){
+  var lines = [];
+  lines.push('═══════════════════════════════════');
+  lines.push('STRATEGY: '+(s.name||s.strategy_name||'Custom'));
+  lines.push('═══════════════════════════════════');
+  lines.push('INSTRUMENT: '+(s.instrument||'NIFTY'));
+  lines.push('ACTION: '+(s.action||'BUY')+' '+(s.option_type||'CE'));
+  lines.push('LOTS: '+(s.quantity||s.lots||1));
+  lines.push('STOP LOSS: '+(s.stop_loss||s.sl_value||100)+' pts');
+  lines.push('TARGET: '+(s.target||s.target_value||200)+' pts');
+  lines.push('TIMEFRAME: '+(s.timeframe||'5m'));
+  if(s.avg_win_rate||s.win_rate) lines.push('WIN RATE: '+(s.avg_win_rate||s.win_rate)+'%');
+  if(s.ai_score) lines.push('AI SCORE: '+s.ai_score);
+  lines.push('───────────────────────────────────');
+  if(s.description) lines.push('DESCRIPTION:\n'+s.description);
+  if(s.conditions) lines.push('\nENTRY CONDITIONS:\n'+s.conditions);
+  if(s.entry_conditions){
+    var ec = Array.isArray(s.entry_conditions)?s.entry_conditions.join('\n'):s.entry_conditions;
+    lines.push('\nENTRY CONDITIONS:\n'+ec);
+  }
+  if(s.exit_conditions) lines.push('\nEXIT CONDITIONS:\n'+s.exit_conditions);
+  if(s.no_trade) lines.push('\nNO-TRADE CONDITIONS:\n'+s.no_trade);
+  if(s.indicators) lines.push('\nINDICATORS: '+s.indicators);
+  if(s.notes) lines.push('\nNOTES: '+s.notes);
+  lines.push('═══════════════════════════════════');
+  
+  var text = lines.join('\n');
+  
+  // Copy to clipboard
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      toast('✅ Strategy copied to clipboard!','success');
+    }).catch(function(){
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+  
+  // Also fill NLP textarea
+  var nlp = document.getElementById('nlp-in');
+  if(nlp){
+    var nlpText = (s.action||'buy').toLowerCase()+' '+(s.instrument||'NIFTY')+' '+(s.option_type||'CE').toLowerCase();
+    nlpText += ' '+(s.quantity||1)+' lot';
+    nlpText += ' sl '+(s.stop_loss||s.sl_value||100);
+    nlpText += ' target '+(s.target||s.target_value||200);
+    if(s.timeframe) nlpText += ' '+s.timeframe;
+    if(s.conditions) nlpText += '\n'+s.conditions;
+    if(s.entry_conditions){
+      var ec2=Array.isArray(s.entry_conditions)?s.entry_conditions.join('\n'):s.entry_conditions;
+      nlpText += '\n'+ec2;
+    }
+    nlp.value = nlpText;
+  }
+}
+
+function fallbackCopy(text){
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try{
+    document.execCommand('copy');
+    toast('✅ Strategy copied!','success');
+  } catch(e){
+    toast('Copy failed - check clipboard permissions','warn');
+  }
+  document.body.removeChild(ta);
+}
+
 function showBt(){ show('bt',null); }
 function showPaper(){ show('paper',null); }
 
@@ -6145,6 +6221,8 @@ function renderAIStratCards(list, strats, type){
       div.querySelector('.ai-use-btn').onclick = function(){ applyStrategyToOrderEntry(JSON.parse(this.closest('[data-strategy-json]').dataset.strategyJson)); };
       div.querySelector('.ai-bt-btn').onclick = function(){ showBt(); };
       div.querySelector('.ai-pt-btn').onclick = function(){ showPaper(); };
+      var copyBtn = div.querySelector('.ai-copy-btn');
+      if(copyBtn) copyBtn.onclick = function(){ copyStrategy(JSON.parse(this.closest('[data-strategy-json]').dataset.strategyJson)); };
       list.appendChild(div);
     });
     toast(strats.length+' AI strategies loaded!','success');
