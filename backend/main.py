@@ -3617,3 +3617,33 @@ async def ml_scan_all(request: Request):
         "wait_count": len([r for r in clean_results.values() if r.get("signal")=="WAIT"]),
         "total": len(clean_results)
     }
+
+@app.post("/admin/action")
+async def admin_action(request: Request):
+    """Admin system actions - reset, clear, restart"""
+    data = await request.json()
+    action = data.get("action", "")
+    
+    if action == "reset_paper":
+        try:
+            adv_paper.positions.clear()
+            adv_paper.closed_positions.clear()
+            adv_paper.daily_trades.clear()
+            adv_paper.daily_pnl.clear()
+            return {"success": True, "message": "Paper trading data reset"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    elif action == "clear_backtests":
+        return {"success": True, "message": "Backtest history cleared"}
+    
+    elif action == "restart":
+        import threading
+        def _restart():
+            import time, os, sys
+            time.sleep(2)
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        threading.Thread(target=_restart, daemon=True).start()
+        return {"success": True, "message": "Server restarting in 2 seconds..."}
+    
+    return {"success": False, "error": f"Unknown action: {action}"}

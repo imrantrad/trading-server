@@ -6258,10 +6258,9 @@ function saveAutoExec(){
     enabled: _aiAutoEnabled,
     min_confidence: conf/100,
     max_lots: lots,
-    daily_limit: limit,
+    daily_signal_limit: limit,
     mode: mode,
-    sl_pct: sl,
-    target_pct: tgt
+    instruments: ['NIFTY','BANKNIFTY','FINNIFTY'],
   }, function(err, r){
     // Show saved confirmation regardless
     var btn = document.querySelector('[onclick="saveAutoExec()"]');
@@ -6659,14 +6658,15 @@ function editUser(uid){
 function saveAdminUser(){
   var uid=document.getElementById('adm-uid').value;
   var data={
-    full_name:document.getElementById('adm-name').value,
-    email:document.getElementById('adm-email').value,
-    phone:document.getElementById('adm-phone').value,
-    capital:parseFloat(document.getElementById('adm-capital').value)||500000,
-    plan:document.getElementById('adm-plan').value,
-    status:document.getElementById('adm-status').value,
-    free_access:document.getElementById('adm-freeaccess').checked,
-    notes:document.getElementById('adm-notes').value,
+    user_id: uid,
+    full_name: document.getElementById('adm-name').value,
+    email: document.getElementById('adm-email').value,
+    phone: document.getElementById('adm-phone').value,
+    capital: parseFloat(document.getElementById('adm-capital').value)||500000,
+    plan: document.getElementById('adm-plan').value,
+    status: document.getElementById('adm-status').value,
+    free_access: document.getElementById('adm-freeaccess').checked,
+    notes: document.getElementById('adm-notes').value,
   };
   var msg=document.getElementById('adm-form-msg');
   var ep=uid?'/admin/users/'+uid:'/admin/users/add';
@@ -6693,7 +6693,7 @@ function deleteUser(uid){
 }
 
 function toggleFreeAccess(uid, current){
-  req('/admin/users/'+uid+'/plan','POST',{free_access:!current},function(err,r){
+  req('/admin/users/'+uid,'PUT',{user_id:uid, free_access:!current},function(err,r){
     if(!err){toast('Free access '+(current?'removed':'granted'),'success');loadAdminUsers();}
   });
 }
@@ -6738,20 +6738,12 @@ function loadPaymentConfig(){
 
 function savePaymentConfig(){
   var data={
-    razorpay_key:document.getElementById('pay-rz-key').value,
-    razorpay_secret:document.getElementById('pay-rz-secret').value,
-    upi_id:document.getElementById('pay-upi').value,
-    account_name:document.getElementById('pay-acname').value,
-    bank_name:document.getElementById('pay-bank').value,
-    ifsc:document.getElementById('pay-ifsc').value,
-    account_number:document.getElementById('pay-accno').value,
-    live_mode:document.getElementById('pay-rz-live').checked,
-    pricing:{
-      FREE:parseInt(document.getElementById('price-free').value)||0,
-      BASIC:parseInt(document.getElementById('price-basic').value)||999,
-      PRO:parseInt(document.getElementById('price-pro').value)||2499,
-      INSTITUTIONAL:parseInt(document.getElementById('price-inst').value)||9999
-    }
+    razorpay_key: document.getElementById('pay-rz-key').value,
+    razorpay_secret: document.getElementById('pay-rz-secret').value,
+    upi_id: document.getElementById('pay-upi').value,
+    account_name: document.getElementById('pay-acname').value,
+    bank_account: document.getElementById('pay-bank').value + ' ' + document.getElementById('pay-accno').value,
+    ifsc: document.getElementById('pay-ifsc').value,
   };
   req('/admin/payment_config','POST',data,function(err,r){
     var msg=document.getElementById('pay-save-msg');
