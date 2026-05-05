@@ -7480,4 +7480,85 @@ function rollbackToVersion(stratId, versionNum){
   });
 }
 
+
+// ── SAVE MY STRATEGY ──────────────────────────────────────────────────────────
+function saveStrat(){
+  var name = (gv('ns-nm')||'').trim();
+  var inst = gv('ns-i') || 'NIFTY';
+  var sl   = parseFloat(gv('ns-sl')) || 100;
+  var tgt  = parseFloat(gv('ns-tg')) || 200;
+  var nlpText = (gv('ns-nlp') || gv('nlp-in') || '').trim();
+  var entry = (gv('ns-en') || '').trim();
+
+  if(!name){ toast('Please enter a strategy name','warn'); return; }
+  if(!nlpText && !entry){ toast('Add NLP text or entry conditions','warn'); return; }
+
+  // Parse entry conditions
+  var conditions = [];
+  // Try from NLP output panel first
+  document.querySelectorAll('#nlp-out div').forEach(function(el){
+    var t = el.textContent.replace(/^[✓\s]+/,'').trim();
+    if(t && t.length > 3 && !t.startsWith('NLP') && !t.startsWith('STRATEGY')
+       && !t.startsWith('INSTRUMENT') && !t.startsWith('ACTION')
+       && !t.startsWith('💡') && !t.startsWith('🔧') && !t.startsWith('📊')
+       && !t.startsWith('FILTER') && !t.startsWith('EXIT'))
+      conditions.push(t);
+  });
+  // Fallback to textarea
+  if(!conditions.length && entry){
+    conditions = entry.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  }
+
+  var saveBtn = document.querySelector('[onclick="saveStrat()"]');
+  if(saveBtn){ saveBtn.textContent='💾 Saving...'; saveBtn.disabled=true; }
+
+  var payload = {
+    user_id: UID,
+    name: name,
+    instrument: inst,
+    timeframe: gv('ns-tf') || '5m',
+    entry_conditions: conditions,
+    exit_conditions: [],
+    sl_type: 'POINTS',
+    sl_value: sl,
+    target_type: 'POINTS',
+    target_value: tgt,
+    quantity: 1,
+    risk_per_trade: 0.01,
+    tags: [],
+    is_public: false,
+    description: nlpText.slice(0, 200)
+  };
+
+  req('/strategies/save', 'POST', payload, function(err, r){
+    if(saveBtn){ saveBtn.textContent='SAVE'; saveBtn.disabled=false; }
+    if(err || !r){
+      toast('Save failed - check connection','error');
+      return;
+    }
+    // Also save to v2 engine
+    req('/strategies/v2/create','POST',{
+      text: nlpText || name,
+      ast: {AND: conditions.map(function(c){return {CONDITION:c};})},
+      execution: {name:name, instrument:inst, sl:sl, target:tgt, order:inst+' BUY CE'},
+      normalized: conditions
+    }, function(e2, r2){
+      if(!e2 && r2 && r2.strategy_id) trdSave('last_strategy_id', r2.strategy_id);
+    });
+
+    toast('✅ Strategy "'+name+'" saved!','success');
+    // Clear form
+    ['ns-nm','ns-nlp','ns-en'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.value='';
+    });
+    var nlpOut=document.getElementById('nlp-out');
+    if(nlpOut) nlpOut.style.display='none';
+    // Refresh MY STRATEGIES
+    loadMy();
+    // Switch to MY tab
+    var myBtn = document.querySelector('[onclick*="loadPaperStrats(\'my\')"]') 
+             || document.querySelector('[onclick*="loadMy"]');
+  });
+}
+
 </script>
