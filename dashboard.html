@@ -6115,6 +6115,7 @@ function loadMLStatus(){
   });
 }
 
+function trainML(){ trainMLModel(); }
 function trainMLModel(){
   var sym=(document.getElementById('ml-train-sym')||{}).value||'NIFTY';
   var days=parseInt((document.getElementById('ml-train-days')||{}).value)||365;
