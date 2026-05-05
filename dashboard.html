@@ -7433,7 +7433,7 @@ function showStratVersions(strat){
     
     var html2='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
       +'<div style="font-size:13px;font-weight:700">⏱ VERSION HISTORY</div>'
-      +'<button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer">✕</button></div>'
+      +'<button id="vcb" style="background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer" onclick="closeVerModal()">✕</button></div>'
       +'<div style="font-size:10px;color:var(--mu);margin-bottom:10px">Strategy: '+d.id+'<br>Versions: '+d.versions.length+'</div>';
     
     d.versions.slice().reverse().forEach(function(v){
@@ -7457,6 +7457,7 @@ function showStratVersions(strat){
   });
 }
 
+function closeVerModal(){var m=document.getElementById("ver-modal");if(m)m.remove();}
 function rollbackToVersion(stratId, versionNum){
   if(!confirm('Restore to version '+versionNum+'?')) return;
   req('/strategies/v2/'+stratId+'/rollback','POST',{version:versionNum},function(err,r){
