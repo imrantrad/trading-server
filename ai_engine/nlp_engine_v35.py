@@ -27,19 +27,21 @@ WEIGHTS = {
 }
 
 def split_sections(text):
-    sec = {"order": "", "entry": "", "exit": "", "no_trade": ""}
-    current = None
+    sec = {"order": "", "entry": "", "exit": "", "no_trade": "", "description": ""}
+    current = "order"  # default to order
     for line in text.split("\n"):
-        l = line.lower()
-        if any(x in l for x in ["order command", "📌", "buy ", "sell "]):
+        l = line.lower().strip()
+        if any(x in l for x in ["📌", "order command", "order:", "buy ", "sell "]):
             current = "order"
-        elif any(x in l for x in ["entry condition", "📊", "entry:"]):
+        elif any(x in l for x in ["📊", "entry condition", "entry:"]):
             current = "entry"
-        elif any(x in l for x in ["exit condition", "🚪", "exit:"]):
+        elif any(x in l for x in ["🚪", "exit condition", "exit:"]):
             current = "exit"
-        elif any(x in l for x in ["no-trade", "no trade", "❌"]):
+        elif any(x in l for x in ["📝", "description:", "description"]):
+            current = "description"
+        elif any(x in l for x in ["❌", "no-trade", "no trade"]):
             current = "no_trade"
-        if current:
+        if line.strip():
             sec[current] += line + "\n"
     return sec
 
@@ -183,7 +185,23 @@ def score(ast):
     return s
 
 def detect_tf(text):
-    m = re.search(r"\b(1m|5m|15m|30m|1h|4h|1d|daily)\b", text.lower())
+    # Map common timeframe variants
+    tf_map = {
+        '1min': '1m', '2min': '2m', '3min': '3m', '5min': '5m',
+        '10min': '10m', '15min': '15m', '30min': '30m', '60min': '1h',
+        '1 min': '1m', '3 min': '3m', '5 min': '5m', '15 min': '15m',
+        '3minute': '3m', '5minute': '5m', '15minute': '15m',
+        '3m': '3m', '2m': '2m'
+    }
+    tl = text.lower()
+    for k, v in tf_map.items():
+        if k in tl:
+            return v
+    m = re.search(r"timeframe[:\s]+([0-9]+min|[0-9]+m|[0-9]+h|daily|1d|4h)", tl)
+    if m:
+        raw = m.group(1).replace('min','m').replace('minute','m')
+        return raw
+    m = re.search(r"\b(1m|5m|15m|30m|1h|4h|1d|daily)\b", tl)
     return m.group(0) if m else "5m"
 
 def parse_order(text):
