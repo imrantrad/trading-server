@@ -3500,93 +3500,78 @@ function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){
     div.appendChild(btns);list.appendChild(div);
   });
 });}
-function parseNLPStrat(){var text=gv('ns-nlp').trim();if(!text){toast('Type strategy','warn');return;}req('/strategies/from_nlp','POST',{user_id:UID,nlp_text:text},function(err,r){if(err){toast('NLP failed','error');return;}var s=r.strategy||{},p=r.parsed||{};if(s.name&&$('ns-nm'))$('ns-nm').value=s.name;if(p.instrument&&$('ns-i'))$('ns-i').value=p.instrument;if(s.sl_value&&$('ns-sl'))$('ns-sl').value=s.sl_value;if(s.target_value&&$('ns-tg'))$('ns-tg').value=s.target_value;if(s.entry_conditions&&$('ns-en'))$('ns-en').value=(s.entry_conditions||[]).join('\n');var box=$('ns-parsed');if(box){box.style.display='block';box.textContent='Parsed: '+JSON.stringify(p).slice(0,100);}toast('Auto-filled!','success');});}
-function saveStrat(){var entry=(gv('ns-en')||'').split('\n').filter(function(l){return l.trim();});var nlpText=gv('nlp-in')||'';
-  var parsedConds=[];
-  document.querySelectorAll('#nlp-out [style*="rgba(0,255,136"]').forEach(function(el){
-    var t=el.textContent.replace('✓ ','').trim();
-    if(t) parsedConds.push(t);
+function parseNLPStrat(){var text=gv('ns-nlp').trim();if(!text){toast('Type strategy','warn');return;}// ── SINGLE SOURCE SAVE (no duplicates) ────────────────────────────────────
+  var saveText = gv('nlp-in')||'';
+  var saveName = gv('ns-nm')||'My Strategy';
+  
+  // Validate before save
+  if(saveText && saveText.toLowerCase().includes('auto-generated')){
+    toast('Auto-generated text cannot be saved directly','warn');
+    return;
+  }
+  if(saveName.trim().length < 2){
+    toast('Please enter a strategy name','warn');
+    return;
+  }
+  
+  // Parse conditions from NLP output panel
+  var parsedConds = [];
+  document.querySelectorAll('#nlp-out div[style*="rgba(0,255,136"]').forEach(function(el){
+    var t = el.textContent.replace(/^[✓\s]+/,'').trim();
+    if(t && t.length > 2) parsedConds.push(t);
   });
   
-  // Save using Strategy Engine v2 (with versioning)
-  var stratName=gv('ns-nm')||'My Strategy';
-  var execution={
-    order:(gv('ns-i')||'NIFTY')+'/'+(gv('ns-at')||'BUY')+'/'+(gv('ns-ot')||'CE'),
-    name:stratName,
-    instrument:gv('ns-i')||'NIFTY',
-    action:gv('ns-at')||'BUY',
-    option_type:gv('ns-ot')||'CE',
-    sl:nv('ns-sl')||100,
-    target:nv('ns-tg')||200,
-    timeframe:gv('ns-tf')||'5m',
-    quantity:1
+  var entryEl = document.getElementById('ns-entry');
+  var rawEntry = entryEl ? entryEl.value.split('\n').filter(function(l){return l.trim();}) : [];
+  var finalConditions = parsedConds.length ? parsedConds : rawEntry;
+  
+  var execution = {
+    name: saveName,
+    order: (gv('ns-i')||'NIFTY')+' '+(gv('ns-at')||'BUY')+' '+(gv('ns-ot')||'CE'),
+    instrument: gv('ns-i')||'NIFTY',
+    action: gv('ns-at')||'BUY',
+    option_type: gv('ns-ot')||'CE',
+    sl: nv('ns-sl')||100,
+    target: nv('ns-tg')||200,
+    timeframe: gv('ns-tf')||'5m',
+    quantity: 1
   };
   
+  // SINGLE SAVE — Strategy Engine v2 only
   req('/strategies/v2/create','POST',{
-    text: nlpText||stratName,
-    ast: {AND: parsedConds.map(function(c){return {CONDITION:c};})},
+    text: saveText || saveName,
+    ast: {AND: finalConditions.map(function(c){return {CONDITION:c};})},
     execution: execution,
-    normalized: parsedConds.length ? parsedConds : entry||[]
-  }, function(err2, r2){
-    if(!err2 && r2 && r2.success){
-      trdSave('last_strategy_id', r2.strategy_id);
+    normalized: finalConditions
+  }, function(err, r){
+    if(err || !r || !r.success){
+      // Fallback to legacy save
+      req('/strategies/save','POST',{
+        user_id:UID, name:saveName,
+        instrument:execution.instrument,
+        timeframe:execution.timeframe,
+        entry_conditions: finalConditions,
+        exit_conditions: [],
+        sl_type:'POINTS', sl_value:execution.sl,
+        target_type:'POINTS', target_value:execution.target,
+        quantity:1, risk_per_trade:0.01,
+        tags:[], is_public:false
+      }, function(err2, r2){
+        if(!err2 && r2) {
+          toast('✅ Strategy saved: '+saveName,'success');
+          var bld=document.getElementById('nlp-bld');if(bld)bld.style.display='none';
+          loadMy();
+        } else {
+          toast('Save failed','error');
+        }
+      });
+      return;
     }
-  });
-  
-  // Also save legacy format
-  req('/strategies/save','POST',{
-    user_id:UID,
-    name:stratName,
-    instrument:gv('ns-i')||'NIFTY',
-    timeframe:gv('ns-tf')||'5m',
-    entry_conditions:parsedConds.length?parsedConds:(entry||[]),
-    exit_conditions:[],
-    sl_type:'POINTS',
-    sl_value:nv('ns-sl')||100,
-    target_type:'POINTS',
-    target_value:nv('ns-tg')||200,
-    quantity:1,
-    risk_per_trade:0.01,
-    tags:[],
-    is_public:false
-  },function(err,r){if(r&&r.strategy_id){toast('Strategy saved!','success');$('nlp-bld').style.display='none';loadMy();}else toast('Save failed','error');});}
-
-// JOURNAL
-function saveJnl(){
-  if(!gv('jn-i')){toast('Instrument likhein pehle!','warn');return;}
-  req('/journal/add','POST',{
-    instrument:gv('jn-i'),pnl:nv('jn-p'),
-    emotion:gv('jn-e'),rating:iv('jn-r')||7,
-    lessons:gv('jn-l'),user_id:UID
-  },function(err,r){
-    if(!err&&r&&r.id){
-      toast('✅ Journal entry saved! ID: '+r.id,'success');
-      $('jn-l').value=''; $('jn-i').value=''; $('jn-p').value='';
-      loadTrades();
-    } else {
-      toast('❌ Save failed: '+(err||'Unknown'),'error');
-    }
-  });
-}
-function loadTrades(){req('/trades','GET',null,function(err,d){var tb=$('trades-tbl');if(!tb)return;if(err||!d||!d.trades||!d.trades.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--mu);padding:16px;text-align:center">No trades yet</td></tr>';return;}var html='';d.trades.slice().reverse().forEach(function(t){var c=(t.net_pnl||0)>=0?'var(--gr)':'var(--rd)';html+='<tr><td style="color:var(--mu)">'+(t.id||'').slice(-6)+'</td><td style="font-weight:700">'+(t.instrument||'')+'</td><td style="color:'+(t.action==='BUY'?'var(--gr)':'var(--rd)')+'">'+t.action+'</td><td>'+(t.entry_price||0)+'</td><td>'+(t.exit_price||0)+'</td><td style="color:'+c+';font-weight:700">'+fmt(t.net_pnl||0)+'</td></tr>';});tb.innerHTML=html;});}
-function loadJnlStats(){req('/stats','GET',null,function(err,d){if(err||!d)return;var p=d.performance||{};if($('j-pf'))$('j-pf').textContent=p.profit_factor||0;if($('j-aw'))$('j-aw').textContent=fmt(p.avg_win||0);if($('j-al'))$('j-al').textContent=fmt(p.avg_loss||0);if($('j-ex'))$('j-ex').textContent=fmt(p.expectancy||0);});}
-
-// REPORTS
-function getRep(type){req('/reports/'+type,'GET',null,function(err,d){if(err||!d){$('rep-ttl').textContent='ERROR';return;}$('rep-ttl').textContent=type.toUpperCase()+' REPORT';var p=(type==='daily'&&d.summary)?d.summary:d;var pnl=p.net_pnl||p.total_pnl||0;$('rep-body').innerHTML='<div class="g4" style="gap:6px"><div class="stat"><div class="sl">TRADES</div><div class="sv" style="color:var(--am)">'+(p.total_trades||0)+'</div></div><div class="stat"><div class="sl">WIN RATE</div><div class="sv" style="color:var(--gr)">'+(p.win_rate||0)+'%</div></div><div class="stat"><div class="sl">NET P&L</div><div class="sv" style="color:'+(pnl>=0?'var(--gr)':'var(--rd)')+';font-size:12px">₹'+Math.round(pnl).toLocaleString('en-IN')+'</div></div><div class="stat"><div class="sl">PROFIT FACTOR</div><div class="sv" style="color:var(--bl)">'+(p.profit_factor||0)+'</div></div></div>';});}
-function getExpRep(){req('/reports/expiry_calendar','GET',null,function(err,d){if(err||!d)return;$('rep-ttl').textContent='EXPIRY CALENDAR';var wc=d.days_to_weekly<=2?'var(--rd)':d.days_to_weekly<=5?'var(--am)':'var(--gr)';$('rep-body').innerHTML='<div class="g2" style="gap:8px"><div class="stat"><div class="sl">WEEKLY</div><div class="sv" style="color:'+wc+';font-size:12px">'+(d.nifty_weekly_expiry||'-')+'</div><div class="ss">'+(d.days_to_weekly||0)+' days</div></div><div class="stat"><div class="sl">MONTHLY</div><div class="sv" style="color:var(--bl);font-size:12px">'+(d.nifty_monthly_expiry||'-')+'</div></div></div><div style="margin-top:8px;padding:10px;background:var(--bg4);border-left:3px solid '+wc+';border-radius:4px;color:'+wc+';font-weight:700">'+(d.theta_warning||'')+'</div>';});}
-
-// CALC
-function calcRR(){var en=nv('rr-e'),sl=nv('rr-s'),tg=nv('rr-t'),lots=iv('rr-l')||1,ls=iv('rr-ls')||50,cap=nv('rr-c')||500000;if(!en||!sl||!tg){toast('Fill Entry, SL, Target','warn');return;}var slp=Math.abs(en-sl),tgp=Math.abs(tg-en),risk=slp*lots*ls,reward=tgp*lots*ls;var out=$('rr-out');if(!out)return;out.style.display='block';out.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"><div><div class="sl">SL PTS</div><div style="font-size:18px;font-weight:700;color:var(--rd)">'+slp+'</div></div><div><div class="sl">TGT PTS</div><div style="font-size:18px;font-weight:700;color:var(--gr)">'+tgp+'</div></div><div><div class="sl">RISK</div><div style="color:var(--rd);font-weight:700">₹'+Math.round(risk).toLocaleString('en-IN')+'</div></div><div><div class="sl">REWARD</div><div style="color:var(--gr);font-weight:700">₹'+Math.round(reward).toLocaleString('en-IN')+'</div></div></div><div class="g4" style="gap:6px"><div class="stat"><div class="sl">R:R</div><div style="color:var(--bl);font-size:13px;font-weight:700">1:'+r2(tgp/slp)+'</div></div><div class="stat"><div class="sl">MIN WIN</div><div style="color:var(--am)">'+r2(slp/(slp+tgp)*100)+'%</div></div><div class="stat"><div class="sl">CAP RISK</div><div style="color:var(--am)">'+r2(risk/cap*100)+'%</div></div><div class="stat"><div class="sl">EXPECT</div><div style="color:'+(.5*reward-.5*risk>=0?'var(--gr)':'var(--rd)')+'">₹'+Math.round(.5*reward-.5*risk).toLocaleString('en-IN')+'</div></div></div>';}
-function calcBS(){var res=bsp(nv('bsc-s'),nv('bsc-k'),nv('bsc-d'),nv('bsc-v'),nv('bsc-r'),gv('bsc-t'));var out=$('bsc-out');if(!out)return;if(!res){out.style.display='block';out.innerHTML='<span style="color:var(--rd)">Fill all fields</span>';return;}out.style.display='block';out.innerHTML='<div style="font-size:22px;font-weight:700;color:var(--gr);margin-bottom:8px">₹'+res.price.toFixed(2)+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px"><div>Delta: <b style="color:var(--bl)">'+res.delta.toFixed(4)+'</b></div><div>Gamma: <b style="color:var(--pu)">'+res.gamma.toFixed(6)+'</b></div><div>Theta/day: <b style="color:var(--rd)">₹'+(res.theta*100).toFixed(2)+'</b></div><div>Vega/1%: <b style="color:var(--bl)">₹'+(res.vega*100).toFixed(2)+'</b></div></div>';}
-
-// AI ENGINE
-
-function evolve(){toast('Evolving...','info');req('/ai/evolve?generations=5','POST',null,function(err,d){if(d)toast('Evolved '+d.evolved+' strategies!','success');loadAIStrats();loadAIStatus();});}
-function getSignal(){var inst=gv('ai-i')||'NIFTY';req('/ai/signal/'+inst,'GET',null,function(err,d){var box=$('ai-sig-box');if(!box)return;box.style.display='block';if(err||!d){box.innerHTML='<div style="color:var(--rd)">Failed: '+err+'</div>';return;}var sc=(d.signal||'WAIT')==='WAIT'?'var(--mu)':((d.signal||'').indexOf('BUY')>=0?'var(--gr)':'var(--rd)');box.innerHTML='<div class="chdr" style="color:var(--gr)">AI SIGNAL - '+inst+'</div><div class="g4" style="gap:6px;margin-bottom:8px"><div class="stat"><div class="sl">SIGNAL</div><div class="sv" style="color:'+sc+';font-size:12px">'+(d.signal||'WAIT')+'</div></div><div class="stat"><div class="sl">CONFIDENCE</div><div class="sv" style="color:var(--bl)">'+(((d.confidence||0)*100).toFixed(1))+'%</div></div><div class="stat"><div class="sl">REGIME</div><div class="sv" style="color:var(--pu);font-size:9px">'+(d.regime||'-')+'</div></div><div class="stat"><div class="sl">PATTERN</div><div class="sv" style="color:var(--am);font-size:9px">'+(d.hidden_pattern||'-')+'</div></div></div><div style="background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:8px;font-size:9px;margin-bottom:8px">Entry: ₹'+(d.entry_price||0)+' | SL: ₹'+(d.stoploss||0)+' | Target: ₹'+(d.target||0)+'</div><div style="font-size:9px;color:var(--gr);margin-bottom:8px">'+(d.recommended_strategy||'')+'</div>';var btns=document.createElement('div');btns.style.display='flex';btns.style.gap='6px';var bu=document.createElement('button');bu.className='btn bg';bu.style.cssText='flex:1;padding:7px';bu.textContent='USE SIGNAL';var ds=d.signal||'',dep=d.entry_price||0,dsl=d.stoploss||0,dtt=d.target||0;bu.onclick=function(){if(!ds||ds==='WAIT'){toast('No signal','warn');return;}if(ds.indexOf('BUY_CE')>=0){setAction('BUY');setType('CE');}else if(ds.indexOf('BUY_PE')>=0){setAction('BUY');setType('PE');}else if(ds.indexOf('SELL_CE')>=0){setAction('SELL');setType('CE');}else if(ds.indexOf('SELL_PE')>=0){setAction('SELL');setType('PE');}if(dep&&$('f-price'))$('f-price').value=dep;if(dsl&&$('f-sl'))$('f-sl').value=dsl;if(dtt&&$('f-tgt'))$('f-tgt').value=dtt;show('trade',null);toast('Signal loaded!','success');};var br=document.createElement('button');br.className='btn bb';br.style.cssText='flex:1;padding:7px';br.textContent='REFRESH';br.onclick=getSignal;btns.appendChild(bu);btns.appendChild(br);box.appendChild(btns);});}
-function getRegime(){var vix=nv('ai-vix')||19.5;req('/ai/regime?vix='+vix,'GET',null,function(err,d){var box=$('ai-reg-box');if(!box)return;box.style.display='block';if(err||!d){box.innerHTML='<div style="color:var(--rd)">Failed</div>';return;}var colors={TRENDING_UP:'var(--gr)',TRENDING_DOWN:'var(--rd)',RANGEBOUND:'var(--am)',HIGH_VOLATILITY:'var(--rd)'};var c=colors[d.regime]||'var(--mu)';box.innerHTML='<div class="chdr" style="color:var(--pu)">REGIME DETECTION</div><div class="g4" style="gap:6px;margin-bottom:8px"><div class="stat"><div class="sl">REGIME</div><div class="sv" style="color:'+c+';font-size:11px">'+(d.regime||'-')+'</div></div><div class="stat"><div class="sl">VIX</div><div class="sv" style="color:var(--am)">'+(d.vix||0)+'</div></div><div class="stat"><div class="sl">MOMENTUM</div><div class="sv" style="color:'+((d.momentum||0)>0?'var(--gr)':'var(--rd)')+'">'+( d.momentum||0)+'%</div></div><div class="stat"><div class="sl">CONF</div><div class="sv" style="color:var(--bl)">'+(((d.confidence||0)*100).toFixed(0))+'%</div></div></div><div style="background:var(--bg4);border-left:3px solid '+c+';border-radius:4px;padding:10px;margin-bottom:6px"><div style="font-size:8px;color:var(--mu)">HIDDEN PATTERN</div><div style="font-size:14px;font-weight:700;color:'+c+'">'+(d.hidden_pattern||'-')+'</div></div><div style="background:#001a0e;border:1px solid var(--gr)30;border-radius:4px;padding:8px;font-size:9px">Strategy: <b style="color:var(--gr)">'+(d.recommended_strategy||'')+'</b></div>';});}
-
-
-// ADMIN
+    trdSave('last_strategy_id', r.strategy_id);
+    toast('✅ Strategy saved: '+saveName+' (v1)','success');
+    var bld=document.getElementById('nlp-bld');if(bld)bld.style.display='none';
+    loadMy();
+  });// ADMIN
 function loadAdmin(){req('/admin/dashboard','GET',null,function(err,d){if(err||!d){toast('Admin failed','error');return;}var sets={'a-u':d.total_users||0,'a-at':d.active_today||0,'a-rev':'₹'+(d.total_revenue||0).toLocaleString('en-IN'),'a-mrr':'₹'+(d.mrr||0).toLocaleString('en-IN')};Object.keys(sets).forEach(function(k){var el=$(k);if(el)el.textContent=sets[k];});var feat=$('a-feat');if(feat&&d.top_features){var h='';d.top_features.forEach(function(f){h+='<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:9px"><span>'+f.feature+'</span><span style="color:var(--gr)">'+f.usage_pct+'%</span></div><div class="pb"><div class="pf" style="width:'+f.usage_pct+'%;background:var(--gr)"></div></div></div>';});feat.innerHTML=h;}var plans=$('a-plans');if(plans&&d.plan_distribution){var pc={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--gr)',INSTITUTIONAL:'var(--am)'};var ph='';Object.keys(d.plan_distribution).forEach(function(p){ph+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bo);font-size:9px"><span style="color:'+(pc[p]||'var(--mu)')+'">'+p+'</span><span>'+d.plan_distribution[p]+' users</span></div>';});plans.innerHTML=ph;}toast('Admin refreshed!','success');});}
 
 function loadUsers(){req('/admin/users','GET',null,function(err,d){if(!err&&d&&d.users){var tb=$('admin-users-count');if(tb)tb.textContent=d.users.length+' users';}toast('Users loaded','info');});}
