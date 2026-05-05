@@ -3036,6 +3036,9 @@ function nlpParse(){
 }
 
 function _renderNLPResult(r, text, outEl){
+  // Store globally for saveStrat to use
+  window._lastNLPResult = r;
+  window._lastNLPText = text;
   // Apply to order entry
   var order = r.order || {};
   if(order.asset){
@@ -7503,18 +7506,21 @@ function rollbackToVersion(stratId, versionNum){
 // ── SAVE MY STRATEGY ──────────────────────────────────────────────────────────
 function saveStrat(){
   var name = (gv('ns-nm')||'').trim();
-  // Get instrument - prefer from NLP parse result, fallback to dropdown
-  var inst = gv('ns-i') || 'NIFTY';
-  // Check if NLP parsed a different instrument
-  var nlpInstEl = document.querySelector('[id^="bi-"].ta') || document.querySelector('[id^="ba-"].ta');
-  var parsedInst = null;
-  document.querySelectorAll('[id^="bi-"]').forEach(function(b){
-    if(b.classList.contains('ta')||b.classList.contains('active'))
-      parsedInst = b.id.replace('bi-','');
-  });
-  if(parsedInst) inst = parsedInst;
-  var sl   = parseFloat(gv('ns-sl')) || 100;
-  var tgt  = parseFloat(gv('ns-tg')) || 200;
+  // Get instrument from last NLP parse result
+  var inst = 'NIFTY';
+  if(window._lastNLPResult && window._lastNLPResult.order && window._lastNLPResult.order.asset){
+    inst = window._lastNLPResult.order.asset;
+  } else {
+    inst = gv('ns-i') || 'NIFTY';
+  }
+  var _nlp = window._lastNLPResult || {};
+  var _ord = _nlp.order || {};
+  var sl  = _ord.sl  || parseFloat(gv('ns-sl')) || 100;
+  var tgt = _ord.tp  || parseFloat(gv('ns-tg')) || 200;
+  var tf  = _nlp.timeframe || gv('ns-tf') || '5m';
+  var act = _ord.side || 'BUY';
+  var otype = _ord.option_type || 'CE';
+  var lots = _ord.lots || 1;
   var nlpText = (gv('ns-nlp') || gv('nlp-in') || '').trim();
   var entry = (gv('ns-en') || '').trim();
 
@@ -7544,7 +7550,7 @@ function saveStrat(){
     user_id: UID,
     name: name,
     instrument: inst,
-    timeframe: gv('ns-tf') || '5m',
+    timeframe: tf,
     entry_conditions: conditions,
     exit_conditions: [],
     sl_type: 'POINTS',
