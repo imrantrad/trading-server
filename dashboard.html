@@ -6062,7 +6062,97 @@ function toggleAutoExec(){
 function loadAutoExecConfig(){ /* config loads from backend if needed */ }
 
 function saveAutoExec(){
+  var conf = parseInt((document.getElementById('ae-conf')||{}).value)||75;
+  var lots = parseInt((document.getElementById('ae-lots')||{}).value)||1;
+  var limit = parseInt((document.getElementById('ae-limit')||{}).value)||3;
+  var mode = (document.getElementById('ae-mode')||{}).value||'PAPER';
+  var sl = parseFloat((document.getElementById('ae-sl')||{}).value)||1.5;
+  var tgt = parseFloat((document.getElementById('ae-tgt')||{}).value)||3.0;
+
+  var config = {
+    enabled: _aiAutoEnabled,
+    min_confidence: conf,
+    max_lots: lots,
+    daily_limit: limit,
+    mode: mode,
+    sl_pct: sl,
+    target_pct: tgt,
+    saved_at: new Date().toLocaleString('en-IN')
+  };
+
+  // Save to localStorage
+  try {
+    localStorage.setItem('trd_auto_exec_config', JSON.stringify(config));
+  } catch(e) {}
+
+  // Save to backend
+  req('/ai/auto_execute/config','POST',{
+    user_id: UID,
+    enabled: _aiAutoEnabled,
+    min_confidence: conf/100,
+    max_lots: lots,
+    daily_limit: limit,
+    mode: mode,
+    sl_pct: sl,
+    target_pct: tgt
+  }, function(err, r){
+    // Show saved confirmation regardless
+    var btn = document.querySelector('[onclick="saveAutoExec()"]');
+    if(btn){
+      btn.textContent = '✅ SAVED!';
+      btn.style.background = 'rgba(0,255,136,.2)';
+      btn.style.borderColor = 'rgba(0,255,136,.4)';
+      setTimeout(function(){
+        btn.textContent = '✓ SAVE AUTO-EXECUTE CONFIG';
+        btn.style.background = '';
+        btn.style.borderColor = '';
+      }, 2000);
+    }
+  });
+
+  // Show config summary
+  var status = document.getElementById('ae-status-display');
+  if(!status){
+    status = document.createElement('div');
+    status.id = 'ae-status-display';
+    var btn = document.querySelector('[onclick="saveAutoExec()"]');
+    if(btn) btn.parentNode.insertBefore(status, btn.nextSibling);
+  }
+  status.style.cssText = 'margin-top:10px;padding:10px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px;font-size:10px';
+  status.innerHTML = '<div style="font-weight:700;color:var(--gr);margin-bottom:6px">✅ CONFIG SAVED</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px">'
+    + '<div style="color:var(--mu)">Status: <b style="color:'+(config.enabled?'var(--gr)':'var(--rd)')+'">'+(config.enabled?'ON':'OFF')+'</b></div>'
+    + '<div style="color:var(--mu)">Mode: <b style="color:var(--am)">'+config.mode+'</b></div>'
+    + '<div style="color:var(--mu)">Min Conf: <b>'+config.min_confidence+'%</b></div>'
+    + '<div style="color:var(--mu)">Max Lots: <b>'+config.max_lots+'</b></div>'
+    + '<div style="color:var(--mu)">Daily Limit: <b>'+config.daily_limit+' trades</b></div>'
+    + '<div style="color:var(--mu)">SL/TGT: <b>'+config.sl_pct+'%/'+config.target_pct+'%</b></div>'
+    + '</div>'
+    + '<div style="font-size:8px;color:var(--mu);margin-top:4px">Saved: '+config.saved_at+'</div>';
+
   toast('✅ Auto-execute config saved!','success');
+}
+
+// Load saved config on startup
+function loadSavedAutoExecConfig(){
+  try {
+    var saved = localStorage.getItem('trd_auto_exec_config');
+    if(!saved) return;
+    var config = JSON.parse(saved);
+    _aiAutoEnabled = config.enabled || false;
+    var set = function(id, v){ var e=document.getElementById(id); if(e&&v!==undefined) e.value=v; };
+    set('ae-conf', config.min_confidence);
+    set('ae-lots', config.max_lots);
+    set('ae-limit', config.daily_limit);
+    set('ae-sl', config.sl_pct);
+    set('ae-tgt', config.target_pct);
+    if(config.mode){ var m=document.getElementById('ae-mode'); if(m) m.value=config.mode; }
+    // Update toggle visual
+    var wrap=document.getElementById('ae-toggle-wrap');
+    var dot=document.getElementById('ae-toggle-dot');
+    if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
+    if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
+  } catch(e) {}
 }
 
 function loadAIPnL(){
