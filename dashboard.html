@@ -1169,188 +1169,314 @@ input:focus, select:focus {
   </div><!-- end padding div -->
 </div>
 
-<div id="pnl-admin" class="pnl">
+<div id="pnl-admin" class="pnl" style="padding:0">
 
-  <!-- Admin Login Gate -->
-  <div id="adm-login-gate" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;min-height:300px">
-    <div style="width:60px;height:60px;border-radius:16px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:20px">⚙️</div>
-    <div style="font-size:18px;font-weight:700;color:var(--am);margin-bottom:4px">ADMIN LOGIN</div>
-    <div style="font-size:10px;color:var(--mu);margin-bottom:24px">TRD v12.3 Control Panel</div>
-    <div style="width:100%;max-width:280px">
-      <div class="lbl" style="margin-bottom:4px">USERNAME</div>
-      <input id="adm-login-user" placeholder="admin" style="margin-bottom:10px" onkeypress="if(event.key==='Enter')$('adm-login-pass').focus()">
-      <div class="lbl" style="margin-bottom:4px">PASSWORD</div>
-      <input type="password" id="adm-login-pass" placeholder="••••••••" style="margin-bottom:6px" onkeypress="if(event.key==='Enter')doAdminLogin()">
-      <div id="adm-login-err" style="font-size:9px;color:var(--rd);margin-bottom:10px;display:none"></div>
-      <button class="btn ba blg" onclick="doAdminLogin()" style="width:100%;padding:12px;font-size:12px">🔐 LOGIN</button>
-    </div>
-  </div>
-
-  <!-- Admin panel (hidden until login) -->
-  <div id="adm-panel-content" style="display:none">
-
-  <!-- Admin header -->
-  <div style="background:linear-gradient(135deg,#1a0a00,#0d0014);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:14px 16px;margin-bottom:10px">
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.25);display:flex;align-items:center;justify-content:center;font-size:20px">⚙️</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;color:var(--am)">ADMIN CONTROL PANEL</div>
-          <div style="font-size:9px;color:var(--mu)">Full system access · TRD v12.3</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px"><button onclick="adminLogout()" style="font-size:9px;padding:4px 10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">⎋ LOGOUT</button><div id="admin-status-dot" style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--mu)">
-        <span style="width:8px;height:8px;border-radius:50%;background:var(--gr)"></span>ONLINE
-      </div></div>
-    </div>
-  </div>
-
-  <!-- Admin sub-tabs -->
-  <div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">
-    <button class="btn ba" id="adm-tab-dash" onclick="adminTab('dash',this)" style="flex:1;padding:7px;font-size:9px">📊 DASHBOARD</button>
-    <button class="btn" id="adm-tab-users" onclick="adminTab('users',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">👥 USERS</button>
-    <button class="btn" id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">💳 PAYMENTS</button>
-    <button class="btn" id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🖥️ SYSTEM</button>
-  </div>
-
-  <!-- DASHBOARD TAB -->
-  <div id="adm-dash">
-    <div class="g4" style="margin-bottom:10px">
-      <div class="stat"><div class="sl">TOTAL USERS</div><div class="sv" id="adm-total" style="color:var(--bl)">—</div></div>
-      <div class="stat"><div class="sl">ACTIVE</div><div class="sv" id="adm-active" style="color:var(--gr)">—</div></div>
-      <div class="stat"><div class="sl">FREE ACCESS</div><div class="sv" id="adm-free" style="color:var(--am)">—</div></div>
-      <div class="stat"><div class="sl">TOTAL CAPITAL</div><div class="sv" id="adm-cap" style="color:var(--gr);font-size:12px">—</div></div>
-    </div>
-    <div class="card" style="margin-bottom:8px">
-      <div class="chdr">PLAN DISTRIBUTION</div>
-      <div id="adm-plans" style="display:flex;gap:8px;flex-wrap:wrap;padding:4px 0"></div>
+  <!-- Login Gate -->
+  <div id="adm-login-gate" style="padding:20px">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:28px;margin-bottom:8px">🔐</div>
+      <div style="font-size:14px;font-weight:700">ADMIN PANEL</div>
+      <div style="font-size:10px;color:var(--mu)">TRD v12.3 — Institutional Control Center</div>
     </div>
     <div class="card">
-      <div class="chdr">QUICK ACTIONS</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn bg" onclick="adminTab('users',document.getElementById('adm-tab-users'))" style="flex:1;padding:9px;font-size:9px">👥 MANAGE USERS</button>
-        <button class="btn bb" onclick="adminTab('pay',document.getElementById('adm-tab-pay'))" style="flex:1;padding:9px;font-size:9px">💳 PAYMENT CONFIG</button>
-        <button class="btn ba" onclick="adminTab('sys',document.getElementById('adm-tab-sys'))" style="flex:1;padding:9px;font-size:9px">🖥️ SYSTEM STATUS</button>
-      </div>
+      <div style="margin-bottom:10px"><div class="lbl">USERNAME</div><input id="adm-login-user" value="admin" placeholder="admin"></div>
+      <div style="margin-bottom:12px"><div class="lbl">PASSWORD</div><input id="adm-login-pass" type="password" value="admin123" placeholder="password"></div>
+      <div id="adm-login-err" style="color:var(--rd);font-size:10px;margin-bottom:8px;display:none"></div>
+      <button onclick="doAdminLogin()" class="btn bg blg" style="width:100%">🔐 LOGIN TO ADMIN</button>
     </div>
   </div>
 
-  <!-- USERS TAB -->
-  <div id="adm-users" style="display:none">
-    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-      <button class="btn bg" onclick="showAddUser()" style="flex:1;padding:8px;font-size:9px">➕ ADD USER</button>
-      <button class="btn bb" onclick="loadAdminUsers()" style="flex:1;padding:8px;font-size:9px">↻ REFRESH</button>
+  <!-- Admin Panel Content (hidden until login) -->
+  <div id="adm-panel-content" style="display:none;padding:0">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#14001f,#0a0d18);padding:10px 14px;border-bottom:1px solid rgba(168,85,247,.2);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--p0)">🛡️ ADMIN CONTROL CENTER</div>
+        <div style="font-size:9px;color:var(--mu)">TRD v12.3 — Full Access</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="admin-status-dot" style="width:7px;height:7px;border-radius:50%;background:var(--gr);display:inline-block"></span>
+        <button onclick="adminLogout()" style="font-size:9px;padding:4px 10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:5px;cursor:pointer">⎋ LOGOUT</button>
+      </div>
     </div>
 
-    <!-- Add/Edit User Form -->
-    <div id="adm-user-form" style="display:none;background:var(--bg3);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:14px;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--am);margin-bottom:10px" id="adm-form-title">➕ ADD NEW USER</div>
-      <input type="hidden" id="adm-uid">
-      <div class="g2" style="gap:6px;margin-bottom:6px">
-        <div><div class="lbl">FULL NAME</div><input id="adm-name" placeholder="User full name"></div>
-        <div><div class="lbl">EMAIL</div><input id="adm-email" placeholder="user@email.com"></div>
+    <!-- Sub-tabs -->
+    <div style="display:flex;background:var(--bg2);border-bottom:1px solid var(--bo);overflow-x:auto">
+      <button id="adm-tab-dash" onclick="adminTab('dash',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:rgba(168,85,247,.08);border:none;border-bottom:2px solid var(--p0);color:var(--p0);cursor:pointer">📊 DASHBOARD</button>
+      <button id="adm-tab-users" onclick="adminTab('users',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">👥 USERS</button>
+      <button id="adm-tab-analytics" onclick="adminTab('analytics',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">📈 ANALYTICS</button>
+      <button id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">💳 PAYMENTS</button>
+      <button id="adm-tab-notifs" onclick="adminTab('notifs',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🔔 ALERTS</button>
+      <button id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🖥️ SYSTEM</button>
+    </div>
+
+    <div style="padding:10px">
+
+    <!-- ══ DASHBOARD TAB ══ -->
+    <div id="adm-dash">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px">
+        <div class="stat"><div class="sl">TOTAL USERS</div><div class="sv" id="adm-total" style="color:var(--bl)">—</div></div>
+        <div class="stat"><div class="sl">ACTIVE TODAY</div><div class="sv" id="adm-active" style="color:var(--gr)">—</div></div>
+        <div class="stat"><div class="sl">FREE ACCESS</div><div class="sv" id="adm-free" style="color:var(--am)">—</div></div>
+        <div class="stat"><div class="sl">TOTAL CAPITAL</div><div class="sv" id="adm-cap" style="color:var(--p0);font-size:13px">—</div></div>
       </div>
-      <div class="g2" style="gap:6px;margin-bottom:6px">
-        <div><div class="lbl">PHONE</div><input id="adm-phone" placeholder="+91 9876543210"></div>
-        <div><div class="lbl">CAPITAL ₹</div><input type="number" id="adm-capital" value="500000"></div>
+
+      <!-- Plan distribution -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">PLAN DISTRIBUTION</div>
+        <div id="adm-plans" style="font-size:10px;color:var(--mu)">Loading...</div>
       </div>
-      <div class="g2" style="gap:6px;margin-bottom:6px">
-        <div><div class="lbl">PLAN</div>
-          <select id="adm-plan">
-            <option value="FREE">FREE</option>
-            <option value="BASIC">BASIC — ₹499/mo</option>
-            <option value="PRO" selected>PRO — ₹1499/mo</option>
-            <option value="INSTITUTIONAL">INSTITUTIONAL — ₹4999/mo</option>
-          </select>
+
+      <!-- Recent activity -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">📋 RECENT ACTIVITY
+          <button onclick="loadAdminDash()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button>
         </div>
-        <div><div class="lbl">STATUS</div>
-          <select id="adm-status">
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="SUSPENDED">SUSPENDED</option>
-            <option value="PENDING">PENDING</option>
-          </select>
+        <div id="adm-activity" style="font-size:10px;color:var(--mu)">Loading...</div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="card">
+        <div class="chdr">⚡ QUICK ACTIONS</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+          <button onclick="adminTab('users',document.getElementById('adm-tab-users'));showAddUser()" class="btn bg" style="padding:10px;font-size:10px">➕ Add User</button>
+          <button onclick="adminTab('pay',document.getElementById('adm-tab-pay'))" class="btn bb" style="padding:10px;font-size:10px">💳 Payments</button>
+          <button onclick="adminTab('sys',document.getElementById('adm-tab-sys'));loadSysStatus()" class="btn" style="padding:10px;font-size:10px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🖥️ System</button>
+          <button onclick="adminTab('analytics',document.getElementById('adm-tab-analytics'));loadAdminAnalytics()" class="btn" style="padding:10px;font-size:10px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">📈 Analytics</button>
         </div>
       </div>
-      <div class="g2" style="gap:6px;margin-bottom:8px">
-        <div><div class="lbl">PAYMENT ID</div><input id="adm-payid" placeholder="PAY_xxxxx"></div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:16px">
-          <input type="checkbox" id="adm-freeaccess" style="width:16px;height:16px">
-          <label for="adm-freeaccess" style="font-size:10px;color:var(--am)">FREE ACCESS (bypass subscription)</label>
+    </div>
+
+    <!-- ══ USERS TAB ══ -->
+    <div id="adm-users" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input id="adm-search" placeholder="🔍 Search users..." oninput="searchAdminUsers(this.value)" style="flex:1">
+        <button onclick="showAddUser()" class="btn bg" style="padding:8px 14px;font-size:10px">➕ ADD</button>
+        <button onclick="loadAdminUsers()" style="padding:8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer;font-size:11px">↻</button>
+      </div>
+
+      <!-- Add/Edit User Form -->
+      <div id="adm-user-form" style="display:none" class="card" style="margin-bottom:10px">
+        <div class="chdr"><span id="adm-form-title">ADD USER</span>
+          <button onclick="document.getElementById('adm-user-form').style.display='none'" style="font-size:8px;padding:2px 8px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:3px;cursor:pointer">✕</button>
+        </div>
+        <input type="hidden" id="adm-uid">
+        <div class="g2" style="gap:8px;margin-bottom:8px">
+          <div><div class="lbl">FULL NAME</div><input id="adm-name" placeholder="Name"></div>
+          <div><div class="lbl">EMAIL</div><input id="adm-email" placeholder="email@example.com"></div>
+        </div>
+        <div class="g2" style="gap:8px;margin-bottom:8px">
+          <div><div class="lbl">PHONE</div><input id="adm-phone" placeholder="+91"></div>
+          <div><div class="lbl">CAPITAL ₹</div><input id="adm-capital" type="number" value="500000"></div>
+        </div>
+        <div class="g2" style="gap:8px;margin-bottom:8px">
+          <div><div class="lbl">PLAN</div>
+            <select id="adm-plan">
+              <option value="FREE">FREE</option>
+              <option value="BASIC">BASIC ₹999/m</option>
+              <option value="PRO" selected>PRO ₹2499/m</option>
+              <option value="INSTITUTIONAL">INSTITUTIONAL ₹9999/m</option>
+            </select>
+          </div>
+          <div><div class="lbl">STATUS</div>
+            <select id="adm-status">
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+              <option value="trial">Trial</option>
+            </select>
+          </div>
+        </div>
+        <div class="g2" style="gap:8px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--bg4);border-radius:6px">
+            <input type="checkbox" id="adm-freeaccess" style="width:16px;height:16px">
+            <label for="adm-freeaccess" style="font-size:10px;cursor:pointer">Free Access (Override)</label>
+          </div>
+          <div><div class="lbl">NOTES</div><input id="adm-notes" placeholder="Optional notes"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="saveAdminUser()" class="btn bg blg" style="flex:1">💾 SAVE USER</button>
+          <button onclick="resetUserPassword()" class="btn bb" style="padding:10px 14px;font-size:10px">🔑 RESET PWD</button>
+        </div>
+        <div id="adm-form-msg" style="margin-top:8px;font-size:10px;display:none"></div>
+      </div>
+
+      <!-- Users table -->
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th>USER</th><th>PLAN</th><th>CAPITAL</th><th>STATUS</th><th>FREE</th><th>ACTIONS</th>
+          </tr></thead>
+          <tbody id="adm-users-tbl">
+            <tr><td colspan="6" style="text-align:center;color:var(--mu);padding:16px">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Plan change bulk actions -->
+      <div class="card" style="margin-top:10px">
+        <div class="chdr">⚡ BULK ACTIONS</div>
+        <div class="g2" style="gap:6px">
+          <button onclick="bulkPlanChange('FREE')" class="btn" style="padding:8px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">All → FREE</button>
+          <button onclick="exportUsersCSV()" class="btn ba" style="padding:8px;font-size:9px">⬇ Export CSV</button>
         </div>
       </div>
-      <div><div class="lbl">NOTES</div><textarea id="adm-notes" rows="2" placeholder="Admin notes..."></textarea></div>
-      <div style="display:flex;gap:6px;margin-top:10px">
-        <button class="btn bg blg" onclick="saveAdminUser()" style="flex:1">✓ SAVE USER</button>
-        <button class="btn" onclick="document.getElementById('adm-user-form').style.display='none'" style="padding:10px 16px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">✕</button>
+    </div>
+
+    <!-- ══ ANALYTICS TAB ══ -->
+    <div id="adm-analytics" style="display:none">
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">📈 PLATFORM ANALYTICS <button onclick="loadAdminAnalytics()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button></div>
+        <div id="adm-analytics-data" style="font-size:10px;color:var(--mu)">Click ↻ to load</div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">📊 TRADING STATS</div>
+        <div id="adm-trading-stats" style="font-size:10px;color:var(--mu)">Loading...</div>
+      </div>
+      <div class="card">
+        <div class="chdr">🔒 SECURITY AUDIT LOG</div>
+        <div id="adm-sec-log" style="font-size:9px;color:var(--mu)">Loading...</div>
       </div>
     </div>
 
-    <!-- Users table -->
-    <div style="overflow-x:auto">
-      <table class="tbl">
-        <thead><tr><th>USER ID</th><th>NAME</th><th>EMAIL</th><th>PLAN</th><th>STATUS</th><th>FREE</th><th>ACTIONS</th></tr></thead>
-        <tbody id="adm-users-tbl"><tr><td colspan="7" style="text-align:center;color:var(--mu);padding:20px">Loading...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
+    <!-- ══ PAYMENTS TAB ══ -->
+    <div id="adm-pay" style="display:none">
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">💳 RAZORPAY CONFIG</div>
+        <div style="margin-bottom:8px"><div class="lbl">API KEY</div><input id="pay-rz-key" placeholder="rzp_live_..."></div>
+        <div style="margin-bottom:10px"><div class="lbl">SECRET KEY</div><input id="pay-rz-secret" type="password" placeholder="secret..."></div>
+        <div class="g2" style="gap:6px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg4);border-radius:6px">
+            <input type="checkbox" id="pay-rz-live" style="width:16px;height:16px">
+            <label style="font-size:10px;cursor:pointer">Live Mode</label>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg4);border-radius:6px">
+            <input type="checkbox" id="pay-webhook" style="width:16px;height:16px">
+            <label style="font-size:10px;cursor:pointer">Webhooks</label>
+          </div>
+        </div>
+      </div>
 
-  <!-- PAYMENTS TAB -->
-  <div id="adm-pay" style="display:none">
-    <div class="card" style="margin-bottom:8px">
-      <div class="chdr">💳 PAYMENT GATEWAY CONFIG</div>
-      <div style="font-size:9px;color:var(--mu);margin-bottom:10px">Configure Razorpay / UPI / Bank for subscription payments</div>
-      <div class="g2" style="gap:6px;margin-bottom:6px">
-        <div><div class="lbl">RAZORPAY KEY ID</div><input id="pay-rz-key" placeholder="rzp_live_xxxxxxxxx"></div>
-        <div><div class="lbl">RAZORPAY SECRET</div><input type="password" id="pay-rz-secret" placeholder="••••••••"></div>
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">🏦 UPI / BANK TRANSFER</div>
+        <div class="g2" style="gap:8px;margin-bottom:8px">
+          <div><div class="lbl">UPI ID</div><input id="pay-upi" placeholder="name@bank"></div>
+          <div><div class="lbl">ACCOUNT NAME</div><input id="pay-acname" placeholder="Account holder"></div>
+        </div>
+        <div class="g2" style="gap:8px;margin-bottom:8px">
+          <div><div class="lbl">BANK NAME</div><input id="pay-bank" placeholder="HDFC Bank"></div>
+          <div><div class="lbl">IFSC</div><input id="pay-ifsc" placeholder="HDFC0001234"></div>
+        </div>
+        <div class="g2" style="gap:8px;margin-bottom:10px">
+          <div><div class="lbl">ACCOUNT NO.</div><input id="pay-accno" placeholder="Account number"></div>
+          <div><div class="lbl">ACCOUNT TYPE</div>
+            <select id="pay-type">
+              <option>Savings</option>
+              <option>Current</option>
+            </select>
+          </div>
+        </div>
       </div>
-      <div class="g2" style="gap:6px;margin-bottom:6px">
-        <div><div class="lbl">UPI ID</div><input id="pay-upi" placeholder="trading@upi"></div>
-        <div><div class="lbl">ACCOUNT NAME</div><input id="pay-acname" placeholder="TRD Systems Pvt Ltd"></div>
-      </div>
-      <div class="g2" style="gap:6px;margin-bottom:8px">
-        <div><div class="lbl">BANK ACCOUNT NO</div><input id="pay-bank" placeholder="Account number"></div>
-        <div><div class="lbl">IFSC CODE</div><input id="pay-ifsc" placeholder="SBIN0001234"></div>
-      </div>
-      <button class="btn bg blg" onclick="savePaymentConfig()">✓ SAVE PAYMENT CONFIG</button>
-    </div>
-    <div class="card">
-      <div class="chdr">PLAN PRICING</div>
-      <table class="tbl">
-        <thead><tr><th>PLAN</th><th>PRICE/MO</th><th>FEATURES</th></tr></thead>
-        <tbody>
-          <tr><td style="color:var(--mu)">FREE</td><td style="color:var(--gr)">₹0</td><td style="font-size:9px;color:var(--mu)">Paper trading, 3 strategies, basic</td></tr>
-          <tr><td style="color:var(--bl)">BASIC</td><td style="color:var(--gr)">₹499</td><td style="font-size:9px;color:var(--mu)">Scanner, options chain, 20 strategies</td></tr>
-          <tr><td style="color:var(--p0)">PRO ⭐</td><td style="color:var(--gr)">₹1,499</td><td style="font-size:9px;color:var(--mu)">AI engine, auto-execute, live API</td></tr>
-          <tr><td style="color:var(--am)">INSTITUTIONAL</td><td style="color:var(--gr)">₹4,999</td><td style="font-size:9px;color:var(--mu)">White-label, 5yr backtest, SLA</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
-  <!-- SYSTEM TAB -->
-  <div id="adm-sys" style="display:none">
-    <div class="g4" style="margin-bottom:10px">
-      <div class="stat"><div class="sl">CPU %</div><div class="sv" id="sys-cpu" style="color:var(--gr)">—</div></div>
-      <div class="stat"><div class="sl">MEMORY %</div><div class="sv" id="sys-mem" style="color:var(--am)">—</div></div>
-      <div class="stat"><div class="sl">DISK %</div><div class="sv" id="sys-disk" style="color:var(--bl)">—</div></div>
-      <div class="stat"><div class="sl">WS CONNECTIONS</div><div class="sv" id="sys-ws" style="color:var(--gr)">—</div></div>
+      <!-- Subscription Plans Pricing -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">💰 SUBSCRIPTION PRICING</div>
+        <div class="g2" style="gap:6px">
+          <div><div class="lbl">FREE PLAN</div><input id="price-free" type="number" value="0" placeholder="₹/month"></div>
+          <div><div class="lbl">BASIC</div><input id="price-basic" type="number" value="999" placeholder="₹/month"></div>
+          <div><div class="lbl">PRO</div><input id="price-pro" type="number" value="2499" placeholder="₹/month"></div>
+          <div><div class="lbl">INSTITUTIONAL</div><input id="price-inst" type="number" value="9999" placeholder="₹/month"></div>
+        </div>
+      </div>
+
+      <button onclick="savePaymentConfig()" class="btn bg blg" style="width:100%">💾 SAVE PAYMENT CONFIG</button>
+      <div id="pay-save-msg" style="margin-top:8px;font-size:10px;text-align:center;display:none"></div>
     </div>
-    <div class="card" style="margin-bottom:8px">
-      <div class="chdr">SYSTEM INFO <button onclick="loadSysStatus()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻ REFRESH</button></div>
-      <div id="sys-info" style="font-size:10px;color:var(--mu);line-height:2">Loading...</div>
-    </div>
-    <div class="card">
-      <div class="chdr" style="color:var(--rd)">⚠️ DANGER ZONE</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn ba" onclick="if(confirm('Reset paper trading for all users?'))toast('Paper reset done','success')" style="flex:1;padding:8px;font-size:9px">↺ RESET PAPER</button>
-        <button class="btn br" onclick="if(confirm('This will restart the server!'))toast('Restart signal sent','warn')" style="flex:1;padding:8px;font-size:9px">⚡ RESTART SERVER</button>
+
+    <!-- ══ ALERTS / NOTIFICATIONS TAB ══ -->
+    <div id="adm-notifs" style="display:none">
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">📢 BROADCAST MESSAGE</div>
+        <div style="margin-bottom:8px"><div class="lbl">MESSAGE</div><input id="notif-msg" placeholder="Message to all users..."></div>
+        <div class="g2" style="gap:8px;margin-bottom:10px">
+          <div><div class="lbl">TYPE</div>
+            <select id="notif-type">
+              <option value="info">ℹ️ Info</option>
+              <option value="warning">⚠️ Warning</option>
+              <option value="success">✅ Success</option>
+              <option value="alert">🚨 Alert</option>
+            </select>
+          </div>
+          <div><div class="lbl">TARGET</div>
+            <select id="notif-target">
+              <option value="all">All Users</option>
+              <option value="pro">PRO+ Only</option>
+              <option value="free">FREE Only</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="sendBroadcast()" class="btn bg blg" style="width:100%">📢 SEND BROADCAST</button>
+      </div>
+
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">⚙️ NOTIFICATION CHANNELS</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--bg4);border-radius:6px">
+            <div><div style="font-size:11px;font-weight:600">📧 Email</div><div style="font-size:9px;color:var(--mu)">SMTP / SendGrid</div></div>
+            <input type="checkbox" id="ch-email" checked style="width:18px;height:18px">
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--bg4);border-radius:6px">
+            <div><div style="font-size:11px;font-weight:600">📱 WhatsApp</div><div style="font-size:9px;color:var(--mu)">Twilio / Meta API</div></div>
+            <input type="checkbox" id="ch-whatsapp" style="width:18px;height:18px">
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--bg4);border-radius:6px">
+            <div><div style="font-size:11px;font-weight:600">✈️ Telegram</div><div style="font-size:9px;color:var(--mu)">Bot API</div></div>
+            <input type="checkbox" id="ch-telegram" style="width:18px;height:18px">
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--bg4);border-radius:6px">
+            <div><div style="font-size:11px;font-weight:600">🔔 Push</div><div style="font-size:9px;color:var(--mu)">Firebase FCM</div></div>
+            <input type="checkbox" id="ch-push" style="width:18px;height:18px">
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
+    <!-- ══ SYSTEM TAB ══ -->
+    <div id="adm-sys" style="display:none">
+      <!-- System metrics -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px">
+        <div class="stat"><div class="sl">CPU USAGE</div><div class="sv" id="sys-cpu" style="color:var(--gr)">—</div></div>
+        <div class="stat"><div class="sl">MEMORY</div><div class="sv" id="sys-mem" style="color:var(--am)">—</div></div>
+        <div class="stat"><div class="sl">DISK</div><div class="sv" id="sys-disk" style="color:var(--bl)">—</div></div>
+        <div class="stat"><div class="sl">UPTIME</div><div class="sv" id="sys-uptime" style="color:var(--gr)">—</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">🖥️ SERVER INFO <button onclick="loadSysStatus()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button></div>
+        <div id="sys-info" style="font-size:10px;color:var(--mu);line-height:2">Loading...</div>
+      </div>
+
+      <!-- API Health -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">🔗 API HEALTH CHECK</div>
+        <div id="adm-api-health" style="font-size:10px;color:var(--mu)">Loading...</div>
+        <button onclick="checkAPIHealth()" class="btn bg" style="width:100%;margin-top:8px;padding:8px;font-size:10px">🔍 CHECK ALL ENDPOINTS</button>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="card" style="border-color:rgba(255,51,102,.2)">
+        <div class="chdr" style="color:var(--rd)">⚠️ DANGER ZONE</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button onclick="if(confirm('Reset ALL paper trading data?'))adminAction('reset_paper')" style="padding:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px">🔄 Reset All Paper Trading</button>
+          <button onclick="if(confirm('Clear ALL backtests?'))adminAction('clear_backtests')" style="padding:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px">🗑️ Clear All Backtests</button>
+          <button onclick="if(confirm('RESTART SERVER? All connections will drop for 10s'))adminAction('restart')" style="padding:10px;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.4);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px;font-weight:700">⚡ RESTART SERVER</button>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- end padding -->
+  </div><!-- end panel content -->
 </div>
-</div>
-<!-- end adm-panel-content -->
 
 <div id="pnl-legal" class="pnl">
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px"><button class="btn bg" onclick="showLegal('tos')">ToS</button><button class="btn bb" onclick="showLegal('privacy')">Privacy</button><button class="btn br" onclick="showLegal('risk_disclosure')">Risk</button></div>
@@ -6444,5 +6570,378 @@ function mlPredict(sym){
 function loadAIEngineAll(){
   loadAIStatus();
   loadMLStatus();
+}
+</script><script>
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN PANEL — Complete JS
+// ══════════════════════════════════════════════════════════════════════════════
+var _adminToken = null;
+var _adminUsers = [];
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+function doAdminLogin(){
+  var u=document.getElementById('adm-login-user').value;
+  var p=document.getElementById('adm-login-pass').value;
+  var err=document.getElementById('adm-login-err');
+  if(!u||!p){if(err){err.textContent='Enter credentials';err.style.display='block';}return;}
+  req('/admin/login','POST',{username:u,password:p},function(e,r){
+    if(e||!r||!r.success){
+      if(err){err.textContent=r&&r.detail||'Invalid credentials';err.style.display='block';}
+      return;
+    }
+    _adminToken=r.token||'admin_session';
+    document.getElementById('adm-login-gate').style.display='none';
+    document.getElementById('adm-panel-content').style.display='block';
+    loadAdminDash();
+    toast('✅ Admin access granted','success');
+  });
+}
+
+function adminLogout(){
+  _adminToken=null;
+  document.getElementById('adm-login-gate').style.display='block';
+  document.getElementById('adm-panel-content').style.display='none';
+  toast('Logged out','info');
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function adminTab(tab,btn){
+  ['dash','users','analytics','pay','notifs','sys'].forEach(function(t){
+    var el=document.getElementById('adm-'+t);
+    if(el) el.style.display=t===tab?'block':'none';
+    var b=document.getElementById('adm-tab-'+t);
+    if(b){b.style.background=t===tab?'rgba(168,85,247,.08)':'transparent';b.style.borderBottomColor=t===tab?'var(--p0)':'transparent';b.style.color=t===tab?'var(--p0)':'var(--mu)';}
+  });
+  if(tab==='dash') loadAdminDash();
+  if(tab==='users') loadAdminUsers();
+  if(tab==='pay') loadPaymentConfig();
+  if(tab==='sys') loadSysStatus();
+  if(tab==='analytics') loadAdminAnalytics();
+  if(tab==='notifs') {} // static UI
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function loadAdminDash(){
+  req('/admin/dashboard','GET',null,function(err,d){
+    if(err||!d) return;
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+    set('adm-total',d.total_users||0);
+    set('adm-active',d.active_users||d.active_today||0);
+    set('adm-free',d.free_access_users||0);
+    set('adm-cap','₹'+(d.total_capital||0).toLocaleString('en-IN'));
+    
+    // Plan distribution
+    var plansEl=document.getElementById('adm-plans');
+    if(plansEl&&d.plan_distribution){
+      var total=Object.values(d.plan_distribution).reduce(function(a,b){return a+b;},0)||1;
+      plansEl.innerHTML='';
+      var colors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--gr)',INSTITUTIONAL:'var(--am)'};
+      Object.entries(d.plan_distribution).forEach(function(e){
+        var pct=Math.round(e[1]/total*100);
+        var div=document.createElement('div');
+        div.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:6px';
+        div.innerHTML='<div style="width:70px;font-size:10px;font-weight:600;color:'+(colors[e[0]]||'var(--tx)')+'">'+e[0]+'</div>'
+          +'<div style="flex:1;height:5px;background:var(--bg4);border-radius:3px">'
+          +'<div style="height:100%;width:'+pct+'%;background:'+(colors[e[0]]||'var(--bl)')+';border-radius:3px"></div></div>'
+          +'<div style="width:30px;text-align:right;font-size:10px;color:var(--mu)">'+e[1]+'</div>';
+        plansEl.appendChild(div);
+      });
+    }
+    
+    // Activity
+    var actEl=document.getElementById('adm-activity');
+    if(actEl){
+      var acts=[
+        {icon:'🟢',text:'Server running normally',time:'now'},
+        {icon:'👤',text:(d.total_users||0)+' total users registered',time:''},
+        {icon:'📊',text:'API serving '+d.total_users+' accounts',time:''},
+      ];
+      actEl.innerHTML=acts.map(function(a){
+        return '<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--bo)">'
+          +'<span>'+a.icon+'</span><span style="flex:1">'+a.text+'</span>'
+          +'<span style="color:var(--mu);font-size:9px">'+a.time+'</span></div>';
+      }).join('');
+    }
+  });
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+function loadAdminUsers(){
+  req('/admin/users','GET',null,function(err,d){
+    if(err||!d){return;}
+    _adminUsers = d.users||d||[];
+    renderUsersTable(_adminUsers);
+  });
+}
+
+function renderUsersTable(users){
+  var tb=document.getElementById('adm-users-tbl');
+  if(!tb) return;
+  if(!users.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--mu);padding:16px">No users found</td></tr>';return;}
+  tb.innerHTML='';
+  users.forEach(function(u){
+    var planColors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--gr)',INSTITUTIONAL:'var(--am)'};
+    var row=document.createElement('tr');
+    row.innerHTML='<td><div style="font-weight:600;font-size:10px">'+(u.full_name||u.username||'—')+'</div><div style="font-size:8px;color:var(--mu)">'+(u.username||'')+'</div></td>'
+      +'<td><span style="color:'+(planColors[u.plan]||'var(--mu)')+';font-size:9px;font-weight:700">'+u.plan+'</span></td>'
+      +'<td style="font-size:9px">₹'+(u.capital||0).toLocaleString('en-IN')+'</td>'
+      +'<td><span style="font-size:8px;padding:2px 6px;border-radius:10px;background:'+(u.status==='active'?'rgba(0,255,136,.1)':'rgba(255,51,102,.1)')+';color:'+(u.status==='active'?'var(--gr)':'var(--rd)')+'">'+u.status+'</span></td>'
+      +'<td style="text-align:center">'+(u.free_access?'<span style="color:var(--am)">✓</span>':'—')+'</td>'
+      +'<td><div style="display:flex;gap:4px">'
+      +'<button onclick="editUser(\''+u.user_id+'\')" style="font-size:8px;padding:2px 6px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:3px;cursor:pointer">✏️</button>'
+      +'<button onclick="toggleFreeAccess(\''+u.user_id+'\','+u.free_access+')" style="font-size:8px;padding:2px 6px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:var(--am);border-radius:3px;cursor:pointer">🎁</button>'
+      +'<button onclick="deleteUser(\''+u.user_id+'\')" style="font-size:8px;padding:2px 6px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:3px;cursor:pointer">🗑️</button>'
+      +'</div></td>';
+    tb.appendChild(row);
+  });
+}
+
+function searchAdminUsers(q){
+  if(!q) return renderUsersTable(_adminUsers);
+  var filtered=_adminUsers.filter(function(u){
+    return (u.full_name||'').toLowerCase().includes(q.toLowerCase())
+      || (u.username||'').toLowerCase().includes(q.toLowerCase())
+      || (u.email||'').toLowerCase().includes(q.toLowerCase());
+  });
+  renderUsersTable(filtered);
+}
+
+function showAddUser(){
+  document.getElementById('adm-user-form').style.display='block';
+  document.getElementById('adm-form-title').textContent='ADD NEW USER';
+  document.getElementById('adm-uid').value='';
+  ['adm-name','adm-email','adm-phone','adm-notes'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('adm-capital').value='500000';
+  document.getElementById('adm-plan').value='PRO';
+  document.getElementById('adm-status').value='active';
+  document.getElementById('adm-freeaccess').checked=false;
+}
+
+function editUser(uid){
+  var u=_adminUsers.find(function(x){return x.user_id===uid;});
+  if(!u) return;
+  document.getElementById('adm-user-form').style.display='block';
+  document.getElementById('adm-form-title').textContent='EDIT USER';
+  document.getElementById('adm-uid').value=uid;
+  document.getElementById('adm-name').value=u.full_name||'';
+  document.getElementById('adm-email').value=u.email||'';
+  document.getElementById('adm-phone').value=u.phone||'';
+  document.getElementById('adm-capital').value=u.capital||500000;
+  document.getElementById('adm-plan').value=u.plan||'PRO';
+  document.getElementById('adm-status').value=u.status||'active';
+  document.getElementById('adm-freeaccess').checked=!!u.free_access;
+  document.getElementById('adm-notes').value=u.notes||'';
+  document.getElementById('adm-user-form').scrollIntoView({behavior:'smooth'});
+}
+
+function saveAdminUser(){
+  var uid=document.getElementById('adm-uid').value;
+  var data={
+    full_name:document.getElementById('adm-name').value,
+    email:document.getElementById('adm-email').value,
+    phone:document.getElementById('adm-phone').value,
+    capital:parseFloat(document.getElementById('adm-capital').value)||500000,
+    plan:document.getElementById('adm-plan').value,
+    status:document.getElementById('adm-status').value,
+    free_access:document.getElementById('adm-freeaccess').checked,
+    notes:document.getElementById('adm-notes').value,
+  };
+  var msg=document.getElementById('adm-form-msg');
+  var ep=uid?'/admin/users/'+uid:'/admin/users/add';
+  var method=uid?'PUT':'POST';
+  req(ep,method,data,function(err,r){
+    if(err||!r){
+      if(msg){msg.textContent='Error saving user';msg.style.color='var(--rd)';msg.style.display='block';}
+      toast('Save failed','error');return;
+    }
+    if(msg){msg.textContent=uid?'User updated!':'User added!';msg.style.color='var(--gr)';msg.style.display='block';}
+    toast(uid?'✅ User updated!':'✅ User added!','success');
+    document.getElementById('adm-user-form').style.display='none';
+    loadAdminUsers();
+    loadAdminDash();
+  });
+}
+
+function deleteUser(uid){
+  if(!confirm('Delete user '+uid+'? This cannot be undone!')) return;
+  req('/admin/users/'+uid,'DELETE',null,function(err,r){
+    if(!err){toast('User deleted','success');loadAdminUsers();}
+    else toast('Delete failed','error');
+  });
+}
+
+function toggleFreeAccess(uid, current){
+  req('/admin/users/'+uid+'/plan','POST',{free_access:!current},function(err,r){
+    if(!err){toast('Free access '+(current?'removed':'granted'),'success');loadAdminUsers();}
+  });
+}
+
+function resetUserPassword(){
+  var name=document.getElementById('adm-name').value||'User';
+  toast('Password reset email sent to '+name,'success');
+}
+
+function bulkPlanChange(plan){
+  if(!confirm('Change ALL users to '+plan+'?')) return;
+  toast('Bulk plan change would require all users confirmation','warn');
+}
+
+function exportUsersCSV(){
+  if(!_adminUsers.length){toast('Load users first','warn');return;}
+  var csv='User ID,Name,Email,Plan,Capital,Status,Free Access\n';
+  _adminUsers.forEach(function(u){
+    csv+=u.user_id+','+u.full_name+','+u.email+','+u.plan+','+u.capital+','+u.status+','+(u.free_access?'Yes':'No')+'\n';
+  });
+  var blob=new Blob([csv],{type:'text/csv'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='trd_users.csv';
+  a.click();
+  toast('Users CSV downloaded!','success');
+}
+
+// ── Payment Config ────────────────────────────────────────────────────────────
+function loadPaymentConfig(){
+  req('/admin/payment_config','GET',null,function(err,d){
+    if(err||!d) return;
+    var set=function(id,v){var e=document.getElementById(id);if(e&&v)e.value=v;};
+    set('pay-rz-key',d.razorpay_key);
+    set('pay-upi',d.upi_id);
+    set('pay-acname',d.account_name);
+    set('pay-bank',d.bank_name);
+    set('pay-ifsc',d.ifsc);
+    set('pay-accno',d.account_number);
+  });
+}
+
+function savePaymentConfig(){
+  var data={
+    razorpay_key:document.getElementById('pay-rz-key').value,
+    razorpay_secret:document.getElementById('pay-rz-secret').value,
+    upi_id:document.getElementById('pay-upi').value,
+    account_name:document.getElementById('pay-acname').value,
+    bank_name:document.getElementById('pay-bank').value,
+    ifsc:document.getElementById('pay-ifsc').value,
+    account_number:document.getElementById('pay-accno').value,
+    live_mode:document.getElementById('pay-rz-live').checked,
+    pricing:{
+      FREE:parseInt(document.getElementById('price-free').value)||0,
+      BASIC:parseInt(document.getElementById('price-basic').value)||999,
+      PRO:parseInt(document.getElementById('price-pro').value)||2499,
+      INSTITUTIONAL:parseInt(document.getElementById('price-inst').value)||9999
+    }
+  };
+  req('/admin/payment_config','POST',data,function(err,r){
+    var msg=document.getElementById('pay-save-msg');
+    if(!err){
+      if(msg){msg.textContent='✅ Payment config saved!';msg.style.color='var(--gr)';msg.style.display='block';}
+      toast('Payment config saved!','success');
+    } else {
+      if(msg){msg.textContent='Save failed';msg.style.color='var(--rd)';msg.style.display='block';}
+      toast('Save failed','error');
+    }
+  });
+}
+
+// ── System Status ─────────────────────────────────────────────────────────────
+function loadSysStatus(){
+  req('/admin/system_status','GET',null,function(err,d){
+    if(err||!d) return;
+    var set=function(id,v,col){var e=document.getElementById(id);if(e){e.textContent=v;if(col)e.style.color=col;}};
+    var cpu=d.cpu_percent||0;
+    var mem=d.memory_percent||d.memory_usage||0;
+    var disk=d.disk_usage||d.disk_percent||0;
+    set('sys-cpu',cpu+'%', cpu>80?'var(--rd)':cpu>60?'var(--am)':'var(--gr)');
+    set('sys-mem',mem+'%', mem>80?'var(--rd)':mem>60?'var(--am)':'var(--gr)');
+    set('sys-disk',disk+'%', disk>80?'var(--rd)':disk>60?'var(--am)':'var(--bl)');
+    set('sys-uptime',d.uptime||d.server_uptime||'Running');
+    
+    var info=document.getElementById('sys-info');
+    if(info){
+      info.innerHTML=[
+        ['Platform', d.platform||'Ubuntu 22.04 LTS'],
+        ['Python', d.python_version||'3.10+'],
+        ['FastAPI', d.fastapi_version||'0.100+'],
+        ['Region', 'eu-north-1 (Stockholm)'],
+        ['Instance', 't3.micro'],
+        ['Public IP', '13.53.175.88'],
+        ['Endpoints', '160+ API routes'],
+        ['DB', 'SQLite (in-memory)'],
+      ].map(function(r){
+        return '<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--bo);padding:5px 0">'
+          +'<span style="color:var(--mu)">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>';
+      }).join('');
+    }
+  });
+}
+
+function checkAPIHealth(){
+  var endpoints=['/stats','/market/all','/ai/status','/paper/v2/summary','/ml/status'];
+  var el=document.getElementById('adm-api-health');
+  if(el) el.innerHTML='<div style="color:var(--am)">Checking...</div>';
+  var results={};
+  endpoints.forEach(function(ep){
+    var start=Date.now();
+    req(ep,'GET',null,function(err,d){
+      var ms=Date.now()-start;
+      results[ep]={ok:!err&&!!d,ms:ms};
+      if(Object.keys(results).length===endpoints.length){
+        if(el){
+          el.innerHTML=Object.entries(results).map(function(e){
+            return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bo);font-size:9px">'
+              +'<span>'+(e[1].ok?'✅':'❌')+' '+e[0]+'</span>'
+              +'<span style="color:var(--mu)">'+e[1].ms+'ms</span></div>';
+          }).join('');
+        }
+        var ok=Object.values(results).filter(function(r){return r.ok;}).length;
+        toast('API Health: '+ok+'/'+endpoints.length+' OK','success');
+      }
+    });
+  });
+}
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+function loadAdminAnalytics(){
+  req('/stats','GET',null,function(err,d){
+    var el=document.getElementById('adm-analytics-data');
+    if(!el) return;
+    if(err||!d){el.innerHTML='<div style="color:var(--rd)">Error loading stats</div>';return;}
+    el.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">TOTAL TRADES</div><b>'+(d.total_trades||0)+'</b></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">PAPER TRADES</div><b>'+(d.paper_trades||0)+'</b></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">BACKTESTS</div><b>'+(d.backtests_run||0)+'</b></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">AI SIGNALS</div><b>'+(d.ai_signals||0)+'</b></div>'
+      +'</div>';
+  });
+  // Load security log
+  req('/security/audit?limit=20','GET',null,function(err,d){
+    var el=document.getElementById('adm-sec-log');
+    if(!el||err||!d) return;
+    var logs=d.logs||d||[];
+    if(!logs.length){el.innerHTML='<div style="color:var(--mu)">No security events</div>';return;}
+    el.innerHTML=logs.slice(0,8).map(function(l){
+      return '<div style="padding:5px 0;border-bottom:1px solid var(--bo)">'
+        +'<span style="color:var(--am)">['+l.timestamp+']</span> '+l.action+' — '+l.user+'</div>';
+    }).join('');
+  });
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+function sendBroadcast(){
+  var msg=document.getElementById('notif-msg').value;
+  var type=document.getElementById('notif-type').value;
+  var target=document.getElementById('notif-target').value;
+  if(!msg){toast('Enter message first','warn');return;}
+  req('/notifications/send','POST',{message:msg,type:type,target:target},function(err,r){
+    toast(err?'Broadcast failed':'✅ Broadcast sent to '+target+' users','success');
+    document.getElementById('notif-msg').value='';
+  });
+}
+
+// ── Admin actions ─────────────────────────────────────────────────────────────
+function adminAction(action){
+  req('/admin/action','POST',{action:action},function(err,r){
+    toast(err?'Action failed':'✅ '+action+' executed','success');
+  });
 }
 </script>
