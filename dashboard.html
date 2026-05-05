@@ -1017,7 +1017,7 @@ input:focus, select:focus {
           <div style="font-size:13px;font-weight:700;color:var(--p0)">🤖 ML ENGINE</div>
           <div style="font-size:9px;color:var(--mu)">XGBoost · RandomForest · GradientBoosting</div>
         </div>
-        <div id="ml-status-badge" style="font-size:9px;padding:3px 10px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:var(--p0)">NOT TRAINED</div>
+        <div id="ml-status-badge" style="font-size:9px;padding:3px 10px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:var(--p0)" id="ml-status-bar">🔄 Loading...</div>
       </div>
       
       <!-- Train -->
@@ -6154,6 +6154,9 @@ function trainMLModel(){
       if(fiEl) fiEl.innerHTML=html2;
       toast('✅ Models trained!','success');
       loadMLStatus();
+      // Update accuracy display
+      var statusBar = document.getElementById('ml-status-bar');
+      if(statusBar) statusBar.innerHTML = '<span style="color:var(--gr)">✅ TRAINED</span>';
     }catch(e){toast('Training parse error','error');}
   };
   x.onerror=x.ontimeout=function(){if(btn){btn.textContent='🧠 TRAIN MODEL';btn.disabled=false;}toast('Training timeout','error');};
