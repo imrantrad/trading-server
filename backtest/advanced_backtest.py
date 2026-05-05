@@ -343,8 +343,13 @@ def run_advanced_backtest(
         monthly_summary.append({
             "month": month,
             "pnl": round(data["pnl"], 2),
+            "net_pnl": round(data["pnl"], 2),  # alias
+            "total_trades": data["trades"],
             "trades": data["trades"],
+            "wins": data["wins"],
+            "losses": data["trades"] - data["wins"],
             "win_rate": round(wr, 1),
+            "return_pct": round(data["pnl"] / capital * 100, 2),
         })
     
     profitable_days = sum(1 for r in daily_results if r["net_pnl"] > 0)

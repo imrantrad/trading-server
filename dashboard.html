@@ -5443,10 +5443,10 @@ function renderBtResults(r, strategy, capital, months){
   var res=document.getElementById('bt-res');
   if(res) res.style.display='block';
   
-  var pnl=r.total_net_pnl||r.net_pnl||0;
-  var ret=((pnl/capital)*100).toFixed(2);
+  var pnl=r.total_pnl||r.total_net_pnl||r.net_pnl||0;
+  var ret=r.total_pnl_pct||((pnl/capital)*100).toFixed(2); ret=parseFloat(ret).toFixed(2);
   var wr=r.win_rate||0;
-  var wins=r.total_wins||0, losses=r.total_losses||0;
+  var wins=r.winning_trades||r.total_wins||0, losses=r.losing_trades||r.total_losses||0;
   var dd=r.max_drawdown_pct||r.max_drawdown||0;
   var sharpe=r.sharpe_ratio||r.sharpe||0;
   var pf=r.profit_factor||0;
@@ -5477,7 +5477,7 @@ function renderBtResults(r, strategy, capital, months){
   renderEquityCurve(daily, capital);
   
   // Monthly breakdown
-  renderMonthly(r.monthly_breakdown||r.monthly||[]);
+  renderMonthly(r.monthly_summary||r.monthly_breakdown||r.monthly||[]);
   
   // Calendar
   renderCalendar(daily);
@@ -5500,7 +5500,7 @@ function renderEquityCurve(daily, capital){
   var data=daily.filter(function(d){return d.cumulative!==undefined;});
   if(!data.length) return;
   
-  var vals=data.map(function(d){return parseFloat(d.cumulative)||0;});
+  var vals=data.map(function(d){return parseFloat(d.cumulative||d.cumulative_pnl||0);});
   var minV=Math.min.apply(null,vals)-100;
   var maxV=Math.max.apply(null,vals)+100;
   var range=maxV-minV||1;
@@ -5513,7 +5513,7 @@ function renderEquityCurve(daily, capital){
   // Area fill
   var pts=data.map(function(d,i){
     var x=i/(data.length-1)*w;
-    var y=h-((parseFloat(d.cumulative)||0)-minV)/range*h;
+    var y=h-((parseFloat(d.cumulative||d.cumulative_pnl||0))-minV)/range*h;
     return x+','+y;
   });
   
@@ -5535,9 +5535,9 @@ function renderMonthly(monthly){
   if(!monthly.length){el.innerHTML='<div style="color:var(--mu);font-size:10px">No monthly data</div>';return;}
   el.innerHTML='';
   monthly.forEach(function(m){
-    var pnl=m.net_pnl||m.pnl||0;
-    var ret=m.return_pct||0;
-    var trades=m.total_trades||m.trades||0;
+    var pnl=m.net_pnl||m.pnl||m.total_pnl||0;
+    var ret=m.return_pct||m.pnl_pct||((pnl/capital)*100)||0;
+    var trades=m.total_trades||m.trades||m.trading_days||0;
     var color=pnl>=0?'var(--gr)':'var(--rd)';
     var barW=Math.min(100,Math.abs(ret)*10)+'%';
     var row=document.createElement('div');
@@ -5556,7 +5556,7 @@ function renderCalendar(daily){
   if(!cal) return;
   cal.innerHTML='';
   daily.filter(function(d){return d.trades>0;}).forEach(function(d){
-    var pnl=d.net_pnl||d.gross_pnl||0;
+    var pnl=d.net_pnl||d.gross_pnl||d.pnl||0;
     var dt=d.date||'';
     var dd=document.createElement('div');
     dd.style.cssText='padding:3px 5px;border-radius:3px;cursor:pointer;text-align:center;min-width:36px;'
@@ -5574,13 +5574,13 @@ function renderTradeList(daily){
   if(!tb) return;
   tb.innerHTML='';
   daily.filter(function(d){return d.trades>0;}).forEach(function(d){
-    var pnl=d.net_pnl||d.gross_pnl||0;
+    var pnl=d.net_pnl||d.gross_pnl||d.pnl||0;
     var tr=document.createElement('tr');
     tr.innerHTML='<td>'+d.date+'</td><td>'+d.trades+'</td>'
-      +'<td style="color:var(--gr)">'+d.wins+'W</td>'
+      +'<td style="color:var(--gr)">'+(d.wins||d.winning_trades||0)+'W</td>'
       +'<td style="color:'+(d.gross_pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+Math.round(d.gross_pnl||0)+'</td>'
       +'<td style="color:'+(pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+Math.round(pnl)+'</td>'
-      +'<td>₹'+Math.round(d.cumulative||0)+'</td>';
+      +'<td>₹'+Math.round(d.cumulative||d.cumulative_pnl||0)+'</td>';
     tb.appendChild(tr);
   });
 }
