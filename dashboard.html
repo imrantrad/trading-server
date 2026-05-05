@@ -476,8 +476,15 @@ input:focus, select:focus {
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div class="card">
-        <div class="chdr">NLP ORDER ENTRY</div>
-        <textarea id="nlp-in" rows="3" placeholder="buy nifty atm call rsi under 30 sl 100 target 300"></textarea>
+        <div class="chdr">NLP ORDER ENTRY
+  <div style="display:flex;gap:6px;align-items:center">
+    <button onclick="toggleNLPSize()" id="nlp-resize-btn" title="Expand/Collapse" style="font-size:11px;padding:2px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">⤢ MAX</button>
+    <button onclick="clearNLP()" title="Clear" style="font-size:11px;padding:2px 8px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">✕</button>
+  </div>
+</div>
+<div id="nlp-wrap" style="position:relative">
+  <textarea id="nlp-in" rows="3" placeholder="buy nifty atm call rsi under 30 sl 100 target 300" style="transition:all .3s;resize:vertical"></textarea>
+</div>
         <div style="display:flex;gap:6px;margin-top:6px"><button class="btn bb" style="flex:1;padding:7px" onclick="nlpParse()">PARSE</button><button class="btn bg" style="flex:1;padding:7px" onclick="nlpExec()">PARSE+EXEC</button></div>
         <div id="nlp-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:6px;font-size:8px;line-height:1.8"></div>
       </div>
@@ -7068,4 +7075,63 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }, 800);
 });
+
+// ── NLP TEXTAREA EXPAND/COLLAPSE ─────────────────────────────────────────────
+var _nlpExpanded = false;
+function toggleNLPSize(){
+  var ta = document.getElementById('nlp-in');
+  var btn = document.getElementById('nlp-resize-btn');
+  var wrap = document.getElementById('nlp-wrap');
+  _nlpExpanded = !_nlpExpanded;
+  if(_nlpExpanded){
+    ta.rows = 12;
+    ta.style.fontSize = '12px';
+    ta.style.lineHeight = '1.8';
+    if(wrap){
+      wrap.style.position = 'fixed';
+      wrap.style.bottom = '60px';
+      wrap.style.left = '10px';
+      wrap.style.right = '10px';
+      wrap.style.zIndex = '9998';
+      wrap.style.background = 'var(--bg2)';
+      wrap.style.border = '1px solid rgba(79,142,247,.4)';
+      wrap.style.borderRadius = '12px';
+      wrap.style.padding = '10px';
+      wrap.style.boxShadow = '0 8px 32px rgba(0,0,0,.6)';
+    }
+    ta.style.width = '100%';
+    ta.style.height = '200px';
+    ta.style.boxSizing = 'border-box';
+    if(btn) btn.textContent = '⤡ MIN';
+    ta.focus();
+  } else {
+    ta.rows = 3;
+    ta.style.fontSize = '';
+    ta.style.lineHeight = '';
+    ta.style.height = '';
+    if(wrap){
+      wrap.style.position = '';
+      wrap.style.bottom = '';
+      wrap.style.left = '';
+      wrap.style.right = '';
+      wrap.style.zIndex = '';
+      wrap.style.background = '';
+      wrap.style.border = '';
+      wrap.style.borderRadius = '';
+      wrap.style.padding = '';
+      wrap.style.boxShadow = '';
+    }
+    ta.style.width = '';
+    if(btn) btn.textContent = '⤢ MAX';
+  }
+}
+
+function clearNLP(){
+  var ta = document.getElementById('nlp-in');
+  if(ta) ta.value = '';
+  var out = document.getElementById('nlp-out');
+  if(out) out.style.display = 'none';
+  toast('NLP cleared','info');
+}
+
 </script>
