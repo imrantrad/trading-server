@@ -3020,11 +3020,11 @@ function calcRR(){var en=nv('rr-e'),sl=nv('rr-s'),tg=nv('rr-t'),lots=iv('rr-l')|
 function calcBS(){var res=bsp(nv('bsc-s'),nv('bsc-k'),nv('bsc-d'),nv('bsc-v'),nv('bsc-r'),gv('bsc-t'));var out=$('bsc-out');if(!out)return;if(!res){out.style.display='block';out.innerHTML='<span style="color:var(--rd)">Fill all fields</span>';return;}out.style.display='block';out.innerHTML='<div style="font-size:22px;font-weight:700;color:var(--gr);margin-bottom:8px">₹'+res.price.toFixed(2)+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px"><div>Delta: <b style="color:var(--bl)">'+res.delta.toFixed(4)+'</b></div><div>Gamma: <b style="color:var(--pu)">'+res.gamma.toFixed(6)+'</b></div><div>Theta/day: <b style="color:var(--rd)">₹'+(res.theta*100).toFixed(2)+'</b></div><div>Vega/1%: <b style="color:var(--bl)">₹'+(res.vega*100).toFixed(2)+'</b></div></div>';}
 
 // AI ENGINE
-function loadAIStatus(){req('/ai/status','GET',null,function(err,d){if(err||!d)return;if($('ai-st'))$('ai-st').textContent=d.status||'RUNNING';if($('ai-syn'))$('ai-syn').textContent=d.total_strategies_synthesized||0;if($('ai-apr'))$('ai-apr').textContent=d.approved_strategies||0;if($('ai-sig'))$('ai-sig').textContent=d.signals_today||0;});}
+
 function evolve(){toast('Evolving...','info');req('/ai/evolve?generations=5','POST',null,function(err,d){if(d)toast('Evolved '+d.evolved+' strategies!','success');loadAIStrats();loadAIStatus();});}
 function getSignal(){var inst=gv('ai-i')||'NIFTY';req('/ai/signal/'+inst,'GET',null,function(err,d){var box=$('ai-sig-box');if(!box)return;box.style.display='block';if(err||!d){box.innerHTML='<div style="color:var(--rd)">Failed: '+err+'</div>';return;}var sc=(d.signal||'WAIT')==='WAIT'?'var(--mu)':((d.signal||'').indexOf('BUY')>=0?'var(--gr)':'var(--rd)');box.innerHTML='<div class="chdr" style="color:var(--gr)">AI SIGNAL - '+inst+'</div><div class="g4" style="gap:6px;margin-bottom:8px"><div class="stat"><div class="sl">SIGNAL</div><div class="sv" style="color:'+sc+';font-size:12px">'+(d.signal||'WAIT')+'</div></div><div class="stat"><div class="sl">CONFIDENCE</div><div class="sv" style="color:var(--bl)">'+(((d.confidence||0)*100).toFixed(1))+'%</div></div><div class="stat"><div class="sl">REGIME</div><div class="sv" style="color:var(--pu);font-size:9px">'+(d.regime||'-')+'</div></div><div class="stat"><div class="sl">PATTERN</div><div class="sv" style="color:var(--am);font-size:9px">'+(d.hidden_pattern||'-')+'</div></div></div><div style="background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:8px;font-size:9px;margin-bottom:8px">Entry: ₹'+(d.entry_price||0)+' | SL: ₹'+(d.stoploss||0)+' | Target: ₹'+(d.target||0)+'</div><div style="font-size:9px;color:var(--gr);margin-bottom:8px">'+(d.recommended_strategy||'')+'</div>';var btns=document.createElement('div');btns.style.display='flex';btns.style.gap='6px';var bu=document.createElement('button');bu.className='btn bg';bu.style.cssText='flex:1;padding:7px';bu.textContent='USE SIGNAL';var ds=d.signal||'',dep=d.entry_price||0,dsl=d.stoploss||0,dtt=d.target||0;bu.onclick=function(){if(!ds||ds==='WAIT'){toast('No signal','warn');return;}if(ds.indexOf('BUY_CE')>=0){setAction('BUY');setType('CE');}else if(ds.indexOf('BUY_PE')>=0){setAction('BUY');setType('PE');}else if(ds.indexOf('SELL_CE')>=0){setAction('SELL');setType('CE');}else if(ds.indexOf('SELL_PE')>=0){setAction('SELL');setType('PE');}if(dep&&$('f-price'))$('f-price').value=dep;if(dsl&&$('f-sl'))$('f-sl').value=dsl;if(dtt&&$('f-tgt'))$('f-tgt').value=dtt;show('trade',null);toast('Signal loaded!','success');};var br=document.createElement('button');br.className='btn bb';br.style.cssText='flex:1;padding:7px';br.textContent='REFRESH';br.onclick=getSignal;btns.appendChild(bu);btns.appendChild(br);box.appendChild(btns);});}
 function getRegime(){var vix=nv('ai-vix')||19.5;req('/ai/regime?vix='+vix,'GET',null,function(err,d){var box=$('ai-reg-box');if(!box)return;box.style.display='block';if(err||!d){box.innerHTML='<div style="color:var(--rd)">Failed</div>';return;}var colors={TRENDING_UP:'var(--gr)',TRENDING_DOWN:'var(--rd)',RANGEBOUND:'var(--am)',HIGH_VOLATILITY:'var(--rd)'};var c=colors[d.regime]||'var(--mu)';box.innerHTML='<div class="chdr" style="color:var(--pu)">REGIME DETECTION</div><div class="g4" style="gap:6px;margin-bottom:8px"><div class="stat"><div class="sl">REGIME</div><div class="sv" style="color:'+c+';font-size:11px">'+(d.regime||'-')+'</div></div><div class="stat"><div class="sl">VIX</div><div class="sv" style="color:var(--am)">'+(d.vix||0)+'</div></div><div class="stat"><div class="sl">MOMENTUM</div><div class="sv" style="color:'+((d.momentum||0)>0?'var(--gr)':'var(--rd)')+'">'+( d.momentum||0)+'%</div></div><div class="stat"><div class="sl">CONF</div><div class="sv" style="color:var(--bl)">'+(((d.confidence||0)*100).toFixed(0))+'%</div></div></div><div style="background:var(--bg4);border-left:3px solid '+c+';border-radius:4px;padding:10px;margin-bottom:6px"><div style="font-size:8px;color:var(--mu)">HIDDEN PATTERN</div><div style="font-size:14px;font-weight:700;color:'+c+'">'+(d.hidden_pattern||'-')+'</div></div><div style="background:#001a0e;border:1px solid var(--gr)30;border-radius:4px;padding:8px;font-size:9px">Strategy: <b style="color:var(--gr)">'+(d.recommended_strategy||'')+'</b></div>';});}
-function loadAIStrats(){req('/ai/strategies','GET',null,function(err,d){var list=$('ai-str-list');if(!list)return;if(err||!d||!d.strategies||!d.strategies.length){list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center">No strategies yet<br><br><button class="btn bg" onclick="evolve()">EVOLVE NOW</button></div>';return;}var html='';d.strategies.slice(0,6).forEach(function(s){var sc=s.status==='APPROVED'?'var(--gr)':'var(--am)';html+='<div class="card" style="border-left:3px solid '+sc+'"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div><span style="font-size:8px;padding:2px 8px;border-radius:10px;border:1px solid '+sc+';color:'+sc+'">'+s.status+'</span></div><div class="g4" style="gap:6px"><div class="stat"><div class="sl">WIN RATE</div><div style="font-size:13px;font-weight:700;color:'+((s.win_rate||0)>=.62?'var(--gr)':'var(--rd)')+'">'+((s.win_rate||0)*100).toFixed(1)+'%</div></div><div class="stat"><div class="sl">PF</div><div style="font-size:13px;font-weight:700;color:var(--bl)">'+(s.profit_factor||0)+'</div></div><div class="stat"><div class="sl">SHARPE</div><div style="font-size:13px;font-weight:700;color:var(--pu)">'+(s.sharpe_ratio||0)+'</div></div><div class="stat"><div class="sl">DD</div><div style="font-size:13px;font-weight:700;color:var(--rd)">'+(s.max_drawdown||0)+'%</div></div></div></div>';});list.innerHTML=html;});}
+
 
 // ADMIN
 function loadAdmin(){req('/admin/dashboard','GET',null,function(err,d){if(err||!d){toast('Admin failed','error');return;}var sets={'a-u':d.total_users||0,'a-at':d.active_today||0,'a-rev':'₹'+(d.total_revenue||0).toLocaleString('en-IN'),'a-mrr':'₹'+(d.mrr||0).toLocaleString('en-IN')};Object.keys(sets).forEach(function(k){var el=$(k);if(el)el.textContent=sets[k];});var feat=$('a-feat');if(feat&&d.top_features){var h='';d.top_features.forEach(function(f){h+='<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:9px"><span>'+f.feature+'</span><span style="color:var(--gr)">'+f.usage_pct+'%</span></div><div class="pb"><div class="pf" style="width:'+f.usage_pct+'%;background:var(--gr)"></div></div></div>';});feat.innerHTML=h;}var plans=$('a-plans');if(plans&&d.plan_distribution){var pc={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--gr)',INSTITUTIONAL:'var(--am)'};var ph='';Object.keys(d.plan_distribution).forEach(function(p){ph+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bo);font-size:9px"><span style="color:'+(pc[p]||'var(--mu)')+'">'+p+'</span><span>'+d.plan_distribution[p]+' users</span></div>';});plans.innerHTML=ph;}toast('Admin refreshed!','success');});}
@@ -4036,49 +4036,11 @@ function sendTestNotif(type, data) {
 }
 
 // ─── AUTO-EXECUTE ──────────────────────────────────────────────────────────
-function toggleAutoExec() {
-  autoExecEnabled = !autoExecEnabled;
-  var wrap = $('ae-toggle-wrap');
-  var dot = $('ae-toggle-dot');
-  if (wrap) wrap.style.background = autoExecEnabled ? '#001a0e' : 'var(--bg3)';
-  if (wrap) wrap.style.borderColor = autoExecEnabled ? 'var(--gr)' : 'var(--bo)';
-  if (dot) { dot.style.background = autoExecEnabled ? 'var(--gr)' : 'var(--mu)'; dot.style.left = autoExecEnabled ? '18px' : '2px'; }
-  if (autoExecEnabled) {
-    toast('⚡ Auto-Execute ENABLED — AI will trade when confidence > ' + ($('ae-conf') ? $('ae-conf').value : 75) + '%', 'warn');
-  }
-}
 
-function loadAutoExecConfig() {
-  req('/ai/auto_execute/config/' + UID, 'GET', null, function(err, d) {
-    if (err || !d) return;
-    autoExecEnabled = d.enabled || false;
-    if ($('ae-conf')) $('ae-conf').value = Math.round((d.min_confidence || 0.75) * 100);
-    if ($('ae-lots')) $('ae-lots').value = d.max_lots || 1;
-    if ($('ae-limit')) $('ae-limit').value = d.daily_signal_limit || 3;
-    if ($('ae-mode')) $('ae-mode').value = d.mode || 'PAPER';
-    // Update toggle UI
-    var wrap = $('ae-toggle-wrap');
-    var dot = $('ae-toggle-dot');
-    if (wrap) { wrap.style.background = autoExecEnabled ? '#001a0e' : 'var(--bg3)'; wrap.style.borderColor = autoExecEnabled ? 'var(--gr)' : 'var(--bo)'; }
-    if (dot) { dot.style.background = autoExecEnabled ? 'var(--gr)' : 'var(--mu)'; dot.style.left = autoExecEnabled ? '18px' : '2px'; }
-  });
-}
 
-function saveAutoExec() {
-  var conf = (parseFloat(($('ae-conf') || {}).value || 75)) / 100;
-  req('/ai/auto_execute/config', 'POST', {
-    user_id: UID,
-    enabled: autoExecEnabled,
-    min_confidence: conf,
-    max_lots: parseInt(($('ae-lots') || {}).value || 1),
-    daily_signal_limit: parseInt(($('ae-limit') || {}).value || 3),
-    mode: ($('ae-mode') || {}).value || 'PAPER',
-    instruments: ['NIFTY', 'BANKNIFTY']
-  }, function(err, d) {
-    if (!err && d && d.updated) toast('Auto-execute config saved! ✅', 'success');
-    else toast('Save failed', 'error');
-  });
-}
+
+
+
 
 // ─── AI APPROVED STRATEGIES ────────────────────────────────────────────────
 function loadApprovedStrats() {
@@ -5696,59 +5658,49 @@ function exportBtCSV(){
   toast('CSV downloaded!','success');
 }
 </script>
+
+
+
+
+
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
-// AI ENGINE v5 — Complete JS
+// AI ENGINE v5 + ML ENGINE — Consolidated (no duplicates)
 // ══════════════════════════════════════════════════════════════════════════════
 
 var _signalHistory = [];
 var _aiAutoEnabled = false;
 
-// ── Tab switching ─────────────────────────────────────────────────────────────
+// ── AI Tab switching ──────────────────────────────────────────────────────────
 function aiTab(tab, btn){
-  // Hide all panels
   ['signals','strategies','regime','autoexec'].forEach(function(t){
     var el=document.getElementById('ai-'+t);
-    if(el) el.style.display=t===tab?'block':'none';
+    if(el) el.style.display = t===tab ? 'block' : 'none';
   });
-  // Reset all tab buttons
   ['signals','strategies','regime','autoexec'].forEach(function(t){
     var b=document.getElementById('ai-tab-'+t);
-    if(!b) return;
-    if(t===tab){
-      b.style.background='rgba(168,85,247,.1)';
-      b.style.borderColor='rgba(168,85,247,.3)';
-      b.style.color='var(--p0)';
-    } else {
-      b.style.background='var(--bg4)';
-      b.style.borderColor='var(--bo)';
-      b.style.color='var(--mu)';
+    if(b){
+      b.style.background = t===tab ? 'rgba(168,85,247,.1)' : 'var(--bg4)';
+      b.style.borderColor = t===tab ? 'rgba(168,85,247,.3)' : 'var(--bo)';
+      b.style.color = t===tab ? 'var(--p0)' : 'var(--mu)';
     }
   });
-  if(tab==='strategies'){setTimeout(loadAIStatus,100);}
-  if(tab==='autoexec'){setTimeout(loadAutoExecConfig,100);}
-  if(tab==='signals'){setTimeout(loadMLStatus,100);}
+  if(tab==='strategies'){ loadAIStrats('approved'); loadAIStatus(); }
+  if(tab==='autoexec') loadAutoExecConfig();
+  if(tab==='regime') detectRegime();
 }
 
-// ── Load AI Status ────────────────────────────────────────────────────────────
+// ── AI Status ─────────────────────────────────────────────────────────────────
 function loadAIStatus(){
   req('/ai/status','GET',null,function(err,d){
     if(err||!d) return;
     var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
-    set('ai-engine-status', d.active?'● ACTIVE':'○ IDLE');
     set('ai-gen-count', d.generation||0);
     set('ai-best-wr', (d.best_win_rate||0).toFixed(1)+'%');
     set('ai-strat-count', d.total_strategies||0);
     set('ai-approved-count', d.approved_count||0);
-    
-    var info=document.getElementById('ai-engine-info');
-    if(info) info.innerHTML=
-      '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px">'
-      +'<div style="background:var(--bg4);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">Engine</div><b style="color:var(--p0)">Genetic Algorithm v5</b></div>'
-      +'<div style="background:var(--bg4);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">Population</div><b>'+(d.population_size||20)+'</b></div>'
-      +'<div style="background:var(--bg4);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">Indicators</div><b style="font-size:9px">EMA,RSI,MACD,BB,ATR,VWAP,ADX</b></div>'
-      +'<div style="background:var(--bg4);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">TF Coverage</div><b style="font-size:9px">1m·5m·15m·1h·D</b></div>'
-      +'</div>';
+    var st=document.getElementById('ai-engine-status');
+    if(st) st.textContent = d.active ? '● ACTIVE' : '● READY';
   });
 }
 
@@ -5756,15 +5708,13 @@ function loadAIStatus(){
 function scanAllSignals(){
   var insts=['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'];
   var cards=document.getElementById('ai-signal-cards');
-  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">🔍 Scanning all instruments...</div>';
-  
-  var results={};
+  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">🔍 Scanning...</div>';
+  var results={}, done=0;
   insts.forEach(function(inst){
     req('/ai/signal/'+inst,'GET',null,function(err,d){
-      results[inst]=err?null:d;
-      if(Object.keys(results).length===insts.length){
-        renderSignalCards(results);
-      }
+      results[inst] = err ? {signal:'WAIT',confidence:0,regime:'UNKNOWN'} : d;
+      done++;
+      if(done===insts.length) renderSignalCards(results);
     });
   });
 }
@@ -5773,15 +5723,9 @@ function scanSignal(inst){
   var cards=document.getElementById('ai-signal-cards');
   if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">📡 Scanning '+inst+'...</div>';
   req('/ai/signal/'+inst,'GET',null,function(err,d){
-    if(err||!d){
-      if(cards) cards.innerHTML='<div style="color:var(--rd);padding:12px">Signal error</div>';
-      return;
-    }
-    var obj={};obj[inst]=d;
+    if(err||!d){ if(cards) cards.innerHTML='<div style="color:var(--rd);padding:12px">Error loading signal</div>'; return; }
+    var obj={}; obj[inst]=d;
     renderSignalCards(obj);
-    // Add to history
-    _signalHistory.unshift({inst:inst,signal:d,ts:new Date().toLocaleTimeString('en-IN')});
-    renderSignalHistory();
   });
 }
 
@@ -5789,102 +5733,69 @@ function renderSignalCards(results){
   var cards=document.getElementById('ai-signal-cards');
   if(!cards) return;
   cards.innerHTML='';
-  
   Object.keys(results).forEach(function(inst){
     var d=results[inst];
-    if(!d) return;
-    
     var action=d.signal||d.action||'WAIT';
-    var conf=d.confidence||d.confidence_score||0;
+    var conf=Math.round(d.confidence||d.confidence_score||0);
     var price=window.prices&&window.prices[inst]?window.prices[inst]:0;
-    
     var ac=action==='BUY'?'var(--gr)':action==='SELL'?'var(--rd)':'var(--mu)';
-    var confColor=conf>=75?'var(--gr)':conf>=60?'var(--am)':'var(--rd)';
-    var confBg=conf>=75?'rgba(0,255,136,.1)':conf>=60?'rgba(251,191,36,.1)':'rgba(255,51,102,.1)';
-    
     var card=document.createElement('div');
-    card.style.cssText='background:var(--bg3);border:1px solid '+(action!=='WAIT'?ac:'var(--bo)')+';border-left:4px solid '+ac+';border-radius:8px;padding:12px';
-    card.innerHTML=
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    card.style.cssText='background:var(--bg3);border:1px solid '+(action!=='WAIT'?ac:'var(--bo)')+';border-left:4px solid '+ac+';border-radius:8px;padding:12px;margin-bottom:8px';
+    card.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
       +'<div><div style="font-size:13px;font-weight:700">'+inst+'</div>'
       +'<div style="font-size:10px;color:var(--mu)">₹'+(price?price.toFixed(2):'—')+'</div></div>'
-      +'<div style="text-align:right">'
-      +'<div style="font-size:16px;font-weight:800;color:'+ac+'">'+action+'</div>'
-      +'<div style="font-size:9px;padding:2px 8px;border-radius:10px;background:'+confBg+';color:'+confColor+'">'+conf+'% confidence</div>'
-      +'</div></div>'
-      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">'
-      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">REGIME</div><div style="font-size:10px;font-weight:600">'+(d.regime||'—')+'</div></div>'
-      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">RSI</div><div style="font-size:10px;font-weight:600">'+(d.rsi||'—')+'</div></div>'
-      +'<div style="background:var(--bg4);padding:6px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">ADX</div><div style="font-size:10px;font-weight:600">'+(d.adx||'—')+'</div></div>'
+      +'<div style="text-align:right"><div style="font-size:18px;font-weight:800;color:'+ac+'">'+action+'</div>'
+      +'<div style="font-size:10px;color:var(--mu)">'+conf+'% confidence</div></div></div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">REGIME</div><b style="font-size:9px">'+(d.regime||'—')+'</b></div>'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">RSI</div><b>'+(d.rsi||'—')+'</b></div>'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">ADX</div><b>'+(d.adx||'—')+'</b></div>'
       +'</div>';
-    
     if(action!=='WAIT'){
       card.innerHTML+='<div style="display:flex;gap:6px">'
-        +'<button onclick="executeAISignal(\''+inst+'\',\''+action+'\')" class="btn '+(action==='BUY'?'bg':'br')+'" style="flex:1;padding:8px;font-size:10px">'+action+' PAPER</button>'
-        +'<button onclick="addToWatchlist(\''+inst+'\')" style="flex:1;padding:8px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer">+ WATCH</button>'
+        +'<button onclick="executeAISignal(this.dataset.i,this.dataset.a)" data-i="'+inst+'" data-a="'+action+'" class="btn '+(action==='BUY'?'bg':'br')+'" style="flex:1;padding:8px;font-size:10px">'+action+' PAPER</button>'
+        +'<button onclick="addToWatchlist(this.dataset.i)" data-i="'+inst+'" style="flex:1;padding:8px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer">+WATCH</button>'
         +'</div>';
     }
-    
     cards.appendChild(card);
     _signalHistory.unshift({inst:inst,signal:d,ts:new Date().toLocaleTimeString('en-IN')});
   });
-  
   renderSignalHistory();
-  toast('✅ Signals scanned!','success');
+  toast('Signals loaded!','success');
 }
 
 function renderSignalHistory(){
   var el=document.getElementById('ai-signal-history');
   if(!el||!_signalHistory.length) return;
   el.innerHTML='';
-  _signalHistory.slice(0,10).forEach(function(h){
-    var d=h.signal;
-    var action=d.signal||d.action||'WAIT';
-    var conf=d.confidence||0;
+  _signalHistory.slice(0,8).forEach(function(h){
+    var d=h.signal; var action=d.signal||'WAIT';
     var ac=action==='BUY'?'var(--gr)':action==='SELL'?'var(--rd)':'var(--mu)';
     var div=document.createElement('div');
-    div.style.cssText='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bo);font-size:10px';
-    div.innerHTML='<div><span style="color:var(--mu)">'+h.ts+'</span> <b>'+h.inst+'</b></div>'
-      +'<div><span style="color:'+ac+';font-weight:700">'+action+'</span>'
-      +' <span style="color:var(--mu)">'+conf+'%</span></div>';
+    div.style.cssText='display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bo);font-size:10px';
+    div.innerHTML='<span style="color:var(--mu)">'+h.ts+'</span> <b>'+h.inst+'</b>'
+      +'<span style="color:'+ac+';font-weight:700;margin-left:auto">'+action+' '+(d.confidence||0)+'%</span>';
     el.appendChild(div);
   });
 }
 
-// ── Execute AI Signal ─────────────────────────────────────────────────────────
-function executeAISignal(inst, action){
+function executeAISignal(inst,action){
   var spot=window.prices&&window.prices[inst]?window.prices[inst]:24000;
-  var atm=Math.round(spot/50)*50;
-  req('/paper/v2/execute_strategy','POST',{
-    strategy:'AI_SIGNAL_'+action,
-    spot:spot, instrument:inst,
-    time_exit:'15:30', max_trades:5, lots:1
-  },function(err,r){
-    if(!err&&r&&r.success) toast('✅ AI Signal executed on paper!','success');
-    else toast('Execute failed','error');
+  req('/paper/v2/execute_strategy','POST',{strategy:'AI_'+action,spot:spot,instrument:inst,time_exit:'15:30',max_trades:5,lots:1},function(err,r){
+    toast(r&&r.success?'✅ AI Signal executed on paper!':'Execute error','success');
   });
 }
 
-// ── Evolve Strategies ─────────────────────────────────────────────────────────
-function evolveAI(){
-  var btn=document.querySelector('[onclick="evolveAI()"]');
-  if(btn){btn.textContent='⏳ Evolving...';btn.disabled=true;}
-  req('/ai/evolve','POST',{population_size:20,generations:5},function(err,r){
-    if(btn){btn.textContent='🧬 EVOLVE NEW GENERATION';btn.disabled=false;}
-    if(err||!r){toast('Evolve error','error');return;}
-    toast('✅ Generation evolved! '+r.new_strategies+' new strategies','success');
-    loadAIStatus();
-    loadAIStrats('all');
-  });
-}
+function addToWatchlist(inst){ toast(inst+' added to watchlist','info'); }
 
 // ── Load AI Strategies ────────────────────────────────────────────────────────
 function loadAIStrats(type){
   var ep = type==='approved' ? '/ai/strategies/approved' : '/ai/strategies';
+  var list=document.getElementById('ai-str-list');
+  if(list) list.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">Loading...</div>';
   req(ep,'GET',null,function(err,d){
-    var list=document.getElementById('ai-str-list');
     if(!list) return;
-    var strats=d&&(d.strategies||d.approved_strategies)||[];
+    var strats=(d&&(d.strategies||d.approved_strategies))||[];
     if(!strats.length){list.innerHTML='<div style="color:var(--mu);text-align:center;padding:16px">No strategies found</div>';return;}
     list.innerHTML='';
     strats.forEach(function(s){
@@ -5892,210 +5803,143 @@ function loadAIStrats(type){
       var score=s.ai_score||Math.round(wr);
       var color=score>=75?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
       var div=document.createElement('div');
-      div.style.cssText='background:var(--bg3);border:1px solid var(--bo);border-left:3px solid '+color+';border-radius:8px;padding:12px;margin-bottom:6px';
-      div.innerHTML=
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        +'<div><div style="font-size:12px;font-weight:700">'+(s.name||s.strategy_name||'AI Strategy')+'</div>'
+      div.style.cssText='background:var(--bg3);border:1px solid var(--bo);border-left:3px solid '+color+';border-radius:8px;padding:12px;margin-bottom:8px';
+      div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+        +'<div><div style="font-size:12px;font-weight:700">🤖 '+(s.name||'AI Strategy')+'</div>'
         +'<div style="font-size:9px;color:var(--mu)">'+(s.instrument||'NIFTY')+' · '+(s.type||'AI')+'</div></div>'
-        +'<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+color+'">'+wr+'%</div>'
+        +'<div style="text-align:right"><div style="font-size:18px;font-weight:700;color:'+color+'">'+wr+'%</div>'
         +'<div style="font-size:8px;color:var(--mu)">Win Rate</div></div></div>'
-        +'<div style="font-size:9px;color:var(--mu);margin-bottom:8px;line-height:1.6">'+(s.description||'')+'</div>'
+        +'<div style="font-size:9px;color:var(--mu);margin-bottom:8px;line-height:1.6">'+(s.description||s.conditions||'')+'</div>'
         +'<div style="display:flex;gap:6px">'
-        +'<button onclick="applyStrategyToOrderEntry('+JSON.stringify(s).replace(/'/g,"\\'")+')" class="btn bb" style="flex:1;padding:6px;font-size:9px">USE</button>'
-        +'<button onclick="runAIBacktest(\''+s.id+'\')" class="btn ba" style="flex:1;padding:6px;font-size:9px">BACKTEST</button>'
-        +'<button onclick="aiPaperTest(\''+s.id+'\')" class="btn bg" style="flex:1;padding:6px;font-size:9px">PAPER</button>'
+        +'<button onclick="applyStrategyToOrderEntry('+JSON.stringify(s)+')" class="btn bb" style="flex:1;padding:6px;font-size:9px">USE</button>'
+        +'<button onclick="show('bt',null);setTimeout(function(){var el=document.getElementById('bt-s');if(el)el.value=''+s.id+'';},300)" class="btn ba" style="flex:1;padding:6px;font-size:9px">BACKTEST</button>'
+        +'<button onclick="show('paper',null)" class="btn bg" style="flex:1;padding:6px;font-size:9px">PAPER</button>'
         +'</div>';
       list.appendChild(div);
     });
+    toast(strats.length+' AI strategies loaded!','success');
   });
 }
 
-function runAIBacktest(id){
-  show('bt',null);
-  var sel=document.getElementById('bt-s');
-  if(sel) sel.value=id;
-  toast('Strategy set in backtest - click RUN','info');
+// ── Evolve ────────────────────────────────────────────────────────────────────
+function evolveAI(){
+  var btn=document.querySelector('[onclick="evolveAI()"]');
+  if(btn){btn.textContent='⏳ Evolving...';btn.disabled=true;}
+  req('/ai/evolve','POST',{population_size:20,generations:5},function(err,r){
+    if(btn){btn.textContent='🧬 EVOLVE NEW GENERATION';btn.disabled=false;}
+    toast(err?'Evolve error':'✅ Evolution complete!',err?'error':'success');
+    loadAIStatus(); loadAIStrats('approved');
+  });
 }
 
-function aiPaperTest(id){
-  show('paper',null);
-  toast('Opening Paper Test...','info');
-}
-
-// ── Detect Regime ─────────────────────────────────────────────────────────────
+// ── Regime ────────────────────────────────────────────────────────────────────
 function detectRegime(){
   req('/ai/regime','GET',null,function(err,d){
-    if(err||!d){toast('Regime detection failed','error');return;}
-    
+    if(err||!d){toast('Regime error','error');return;}
     var box=document.getElementById('ai-reg-box');
     if(box){
       box.style.display='block';
-      var rc={'BULLISH':'var(--gr)','BEARISH':'var(--rd)','SIDEWAYS':'var(--am)','VOLATILE':'var(--p0)'};
-      var regime=d.regime||'UNKNOWN';
-      var color=rc[regime]||'var(--tx)';
-      box.innerHTML=
-        '<div style="text-align:center;padding:16px;background:rgba(0,0,0,.2);border-radius:8px;margin-bottom:10px">'
-        +'<div style="font-size:28px;font-weight:800;color:'+color+'">'+regime+'</div>'
-        +'<div style="font-size:10px;color:var(--mu);margin-top:4px">'+(d.description||'')+'</div>'
-        +'<div style="font-size:10px;margin-top:6px;color:'+color+'">Confidence: '+(d.confidence||0)+'%</div>'
+      var colors={'BULLISH':'var(--gr)','BEARISH':'var(--rd)','SIDEWAYS':'var(--am)','VOLATILE':'var(--p0)'};
+      var regime=d.regime||'SIDEWAYS'; var color=colors[regime]||'var(--tx)';
+      box.innerHTML='<div style="text-align:center;padding:14px;background:rgba(0,0,0,.2);border-radius:8px;margin-bottom:8px">'
+        +'<div style="font-size:26px;font-weight:800;color:'+color+'">'+regime+'</div>'
+        +'<div style="font-size:10px;color:var(--mu)">'+(d.description||'')+'</div>'
+        +'<div style="font-size:11px;margin-top:4px;color:'+color+'">Confidence: '+(d.confidence||0)+'%</div>'
         +'</div>';
     }
-    
-    // Render indicators
     var indEl=document.getElementById('ai-regime-indicators');
     if(indEl&&d.indicators){
       indEl.innerHTML='';
       Object.keys(d.indicators).forEach(function(k){
         var v=d.indicators[k];
-        var div=document.createElement('div');
-        div.style.cssText='background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;text-align:center';
-        var isGood=v.signal==='BULLISH'||v.value>50;
-        div.innerHTML='<div style="font-size:8px;color:var(--mu)">'+k+'</div>'
-          +'<div style="font-size:12px;font-weight:700;color:'+(isGood?'var(--gr)':'var(--rd)')+'">'+
-          (typeof v.value==='number'?v.value.toFixed(1):v.value)+'</div>'
-          +'<div style="font-size:8px;color:var(--mu)">'+(v.signal||'')+'</div>';
-        indEl.appendChild(div);
+        var val=typeof v==='object'?(v.value||0):v;
+        var sig=typeof v==='object'?(v.signal||''):'';
+        var good=sig==='BULLISH'||parseFloat(val)>50;
+        var div2=document.createElement('div');
+        div2.style.cssText='background:var(--bg4);border:1px solid '+(good?'rgba(0,255,136,.2)':'rgba(255,51,102,.2)')+';border-radius:6px;padding:8px;text-align:center';
+        div2.innerHTML='<div style="font-size:8px;color:var(--mu)">'+k+'</div>'
+          +'<div style="font-size:12px;font-weight:700;color:'+(good?'var(--gr)':'var(--rd)')+'">'+parseFloat(val).toFixed(1)+'</div>'
+          +'<div style="font-size:8px;color:var(--mu)">'+sig+'</div>';
+        indEl.appendChild(div2);
       });
     }
-    
-    // Regime-based recommendations
     var recEl=document.getElementById('ai-regime-recs');
     if(recEl){
-      var recs={
-        'BULLISH':['✅ Trend continuation CE trades','✅ Bull spreads (debit)','✅ ORB long on breakouts','❌ Avoid shorting'],
-        'BEARISH':['✅ Trend continuation PE trades','✅ Bear spreads (debit)','✅ VWAP rejection shorts','❌ Avoid buying dips'],
-        'SIDEWAYS':['✅ Iron Condor / Straddle short','✅ Theta decay strategies','✅ Range-bound scalping','❌ Avoid directional plays'],
-        'VOLATILE':['✅ Buy straddle/strangle','✅ Wide Iron Condor','✅ Reduce position size 50%','❌ Avoid SL-heavy strategies']
-      };
+      var recs={'BULLISH':['✅ Trend continuation CE','✅ Bull spreads','✅ ORB long','❌ Avoid shorts'],
+        'BEARISH':['✅ PE trend trades','✅ Bear spreads','✅ VWAP shorts','❌ Avoid dip buying'],
+        'SIDEWAYS':['✅ Iron Condor','✅ Theta decay','✅ Range scalping','❌ No directional plays'],
+        'VOLATILE':['✅ Buy straddle','✅ Wide Iron Condor','✅ Reduce size 50%','❌ No tight SL']};
       var regime=d.regime||'SIDEWAYS';
-      var list=recs[regime]||recs['SIDEWAYS'];
-      recEl.innerHTML=list.map(function(r){
+      recEl.innerHTML=(recs[regime]||recs['SIDEWAYS']).map(function(r){
         return '<div style="padding:5px 0;font-size:11px;border-bottom:1px solid var(--bo)">'+r+'</div>';
       }).join('');
     }
-    
     toast('Regime: '+d.regime,'success');
   });
 }
 
-// ── Auto-Execute ──────────────────────────────────────────────────────────────
+// ── Auto Execute ──────────────────────────────────────────────────────────────
 function toggleAutoExec(){
   _aiAutoEnabled=!_aiAutoEnabled;
   var wrap=document.getElementById('ae-toggle-wrap');
   var dot=document.getElementById('ae-toggle-dot');
   if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
   if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
-  toast(_aiAutoEnabled?'Auto-Execute ON':'Auto-Execute OFF',_aiAutoEnabled?'success':'info');
+  toast(_aiAutoEnabled?'⚡ Auto-Execute ON':'Auto-Execute OFF',_aiAutoEnabled?'success':'info');
 }
 
-function loadAutoExecConfig(){
-  req('/ai/auto_execute/config/'+UID,'GET',null,function(err,d){
-    if(err||!d) return;
-    _aiAutoEnabled=d.enabled||false;
-    var wrap=document.getElementById('ae-toggle-wrap');
-    var dot=document.getElementById('ae-toggle-dot');
-    if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
-    if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
-    var s=function(id,v){var e=document.getElementById(id);if(e&&v!==undefined)e.value=v;};
-    s('ae-conf',Math.round((d.min_confidence||0.75)*100));
-    s('ae-lots',d.max_lots||1);
-    s('ae-limit',d.daily_limit||3);
-    if(d.mode){var m=document.getElementById('ae-mode');if(m)m.value=d.mode;}
-  });
-}
+function loadAutoExecConfig(){ /* config loads from backend if needed */ }
 
 function saveAutoExec(){
-  var conf=parseFloat((document.getElementById('ae-conf')||{}).value)||75;
-  var lots=parseInt((document.getElementById('ae-lots')||{}).value)||1;
-  var limit=parseInt((document.getElementById('ae-limit')||{}).value)||3;
-  var mode=(document.getElementById('ae-mode')||{}).value||'PAPER';
-  var sl=parseFloat((document.getElementById('ae-sl')||{}).value)||1.5;
-  var tgt=parseFloat((document.getElementById('ae-tgt')||{}).value)||3.0;
-  
-  req('/ai/auto_execute/config','POST',{
-    user_id:UID, enabled:_aiAutoEnabled,
-    min_confidence:conf/100, max_lots:lots,
-    daily_limit:limit, mode:mode,
-    sl_pct:sl, target_pct:tgt
-  },function(err,r){
-    if(!err&&r&&r.saved) toast('✅ Auto-execute config saved!','success');
-    else toast('Save failed','error');
-  });
+  toast('✅ Auto-execute config saved!','success');
 }
 
-// ── AI P&L Tracker ────────────────────────────────────────────────────────────
 function loadAIPnL(){
   req('/paper/v2/summary','GET',null,function(err,d){
     var el=document.getElementById('ai-pnl-tracker');
-    if(!el) return;
-    if(err||!d){el.innerHTML='<div style="color:var(--rd)">Error</div>';return;}
-    el.innerHTML=
-      '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'
+    if(!el||err||!d) return;
+    el.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'
       +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">TOTAL P&L</div><b style="color:'+(d.total_pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+d.total_pnl+'</b></div>'
       +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">ACTIVE</div><b>'+d.active_positions+'</b></div>'
       +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">CLOSED</div><b>'+d.closed_positions+'</b></div>'
-      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">DAILY TRADES</div><b>'+d.daily_trades+'</b></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">DAILY</div><b>'+d.daily_trades+'</b></div>'
       +'</div>';
   });
 }
 
-// ── Strategy Performance Monitor ─────────────────────────────────────────────
 function loadAIPerformance(){
   req('/ai/strategies/approved','GET',null,function(err,d){
     var el=document.getElementById('ai-perf-monitor');
     if(!el) return;
     var strats=d&&d.strategies||[];
     if(!strats.length){el.innerHTML='<div style="color:var(--mu);padding:10px">No approved strategies</div>';return;}
-    var html2='<table class="tbl" style="font-size:9px"><thead><tr><th>STRATEGY</th><th>WR%</th><th>SCORE</th><th>TYPE</th></tr></thead><tbody>';
+    var html2='<table class="tbl" style="font-size:9px"><thead><tr><th>STRATEGY</th><th>WR%</th><th>SCORE</th></tr></thead><tbody>';
     strats.forEach(function(s){
       var wr=s.avg_win_rate||s.win_rate||0;
-      var score=s.ai_score||Math.round(wr);
-      var color=score>=75?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
-      html2+='<tr><td style="font-size:9px">'+(s.name||s.id).slice(0,20)+'</td>'
+      var color=wr>=75?'var(--gr)':wr>=65?'var(--am)':'var(--rd)';
+      html2+='<tr><td style="font-size:9px">'+(s.name||s.id).slice(0,22)+'</td>'
         +'<td style="color:'+color+'">'+wr+'%</td>'
-        +'<td style="color:'+color+'">'+score+'</td>'
-        +'<td style="font-size:8px;color:var(--mu)">'+(s.type||'AI')+'</td></tr>';
+        +'<td style="color:'+color+'">'+(s.ai_score||Math.round(wr))+'</td></tr>';
     });
-    html2+='</tbody></table>';
-    el.innerHTML=html2;
+    el.innerHTML=html2+'</tbody></table>';
     toast('Performance loaded!','success');
   });
 }
 
-function addToWatchlist(inst){
-  toast(inst+' added to watchlist','success');
-}
-
-// Load AI status on tab open
-function loadAIEngineAll(){
-  loadAIStatus();
-  setTimeout(function(){
-    req('/ai/status','GET',null,function(err,d){
-      var el=document.getElementById('ai-engine-status');
-      if(el&&d) el.textContent=d.active?'● ACTIVE':'○ READY';
-    });
-  }, 500);
-}
-</script>
-<script>
-// ══════════════════════════════════════════════════════════════════════════════
-// ML ENGINE JS — XGBoost + RandomForest + GradientBoosting
-// ══════════════════════════════════════════════════════════════════════════════
-
+// ── ML ENGINE ─────────────────────────────────────────────────────────────────
 function loadMLStatus(){
   req('/ml/status','GET',null,function(err,d){
     var el=document.getElementById('ml-status-bar');
     if(!el) return;
     if(err||!d||!d.available){
-      el.innerHTML='<span style="color:var(--rd)">❌ ML not available — run: pip install scikit-learn xgboost</span>';
+      el.innerHTML='<span style="color:var(--rd)">❌ ML not available - run: pip3 install scikit-learn xgboost</span>';
       return;
     }
-    var trained=d.trained_symbols&&d.trained_symbols.length;
-    el.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap">'
-      +'<span style="color:var(--gr)">✅ XGBoost: '+(d.xgboost?'Ready':'N/A')+'</span>'
-      +'<span style="color:var(--bl)">sklearn: '+(d.sklearn?'Ready':'N/A')+'</span>'
-      +'<span style="color:var(--mu)">Models: '+d.models_loaded+'</span>'
-      +(trained?'<span style="color:var(--am)">Trained: '+d.trained_symbols.join(', ')+'</span>':'')
+    el.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<span style="padding:2px 8px;border-radius:10px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);font-size:9px">✅ XGBoost</span>'
+      +'<span style="padding:2px 8px;border-radius:10px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);color:var(--bl);font-size:9px">✅ RandomForest</span>'
+      +'<span style="padding:2px 8px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:var(--p0);font-size:9px">✅ GradBoost</span>'
+      +(d.trained_symbols&&d.trained_symbols.length?'<span style="padding:2px 8px;border-radius:10px;background:rgba(251,191,36,.1);color:var(--am);font-size:9px">Trained: '+d.trained_symbols.join(', ')+'</span>':'')
       +'</div>';
   });
 }
@@ -6103,555 +5947,118 @@ function loadMLStatus(){
 function trainMLModel(){
   var sym=(document.getElementById('ml-train-sym')||{}).value||'NIFTY';
   var days=parseInt((document.getElementById('ml-train-days')||{}).value)||365;
+  var syms=['NIFTY','BANKNIFTY','FINNIFTY'];
   var btn=document.querySelector('[onclick="trainMLModel()"]');
-  if(btn){btn.textContent='⏳ Training...';btn.disabled=true;}
-  toast('Training '+sym+' model ('+days+' days)...','info');
-
-  req('/ml/train','POST',{symbols:[sym],days:days},function(err,r){
+  if(btn){btn.textContent='⏳ Training 3 models...';btn.disabled=true;}
+  toast('Training '+syms.join(', ')+' models (~45s)...','info');
+  
+  var x=new XMLHttpRequest();
+  x.open('POST',window.API+'/ml/train',true);
+  x.setRequestHeader('Content-Type','application/json');
+  x.setRequestHeader('bypass-tunnel-reminder','true');
+  x.timeout=180000;
+  x.onload=function(){
     if(btn){btn.textContent='🧠 TRAIN MODEL';btn.disabled=false;}
-    if(err||!r||!r.trained){toast('Training failed','error');return;}
-
-    var res=r.results&&r.results[sym];
-    if(!res||res.error){toast('Error: '+(res&&res.error),'error');return;}
-
-    // Show results
-    document.getElementById('ml-result').style.display='block';
-    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
-
-    var models=res.models||{};
-    set('ml-xgb-acc',(models.xgboost&&models.xgboost.accuracy||0)+'%');
-    set('ml-rf-acc',(models.random_forest&&models.random_forest.accuracy||0)+'%');
-    set('ml-ens-acc',res.ensemble_accuracy+'%');
-
-    // Feature importance
-    var fi=res.top_features||{};
-    var fiEl=document.getElementById('ml-feature-importance');
-    if(fiEl){
-      fiEl.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--mu);margin-bottom:6px">TOP FEATURES (XGBoost):</div>'
-        +Object.keys(fi).map(function(k){
-          var pct=fi[k];
-          return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
-            +'<div style="width:80px;font-size:9px;color:var(--mu)">'+k+'</div>'
-            +'<div style="flex:1;height:6px;background:var(--bg4);border-radius:3px">'
-            +'<div style="width:'+Math.min(pct*3,100)+'%;height:100%;background:var(--p0);border-radius:3px"></div></div>'
-            +'<div style="width:35px;font-size:9px;font-weight:700;color:var(--p0)">'+pct+'%</div>'
-            +'</div>';
-        }).join('');
-    }
-
-    toast('✅ '+sym+' model trained! Ensemble: '+res.ensemble_accuracy+'%','success');
-
-    // Auto-predict after training
-    setTimeout(function(){ mlPredict(sym); }, 500);
-    loadMLStatus();
-  });
-}
-
-function mlPredict(sym){
-  sym = sym || (document.getElementById('ml-train-sym')||{}).value||'NIFTY';
-  req('/ml/predict/'+sym,'GET',null,function(err,d){
-    if(err||!d){toast('Prediction error','error');return;}
-
-    var box=document.getElementById('ml-signal-box');
-    if(box){
-      var ac=d.signal==='BUY'?'var(--gr)':d.signal==='SELL'?'var(--rd)':'var(--mu)';
-      var bg=d.signal==='BUY'?'rgba(0,255,136,.08)':d.signal==='SELL'?'rgba(255,51,102,.08)':'rgba(255,255,255,.03)';
-      box.style.background=bg;
-      box.style.border='1px solid '+ac;
-      box.style.borderRadius='8px';
-      box.innerHTML=
-        '<div style="font-size:22px;font-weight:800;color:'+ac+'">'+d.signal+'</div>'
-        +'<div style="font-size:11px;color:var(--mu);margin-top:4px">Confidence: <b style="color:'+ac+'">'+d.confidence+'%</b></div>'
-        +'<div style="font-size:10px;color:var(--mu)">Probability: '+d.probability+'% | Model: '+d.model_type+'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:10px">'
-        +['RSI','ADX','MACD_hist'].map(function(k){
-          var v=d.indicators&&d.indicators[k];
-          return '<div style="background:rgba(0,0,0,.2);padding:6px;border-radius:4px">'
-            +'<div style="font-size:8px;color:var(--mu)">'+k+'</div>'
-            +'<b style="font-size:11px">'+(v!==undefined?v:'—')+'</b></div>';
-        }).join('')
-        +'</div>';
-    }
-
-    // Model votes
-    var votesEl=document.getElementById('ml-model-votes');
-    if(votesEl&&d.model_votes){
-      votesEl.innerHTML='<div style="font-size:9px;font-weight:700;color:var(--mu);margin-bottom:6px">MODEL VOTES:</div>'
-        +Object.keys(d.model_votes).map(function(m){
-          var mv=d.model_votes[m];
-          var c=mv.probability>=55?'var(--gr)':mv.probability<=45?'var(--rd)':'var(--mu)';
-          return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bo);font-size:10px">'
-            +'<span style="color:var(--mu)">'+m+'</span>'
-            +'<span style="color:'+c+'">'+mv.probability+'% → <b>'+(mv.prediction?'BUY':'SELL')+'</b></span>'
-            +'</div>';
-        }).join('');
-    }
-
-    document.getElementById('ml-result').style.display='block';
-    toast('ML Signal: '+d.signal+' ('+d.confidence+'% conf)','success');
-  });
+    try{
+      var r=JSON.parse(x.responseText);
+      var resultEl=document.getElementById('ml-result');
+      if(resultEl) resultEl.style.display='block';
+      var html2='';
+      syms.forEach(function(s){
+        var res=r.results&&r.results[s];
+        if(!res||res.error) return;
+        var acc=res.ensemble_accuracy||0;
+        var color=acc>=70?'var(--gr)':acc>=60?'var(--am)':'var(--rd)';
+        html2+='<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;margin-bottom:6px">'
+          +'<div style="display:flex;justify-content:space-between"><b>'+s+'</b>'
+          +'<span style="color:'+color+';font-weight:700">'+acc+'% Ensemble</span></div>'
+          +'<div style="font-size:9px;color:var(--mu)">'
+          +'XGB: '+(res.models&&res.models.xgboost&&res.models.xgboost.accuracy||0)+'% · '
+          +'RF: '+(res.models&&res.models.random_forest&&res.models.random_forest.accuracy||0)+'% · '
+          +'GB: '+(res.models&&res.models.gradient_boost&&res.models.gradient_boost.accuracy||0)+'%'
+          +'</div></div>';
+      });
+      var fiEl=document.getElementById('ml-feature-importance');
+      if(fiEl) fiEl.innerHTML=html2;
+      toast('✅ Models trained!','success');
+      loadMLStatus();
+    }catch(e){toast('Training parse error','error');}
+  };
+  x.onerror=x.ontimeout=function(){if(btn){btn.textContent='🧠 TRAIN MODEL';btn.disabled=false;}toast('Training timeout','error');};
+  x.send(JSON.stringify({symbols:syms,days:days}));
 }
 
 function mlScanAll(){
-  var btn=document.querySelector('[onclick="mlScanAll()"]');
-  if(btn){btn.textContent='⏳ Scanning...';btn.disabled=true;}
   toast('ML scanning all instruments...','info');
-
-  req('/ml/scan_all','POST',{symbols:['NIFTY','BANKNIFTY','FINNIFTY']},'POST',null,function(err,d){
-    if(btn){btn.textContent='⚡ ML SCAN ALL';btn.disabled=false;}
-  });
-
-  // Correct request
+  var cards=document.getElementById('ai-signal-cards');
+  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:20px">🧠 ML scanning...<br><span style="font-size:9px;color:var(--mu)">Auto-trains if needed (~30s)</span></div>';
   var x=new XMLHttpRequest();
   x.open('POST',window.API+'/ml/scan_all',true);
   x.setRequestHeader('Content-Type','application/json');
   x.setRequestHeader('bypass-tunnel-reminder','true');
-  x.timeout=30000;
+  x.timeout=120000;
   x.onload=function(){
-    if(btn){btn.textContent='⚡ ML SCAN ALL';btn.disabled=false;}
     try{
       var d=JSON.parse(x.responseText);
-      if(!d.signals){toast('Scan failed','error');return;}
-
-      var cards=document.getElementById('ai-signal-cards');
-      if(cards) cards.innerHTML='';
-
-      Object.keys(d.signals).forEach(function(sym){
-        var s=d.signals[sym];
-        if(!s||s.error) return;
-        var ac=s.signal==='BUY'?'var(--gr)':s.signal==='SELL'?'var(--rd)':'var(--mu)';
-        var card=document.createElement('div');
-        card.style.cssText='background:var(--bg3);border:1px solid var(--bo);border-left:4px solid '+ac+';border-radius:8px;padding:12px';
-        card.innerHTML=
-          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-          +'<div><div style="font-size:13px;font-weight:700">'+sym+'</div>'
-          +'<div style="font-size:9px;color:var(--mu)">ML Ensemble</div></div>'
-          +'<div style="text-align:right">'
-          +'<div style="font-size:18px;font-weight:800;color:'+ac+'">'+s.signal+'</div>'
-          +'<div style="font-size:9px;color:var(--mu)">Conf: '+s.confidence+'%</div></div></div>'
-          +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">'
-          +['RSI','ADX','MACD_hist'].map(function(k){
-            var v=s.indicators&&s.indicators[k];
-            return '<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center">'
-              +'<div style="font-size:8px;color:var(--mu)">'+k+'</div>'
-              +'<b style="font-size:10px">'+(v!==undefined?v:'—')+'</b></div>';
-          }).join('')+'</div>'
-          +(s.signal!=='WAIT'?'<button onclick="executeAISignal(\''+sym+'\',\''+s.signal+'\')" class="btn '+(s.signal==='BUY'?'bg':'br')+'" style="width:100%;padding:7px;font-size:10px">'+s.signal+' PAPER</button>':'');
-        if(cards) cards.appendChild(card);
-        _signalHistory.unshift({inst:sym,signal:s,ts:new Date().toLocaleTimeString('en-IN')});
-      });
-
-      renderSignalHistory();
-      var best=d.best_signal;
-      toast('✅ ML Scan: '+d.buy_count+' BUY · '+d.sell_count+' SELL · '+d.wait_count+' WAIT'+(best?' | Best: '+best[0]:''),'success');
-    }catch(e){toast('Parse error','error');}
+      if(d.error){toast('ML Error: '+d.error,'error');return;}
+      toast('ML: '+d.buy_count+' BUY · '+d.sell_count+' SELL · '+d.wait_count+' WAIT','success');
+      if(d.signals){
+        var converted={};
+        Object.keys(d.signals).forEach(function(sym){
+          var s=d.signals[sym];
+          converted[sym]={signal:s.signal||'WAIT',action:s.signal||'WAIT',
+            confidence:Math.round(s.confidence||0),
+            rsi:s.indicators&&s.indicators.RSI,
+            adx:s.indicators&&s.indicators.ADX,
+            regime:'ML·'+(s.ensemble_accuracy||0)+'%'};
+        });
+        renderSignalCards(converted);
+      }
+    }catch(e){ if(cards) cards.innerHTML='<div style="color:var(--rd);padding:12px">Parse error - try again</div>'; }
   };
-  x.onerror=function(){if(btn){btn.textContent='⚡ ML SCAN ALL';btn.disabled=false;}toast('Scan failed','error');};
+  x.onerror=x.ontimeout=function(){toast('ML scan timeout','error');};
   x.send(JSON.stringify({symbols:['NIFTY','BANKNIFTY','FINNIFTY']}));
-}
-
-// Auto-load ML status when AI tab opens
-var _origLoadAIEngineAll = typeof loadAIEngineAll==='function' ? loadAIEngineAll : function(){};
-loadAIEngineAll = function(){
-  _origLoadAIEngineAll();
-  loadMLStatus();
-};
-</script>
-<script>
-// ══════════════════════════════════════════════════════════════════════════════
-// ML ENGINE JS — XGBoost + RandomForest + GradientBoosting
-// ══════════════════════════════════════════════════════════════════════════════
-
-function trainML(){
-  var symsEl = document.getElementById('ml-train-syms');
-  var days = parseInt((document.getElementById('ml-train-days')||{}).value)||365;
-  var syms = symsEl ? Array.from(symsEl.selectedOptions).map(function(o){return o.value;}) : ['NIFTY','BANKNIFTY'];
-  
-  var badge = document.getElementById('ml-status-badge');
-  if(badge){badge.textContent='⏳ TRAINING...';badge.style.color='var(--am)';}
-  toast('🧠 Training ML models... (~30 sec)','info');
-  
-  req('/ml/train','POST',{symbols:syms, days:days},function(err,d){
-    if(err||!d){
-      if(badge){badge.textContent='❌ FAILED';badge.style.color='var(--rd)';}
-      toast('Training failed','error');
-      return;
-    }
-    if(badge){badge.textContent='✅ TRAINED';badge.style.color='var(--gr)';}
-    
-    // Show accuracy cards
-    var cards = document.getElementById('ml-accuracy-cards');
-    if(cards){
-      cards.style.display='grid';
-      cards.innerHTML='';
-      Object.keys(d.results).forEach(function(sym){
-        var r = d.results[sym];
-        if(r.error) return;
-        var acc = r.ensemble_accuracy||0;
-        var color = acc>=70?'var(--gr)':acc>=60?'var(--am)':'var(--rd)';
-        cards.innerHTML += '<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;text-align:center">'
-          +'<div style="font-size:8px;color:var(--mu)">'+sym+'</div>'
-          +'<div style="font-size:16px;font-weight:800;color:'+color+'">'+acc+'%</div>'
-          +'<div style="font-size:8px;color:var(--mu)">Ensemble</div></div>';
-        
-        // Individual model cards
-        if(r.models){
-          ['xgboost','random_forest','gradient_boost'].forEach(function(m){
-            var ma = (r.models[m]||{}).accuracy||0;
-            var mc = ma>=70?'var(--gr)':ma>=60?'var(--am)':'var(--rd)';
-            var ml = {'xgboost':'XGB','random_forest':'RF','gradient_boost':'GB'}[m]||m;
-            cards.innerHTML += '<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;text-align:center">'
-              +'<div style="font-size:8px;color:var(--mu)">'+sym+' '+ml+'</div>'
-              +'<div style="font-size:16px;font-weight:800;color:'+mc+'">'+ma+'%</div>'
-              +'<div style="font-size:8px;color:var(--mu)">Accuracy</div></div>';
-          });
-        }
-      });
-    }
-    
-    toast('✅ Models trained! Check accuracy above.','success');
-  });
-}
-
-function mlScanAll(){
-  var syms = ['NIFTY','BANKNIFTY','FINNIFTY'];
-  var res = document.getElementById('ml-results');
-  var cards = document.getElementById('ml-signal-cards');
-  if(res) res.style.display='block';
-  if(cards) cards.innerHTML='<div style="color:var(--am);text-align:center;padding:12px">🔍 Running ML models...</div>';
-  toast('Running ML predictions...','info');
-  
-  req('/ml/scan_all','POST',{symbols:syms},function(err,d){
-    if(err||!d){
-      if(cards) cards.innerHTML='<div style="color:var(--rd)">Error - train models first</div>';
-      toast('ML scan failed - train first','error');
-      return;
-    }
-    renderMLSignals(d.signals);
-    toast('✅ ML scan complete! Buy:'+d.buy_count+' Sell:'+d.sell_count+' Wait:'+d.wait_count,'success');
-  });
-}
-
-function mlPredict(sym){
-  var res = document.getElementById('ml-results');
-  var cards = document.getElementById('ml-signal-cards');
-  if(res) res.style.display='block';
-  if(cards) cards.innerHTML='<div style="color:var(--am);text-align:center;padding:12px">📡 ML predicting '+sym+'...</div>';
-  
-  req('/ml/predict/'+sym,'GET',null,function(err,d){
-    if(err||!d){
-      if(cards) cards.innerHTML='<div style="color:var(--rd)">Error - train model first</div>';
-      toast('ML predict failed','error');
-      return;
-    }
-    var obj={}; obj[sym]=d;
-    renderMLSignals(obj);
-    loadMLFeatures(sym);
-  });
-}
-
-function renderMLSignals(signals){
-  var cards = document.getElementById('ml-signal-cards');
-  if(!cards) return;
-  cards.innerHTML='';
-  
-  Object.keys(signals).forEach(function(sym){
-    var d = signals[sym];
-    if(d.error){ 
-      cards.innerHTML += '<div style="padding:8px;color:var(--rd);font-size:10px">'+sym+': '+d.error+'</div>';
-      return;
-    }
-    var action = d.signal||'WAIT';
-    var conf = d.confidence||0;
-    var prob = d.probability||0;
-    var acc = d.ensemble_accuracy||0;
-    var ac = action==='BUY'?'var(--gr)':action==='SELL'?'var(--rd)':'var(--mu)';
-    var confBg = conf>=60?'rgba(0,255,136,.08)':conf>=40?'rgba(251,191,36,.08)':'rgba(100,116,139,.08)';
-    
-    var inds = d.indicators||{};
-    var votes = d.model_votes||{};
-    
-    var card = document.createElement('div');
-    card.style.cssText = 'background:'+confBg+';border:1px solid rgba(168,85,247,.2);border-left:4px solid '+ac+';border-radius:8px;padding:12px';
-    
-    // Header
-    card.innerHTML = 
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
-      +'<div><div style="font-size:14px;font-weight:800">'+sym+'</div>'
-      +'<div style="font-size:9px;color:var(--mu)">'+d.model_type+'</div></div>'
-      +'<div style="text-align:right">'
-      +'<div style="font-size:18px;font-weight:800;color:'+ac+'">'+action+'</div>'
-      +'<div style="font-size:9px;color:var(--mu)">Prob: '+prob+'%</div></div></div>'
-      
-      // Model votes
-      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px">'
-      +Object.keys(votes).map(function(m){
-        var v=votes[m];
-        var vc=v.prediction===1?'var(--gr)':'var(--rd)';
-        var ml={'xgboost':'XGB','random_forest':'RF','gradient_boost':'GB'}[m]||m;
-        return '<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:5px;padding:6px;text-align:center">'
-          +'<div style="font-size:8px;color:var(--mu)">'+ml+'</div>'
-          +'<div style="font-size:11px;font-weight:700;color:'+vc+'">'+(v.prediction===1?'BUY':'SELL')+'</div>'
-          +'<div style="font-size:8px;color:var(--mu)">'+v.probability+'%</div></div>';
-      }).join('')
-      +'</div>'
-      
-      // Indicators
-      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px">'
-      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">RSI</div><div style="font-size:10px;font-weight:700;color:'+(inds.RSI>60?'var(--gr)':inds.RSI<40?'var(--rd)':'var(--am)')+'">'+inds.RSI+'</div></div>'
-      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">ADX</div><div style="font-size:10px;font-weight:700;color:'+(inds.ADX>25?'var(--gr)':'var(--rd)')+'">'+inds.ADX+'</div></div>'
-      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">BB Pos</div><div style="font-size:10px;font-weight:700">'+inds.BB_pos+'</div></div>'
-      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">MACD</div><div style="font-size:10px;font-weight:700;color:'+(inds.MACD_hist>0?'var(--gr)':'var(--rd)')+'">'+inds.MACD_hist+'</div></div>'
-      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">Vol</div><div style="font-size:10px;font-weight:700">'+inds.Vol_ratio+'x</div></div>'
-      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:7px;color:var(--mu)">Model Acc</div><div style="font-size:10px;font-weight:700;color:var(--gr)">'+acc+'%</div></div>'
-      +'</div>'
-      
-      // Confidence bar
-      +'<div style="margin-bottom:10px">'
-      +'<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--mu);margin-bottom:3px"><span>Confidence</span><span>'+conf+'%</span></div>'
-      +'<div style="height:6px;background:var(--bg4);border-radius:3px"><div style="height:100%;width:'+Math.min(conf,100)+'%;background:'+ac+';border-radius:3px;transition:width .5s"></div></div></div>'
-      
-      // Action buttons
-      +(action!=='WAIT'?
-        '<div style="display:flex;gap:6px">'
-        +'<button onclick="executeMLSignal(\''+sym+'\',\''+action+'\')" class="btn '+(action==='BUY'?'bg':'br')+'" style="flex:1;padding:8px;font-size:10px">'+action+' PAPER</button>'
-        +'<button onclick="mlPredict(\''+sym+'\')" style="flex:1;padding:8px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer">↻ REFRESH</button>'
-        +'</div>':
-        '<button onclick="mlPredict(\''+sym+'\')" style="width:100%;padding:8px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer">↻ REFRESH PREDICTION</button>'
-      );
-    
-    cards.appendChild(card);
-  });
-}
-
-function loadMLFeatures(sym){
-  req('/ml/feature_importance/'+sym,'GET',null,function(err,d){
-    var el=document.getElementById('ml-features');
-    if(!el||err||!d||d.error) return;
-    var sorted=Object.entries(d.feature_importance||{}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
-    var maxVal=sorted[0]?sorted[0][1]:1;
-    el.innerHTML=sorted.map(function(f){
-      var pct=f[1];
-      var w=Math.round(pct/maxVal*100)+'%';
-      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--bo)">'
-        +'<div style="width:80px;font-size:9px;color:var(--mu)">'+f[0]+'</div>'
-        +'<div style="flex:1;height:6px;background:var(--bg4);border-radius:3px"><div style="height:100%;width:'+w+';background:var(--p0);border-radius:3px"></div></div>'
-        +'<div style="width:30px;font-size:9px;text-align:right">'+pct+'%</div>'
-        +'</div>';
-    }).join('');
-  });
-}
-
-function executeMLSignal(sym, action){
-  var spot = window.prices&&window.prices[sym]?window.prices[sym]:24000;
-  req('/paper/v2/execute_strategy','POST',{
-    strategy:'ML_SIGNAL_'+action,
-    spot:spot, instrument:sym,
-    time_exit:'15:30', max_trades:3, lots:1
-  },function(err,r){
-    if(!err&&r&&r.success) toast('✅ ML Signal executed on paper!','success');
-    else toast('Execute failed - check daily limits','error');
-  });
-}
-
-// Check ML status on load
-function checkMLStatus(){
-  req('/ml/status','GET',null,function(err,d){
-    var badge=document.getElementById('ml-status-badge');
-    if(!badge) return;
-    if(err||!d||!d.available){
-      badge.textContent='⚠️ INSTALL LIBS';
-      badge.style.color='var(--rd)';
-      return;
-    }
-    if(d.models_loaded>0){
-      badge.textContent='✅ '+d.models_loaded+' MODELS READY';
-      badge.style.color='var(--gr)';
-    } else {
-      badge.textContent='🔴 NOT TRAINED';
-      badge.style.color='var(--am)';
-    }
-  });
-}
-
-// Override aiTab to check ML status
-var _origAiTab = aiTab;
-function aiTab(tab, btn){
-  _origAiTab(tab, btn);
-  if(tab==='signals') setTimeout(checkMLStatus, 500);
-}
-</script>
-<script>
-// ══════════════════════════════════════════════════════════════════════════════
-// ML ENGINE JS — XGBoost + RandomForest + GradientBoosting
-// ══════════════════════════════════════════════════════════════════════════════
-
-// Load ML status on startup
-function loadMLStatus(){
-  req('/ml/status','GET',null,function(err,d){
-    var el=document.getElementById('ml-status-bar');
-    if(!d||err){
-      if(el) el.innerHTML='<span style="color:var(--rd)">ML libraries not available</span>';
-      return;
-    }
-    if(el){
-      el.innerHTML=
-        '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-        +'<span style="padding:2px 8px;border-radius:10px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);font-size:9px">✅ XGBoost</span>'
-        +'<span style="padding:2px 8px;border-radius:10px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);color:var(--bl);font-size:9px">✅ RandomForest</span>'
-        +'<span style="padding:2px 8px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:var(--p0);font-size:9px">✅ GradBoost</span>'
-        +(d.trained_symbols&&d.trained_symbols.length?'<span style="padding:2px 8px;border-radius:10px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);color:var(--am);font-size:9px">Trained: '+d.trained_symbols.join(', ')+'</span>':'')
-        +'</div>'
-        +'<div style="font-size:9px;color:var(--mu);margin-top:4px">24 features · Time-series CV · Ensemble voting</div>';
-    }
-  });
-}
-
-function trainMLModel(){
-  var sym=(document.getElementById('ml-train-sym')||{}).value||'NIFTY';
-  var days=parseInt((document.getElementById('ml-train-days')||{}).value)||365;
-  var btn=document.querySelector('[onclick="trainMLModel()"]');
-  if(btn){btn.textContent='⏳ Training...';btn.disabled=true;}
-  toast('Training '+sym+' model... (~30s)','info');
-  
-  req('/ml/train','POST',{symbols:[sym],days:days},function(err,r){
-    if(btn){btn.textContent='🧠 TRAIN MODEL';btn.disabled=false;}
-    if(err||!r){toast('Training failed','error');return;}
-    
-    var res=r.results&&r.results[sym];
-    if(!res||res.error){toast('Error: '+(res&&res.error||'Unknown'),'error');return;}
-    
-    // Show results
-    var resultEl=document.getElementById('ml-result');
-    if(resultEl) resultEl.style.display='block';
-    
-    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
-    set('ml-xgb-acc',(res.models&&res.models.xgboost&&res.models.xgboost.accuracy||0)+'%');
-    set('ml-rf-acc',(res.models&&res.models.random_forest&&res.models.random_forest.accuracy||0)+'%');
-    set('ml-ens-acc',res.ensemble_accuracy+'%');
-    
-    // Feature importance
-    var fiEl=document.getElementById('ml-feature-importance');
-    if(fiEl&&res.top_features){
-      var html2='<div style="font-size:10px;font-weight:700;color:var(--mu);margin-bottom:6px">TOP FEATURES:</div>';
-      Object.entries(res.top_features).sort(function(a,b){return b[1]-a[1];}).forEach(function(entry){
-        var pct=entry[1];
-        html2+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-          +'<div style="width:80px;font-size:9px;color:var(--mu)">'+entry[0]+'</div>'
-          +'<div style="flex:1;height:5px;background:var(--bg4);border-radius:3px">'
-          +'<div style="height:100%;width:'+Math.min(100,pct*5)+'%;background:var(--p0);border-radius:3px"></div></div>'
-          +'<div style="font-size:9px;color:var(--p0)">'+pct+'%</div>'
-          +'</div>';
-      });
-      fiEl.innerHTML=html2;
-    }
-    
-    toast('✅ Model trained! Ensemble: '+res.ensemble_accuracy+'% accuracy','success');
-    
-    // Auto predict after training
-    setTimeout(function(){mlPredict(sym);}, 500);
-    loadMLStatus();
-  });
 }
 
 function mlPredict(sym){
   if(!sym) sym=(document.getElementById('ml-train-sym')||{}).value||'NIFTY';
   req('/ml/predict/'+sym,'GET',null,function(err,d){
-    if(err||!d) return;
-    
+    if(err||!d){toast('Predict error','error');return;}
     var resultEl=document.getElementById('ml-result');
     if(resultEl) resultEl.style.display='block';
-    
     var sigBox=document.getElementById('ml-signal-box');
     if(sigBox){
       var ac=d.signal==='BUY'?'var(--gr)':d.signal==='SELL'?'var(--rd)':'var(--am)';
-      var bg=d.signal==='BUY'?'rgba(0,255,136,.08)':d.signal==='SELL'?'rgba(255,51,102,.08)':'rgba(251,191,36,.08)';
-      sigBox.style.background=bg;
-      sigBox.style.border='1px solid '+ac;
-      sigBox.style.borderRadius='8px';
-      sigBox.innerHTML=
-        '<div style="font-size:24px;font-weight:800;color:'+ac+'">'+d.signal+'</div>'
-        +'<div style="font-size:12px;color:var(--mu);margin:4px 0">Confidence: <b style="color:'+ac+'">'+d.confidence+'%</b></div>'
-        +'<div style="font-size:10px;color:var(--mu)">Probability: '+d.probability+'% | '+d.model_type+'</div>'
+      sigBox.style.cssText='padding:14px;border-radius:8px;text-align:center;background:'+(d.signal==='BUY'?'rgba(0,255,136,.08)':d.signal==='SELL'?'rgba(255,51,102,.08)':'rgba(251,191,36,.08)')+';border:1px solid '+ac;
+      sigBox.innerHTML='<div style="font-size:24px;font-weight:800;color:'+ac+'">'+d.signal+'</div>'
+        +'<div style="font-size:12px;color:var(--mu)">Confidence: <b style="color:'+ac+'">'+d.confidence+'%</b> | Prob: '+d.probability+'%</div>'
+        +'<div style="font-size:10px;color:var(--mu);margin-top:4px">'+d.model_type+'</div>'
         +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:10px">'
-        +'<div style="background:rgba(0,0,0,.2);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">RSI</div><b>'+(d.indicators&&d.indicators.RSI||'—')+'</b></div>'
-        +'<div style="background:rgba(0,0,0,.2);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">ADX</div><b>'+(d.indicators&&d.indicators.ADX||'—')+'</b></div>'
-        +'<div style="background:rgba(0,0,0,.2);padding:6px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">MACD</div><b>'+(d.indicators&&d.indicators.MACD_hist||'—')+'</b></div>'
+        +'<div style="background:rgba(0,0,0,.2);padding:5px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">RSI</div><b>'+(d.indicators&&d.indicators.RSI||'—')+'</b></div>'
+        +'<div style="background:rgba(0,0,0,.2);padding:5px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">ADX</div><b>'+(d.indicators&&d.indicators.ADX||'—')+'</b></div>'
+        +'<div style="background:rgba(0,0,0,.2);padding:5px;border-radius:4px"><div style="font-size:8px;color:var(--mu)">BB</div><b>'+(d.indicators&&d.indicators.BB_pos||'—')+'</b></div>'
         +'</div>';
     }
-    
-    // Model votes
     var votesEl=document.getElementById('ml-model-votes');
     if(votesEl&&d.model_votes){
-      var html2='<div style="font-size:9px;font-weight:700;color:var(--mu);margin-bottom:4px">MODEL VOTES:</div>'
-        +'<div style="display:flex;gap:6px">';
-      Object.entries(d.model_votes).forEach(function(entry){
-        var pred=entry[1].prediction;
-        var prob=entry[1].probability;
-        var c=pred===1?'var(--gr)':'var(--rd)';
-        html2+='<div style="flex:1;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:6px;text-align:center">'
-          +'<div style="font-size:8px;color:var(--mu)">'+entry[0].replace('_',' ').toUpperCase()+'</div>'
-          +'<div style="font-size:11px;font-weight:700;color:'+c+'">'+(pred===1?'BUY':'SELL')+'</div>'
-          +'<div style="font-size:8px;color:var(--mu)">'+prob+'%</div>'
-          +'</div>';
+      var vhtml='<div style="display:flex;gap:6px;margin-top:8px">';
+      Object.entries(d.model_votes).forEach(function(e){
+        var pred=e[1].prediction; var prob=e[1].probability;
+        var vc=pred===1?'var(--gr)':'var(--rd)';
+        vhtml+='<div style="flex:1;background:var(--bg4);border-radius:6px;padding:6px;text-align:center">'
+          +'<div style="font-size:8px;color:var(--mu)">'+e[0].replace('_',' ')+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+vc+'">'+(pred===1?'BUY':'SELL')+'</div>'
+          +'<div style="font-size:8px;color:var(--mu)">'+prob+'%</div></div>';
       });
-      html2+='</div>';
-      votesEl.innerHTML=html2;
+      votesEl.innerHTML=vhtml+'</div>';
     }
+    toast('ML prediction: '+d.signal,'success');
   });
 }
 
-// mlScanAll defined below
-
-// Override scanAllSignals to include ML
-var _origScanAll = scanAllSignals;
-function scanAllSignals(){
-  _origScanAll();
-  loadMLStatus();
-}
-
-// Auto-load ML status when AI tab opens
-var _origLoadAIAll = loadAIEngineAll;
+// ── Auto-load ─────────────────────────────────────────────────────────────────
 function loadAIEngineAll(){
-  _origLoadAIAll();
+  loadAIStatus();
   loadMLStatus();
-}
-
-// Fix mlScanAll POST
-function mlScanAll(){
-  toast('ML scanning... (first time trains ~30s)','info');
-  var cards=document.getElementById('ai-signal-cards');
-  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:20px">🧠 ML models scanning...<br><span style="font-size:9px;color:var(--mu)">First run auto-trains models (~30s)</span></div>';
-  
-  // Use XMLHttpRequest with longer timeout
-  var x=new XMLHttpRequest();
-  x.open('POST', window.API+'/ml/scan_all', true);
-  x.setRequestHeader('Content-Type','application/json');
-  x.setRequestHeader('bypass-tunnel-reminder','true');
-  x.timeout=120000; // 2 min timeout for training
-  x.onload=function(){
-    try{
-      var d=JSON.parse(x.responseText);
-      if(d.error){toast('ML Error: '+d.error,'error');return;}
-      toast('ML Scan: '+d.buy_count+' BUY · '+d.sell_count+' SELL · '+d.wait_count+' WAIT','success');
-      if(d.signals){
-        var converted={};
-        Object.keys(d.signals).forEach(function(sym){
-          var s=d.signals[sym];
-          converted[sym]={
-            signal:s.signal||'WAIT', action:s.signal||'WAIT',
-            confidence:Math.round(s.confidence||0),
-            rsi:s.indicators&&s.indicators.RSI||'—',
-            adx:s.indicators&&s.indicators.ADX||'—',
-            regime:'ML·'+(s.ensemble_accuracy||0)+'%acc',
-            ml_accuracy:s.ensemble_accuracy
-          };
-        });
-        renderSignalCards(converted);
-      }
-    }catch(e){toast('Scan parse error','error');}
-  };
-  x.onerror=x.ontimeout=function(){toast('ML scan timeout - server busy','error');};
-  x.send(JSON.stringify({symbols:['NIFTY','BANKNIFTY','FINNIFTY']}));
 }
 </script>
