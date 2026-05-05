@@ -3492,19 +3492,54 @@ function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){
       catch(e){var ta=document.createElement('textarea');ta.value=txt;ta.style='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('✅ Copied!','success');}
     };})(s);
     // DELETE
+    var bHist=document.createElement('button');bHist.style.cssText='padding:5px 8px;font-size:9px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:5px;cursor:pointer;color:var(--p0)';bHist.textContent='⏱';bHist.title='Version history';
+    bHist.onclick=(function(strat){return function(){showStratVersions(strat);};})(s);
     var bDel=document.createElement('button');bDel.style.cssText='padding:5px 8px;font-size:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);border-radius:5px;cursor:pointer;color:var(--rd)';bDel.textContent='🗑️';
     bDel.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};
-    btns.appendChild(bUse);btns.appendChild(bBt);btns.appendChild(bCp);btns.appendChild(bDel);
+    btns.appendChild(bUse);btns.appendChild(bBt);btns.appendChild(bCp);btns.appendChild(bHist);btns.appendChild(bDel);
     div.appendChild(btns);list.appendChild(div);
   });
 });}
 function parseNLPStrat(){var text=gv('ns-nlp').trim();if(!text){toast('Type strategy','warn');return;}req('/strategies/from_nlp','POST',{user_id:UID,nlp_text:text},function(err,r){if(err){toast('NLP failed','error');return;}var s=r.strategy||{},p=r.parsed||{};if(s.name&&$('ns-nm'))$('ns-nm').value=s.name;if(p.instrument&&$('ns-i'))$('ns-i').value=p.instrument;if(s.sl_value&&$('ns-sl'))$('ns-sl').value=s.sl_value;if(s.target_value&&$('ns-tg'))$('ns-tg').value=s.target_value;if(s.entry_conditions&&$('ns-en'))$('ns-en').value=(s.entry_conditions||[]).join('\n');var box=$('ns-parsed');if(box){box.style.display='block';box.textContent='Parsed: '+JSON.stringify(p).slice(0,100);}toast('Auto-filled!','success');});}
-function saveStrat(){var entry=(gv('ns-en')||'').split('\n').filter(function(l){return l.trim();});req('/strategies/save','POST',{
+function saveStrat(){var entry=(gv('ns-en')||'').split('\n').filter(function(l){return l.trim();});var nlpText=gv('nlp-in')||'';
+  var parsedConds=[];
+  document.querySelectorAll('#nlp-out [style*="rgba(0,255,136"]').forEach(function(el){
+    var t=el.textContent.replace('✓ ','').trim();
+    if(t) parsedConds.push(t);
+  });
+  
+  // Save using Strategy Engine v2 (with versioning)
+  var stratName=gv('ns-nm')||'My Strategy';
+  var execution={
+    order:(gv('ns-i')||'NIFTY')+'/'+(gv('ns-at')||'BUY')+'/'+(gv('ns-ot')||'CE'),
+    name:stratName,
+    instrument:gv('ns-i')||'NIFTY',
+    action:gv('ns-at')||'BUY',
+    option_type:gv('ns-ot')||'CE',
+    sl:nv('ns-sl')||100,
+    target:nv('ns-tg')||200,
+    timeframe:gv('ns-tf')||'5m',
+    quantity:1
+  };
+  
+  req('/strategies/v2/create','POST',{
+    text: nlpText||stratName,
+    ast: {AND: parsedConds.map(function(c){return {CONDITION:c};})},
+    execution: execution,
+    normalized: parsedConds.length ? parsedConds : entry||[]
+  }, function(err2, r2){
+    if(!err2 && r2 && r2.success){
+      trdSave('last_strategy_id', r2.strategy_id);
+    }
+  });
+  
+  // Also save legacy format
+  req('/strategies/save','POST',{
     user_id:UID,
-    name:gv('ns-nm')||'My Strategy',
+    name:stratName,
     instrument:gv('ns-i')||'NIFTY',
     timeframe:gv('ns-tf')||'5m',
-    entry_conditions:entry||[],
+    entry_conditions:parsedConds.length?parsedConds:(entry||[]),
     exit_conditions:[],
     sl_type:'POINTS',
     sl_value:nv('ns-sl')||100,
@@ -7378,6 +7413,61 @@ function startVoiceInput(){
   };
   
   _recognition.start();
+}
+
+
+// ── STRATEGY VERSION VIEWER ───────────────────────────────────────────────────
+function showStratVersions(strat){
+  var sid = trdLoad('last_strategy_id', null);
+  if(!sid){toast('No versioned strategy found','warn');return;}
+  
+  req('/strategies/v2/'+sid,'GET',null,function(err,d){
+    if(err||!d||!d.versions){toast('Version data not available','info');return;}
+    
+    // Show modal
+    var modal = document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    
+    var box = document.createElement('div');
+    box.style.cssText='background:var(--bg2);border:1px solid var(--bo);border-radius:12px;padding:16px;width:100%;max-width:440px;max-height:80vh;overflow-y:auto';
+    
+    var html2='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+      +'<div style="font-size:13px;font-weight:700">⏱ VERSION HISTORY</div>'
+      +'<button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer">✕</button></div>'
+      +'<div style="font-size:10px;color:var(--mu);margin-bottom:10px">Strategy: '+d.id+'<br>Versions: '+d.versions.length+'</div>';
+    
+    d.versions.slice().reverse().forEach(function(v){
+      var isCurrent = v.version === d.current_version;
+      html2+='<div style="background:var(--bg3);border:1px solid '+(isCurrent?'rgba(0,255,136,.3)':'var(--bo)')+';border-radius:8px;padding:10px;margin-bottom:8px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+        +'<div><b>v'+v.version+'</b> '+(isCurrent?'<span style="font-size:8px;padding:1px 6px;background:rgba(0,255,136,.15);color:var(--gr);border-radius:8px">CURRENT</span>':'')+'</div>'
+        +'<div style="font-size:9px;color:var(--mu)">'+v.timestamp.slice(0,16).replace('T',' ')+'</div></div>'
+        +'<div style="font-size:9px;color:var(--am);margin-bottom:6px">'+v.notes+'</div>'
+        +(v.normalized&&v.normalized.length
+          ?'<div style="font-size:9px;color:var(--mu)">Conditions: '+v.normalized.length+'<br>'+v.normalized.slice(0,2).join(' · ')+'...</div>'
+          :'')
+        +'<div style="display:flex;gap:6px;margin-top:8px">'
+        +'<button onclick="rollbackToVersion(''+d.id+'','+v.version+')" style="flex:1;padding:5px;font-size:9px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">'+(isCurrent?'Current':'↩ Restore v'+v.version)+'</button>'
+        +'</div></div>';
+    });
+    
+    box.innerHTML=html2;
+    modal.appendChild(box);
+    document.body.appendChild(modal);
+  });
+}
+
+function rollbackToVersion(stratId, versionNum){
+  if(!confirm('Restore to version '+versionNum+'?')) return;
+  req('/strategies/v2/'+stratId+'/rollback','POST',{version:versionNum},function(err,r){
+    if(!err&&r&&r.success){
+      toast('✅ Rolled back to v'+versionNum,'success');
+      document.querySelectorAll('div[style*="position:fixed"]').forEach(function(m){m.remove();});
+      loadMy();
+    } else {
+      toast('Rollback failed','error');
+    }
+  });
 }
 
 </script>

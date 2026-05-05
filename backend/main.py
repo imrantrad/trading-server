@@ -3688,3 +3688,105 @@ async def nlp_parse_v35(request: Request):
     
     # Fallback basic parser
     return {"success": False, "error": "NLP v3.5 not loaded"}
+
+# ════════════════════════════════════════════════════════════════════════════
+# STRATEGY ENGINE v2 — Canonical + Versioning + Diff + Rollback
+# ════════════════════════════════════════════════════════════════════════════
+try:
+    from ai_engine.strategy_engine import (
+        create_strategy as se_create,
+        add_version as se_add_version,
+        get_current as se_get_current,
+        get_version as se_get_version,
+        rollback as se_rollback,
+        diff_versions as se_diff,
+        copy_strategy as se_copy,
+        render_clean as se_render,
+        save_strategy as se_save,
+        load_strategy as se_load,
+        list_strategies as se_list,
+        _strategy_store
+    )
+    SE_AVAILABLE = True
+except Exception as e:
+    SE_AVAILABLE = False
+    print(f"Strategy Engine: {e}")
+
+@app.post("/strategies/v2/create")
+async def strategy_create(request: Request):
+    """Create new strategy with versioning"""
+    data = await request.json()
+    text = data.get("text","")
+    ast = data.get("ast",{})
+    execution = data.get("execution",{})
+    normalized = data.get("normalized",[])
+    
+    if not SE_AVAILABLE:
+        return {"error":"Strategy Engine not loaded"}
+    
+    strat = se_create(text, ast, execution, normalized)
+    strat_id = se_save(strat)
+    return {"success":True, "strategy_id": strat_id, "strategy": strat}
+
+@app.post("/strategies/v2/{strategy_id}/version")
+async def strategy_add_version(strategy_id: str, request: Request):
+    """Add new version to existing strategy"""
+    data = await request.json()
+    strat = se_load(strategy_id)
+    if not strat:
+        return {"error":"Strategy not found"}
+    
+    updated = se_add_version(
+        strat,
+        data.get("text",""),
+        data.get("ast",{}),
+        data.get("execution",{}),
+        data.get("normalized",[]),
+        data.get("notes","")
+    )
+    se_save(updated)
+    return {"success":True, "version": updated["current_version"], "strategy": updated}
+
+@app.get("/strategies/v2/{strategy_id}")
+def strategy_get(strategy_id: str):
+    """Get strategy with all versions"""
+    strat = se_load(strategy_id)
+    if not strat: return {"error":"Not found"}
+    return strat
+
+@app.get("/strategies/v2/{strategy_id}/copy")
+def strategy_copy(strategy_id: str):
+    """Get copyable natural language text"""
+    strat = se_load(strategy_id)
+    if not strat: return {"error":"Not found"}
+    return {"text": se_copy(strat), "rendered": se_render(strat)}
+
+@app.post("/strategies/v2/{strategy_id}/rollback")
+async def strategy_rollback(strategy_id: str, request: Request):
+    """Rollback to specific version"""
+    data = await request.json()
+    version_num = int(data.get("version",1))
+    strat = se_load(strategy_id)
+    if not strat: return {"error":"Not found"}
+    result = se_rollback(strat, version_num)
+    if isinstance(result, dict) and "error" in result:
+        return result
+    se_save(result)
+    return {"success":True, "current_version": version_num}
+
+@app.get("/strategies/v2/{strategy_id}/diff")
+def strategy_diff(strategy_id: str, v1: int = 1, v2: int = 2):
+    """Compare two versions"""
+    strat = se_load(strategy_id)
+    if not strat: return {"error":"Not found"}
+    ver1 = se_get_version(strat, v1)
+    ver2 = se_get_version(strat, v2)
+    if not ver1 or not ver2:
+        return {"error":"Version not found"}
+    return {"diff": se_diff(ver1, ver2), "v1": v1, "v2": v2}
+
+@app.get("/strategies/v2/list/{user_id}")
+def strategies_list(user_id: str):
+    """List all strategies"""
+    strats = se_list(user_id)
+    return {"strategies": strats, "count": len(strats)}
