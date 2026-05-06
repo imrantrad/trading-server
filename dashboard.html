@@ -2395,9 +2395,7 @@ function show(name, btn) {
   try{ localStorage.setItem('trd_last_tab', name); }catch(e){}
   
   // Hide ALL panels with absolute certainty
-  var allPnl = document.querySelectorAll('[id^="pnl-"]');
-  allPnl.forEach(function(p){
-    p.style.cssText = 'display:none !important';
+  document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
     p.classList.remove('active');
   });
   
@@ -2407,8 +2405,6 @@ function show(name, btn) {
   // Show ONLY the target panel
   var target = document.getElementById('pnl-' + name);
   if(target){
-    target.style.cssText = '';
-    target.style.display = 'flex';
     target.classList.add('active');
   }
   
@@ -3487,7 +3483,6 @@ function fallbackToPolling() {
   // ── STEP 3: Force correct startup panel ──
   // Hide ALL panels first
   document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
-    p.style.cssText = 'display:none !important';
     p.classList.remove('active');
   });
   document.querySelectorAll('.tab').forEach(function(t2){t2.classList.remove('active');});
@@ -3505,7 +3500,7 @@ function fallbackToPolling() {
   
   // Show the target panel
   var tp2 = document.getElementById('pnl-'+lastTab);
-  if(tp2){ tp2.style.cssText=''; tp2.style.display='flex'; tp2.classList.add('active'); }
+  if(tp2){ tp2.classList.add('active'); }
   
   // Highlight matching tab button
   var tabFound = false;
