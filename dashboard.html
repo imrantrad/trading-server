@@ -127,28 +127,19 @@ body { font-family: -apple-system, 'SF Pro Display', 'Segoe UI', sans-serif; }
 
 /* Header - compact professional */
 .hdr {
-  height: 44px !important;
-  background: linear-gradient(135deg, #060b14 0%, #0a1628 50%, #060b14 100%) !important;
-  border-bottom: 1px solid rgba(79,142,247,.15) !important;
-  padding: 0 12px !important;
+  height: 42px !important;
   display: flex !important;
   align-items: center !important;
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 1000 !important;
+  flex-shrink: 0 !important;
 }
 
 /* Navigation - professional tab bar */
 .nav {
   height: 36px !important;
-  background: #070c18 !important;
-  border-bottom: 1px solid rgba(255,255,255,.06) !important;
   display: flex !important;
   overflow-x: auto !important;
   scrollbar-width: none !important;
-  position: sticky !important;
-  top: 44px !important;
-  z-index: 999 !important;
+  flex-shrink: 0 !important;
 }
 .nav::-webkit-scrollbar { display: none; }
 
@@ -3934,9 +3925,30 @@ function fallbackToPolling() {
     }
   }catch(e){}
   
-  // Show the target panel
-  var tp2 = document.getElementById('pnl-'+lastTab);
-  if(tp2){ tp2.style.display='flex'; tp2.classList.add('active'); }
+  // Show the target panel - wait for DOM
+  function _initPanel(){
+    var mainEl = document.querySelector('.main');
+    if(mainEl) mainEl.scrollTop = 0;
+    
+    // Hide all first
+    document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
+      p.style.display='none';
+      p.classList.remove('active');
+    });
+    
+    var tp2 = document.getElementById('pnl-'+lastTab);
+    if(tp2){ 
+      tp2.style.display='block'; 
+      tp2.classList.add('active');
+      tp2.scrollTop = 0;
+    }
+  }
+  
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', _initPanel);
+  } else {
+    _initPanel();
+  }
   
   // Highlight matching tab button
   var tabFound = false;
