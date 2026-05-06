@@ -901,7 +901,7 @@ input:focus, select:focus {
 </div>
   <div id="nlp-bld" class="card" style="display:none;border-color:var(--gr)30">
     <div class="chdr" style="color:var(--gr)">NLP STRATEGY BUILDER</div>
-    <textarea id="ns-nlp" rows="3" placeholder="buy nifty atm if rsi under 30 ema crossover sl 100 target 300"></textarea>
+    <textarea id="ns-nlp" rows="4" placeholder="Paste strategy text here (or type) — e.g: buy nifty CE rsi under 30 ema cross sl 100 target 200" style="font-size:10px"></textarea>
     <button class="btn bg blg" onclick="parseNLPStrat()" style="margin-top:6px;margin-bottom:8px">PARSE AND AUTO-FILL</button>
     <div id="ns-parsed" style="display:none;background:#001a0e;border:1px solid var(--gr)30;border-radius:4px;padding:6px;font-size:8px;margin-bottom:8px;color:var(--gr)"></div>
     <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">NAME</div><input id="ns-nm" placeholder="Strategy name"></div><div><div class="lbl">INST</div><select id="ns-i"><option value="NIFTY">NIFTY</option><option value="BANKNIFTY">BANKNIFTY</option><option value="FINNIFTY">FINNIFTY</option><option value="SENSEX">SENSEX</option></select></div></div>
@@ -3136,6 +3136,28 @@ function _renderNLPResult(r, text, outEl){
   }
 
   outEl.innerHTML=html2;
+  // Add "Save to MY STRATEGIES" button in output
+  if(outEl){
+    var saveDiv = document.createElement('div');
+    saveDiv.style.cssText = 'margin-top:10px;display:flex;gap:6px';
+    var saveToMyBtn = document.createElement('button');
+    saveToMyBtn.className = 'btn bg blg';
+    saveToMyBtn.style.cssText = 'flex:1;padding:8px;font-size:10px';
+    saveToMyBtn.textContent = '💾 SAVE TO MY STRATEGIES';
+    saveToMyBtn.onclick = function(){
+      // Sync text to ns-nlp
+      var nsNlp = document.getElementById('ns-nlp');
+      var nsNm = document.getElementById('ns-nm');
+      if(nsNlp) nsNlp.value = text;
+      // Scroll to MY STRATEGIES section or show prompt
+      var namePrompt = prompt('Strategy name:', r.order && r.order.asset ? r.order.asset+' Strategy' : 'My Strategy');
+      if(!namePrompt) return;
+      if(nsNm) nsNm.value = namePrompt;
+      saveStrat();
+    };
+    saveDiv.appendChild(saveToMyBtn);
+    outEl.appendChild(saveDiv);
+  }
   toast('✅ NLP v3.5: '+r.condition_count+' conditions, score '+r.score+'/10','success');
 }
 
@@ -7471,7 +7493,14 @@ function saveStrat(){
   var name = (gv('ns-nm')||'').trim();
   if(name.length < 2){ toast('Enter strategy name first','warn'); return; }
 
-  var nlpText = (gv('ns-nlp') || gv('nlp-in') || '').trim();
+  // Read from ns-nlp (MY STRATEGIES builder) OR nlp-in (TRADE NLP tab)
+  var nlpText = (gv('ns-nlp') || '').trim();
+  if(!nlpText) nlpText = (gv('nlp-in') || '').trim();
+  // Also sync to ns-nlp for display
+  if(nlpText && !gv('ns-nlp')){
+    var nsNlpEl = document.getElementById('ns-nlp');
+    if(nsNlpEl) nsNlpEl.value = nlpText;
+  }
   var tl = nlpText.toLowerCase();
 
   // Parse instrument directly from text
