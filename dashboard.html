@@ -4922,98 +4922,83 @@ function execPaperTrade(){
 
 // ── COPY STRATEGY AS NATURAL LANGUAGE ────────────────────────────────────────
 function copyStrategyText(s){
-  var lines = [];
-  var name = s.name || s.strategy_name || 'Strategy';
-  var inst = s.instrument || 'NIFTY';
-  var action = s.action || s.entry_action || 'BUY';
-  var otype = s.option_type || 'CE';
-  var lots = s.quantity || s.lots || s.default_lots || 1;
-  var sl = s.stop_loss || s.sl || 100;
-  var tgt = s.target || s.target_points || 200;
-  var tf = s.timeframe || '5m';
-  var wr = s.avg_win_rate || s.win_rate || 0;
-  
+  if(!s){toast('No strategy data','warn');return;}
+  var lines=[];
+  var name=s.name||s.strategy_name||'Strategy';
+  var inst=s.instrument||'NIFTY';
+  var action=s.action||'BUY';
+  var otype=s.option_type||'CE';
+  var lots=s.quantity||s.lots||1;
+  var sl=s.stop_loss||s.sl_value||s.sl||80;
+  var tgt=s.target||s.target_value||s.tp||160;
+  var tf=s.timeframe||'5m';
+  var wr=s.avg_win_rate||s.win_rate||0;
+
   // Header
-  lines.push('=== ' + name.toUpperCase() + ' ===');
+  lines.push('=== '+name.toUpperCase()+' ===');
   lines.push('');
-  
-  // Core order command
+
+  // Order command
   lines.push('📌 ORDER COMMAND:');
-  lines.push(action + ' ' + inst + ' ' + otype + ' ' + lots + ' LOT');
-  lines.push('Stop Loss: ' + sl + ' pts | Target: ' + tgt + ' pts');
-  lines.push('Timeframe: ' + tf + ' | R/R: 1:' + (tgt/sl).toFixed(2));
+  lines.push(action+' '+inst+' '+otype+' '+lots+' LOT');
+  lines.push('Stop Loss: '+sl+' pts | Target: '+tgt+' pts');
+  lines.push('Timeframe: '+tf+' | R/R: 1:'+(tgt/sl).toFixed(2));
   lines.push('');
-  
-  // Entry conditions
-  if(s.conditions || s.entry_conditions){
+
+  // Entry conditions - handle array
+  var ec=s.entry_conditions||s.conditions||[];
+  if(typeof ec==='string') ec=ec.split('\n').filter(Boolean);
+  if(ec.length){
     lines.push('📊 ENTRY CONDITIONS:');
-    var conds = (s.conditions || s.entry_conditions || '').split(' AND ');
-    conds.forEach(function(c,i){
-      if(c.trim()) lines.push((i+1)+'. ' + c.trim());
-    });
+    ec.forEach(function(c,i){if(c&&c.trim())lines.push((i+1)+'. '+c.trim());});
     lines.push('');
   }
-  
-  // Description
-  if(s.description){
+
+  // Description - SKIP if it duplicates entry conditions
+  var desc=(s.description||'').trim();
+  var condStr=ec.join(' ').toLowerCase();
+  // Check if desc is just pipe-separated version of conditions
+  var descParts=desc.split('|').map(function(p){return p.trim().toLowerCase().slice(0,8);});
+  var isDuplicate=descParts.length>1&&descParts.every(function(p){
+    return !p||condStr.indexOf(p)>=0;
+  });
+  if(desc&&!isDuplicate&&desc.length<150&&desc.indexOf('📌')<0&&desc.indexOf('===')<0){
     lines.push('📝 DESCRIPTION:');
-    lines.push(s.description);
+    lines.push(desc);
     lines.push('');
   }
-  
-  // Exit conditions - handle string or array
-  var ec = s.exit_conditions || [];
-  if(typeof ec === 'string') ec = [ec];
-  if(ec.length && ec[0]){
+
+  // Exit conditions
+  var xc=s.exit_conditions||[];
+  if(typeof xc==='string') xc=[xc];
+  if(xc.length&&xc[0]){
     lines.push('🚪 EXIT CONDITIONS:');
-    ec.forEach(function(c){if(c&&c.trim())lines.push('• '+c.trim());});
+    xc.forEach(function(c){if(c&&c.trim())lines.push('• '+c.trim());});
     lines.push('');
   }
-  
-  // No-trade conditions
-  if(s.no_trade){
+
+  // No trade
+  var nt=s.no_trade||s.no_trade_conditions||'';
+  if(nt){
     lines.push('❌ NO-TRADE CONDITIONS:');
-    lines.push(s.no_trade);
+    lines.push(nt);
     lines.push('');
   }
-  
+
   // Indicators
-  if(s.indicators){
-    lines.push('📈 INDICATORS: ' + s.indicators);
-  }
-  
-  // Stats
-  if(wr > 0){
-    lines.push('✅ WIN RATE: ' + wr + '%');
-  }
-  if(s.ai_score){
-    lines.push('🤖 AI SCORE: ' + s.ai_score + '/100');
-  }
-  if(s.avg_monthly_return){
-    lines.push('💰 AVG MONTHLY RETURN: ' + s.avg_monthly_return + '%');
-  }
-  
-  // Notes
-  if(s.notes){
-    lines.push('');
-    lines.push('💡 NOTES: ' + s.notes);
-  }
-  
-  var text = lines.join('\n');
-  
-  // Copy to clipboard
-  try {
+  if(s.indicators) lines.push('📈 INDICATORS: '+s.indicators);
+  if(wr>0) lines.push('✅ WIN RATE: '+wr+'%');
+  if(s.ai_score) lines.push('🤖 AI SCORE: '+s.ai_score+'/100');
+
+  var text=lines.join('\n');
+  try{
     navigator.clipboard.writeText(text).then(function(){
-      toast('✅ Strategy copied to clipboard!','success');
-    }).catch(function(){
-      fallbackCopy(text);
-    });
-  } catch(e){
-    fallbackCopy(text);
-  }
-  
+      toast('✅ Strategy copied!','success');
+    }).catch(function(){fallbackCopy(text);});
+  }catch(e){fallbackCopy(text);}
   return text;
 }
+
 
 function fallbackCopy(text){
   var ta = document.createElement('textarea');
