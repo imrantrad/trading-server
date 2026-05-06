@@ -368,14 +368,8 @@ input:focus, select:focus {
   .blg { padding: 10px !important; }
 }
 
-/* CRITICAL: Panels hidden by default - MUST be last rule */
-
-
-
-
 /* ── PANEL VISIBILITY - DO NOT MODIFY ── */
 
-/* ═══ DEFINITIVE PANEL RULES - OVERRIDES ALL ABOVE ═══ */
 .pnl { display: none !important; }
 .pnl.active { display: flex !important; flex-direction: column; padding: 8px; }
 </style>
@@ -2398,51 +2392,9 @@ input:focus, select:focus {
 .sym-btn.active{background:#001a0e;border-color:var(--gr);color:var(--gr);font-weight:700}
 .rm-fill{height:100%;border-radius:2px;transition:width 1.5s ease}
 
-/* ═══ DEFINITIVE LAYOUT RULES ═══ */
+/* PANEL DISPLAY - FINAL */
 .pnl { display: none !important; }
-.pnl.active { 
-  display: flex !important; 
-  flex-direction: column !important;
-  align-items: stretch !important;
-  justify-content: flex-start !important;
-  padding: 8px !important;
-  min-height: 0 !important;
-}
-.main { 
-  flex: 1 !important; 
-  overflow-y: auto !important;
-  min-height: 0 !important;
-}
-body {
-  display: flex !important;
-  flex-direction: column !important;
-  height: 100vh !important;
-  overflow: hidden !important;
-}
-.hdr { flex-shrink: 0 !important; }
-.tabs { flex-shrink: 0 !important; }
-
-/* ━━━━━━ PANEL LAYOUT - SINGLE SOURCE OF TRUTH ━━━━━━ */
-body { 
-  display: flex !important; 
-  flex-direction: column !important; 
-  height: 100vh !important; 
-  overflow: hidden !important;
-}
-.hdr { flex-shrink: 0 !important; height: 42px !important; }
-.tabs { flex-shrink: 0 !important; }
-.main { 
-  flex: 1 !important; 
-  overflow-y: auto !important; 
-  overflow-x: hidden !important;
-  min-height: 0 !important;
-}
-.pnl { display: none !important; }
-.pnl.active { 
-  display: block !important;
-  padding: 8px !important;
-  min-height: 0 !important;
-}
+.pnl.active { display: block !important; padding: 8px !important; }
 </style>
 
 
