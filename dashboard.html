@@ -7616,7 +7616,12 @@ function saveStrat(){
     });
     var nlpOutEl=document.getElementById('nlp-out');
     if(nlpOutEl) nlpOutEl.style.display='none';
+    // Refresh both MY STRATEGIES lists
     loadMy();
+    if(typeof loadPaperStrats==='function') loadPaperStrats('my');
+    // Switch to MY tab in TRADE section to show saved strategy
+    var myTab = document.getElementById('strat-list');
+    if(myTab) myTab.scrollIntoView({behavior:'smooth', block:'start'});
   });
 }
 </script>
