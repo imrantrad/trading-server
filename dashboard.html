@@ -175,10 +175,11 @@ body { font-family: -apple-system, 'SF Pro Display', 'Segoe UI', sans-serif; }
 }
 
 /* Panel - zero waste space */
-.pnl {
-  padding: 10px !important;
-  max-width: 480px !important;
-  margin: 0 auto !important;
+/* .pnl display is controlled by JS - do not override here */
+.pnl.active {
+  padding: 10px;
+  max-width: 480px;
+  margin: 0 auto;
 }
 
 /* Cards - professional */
@@ -366,7 +367,7 @@ input:focus, select:focus {
 
 /* Mobile optimizations */
 @media (max-width: 480px) {
-  .pnl { padding: 8px !important; }
+  .pnl.active { padding: 8px; }
   .card { padding: 10px !important; }
   .blg { padding: 10px !important; }
 }
