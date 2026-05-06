@@ -3892,9 +3892,9 @@ function fallbackToPolling() {
   
   // ── STEP 3: Force correct startup panel ──
   // Hide ALL panels first
-  document.querySelectorAll('.pnl').forEach(function(p){
+  document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
+    p.style.cssText = 'display:none !important';
     p.classList.remove('active');
-    p.style.display = 'none';  // Force hide
   });
   document.querySelectorAll('.tab').forEach(function(t2){t2.classList.remove('active');});
   
@@ -3902,7 +3902,9 @@ function fallbackToPolling() {
   var lastTab = 'trade';
   try{
     var saved = localStorage.getItem('trd_last_tab');
-    if(saved && saved !== 'paper' && saved !== 'livepos' && document.getElementById('pnl-'+saved)){
+    // Never restore strats as startup tab
+    var blocked = ['paper','livepos','strats','admin'];
+    if(saved && blocked.indexOf(saved)<0 && document.getElementById('pnl-'+saved)){
       lastTab = saved;
     }
   }catch(e){}
