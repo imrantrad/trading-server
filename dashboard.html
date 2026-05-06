@@ -2814,6 +2814,7 @@ function show(name, btn) {
   // Show ONLY target panel
   var p = $('pnl-'+name);
   if(p){ 
+    p.style.display = 'flex';  // Force show
     p.classList.add('active'); 
   }
   if(btn && btn.classList) btn.classList.add('active');
@@ -3892,7 +3893,7 @@ function fallbackToPolling() {
   // Hide ALL panels first
   document.querySelectorAll('.pnl').forEach(function(p){
     p.classList.remove('active');
-    // Do NOT remove style - preserves display:none on pnl-livepos etc
+    p.style.display = 'none';  // Force hide
   });
   document.querySelectorAll('.tab').forEach(function(t2){t2.classList.remove('active');});
   
@@ -3907,7 +3908,7 @@ function fallbackToPolling() {
   
   // Show the target panel
   var tp2 = document.getElementById('pnl-'+lastTab);
-  if(tp2){ tp2.classList.add('active'); }
+  if(tp2){ tp2.style.display='flex'; tp2.classList.add('active'); }
   
   // Highlight matching tab button
   var tabFound = false;
