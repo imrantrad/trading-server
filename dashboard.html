@@ -918,7 +918,962 @@ input:focus, select:focus {
   <button class="btn bg" onclick="loadBuiltin()">★ BUILT-IN</button>
   <button class="btn bb" onclick="loadMy()">MY STRATEGIES</button>
   <button class="btn ba" onclick="toggleNLP()">◆ NLP BUILDER</button>
-  <button class="btn bg" style="border-color:var(--am);background:#1a0e00;color:var(--am)" onclick="loadAIApprovedStrats()">🤖 AI STRATEGIES</button>
+  <button class="btn bg" style="border-color:var(--am);background:#1a0e00;color:var(--am)" onclick="loadAIStrats('approved')">🤖 AI STRATEGIES</button>
+
+  <div <div id="nlp-bld" class="card" style="display:none;border-color:rgba(0,255,136,.3)">
+    <div class="chdr" style="color:var(--gr)">💾 SAVE STRATEGY
+      <button onclick="toggleNLP()" style="font-size:10px;padding:2px 8px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">✕ CLOSE</button>
+    </div>
+    <!-- Name -->
+    <div style="margin-bottom:8px">
+      <div class="lbl">STRATEGY NAME *</div>
+      <input id="ns-nm" placeholder="e.g. Noor BankNifty Scalp" style="font-size:13px;font-weight:600;border-color:rgba(0,255,136,.3)">
+    </div>
+    <!-- NLP Text area -->
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div class="lbl">STRATEGY TEXT / NLP</div>
+        <div style="display:flex;gap:4px">
+          <button onclick="startVoiceInput()" id="nlp-mic-btn" title="Voice" style="font-size:11px;padding:2px 6px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">🎤</button>
+          <button onclick="toggleNLPSize()" id="nlp-resize-btn" style="font-size:10px;padding:2px 6px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">⤢ MAX</button>
+          <button onclick="clearNLP()" style="font-size:10px;padding:2px 6px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">✕</button>
+        </div>
+      </div>
+      <div id="nlp-wrap">
+        <textarea id="nlp-in" rows="4" placeholder="buy nifty ce rsi 60 ema cross sl 80 target 160...&#10;&#10;Or paste copied strategy here" style="transition:all .3s;resize:vertical;width:100%;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);border-radius:6px;padding:8px;font-size:10px;font-family:monospace"></textarea>
+      </div>
+    </div>
+    <!-- Parse + Save buttons -->
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button onclick="nlpParse()" class="btn bb" style="flex:1;padding:8px;font-size:10px">🧠 PARSE</button>
+      <button onclick="nlpParseAndFill()" class="btn ba" style="flex:1;padding:8px;font-size:10px">⚡ PARSE & FILL</button>
+    </div>
+    <!-- NLP output -->
+    <div id="nlp-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:10px;font-size:10px"></div>
+    <!-- Save button -->
+    <button onclick="saveStrat()" class="btn bg blg" style="width:100%;margin-top:8px;font-size:12px">💾 SAVE TO MY STRATEGIES</button>
+    <div id="ns-save-msg" style="margin-top:8px;font-size:11px;text-align:center;display:none"></div>
+  </div>TYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>TRD v12.3</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060608;--bg2:#0d0e14;--bg3:#12131c;--bg4:#181924;--bo:#1e2030;--gr:#00ff88;--rd:#ff3355;--bl:#4f8ef7;--am:#f59e0b;--pu:#a855f7;--tx:#e2e8f0;--mu:#64748b}
+body{background:var(--bg);color:var(--tx);font-family:monospace;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;font-size:13px}
+.hdr{background:var(--bg2);border-bottom:1px solid var(--bo);padding:0 12px;height:42px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.tabs{background:var(--bg2);border-bottom:1px solid var(--bo);display:flex;overflow-x:auto;flex-shrink:0}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:10px 14px;font-size:10px;letter-spacing:.5px;cursor:pointer;border:none;background:none;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
+.tab.active{color:var(--gr);border-bottom-color:var(--gr)}
+.main{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;-webkit-overflow-scrolling:touch}
+.pnl{display:none;flex-direction:column;padding:10px;min-height:100%}
+.pnl.active{display:flex}
+.pnl.active{display:flex}
+.card{background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px}
+.chdr{font-size:8px;color:var(--mu);letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stat{background:var(--bg4);border:1px solid var(--bo);border-radius:5px;padding:8px}
+.sl{font-size:7px;color:var(--mu);letter-spacing:1px}
+.sv{font-size:16px;font-weight:700;margin-top:2px}
+.ss{font-size:8px;color:var(--mu);margin-top:1px}
+.btn{font-family:inherit;cursor:pointer;border-radius:5px;font-size:10px;letter-spacing:.5px;border:1px solid;font-weight:600;padding:7px 14px}
+.bg{background:#001a0e;color:var(--gr);border-color:var(--gr)}
+.br{background:#1a0008;color:var(--rd);border-color:var(--rd)}
+.bb{background:#0a1628;color:var(--bl);border-color:var(--bl)}
+.ba{background:#1a0e00;color:var(--am);border-color:var(--am)}
+.bp{background:#160a28;color:var(--pu);border-color:var(--pu)}
+.blg{width:100%;padding:10px;font-size:11px}
+.tog{padding:5px 10px;font-size:9px;font-family:inherit;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);cursor:pointer;border-radius:4px}
+.tg{background:#001a0e;border-color:var(--gr);color:var(--gr);font-weight:700}
+.tr{background:#1a0008;border-color:var(--rd);color:var(--rd);font-weight:700}
+.tb{background:#0a1628;border-color:var(--bl);color:var(--bl);font-weight:700}
+.ta{background:#1a0e00;border-color:var(--am);color:var(--am);font-weight:700}
+input,select,textarea{background:var(--bg4);border:1px solid var(--bo);color:var(--tx);font-family:inherit;font-size:12px;border-radius:6px;padding:9px 12px;outline:none;width:100%}
+input:focus,select:focus{border-color:var(--gr)}
+textarea{resize:vertical;min-height:55px}
+.lbl{font-size:8px;color:var(--mu);letter-spacing:1px;margin-bottom:3px}
+.tbl{width:100%;font-size:9px;border-collapse:collapse}
+.tbl th{color:var(--mu);font-size:7px;padding:6px;text-align:left;border-bottom:1px solid var(--bo);background:var(--bg4)}
+.tbl td{padding:6px;border-bottom:1px solid var(--bo)}
+.pb{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-top:3px}
+.pf{height:100%;border-radius:2px;transition:width .5s}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.bdg{font-size:7px;padding:2px 7px;border-radius:10px;font-weight:700;border:1px solid}
+#toast{position:fixed;top:50px;right:12px;z-index:999;background:var(--bg2);border-left:3px solid var(--gr);border:1px solid var(--bo);border-radius:5px;padding:10px 14px;font-size:10px;display:none;max-width:280px}
+.rm-fill{height:100%;border-radius:2px;transition:width 1.5s ease}
+
+/* ── PREMIUM POLISH ── */
+:root {
+  --shadow-green: 0 0 20px rgba(0,255,136,.08);
+  --shadow-card: 0 4px 24px rgba(0,0,0,.4);
+}
+.card {
+  box-shadow: var(--shadow-card);
+  transition: border-color .2s, box-shadow .2s;
+}
+.card:hover { border-color: var(--bo); }
+
+/* Better scrollbar */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--bo); border-radius: 2px; }
+
+/* Button hover glow */
+.btn:hover { transform: translateY(-1px); transition: all .15s; }
+.blg { font-size: 12px !important; padding: 12px !important; letter-spacing: 1px; border-radius: 6px !important; }
+
+/* Input focus glow */
+input:focus, select:focus, textarea:focus {
+  border-color: var(--gr) !important;
+  box-shadow: 0 0 0 2px rgba(0,255,136,.08);
+}
+
+/* Tab active indicator */
+.tab.active { color: var(--gr) !important; border-bottom-color: var(--gr) !important; }
+
+/* Stat card hover */
+.stat { transition: background .2s; }
+.stat:hover { background: var(--bg3); }
+
+/* Market watch chips hover */
+.mkt-chip:hover { opacity: .85; transform: translateY(-1px); }
+
+/* Table row hover */
+.tbl tbody tr:hover td { background: var(--bg3) !important; }
+
+/* Modal backdrop */
+#chart-modal { backdrop-filter: blur(4px); }
+
+/* Smooth panel transitions */
+.pnl.active { animation: fadeIn .2s ease; }  /* Only animate when showing */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+
+/* ── MOBILE SCROLL FIX ── */
+@media(max-width:768px){
+  body{height:auto;min-height:100vh}
+  .main{height:auto;min-height:calc(100vh - 110px)}
+  .pnl.active{min-height:calc(100vh - 110px);padding-bottom:40px}
+  #pnl-prof{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .card{margin-bottom:10px}
+  /* Prevent horizontal overflow */
+  *{max-width:100%;word-break:break-word}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* Better touch targets */
+  .btn{min-height:36px}
+  .tab{min-height:36px;padding:8px 10px}
+  input,select,textarea{font-size:16px!important} /* Prevent zoom on iOS */
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   TRD v12.3 — Professional UI System
+   International Trading Platform Standards
+═══════════════════════════════════════════════════════════════ */
+
+/* Layout resets */
+* { box-sizing: border-box; }
+body { font-family: -apple-system, 'SF Pro Display', 'Segoe UI', sans-serif; }
+
+/* Header - compact professional */
+.hdr {
+  height: 44px !important;
+  background: linear-gradient(135deg, #060b14 0%, #0a1628 50%, #060b14 100%) !important;
+  border-bottom: 1px solid rgba(79,142,247,.15) !important;
+  padding: 0 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+}
+
+/* Navigation - professional tab bar */
+.nav {
+  height: 36px !important;
+  background: #070c18 !important;
+  border-bottom: 1px solid rgba(255,255,255,.06) !important;
+  display: flex !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+  position: sticky !important;
+  top: 44px !important;
+  z-index: 999 !important;
+}
+.nav::-webkit-scrollbar { display: none; }
+
+/* Tab buttons */
+.nav-btn {
+  flex-shrink: 0 !important;
+  padding: 0 14px !important;
+  height: 36px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px !important;
+  border: none !important;
+  background: transparent !important;
+  color: rgba(255,255,255,.4) !important;
+  cursor: pointer !important;
+  border-bottom: 2px solid transparent !important;
+  transition: all .15s !important;
+  white-space: nowrap !important;
+}
+.nav-btn:hover { color: rgba(255,255,255,.7) !important; }
+.nav-btn.active {
+  color: #fff !important;
+  border-bottom-color: #4f8ef7 !important;
+  background: rgba(79,142,247,.06) !important;
+}
+
+/* Panel - zero waste space */
+/* .pnl display is controlled by JS - do not override here */
+.pnl.active {
+  padding: 10px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Cards - professional */
+.card {
+  background: rgba(255,255,255,.03) !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  border-radius: 10px !important;
+  padding: 12px !important;
+  margin-bottom: 10px !important;
+}
+.card:last-child { margin-bottom: 0; }
+
+/* Card header */
+.chdr {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px !important;
+  color: rgba(255,255,255,.4) !important;
+  margin-bottom: 10px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  text-transform: uppercase !important;
+}
+
+/* Stats */
+.stat {
+  background: rgba(255,255,255,.03) !important;
+  border: 1px solid rgba(255,255,255,.06) !important;
+  border-radius: 8px !important;
+  padding: 10px !important;
+}
+.sv { font-size: 16px !important; font-weight: 700 !important; margin-top: 2px !important; }
+.sl { font-size: 8px !important; color: rgba(255,255,255,.4) !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; }
+
+/* Buttons - professional */
+.btn {
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2px !important;
+  transition: all .15s !important;
+  cursor: pointer !important;
+  font-size: 10px !important;
+}
+.btn:active { transform: scale(.97) !important; }
+.blg { padding: 11px !important; font-size: 11px !important; font-weight: 700 !important; letter-spacing: 0.5px !important; }
+
+/* Inputs - professional */
+input, select {
+  background: rgba(255,255,255,.05) !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  border-radius: 6px !important;
+  color: #fff !important;
+  padding: 9px 10px !important;
+  font-size: 12px !important;
+  width: 100% !important;
+  transition: border-color .15s !important;
+}
+input:focus, select:focus {
+  outline: none !important;
+  border-color: rgba(79,142,247,.5) !important;
+  background: rgba(79,142,247,.05) !important;
+}
+
+/* Labels */
+.lbl {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.6px !important;
+  color: rgba(255,255,255,.35) !important;
+  text-transform: uppercase !important;
+  margin-bottom: 5px !important;
+}
+
+/* Toggle buttons */
+.tog {
+  padding: 6px 10px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  border-radius: 5px !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  background: transparent !important;
+  color: rgba(255,255,255,.4) !important;
+  cursor: pointer !important;
+  transition: all .15s !important;
+}
+.tog.ta {
+  background: rgba(79,142,247,.15) !important;
+  border-color: rgba(79,142,247,.4) !important;
+  color: #4f8ef7 !important;
+}
+
+/* Table */
+.tbl {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 10px !important;
+}
+.tbl th {
+  padding: 7px 8px !important;
+  text-align: left !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.6px !important;
+  color: rgba(255,255,255,.3) !important;
+  text-transform: uppercase !important;
+  border-bottom: 1px solid rgba(255,255,255,.06) !important;
+}
+.tbl td {
+  padding: 7px 8px !important;
+  border-bottom: 1px solid rgba(255,255,255,.04) !important;
+  color: rgba(255,255,255,.8) !important;
+}
+.tbl tr:hover td { background: rgba(255,255,255,.02) !important; }
+
+/* Grid */
+.g2 { display: grid !important; grid-template-columns: repeat(2,1fr) !important; }
+.g3 { display: grid !important; grid-template-columns: repeat(3,1fr) !important; }
+
+/* Market watch strip */
+.mkt-strip {
+  background: #070c18 !important;
+  border-bottom: 1px solid rgba(255,255,255,.05) !important;
+  padding: 6px 10px !important;
+  display: flex !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+
+/* Toast notifications */
+.toast-container {
+  position: fixed !important;
+  bottom: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  pointer-events: none !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+
+/* Color system */
+:root {
+  --gr: #00ff88;
+  --rd: #ff3366;
+  --am: #fbbf24;
+  --bl: #4f8ef7;
+  --p0: #a855f7;
+  --mu: rgba(255,255,255,.4);
+  --tx: rgba(255,255,255,.9);
+  --bg2: #070c18;
+  --bg3: rgba(255,255,255,.03);
+  --bg4: rgba(255,255,255,.05);
+  --bo: rgba(255,255,255,.08);
+  --shadow: 0 4px 24px rgba(0,0,0,.4);
+}
+
+/* Loading skeleton */
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.1) 50%, rgba(255,255,255,.05) 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.2s infinite;
+  border-radius: 4px;
+}
+
+/* Status indicators */
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.status-dot.online { background: var(--gr); animation: pulse 2s infinite; }
+.status-dot.offline { background: var(--rd); }
+
+/* Mobile optimizations */
+@media (max-width: 480px) {
+  .pnl.active { padding: 8px; }
+  .card { padding: 10px !important; }
+  .blg { padding: 10px !important; }
+}
+
+/* CRITICAL: Panels hidden by default - MUST be last rule */
+.pnl:not(.active) { display: none !important; }
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="hdr" style="background:linear-gradient(90deg,#00000a 0%,#030510 50%,#00000a 100%);border-bottom:1px solid rgba(0,255,136,.1)">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px">TRD v12.3</span>
+    <span class="bdg" id="mode-bdg" style="border-color:var(--bl);background:#0a1628;color:var(--bl)">PAPER</span>
+    <span class="bdg" id="plan-bdg" style="border-color:var(--pu);background:#160a28;color:var(--pu)">PRO</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:9px;color:var(--mu)" id="clk"></span>
+    <div style="position:relative;cursor:pointer" onclick="toggleNotifPanel()">
+      <span style="font-size:18px">🔔</span>
+      <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:var(--rd);border-radius:50%;font-size:8px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">0</span>
+    </div>
+    <div class="dot" id="api-dot" style="background:var(--am)"></div>
+    <span style="font-size:8px;color:var(--mu)" id="api-lbl">CONNECTING</span>
+    <button class="btn br" id="kill-btn" onclick="toggleKill()" style="padding:3px 8px">KILL</button>
+    <button class="btn" onclick="show('prof',null)" style="padding:3px 10px;background:#160a28;border-color:var(--pu);color:var(--pu);font-size:9px">👤 PROFILE</button>
+    
+  </div>
+</div>
+
+<!-- NOTIFICATION PANEL -->
+<div id="notif-panel" style="display:none;position:fixed;top:50px;right:10px;width:320px;max-height:80vh;background:var(--bg2);border:1px solid var(--bo);border-radius:10px;flex-direction:column;z-index:500;box-shadow:0 20px 60px rgba(0,0,0,.6);overflow:hidden">
+  <div style="padding:12px 16px;border-bottom:1px solid var(--bo);display:flex;justify-content:space-between;align-items:center;background:var(--bg3)">
+    <div style="font-size:12px;font-weight:700">🔔 NOTIFICATIONS</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="markAllRead()" style="font-size:9px;padding:3px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">Mark all read</button>
+      <button onclick="toggleNotifPanel()" style="background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer;line-height:1">✕</button>
+    </div>
+  </div>
+  <div id="notif-list" style="flex:1;overflow-y:auto;padding:8px;max-height:60vh">
+    <div style="text-align:center;color:var(--mu);padding:24px;font-size:10px">Loading notifications...</div>
+  </div>
+  <div style="padding:10px 16px;border-top:1px solid var(--bo);font-size:9px;color:var(--mu);text-align:center">
+    Quiet hours: 11PM–7AM IST · Max 10 push/hr
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="show('trade',this)">TRADE</button>
+  <button class="tab" id="tab-paper" onclick="activatePaperTab(this)">📄 PAPER TEST</button>
+  <button class="tab" onclick="show('risk',this)">RISK</button>
+  <button class="tab" onclick="show('scan',this)">SCANNER</button>
+  <button class="tab" onclick="show('opts',this)">OPTIONS</button>
+  <button class="tab" onclick="show('strats',this);loadBuiltin()">📂 STRATEGIES</button>
+  <button class="tab" onclick="show('bt',this)">BACKTEST</button>
+  <button class="tab" onclick="show('jnl',this)">JOURNAL</button>
+  <button class="tab" onclick="show('rep',this)">REPORTS</button>
+  <button class="tab" onclick="show('calc',this)">CALC</button>
+  <button class="tab" onclick="show('ai',this)">AI ENGINE</button>
+  <button class="tab" onclick="show('admin',this)">ADMIN</button>
+  <button class="tab" onclick="show('legal',this)">LEGAL</button>
+</div>
+<div class="main">
+
+<div id="pnl-trade" class="pnl">
+  <!-- Unified Mode Bar -->
+  <div id="trade-mode-bar" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:10px 14px;background:rgba(0,255,136,.03);border:1px solid rgba(0,255,136,.08);border-radius:8px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="mode-indicator" style="font-size:10px;font-weight:700;padding:4px 12px;border-radius:20px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);color:var(--gr);letter-spacing:.5px">📄 PAPER MODE</span>
+      <span id="mode-desc" style="font-size:10px;color:var(--mu)">Orders go to virtual wallet</span>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button id="mode-paper-btn" onclick="switchToMode('PAPER')" style="font-size:9px;padding:5px 14px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:4px;font-weight:700;cursor:pointer;font-family:inherit">PAPER</button>
+      <button id="mode-live-btn" onclick="switchToMode('LIVE')" style="font-size:9px;padding:5px 14px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer;font-family:inherit">LIVE</button>
+    </div>
+  </div>
+  <!-- COMPACT MARKET WATCH STRIP -->
+  <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:6px 10px;margin-bottom:8px;overflow-x:auto">
+    <div style="display:flex;align-items:center;gap:4px;min-width:max-content">
+      <span id="mkt-status" style="font-size:8px;padding:2px 7px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd);flex-shrink:0;margin-right:6px">● CLOSED</span>
+      <div id="mkt-grd" style="display:flex;gap:4px"></div>
+    </div>
+  </div>
+  <!-- Quick Action Row -->
+  <div style="display:flex;gap:6px;margin-bottom:8px">
+    <button class="btn bb" style="flex:1;padding:8px;font-size:9px" onclick="openLivePositions()">📈 POSITIONS</button>
+    <button class="btn bg" style="flex:1;padding:8px;font-size:9px" onclick="openStrategies()">★ STRATEGIES</button>
+    <button class="btn" style="flex:1;padding:8px;font-size:9px;background:rgba(0,255,136,.07);border-color:var(--gr);color:var(--gr)" onclick="openPaperTest()">📄 PAPER</button>
+  </div>
+  <div class="g4">
+    <div class="stat"><div class="sl">TOTAL P&L</div><div class="sv" id="s-pnl" style="color:var(--gr)">₹0</div><div class="ss" id="s-pp">0%</div></div>
+    <div class="stat"><div class="sl">TODAY P&L</div><div class="sv" id="s-dp" style="color:var(--gr)">₹0</div><div class="ss" id="s-tc">0 trades</div></div>
+    <div class="stat"><div class="sl">WIN RATE</div><div class="sv" id="s-wr" style="color:var(--gr)">0%</div><div class="ss" id="s-wl">0W/0L</div></div>
+    <div class="stat"><div class="sl">CAPITAL</div><div class="sv" id="s-cap" style="color:var(--bl);font-size:13px">₹5L</div><div class="ss" id="s-dd">DD: 0%</div></div>
+  </div>
+  <div class="g2" style="gap:10px">
+    <div class="card">
+      <div class="chdr">ORDER ENTRY</div>
+
+      <div style="margin-bottom:8px"><div class="lbl">INSTRUMENT</div><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="tog ta" id="bi-NIFTY" onclick="setInst('NIFTY',this)">NIFTY</button><button class="tog" id="bi-BANKNIFTY" onclick="setInst('BANKNIFTY',this)">BANKNIFTY</button><button class="tog" id="bi-FINNIFTY" onclick="setInst('FINNIFTY',this)">FINNIFTY</button><button class="tog" id="bi-SENSEX" onclick="setInst('SENSEX',this)">SENSEX</button></div></div>
+      <div class="g2" style="gap:6px;margin-bottom:6px">
+        <div><div class="lbl">ACTION</div><div style="display:flex;gap:4px"><button class="tog tg" id="ba-BUY" onclick="setAction('BUY')">BUY</button><button class="tog" id="ba-SELL" onclick="setAction('SELL')">SELL</button></div></div>
+        <div><div class="lbl">OPTION TYPE</div><div style="display:flex;gap:4px"><button class="tog tb" id="bt-CE" onclick="setType('CE')">CE</button><button class="tog" id="bt-PE" onclick="setType('PE')">PE</button><button class="tog" id="bt-FUT" onclick="setType('FUT')">FUT</button></div></div>
+      </div>
+      <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">STRIKE</div><input type="number" id="f-strike" placeholder="23900"></div><div><div class="lbl">LOTS</div><input type="number" id="f-lots" value="1"></div></div>
+      <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">ENTRY PRICE</div><input type="number" id="f-price" placeholder="Premium"></div><div><div class="lbl">EXPIRY</div><select id="f-exp"><option>WEEKLY</option><option>MONTHLY</option></select></div></div>
+      <div class="g2" style="gap:6px;margin-bottom:10px"><div><div class="lbl">STOP LOSS (pts)</div><input type="number" id="f-sl" value="100"></div><div><div class="lbl">TARGET (pts)</div><input type="number" id="f-tgt" value="200"></div></div>
+      <button class="btn blg bg" id="exec-btn" onclick="execTrade()" style="background:linear-gradient(135deg,#006633,#004422);border-color:#00ff88">EXECUTE BUY NIFTY CE</button>
+      <div style="margin-top:10px;overflow-x:auto"><table class="tbl"><thead><tr><th>ID</th><th>INST</th><th>OPT</th><th>LOTS</th><th>ENTRY</th><th>SIDE</th><th>STATUS</th></tr></thead><tbody id="exec-rows"></tbody></table></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="card">
+        <div class="chdr">NLP ORDER ENTRY
+  <div style="display:flex;gap:5px;align-items:center">
+    <button onclick="startVoiceInput()" id="nlp-mic-btn" title="Voice Input" style="font-size:13px;padding:2px 8px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">🎤</button>
+    <button onclick="toggleNLPSize()" id="nlp-resize-btn" title="Expand/Collapse" style="font-size:11px;padding:2px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">⤢ MAX</button>
+    <button onclick="clearNLP()" title="Clear" style="font-size:11px;padding:2px 8px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">✕</button>
+  </div>
+</div>
+<div id="nlp-wrap" style="position:relative">
+  <textarea id="nlp-in" rows="3" placeholder="buy nifty atm call rsi under 30 sl 100 target 300" style="transition:all .3s;resize:vertical"></textarea>
+</div>
+        <div style="display:flex;gap:6px;margin-top:6px"><button class="btn bb" style="flex:1;padding:7px" onclick="nlpParse()">PARSE</button><button class="btn bg" style="flex:1;padding:7px" onclick="nlpParseAndFill()">⚡ PARSE & FILL</button></div>
+        <div id="nlp-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:6px;font-size:8px;line-height:1.8"></div>
+      </div>
+      <div class="card">
+        <div class="chdr">MARKET WATCH <span id="mkt-status" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
+        <div id="mkt-grd" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
+      </div>
+      <!-- STRATEGY SELECTOR IN TRADE TAB -->
+              </div>
+        <div id="trade-strat-list" style="max-height:220px;overflow-y:auto"></div>
+      </div>
+
+            <div class="card" id="trade-strat-section">
+        <div class="chdr">📂 STRATEGIES
+          <div style="display:flex;gap:4px">
+            <button id="ts-bi" onclick="tradeStratTab('builtin',this)" style="font-size:8px;padding:2px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:4px;cursor:pointer">★ BUILT-IN</button>
+            <button id="ts-my" onclick="tradeStratTab('my',this)" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">MY</button>
+            <button id="ts-nlp" onclick="tradeStratTab('nlp',this)" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">NLP</button>
+            <button id="ts-ai" onclick="tradeStratTab('ai',this)" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">🤖 AI</button>
+          </div>
+        </div>
+        <div id="trade-strat-list" style="max-height:220px;overflow-y:auto"></div>
+      </div>
+<div class="card">
+        <div class="chdr">LOG <button class="btn ba" onclick="document.getElementById('log-box').innerHTML=''" style="padding:2px 8px;font-size:8px">CLR</button></div>
+        <div id="log-box" style="max-height:100px;overflow-y:auto;font-size:9px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="pnl-pos" class="pnl">
+  <div class="g3"><div class="stat"><div class="sl">OPEN</div><div class="sv" id="p-open" style="color:var(--bl)">0</div></div><div class="stat"><div class="sl">UNREALIZED P&L</div><div class="sv" id="p-upnl" style="color:var(--gr)">₹0</div></div><div class="stat"><div class="sl">REALIZED P&L</div><div class="sv" id="p-rpnl" style="color:var(--gr)">₹0</div></div></div>
+  <div class="card"><div class="chdr">OPEN POSITIONS<div style="display:flex;gap:6px"><button class="btn ba" onclick="loadPos()" style="padding:4px 8px">↻</button><button class="btn br" onclick="closeAll()" style="padding:4px 8px">CLOSE ALL</button></div></div>
+    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>ID</th><th>INST</th><th>TYPE</th><th>QTY</th><th>ENTRY</th><th>LTP</th><th>P&L</th><th>ACT</th></tr></thead><tbody id="pos-tbl"></tbody></table></div>
+  </div>
+</div>
+
+<div id="pnl-risk" class="pnl">
+  <div class="g4"><div class="stat"><div class="sl">STATUS</div><div class="sv" id="r-st" style="color:var(--gr);font-size:12px">GREEN</div></div><div class="stat"><div class="sl">DAILY LOSS</div><div class="sv" id="r-dl" style="color:var(--gr)">₹0</div></div><div class="stat"><div class="sl">DRAWDOWN</div><div class="sv" id="r-dd" style="color:var(--gr)">0%</div></div><div class="stat"><div class="sl">CONSEC LOSSES</div><div class="sv" id="r-cl" style="color:var(--am)">0</div></div></div>
+  <div class="g2" style="gap:10px">
+    <div class="card"><div class="chdr">RISK METERS</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div><div style="display:flex;justify-content:space-between;font-size:9px"><span style="color:var(--mu)">DAILY LOSS</span><span id="rm-dl">0%/3%</span></div><div class="pb"><div class="pf" id="pb-dl" style="width:0%;background:var(--gr)"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:9px"><span style="color:var(--mu)">DRAWDOWN</span><span id="rm-dd">0%/10%</span></div><div class="pb"><div class="pf" id="pb-dd" style="width:0%;background:var(--bl)"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:9px"><span style="color:var(--mu)">POSITIONS</span><span id="rm-pos">0/5</span></div><div class="pb"><div class="pf" id="pb-pos" style="width:0%;background:var(--am)"></div></div></div>
+      </div>
+    </div>
+    <div class="card"><div class="chdr">POSITION SIZER</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="g2" style="gap:4px"><div><div class="lbl">CAPITAL</div><input type="number" id="ps-c" value="500000"></div><div><div class="lbl">RISK %</div><input type="number" id="ps-r" value="1"></div></div>
+        <div class="g2" style="gap:4px"><div><div class="lbl">SL PTS</div><input type="number" id="ps-s" value="100"></div><div><div class="lbl">LOT SIZE</div><input type="number" id="ps-l" value="50"></div></div>
+        <button class="btn bb blg" onclick="calcPos()">CALCULATE</button>
+        <div id="ps-res" style="display:none;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:8px;font-size:10px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card"><div class="chdr">EMERGENCY</div><div style="display:flex;gap:8px"><button class="btn br" onclick="toggleKill()">KILL SWITCH</button><button class="btn bg" onclick="resumeT()">RESUME</button><button class="btn ba" onclick="resetP()">RESET PAPER</button></div></div>
+</div>
+
+<div id="pnl-scan" class="pnl">
+  <div class="card"><div class="chdr">SCANNER<button class="btn bg" onclick="runScan()" style="padding:4px 10px">SCAN NOW</button></div><div id="scan-out" style="min-height:60px;color:var(--mu);padding:10px;text-align:center">Click SCAN NOW</div></div>
+  <div class="g2" style="gap:10px">
+    <div class="card"><div class="chdr">IV RANK</div>
+      <div class="g2" style="gap:4px;margin-bottom:6px"><div><div class="lbl">INST</div><select id="iv-i"><option>NIFTY</option><option>BANKNIFTY</option></select></div><div><div class="lbl">IV %</div><input type="number" id="iv-v" value="15"></div></div>
+      <button class="btn bb blg" onclick="getIV()">GET IV RANK</button>
+      <div id="iv-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:8px;font-size:10px"></div>
+    </div>
+    <div class="card"><div class="chdr">FII/DII + EXPIRY</div>
+      <button class="btn bb blg" onclick="getFII()" style="margin-bottom:6px">FII/DII DATA</button>
+      <div id="fii-out" style="font-size:9px;color:var(--mu);margin-bottom:8px">Click to load</div>
+      <button class="btn ba blg" onclick="getExpiry()">EXPIRY DATES</button>
+      <div id="exp-out" style="font-size:9px;color:var(--mu);margin-top:6px">Click to load</div>
+    </div>
+  </div>
+</div>
+
+<div id="pnl-opts" class="pnl">
+
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:10px">
+    <button class="btn ba" id="opt-tab-greeks" onclick="['greeks','chain','payoff','iv'].forEach(function(t){var e=document.getElementById('opt-'+t);if(e)e.style.display=t==='greeks'?'block':'none';});['greeks','chain','payoff','iv'].forEach(function(t){var b=document.getElementById('opt-tab-'+t);if(b){b.style.background=t==='greeks'?'rgba(251,191,36,.1)':'var(--bg4)';b.style.color=t==='greeks'?'var(--am)':'var(--mu)';}})" style="flex:1;padding:7px;font-size:9px">🧮 GREEKS</button>
+    <button class="btn" id="opt-tab-chain" onclick="['greeks','chain','payoff','iv'].forEach(function(t){var e=document.getElementById('opt-'+t);if(e)e.style.display=t==='chain'?'block':'none';});['greeks','chain','payoff','iv'].forEach(function(t){var b=document.getElementById('opt-tab-'+t);if(b){b.style.background=t==='chain'?'rgba(251,191,36,.1)':'var(--bg4)';b.style.color=t==='chain'?'var(--am)':'var(--mu)';}})" style="flex:1;padding:7px;font-size:9px">📊 CHAIN</button>
+    <button class="btn" id="opt-tab-payoff" onclick="['greeks','chain','payoff','iv'].forEach(function(t){var e=document.getElementById('opt-'+t);if(e)e.style.display=t==='payoff'?'block':'none';});['greeks','chain','payoff','iv'].forEach(function(t){var b=document.getElementById('opt-tab-'+t);if(b){b.style.background=t==='payoff'?'rgba(251,191,36,.1)':'var(--bg4)';b.style.color=t==='payoff'?'var(--am)':'var(--mu)';}})" style="flex:1;padding:7px;font-size:9px">📈 PAYOFF</button>
+    <button class="btn" id="opt-tab-iv" onclick="['greeks','chain','payoff','iv'].forEach(function(t){var e=document.getElementById('opt-'+t);if(e)e.style.display=t==='iv'?'block':'none';});['greeks','chain','payoff','iv'].forEach(function(t){var b=document.getElementById('opt-tab-'+t);if(b){b.style.background=t==='iv'?'rgba(251,191,36,.1)':'var(--bg4)';b.style.color=t==='iv'?'var(--am)':'var(--mu)';}})" style="flex:1;padding:7px;font-size:9px">🎯 IV</button>
+  </div>
+
+  <!-- GREEKS CALCULATOR -->
+  <div id="opt-greeks">
+    <div class="card" style="margin-bottom:8px">
+      <div class="chdr">🧮 Black-Scholes Greeks Calculator</div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">SPOT PRICE</div><input type="number" id="g-spot" value="24000"></div>
+        <div><div class="lbl">STRIKE PRICE</div><input type="number" id="g-strike" value="24000"></div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">EXPIRY (days)</div><input type="number" id="g-exp" value="7"></div>
+        <div><div class="lbl">IV % (Volatility)</div><input type="number" id="g-iv" value="15" step="0.5"></div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">RISK-FREE RATE %</div><input type="number" id="g-rate" value="6.5" step="0.1"></div>
+        <div><div class="lbl">OPTION TYPE</div>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <button class="btn ba active" id="gbt-CE" onclick="document.getElementById('gbt-CE').classList.add('active');document.getElementById('gbt-PE').classList.remove('active');calcGreeks()" style="flex:1;padding:7px;font-size:11px">CE</button>
+            <button class="btn br" id="gbt-PE" onclick="document.getElementById('gbt-PE').classList.add('active');document.getElementById('gbt-CE').classList.remove('active');calcGreeks()" style="flex:1;padding:7px;font-size:11px">PE</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn bg blg" onclick="calcGreeksNew()" style="width:100%">⚡ CALCULATE GREEKS</button>
+    </div>
+
+    <!-- Greeks Output -->
+    <div id="greeks-out" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+        <div class="stat" style="text-align:center"><div class="sl">PREMIUM</div><div class="sv" id="g-price" style="color:var(--am);font-size:18px">—</div></div>
+        <div class="stat" style="text-align:center"><div class="sl">DELTA Δ</div><div class="sv" id="g-delta" style="color:var(--bl)">—</div></div>
+        <div class="stat" style="text-align:center"><div class="sl">GAMMA Γ</div><div class="sv" id="g-gamma" style="color:var(--gr);font-size:13px">—</div></div>
+        <div class="stat" style="text-align:center"><div class="sl">THETA Θ/day</div><div class="sv" id="g-theta" style="color:var(--rd)">—</div></div>
+        <div class="stat" style="text-align:center"><div class="sl">VEGA ν/1%IV</div><div class="sv" id="g-vega" style="color:var(--p0)">—</div></div>
+        <div class="stat" style="text-align:center"><div class="sl">RHO ρ/1%r</div><div class="sv" id="g-rho" style="color:var(--mu)">—</div></div>
+      </div>
+      <div class="card" style="font-size:10px;line-height:2">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Intrinsic Value</span><span id="g-intrinsic" style="font-weight:700"></span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Time Value</span><span id="g-timevalue" style="font-weight:700"></span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Moneyness</span><span id="g-money" style="font-weight:700"></span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Total Premium (1 lot)</span><span id="g-total" style="font-weight:700;color:var(--am)"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTIONS CHAIN -->
+  <div id="opt-chain" style="display:none">
+    <div class="card" style="margin-bottom:8px">
+      <div class="g2" style="gap:8px">
+        <div><div class="lbl">INSTRUMENT</div>
+          <select id="ch-i" onchange="document.getElementById('ch-spot-val').value=this.value">
+  <option value="24000">NIFTY (~24000)</option>
+  <option value="56000">BANKNIFTY (~56000)</option>
+  <option value="26000">FINNIFTY (~26000)</option>
+  <option value="78000">SENSEX (~78000)</option>
+</select>
+        </div>
+        <div><div class="lbl">EXPIRY (days)</div><input type="number" id="ch-exp" value="7"></div>
+      </div>
+      <div class="g2" style="gap:8px;margin-top:8px">
+        <div><div class="lbl">VIX %</div><input type="number" id="ch-vix" value="15" step="0.5"></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn bg blg" onclick="loadOptionsChain()" style="width:100%;padding:9px">LOAD CHAIN</button></div>
+      </div>
+    </div>
+    <div id="chain-out" style="overflow-x:auto">
+      <div style="text-align:center;color:var(--mu);padding:20px;font-size:10px">Click LOAD CHAIN</div>
+    </div>
+  </div>
+
+  <!-- IV CALCULATOR -->
+  <div id="opt-iv" style="display:none">
+    <div class="card">
+      <div class="chdr">🎯 Implied Volatility Calculator</div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">MARKET PRICE</div><input type="number" id="iv-mkt" value="100"></div>
+        <div><div class="lbl">SPOT</div><input type="number" id="iv-spot" value="24000"></div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">STRIKE</div><input type="number" id="iv-strike" value="24000"></div>
+        <div><div class="lbl">EXPIRY (days)</div><input type="number" id="iv-exp" value="7"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn ba" id="ivbt-CE" onclick="document.getElementById('ivbt-CE').classList.add('active');document.getElementById('ivbt-PE').classList.remove('active')" style="flex:1;padding:8px">CE</button>
+        <button class="btn br" id="ivbt-PE" onclick="document.getElementById('ivbt-PE').classList.add('active');document.getElementById('ivbt-CE').classList.remove('active')" style="flex:1;padding:8px">PE</button>
+      </div>
+      <button class="btn bg blg" onclick="calcIV()" style="width:100%">🎯 CALCULATE IV</button>
+      <div id="iv-out" style="display:none;margin-top:12px">
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--mu);margin-bottom:4px">IMPLIED VOLATILITY</div>
+          <div id="iv-result" style="font-size:36px;font-weight:800;color:var(--am)">—</div>
+          <div style="font-size:10px;color:var(--mu);margin-top:4px">Annualized IV</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYOFF DIAGRAM -->
+  <div id="opt-payoff" style="display:none">
+    <div class="card" style="margin-bottom:8px">
+      <div class="chdr">📈 Strategy Payoff Builder</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn bg" onclick="loadPayoffPreset('straddle')" style="flex:1;padding:7px;font-size:9px">STRADDLE</button>
+        <button class="btn bb" onclick="loadPayoffPreset('strangle')" style="flex:1;padding:7px;font-size:9px">STRANGLE</button>
+        <button class="btn ba" onclick="loadPayoffPreset('iron_condor')" style="flex:1;padding:7px;font-size:9px">IRON CONDOR</button>
+        <button class="btn br" onclick="loadPayoffPreset('bull_spread')" style="flex:1;padding:7px;font-size:9px">BULL SPREAD</button>
+      </div>
+      <div><div class="lbl">SPOT PRICE</div><input type="number" id="po-spot" value="24000" style="margin-bottom:8px"></div>
+      <div id="po-legs" style="margin-bottom:8px"></div>
+      <button class="btn bg blg" onclick="calcPayoff()" style="width:100%">📈 CALCULATE PAYOFF</button>
+    </div>
+    <div id="payoff-out" style="display:none">
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div class="stat"><div class="sl">MAX PROFIT</div><div class="sv" id="po-maxp" style="color:var(--gr)">—</div></div>
+        <div class="stat"><div class="sl">MAX LOSS</div><div class="sv" id="po-maxl" style="color:var(--rd)">—</div></div>
+        <div class="stat"><div class="sl">BREAKEVEN(S)</div><div class="sv" id="po-be" style="font-size:11px;color:var(--am)">—</div></div>
+        <div class="stat"><div class="sl">RISK/REWARD</div><div class="sv" id="po-rr" style="color:var(--gr)">—</div></div>
+      </div>
+      <div class="card">
+        <div class="chdr">P&L at Expiry</div>
+        <div id="payoff-chart" style="height:160px;position:relative;overflow:hidden"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="pnl-bt" class="pnl">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#0a0d18,#001428);padding:10px 14px;border-bottom:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:space-between;margin:-10px -10px 12px">
+    <div style="font-size:13px;font-weight:700;color:var(--bl)">📊 BACKTEST ENGINE</div>
+    <div style="font-size:9px;color:var(--mu)">Deterministic · Per-day consistent</div>
+  </div>
+
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:12px">
+    <button class="btn ba" id="bt-tab-run" onclick="btTab('run',this)" style="flex:1;padding:7px;font-size:9px">⚡ RUN</button>
+    <button class="btn" id="bt-tab-compare" onclick="btTab('compare',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🔀 COMPARE</button>
+    <button class="btn" id="bt-tab-history" onclick="btTab('history',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">📋 HISTORY</button>
+  </div>
+
+  <!-- RUN TAB -->
+  <div id="bt-run">
+    <div class="card" style="margin-bottom:10px">
+      <!-- Strategy Select -->
+      <div style="margin-bottom:8px">
+        <div class="lbl">STRATEGY</div>
+        <select id="bt-s" style="width:100%;margin-top:4px">
+          <optgroup label="── BUILT-IN ──">
+            <option value="STR_THETA_DECAY">Weekly Theta Decay (WR:72%)</option>
+            <option value="STR_ORB">Opening Range Breakout (WR:68%)</option>
+            <option value="STR_IRON_CONDOR_WEEKLY">Weekly Iron Condor (WR:78%)</option>
+            <option value="STR_VWAP_PULLBACK">VWAP Pullback (WR:65%)</option>
+            <option value="STR_GAP_FADE">Gap Fade Strategy (WR:74%)</option>
+            <option value="STR_BANKNIFTY_SCALP">BankNifty Power Hour (WR:62%)</option>
+            <option value="STR_PCR_REVERSAL">PCR Extreme Reversal (WR:71%)</option>
+            <option value="STR_MAX_PAIN_EXPIRY">Max Pain Expiry (WR:76%)</option>
+            <option value="STR_SUPERTREND_EMA">Supertrend+EMA Combo (WR:63%)</option>
+            <option value="STR_FII_MOMENTUM">FII Flow Momentum (WR:69%)</option>
+          </optgroup>
+          <optgroup label="── PREMIUM ──">
+            <option value="STRONG_TREND_CONT">Strong Trend Continuation (WR:72%)</option>
+            <option value="BREAKOUT_TREND">Breakout Trend (WR:68%)</option>
+            <option value="MTF_TREND_ALIGN">Multi-Timeframe Alignment (WR:75%)</option>
+            <option value="TREND_REVERSAL">Trend Reversal (WR:65%)</option>
+            <option value="MOMENTUM_ACCEL">Momentum Acceleration (WR:70%)</option>
+            <option value="CONFLUENCE_930">9:30 AM Confluence (WR:73%)</option>
+            <option value="ORB_ATM_930">ORB ATM 9:30 (WR:71%)</option>
+          </optgroup>
+          <optgroup label="── AI GEN5 ──">
+            <option value="AI_GEN5_001">Gen5 Momentum AI (WR:74%)</option>
+            <option value="AI_GEN5_002">Gen5 Mean Reversion AI (WR:71%)</option>
+            <option value="AI_GEN5_003">Gen5 Breakout AI (WR:67%)</option>
+            <option value="AI_GEN5_004">Gen5 Opening Range AI (WR:73%)</option>
+            <option value="AI_GEN5_005">Gen5 Theta Harvester AI (WR:78%)</option>
+          </optgroup>
+          <optgroup label="── MY STRATEGIES ──" id="bt-my-optgroup">
+            <option value="">Loading...</option>
+          </optgroup>
+        </select>
+        <button onclick="loadBtStrategies()" style="width:100%;margin-top:4px;padding:5px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">↻ Load All Strategies</button>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">CAPITAL ₹</div><input type="number" id="bt-c" value="100000" step="10000"></div>
+        <div><div class="lbl">LOTS</div><input type="number" id="bt-l" value="1" min="1"></div>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">PERIOD</div>
+          <select id="bt-m">
+            <option value="1">1 Month</option>
+            <option value="3" selected>3 Months</option>
+            <option value="6">6 Months</option>
+            <option value="12">12 Months</option>
+          </select>
+        </div>
+        <div><div class="lbl">SL %</div>
+          <select id="bt-sl">
+            <option value="1.0">1% (Conservative)</option>
+            <option value="1.5" selected>1.5% (Moderate)</option>
+            <option value="2.0">2% (Aggressive)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">TARGET %</div>
+          <select id="bt-tgt">
+            <option value="1.5">1.5% (1:1 R/R)</option>
+            <option value="2.0" selected>2% (1:1.33)</option>
+            <option value="3.0">3% (1:2 R/R)</option>
+            <option value="4.5">4.5% (1:3 R/R)</option>
+          </select>
+        </div>
+        <div><div class="lbl">POSITION SIZE</div>
+          <select id="bt-pos-size">
+            <option value="fixed">Fixed (1 lot)</option>
+            <option value="pct" selected>% of Capital</option>
+            <option value="kelly">Kelly Criterion</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="bt-btn" onclick="runBT()" class="btn bg blg" style="width:100%;font-size:12px">⚡ RUN BACKTEST</button>
+    </div>
+
+    <!-- Results -->
+    <div id="bt-res" style="display:none">
+
+      <!-- Key metrics -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px">
+        <div class="stat"><div class="sl">TOTAL P&L</div><div class="sv" id="bt-pnl" style="font-size:18px">—</div></div>
+        <div class="stat"><div class="sl">RETURN %</div><div class="sv" id="bt-ret" style="font-size:18px">—</div></div>
+        <div class="stat"><div class="sl">WIN RATE</div><div class="sv" id="bt-wr">—</div></div>
+        <div class="stat"><div class="sl">TOTAL TRADES</div><div class="sv" id="bt-tot">—</div></div>
+        <div class="stat"><div class="sl">MAX DRAWDOWN</div><div class="sv" id="bt-dd" style="color:var(--rd)">—</div></div>
+        <div class="stat"><div class="sl">SHARPE RATIO</div><div class="sv" id="bt-sharpe">—</div></div>
+        <div class="stat"><div class="sl">PROFIT FACTOR</div><div class="sv" id="bt-pf">—</div></div>
+        <div class="stat"><div class="sl">MAX CONSEC LOSS</div><div class="sv" id="bt-mcl" style="color:var(--rd)">—</div></div>
+      </div>
+
+      <!-- P&L Equity Curve Chart -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">📈 EQUITY CURVE</div>
+        <div id="bt-equity-chart" style="height:150px;position:relative"></div>
+      </div>
+
+      <!-- Monthly breakdown -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">📅 MONTHLY BREAKDOWN</div>
+        <div id="bt-monthly" style="display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+
+      <!-- Trade Calendar -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">🗓️ DATE-WISE P&L CALENDAR</div>
+        <div id="bt-calendar" style="display:flex;flex-wrap:wrap;gap:3px;font-size:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;font-size:9px;color:var(--mu)">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:rgba(0,255,136,.3);border-radius:2px;display:inline-block"></span>Profit</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:rgba(255,51,102,.3);border-radius:2px;display:inline-block"></span>Loss</span>
+        </div>
+      </div>
+
+      <!-- Trade List -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">📋 TRADE LIST
+          <button onclick="exportBtCSV()" style="font-size:8px;padding:2px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:3px;cursor:pointer">⬇ CSV</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl" style="font-size:9px">
+            <thead><tr><th>DATE</th><th>TRADES</th><th>W/L</th><th>GROSS P&L</th><th>NET P&L</th><th>CUMULATIVE</th></tr></thead>
+            <tbody id="bt-trade-list"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Position Sizing Recommendation -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">💰 POSITION SIZING</div>
+        <div id="bt-position-sizing" style="font-size:10px;line-height:2;color:var(--mu)"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COMPARE TAB -->
+  <div id="bt-compare" style="display:none">
+    <div class="card" style="margin-bottom:10px">
+      <div class="chdr">🔀 COMPARE 2 STRATEGIES</div>
+      <div class="g2" style="gap:8px;margin-bottom:8px">
+        <div><div class="lbl">STRATEGY A</div>
+          <select id="bt-cmp-a" style="width:100%">
+            <option value="STR_THETA_DECAY">Theta Decay</option>
+            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor</option>
+            <option value="STR_ORB">ORB</option>
+            <option value="CONFLUENCE_930">9:30 Confluence</option>
+            <option value="MTF_TREND_ALIGN">MTF Alignment</option>
+          </select>
+        </div>
+        <div><div class="lbl">STRATEGY B</div>
+          <select id="bt-cmp-b" style="width:100%">
+            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor</option>
+            <option value="STR_THETA_DECAY">Theta Decay</option>
+            <option value="BREAKOUT_TREND">Breakout Trend</option>
+            <option value="ORB_ATM_930">ORB ATM 9:30</option>
+            <option value="AI_GEN5_001">Gen5 Momentum AI</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2" style="gap:8px;margin-bottom:10px">
+        <div><div class="lbl">CAPITAL</div><input type="number" id="bt-cmp-cap" value="100000"></div>
+        <div><div class="lbl">PERIOD</div>
+          <select id="bt-cmp-m">
+            <option value="1">1 Month</option>
+            <option value="3" selected>3 Months</option>
+            <option value="6">6 Months</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="runCompare()" class="btn bg blg" style="width:100%">🔀 COMPARE NOW</button>
+    </div>
+    <div id="bt-compare-result" style="display:none"></div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div id="bt-history" style="display:none">
+    <div class="card">
+      <div class="chdr">📋 BACKTEST HISTORY</div>
+      <div id="bt-history-list" style="font-size:10px;color:var(--mu)">
+        <div style="text-align:center;padding:20px">Run a backtest to see history</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="pnl-strats" class="pnl">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+  <button class="btn bg" onclick="loadBuiltin()">★ BUILT-IN</button>
+  <button class="btn bb" onclick="loadMy()">MY STRATEGIES</button>
+  <button class="btn ba" onclick="toggleNLP()">◆ NLP BUILDER</button>
+  <button class="btn bg" style="border-color:var(--am);background:#1a0e00;color:var(--am)" onclick="loadAIStrats('approved')">🤖 AI STRATEGIES</button>
 
   <div id="nlp-bld" class="card" style="display:none;border-color:rgba(0,255,136,.3)">
     <div class="chdr" style="color:var(--gr)">💾 SAVE STRATEGY
