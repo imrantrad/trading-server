@@ -2802,41 +2802,42 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 
 // PANELS
 function show(name, btn) {
-  // Save current tab
   try{ localStorage.setItem('trd_last_tab', name); }catch(e){}
-  // Hide ALL panels - only remove active class, keep inline styles
-  document.querySelectorAll('.pnl').forEach(function(p){
+  
+  // Hide ALL panels with absolute certainty
+  var allPnl = document.querySelectorAll('[id^="pnl-"]');
+  allPnl.forEach(function(p){
+    p.style.cssText = 'display:none !important';
     p.classList.remove('active');
-    // Don't remove style attribute - some panels need it (padding:0 etc)
   });
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   
-  // Show ONLY target panel
-  var p = $('pnl-'+name);
-  if(p){ 
-    p.style.display = 'flex';  // Force show
-    p.classList.add('active'); 
+  // Remove active from all tabs
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  
+  // Show ONLY the target panel
+  var target = document.getElementById('pnl-' + name);
+  if(target){
+    target.style.cssText = '';
+    target.style.display = 'flex';
+    target.classList.add('active');
   }
-  if(btn && btn.classList) btn.classList.add('active');
   
-  // Auto-highlight matching tab if btn not passed
-  if(!btn){
+  // Highlight tab button
+  if(btn && btn.classList) btn.classList.add('active');
+  else {
     document.querySelectorAll('.tab').forEach(function(t){
-      if(t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'"+name+"'") >= 0){
+      if(t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'"+name+"'") >= 0)
         t.classList.add('active');
-      }
     });
   }
-  
-  // Load data for panel
-  if(name==='pos')loadPos();
-  if(name==='risk')loadRisk();
-  if(name==='jnl'){loadTrades();loadJnlStats();}
-  if(name==='ai'){
-    setTimeout(function(){loadAIStrats('all');loadAIStatus();loadMLStatus();}, 300);loadAIEngineAll();}
-  if(name==='legal'){ setTimeout(restoreLegalSign,100); }
+
+  // Panel-specific loads
+  if(name==='pos') loadPos();
+  if(name==='risk') loadRisk();
+  if(name==='jnl'){ loadTrades(); loadJnlStats(); }
+  if(name==='ai'){ setTimeout(function(){loadAIStrats('all');loadAIStatus();loadMLStatus();},300); }
+  if(name==='legal') setTimeout(restoreLegalSign, 100);
   if(name==='admin'){
-    // Admin: check token
     try{
       var tok=localStorage.getItem('trd_admin_token');
       if(tok){
@@ -2849,9 +2850,9 @@ function show(name, btn) {
     }catch(e){}
     loadAdmin();
   }
-  if(name==='prof')loadProfStats();
-  // Strategies load only when explicitly clicked - not auto
+  if(name==='prof') loadProfStats();
 }
+
 
 // STATS
 function loadStats() {
@@ -3908,7 +3909,7 @@ function fallbackToPolling() {
   
   // Show the target panel
   var tp2 = document.getElementById('pnl-'+lastTab);
-  if(tp2){ tp2.style.display='flex'; tp2.classList.add('active'); }
+  if(tp2){ tp2.style.cssText=''; tp2.style.display='flex'; tp2.classList.add('active'); }
   
   // Highlight matching tab button
   var tabFound = false;
