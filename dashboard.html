@@ -3503,31 +3503,7 @@ function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){
     bBt.onclick=function(){var sel=document.getElementById('bt-s');if(sel)sel.value=sid;show('bt',null);};
     // COPY 📋
     var bCp=document.createElement('button');bCp.style.cssText='padding:5px 8px;font-size:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:5px;cursor:pointer;color:#fff';bCp.title='Copy strategy logic';bCp.textContent='📋';
-    bCp.onclick=(function(strat){return function(){
-      // Build copy text for MY STRATEGIES
-      var lines=['=== '+( strat.name||'My Strategy').toUpperCase()+' ===',''];
-      lines.push('📌 ORDER:');
-      lines.push((strat.action||'BUY')+' '+(strat.instrument||'NIFTY')+' '+(strat.option_type||'CE'));
-      lines.push('SL: '+(strat.sl_value||strat.stop_loss||0)+' pts | Target: '+(strat.target_value||strat.target||0)+' pts');
-      if(strat.timeframe) lines.push('Timeframe: '+strat.timeframe);
-      lines.push('');
-      if(strat.entry_conditions&&strat.entry_conditions.length){
-        lines.push('📊 ENTRY CONDITIONS:');
-        strat.entry_conditions.forEach(function(c,i){lines.push((i+1)+'. '+c);});
-        lines.push('');
-      }
-      if(strat.description){lines.push('📝 '+strat.description);lines.push('');}
-      if(strat.exit_conditions&&strat.exit_conditions.length){
-        lines.push('🚪 EXIT:');
-        strat.exit_conditions.forEach(function(c){lines.push('• '+c);});
-      }
-      var txt=lines.join('\n');
-      try{navigator.clipboard.writeText(txt).then(function(){toast('✅ Strategy copied!','success');});}
-      catch(e){var ta=document.createElement('textarea');ta.value=txt;ta.style='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('✅ Copied!','success');}
-    };})(s);
-    // DELETE
-    var bHist=document.createElement('button');bHist.style.cssText='padding:5px 8px;font-size:9px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:5px;cursor:pointer;color:var(--p0)';bHist.textContent='⏱';bHist.title='Version history';
-    bHist.onclick=(function(strat){return function(){showStratVersions(strat);};})(s);
+    bCp.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
     var bDel=document.createElement('button');bDel.style.cssText='padding:5px 8px;font-size:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);border-radius:5px;cursor:pointer;color:var(--rd)';bDel.textContent='🗑️';
     bDel.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};
     btns.appendChild(bUse);btns.appendChild(bBt);btns.appendChild(bCp);btns.appendChild(bHist);btns.appendChild(bDel);
