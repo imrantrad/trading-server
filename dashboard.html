@@ -5048,27 +5048,46 @@ function _doCopy(text){
 }
 
 function _fallbackCopyMethod(text){
+  // Try execCommand first
   var ta = document.createElement('textarea');
   ta.value = text;
-  ta.setAttribute('readonly', '');
-  ta.style.cssText = 'position:fixed;top:0;left:0;width:2em;height:2em;padding:0;border:none;outline:none;box-shadow:none;background:transparent;opacity:0;';
+  ta.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:60%;padding:10px;font-size:11px;background:#111;color:#fff;border:2px solid #00ff88;z-index:99999;border-radius:8px;font-family:monospace';
   document.body.appendChild(ta);
   ta.focus();
   ta.select();
-  // iOS fix
-  var range = document.createRange();
-  range.selectNodeContents(ta);
-  var sel = window.getSelection();
-  if(sel){ sel.removeAllRanges(); sel.addRange(range); }
-  ta.setSelectionRange(0, 999999);
+  ta.setSelectionRange(0, 99999);
   var ok = false;
   try{ ok = document.execCommand('copy'); }catch(e){}
-  document.body.removeChild(ta);
-  if(ok){ toast('✅ Strategy copied!','success'); }
-  else { 
-    // Last resort: show text in prompt so user can copy manually
-    window.prompt('Copy this strategy (Ctrl+C / Long press):', text.slice(0,200));
+  if(ok){
+    document.body.removeChild(ta);
+    toast('✅ Strategy copied to clipboard!','success');
+    return;
   }
+  // Show copy modal - always works
+  document.body.removeChild(ta);
+  showCopyModal(text);
+}
+
+function showCopyModal(text){
+  var existing = document.getElementById('copy-modal');
+  if(existing) existing.remove();
+  var modal = document.createElement('div');
+  modal.id = 'copy-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;flex-direction:column;padding:16px;gap:10px';
+  modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center">'
+    + '<div style="color:#00ff88;font-weight:700;font-size:13px">📋 STRATEGY — Long Press to Copy</div>'
+    + '<button onclick="document.getElementById('copy-modal').remove()" style="background:rgba(255,51,102,.2);border:1px solid rgba(255,51,102,.4);color:#ff3366;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px">✕ CLOSE</button>'
+    + '</div>'
+    + '<textarea readonly style="flex:1;background:#0a0d18;color:#fff;border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;font-size:10px;font-family:monospace;resize:none;line-height:1.6">' 
+    + text.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    + '</textarea>'
+    + '<div style="color:rgba(255,255,255,.5);font-size:10px;text-align:center">Select all text → Long press → Copy</div>';
+  document.body.appendChild(modal);
+  // Auto-select the textarea
+  setTimeout(function(){
+    var ta = modal.querySelector('textarea');
+    if(ta){ ta.focus(); ta.select(); ta.setSelectionRange(0,99999); }
+  }, 100);
 }
 
 
