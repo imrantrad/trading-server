@@ -4829,16 +4829,7 @@ function activatePaperTab(btn){
 }
 
 function goBackToTrade(){
-  document.querySelectorAll('.pnl').forEach(function(p){
-    p.classList.remove('active');
-    p.removeAttribute('style');
-  });
-  var tp=document.getElementById('pnl-trade');
-  if(tp){ tp.removeAttribute('style'); tp.classList.add('active'); }
-  // Highlight TRADE tab (first tab)
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  var tradeTab=document.querySelector('.tab[onclick*="trade"]');
-  if(tradeTab) tradeTab.classList.add('active');
+  show('trade', null);
 }
 
 // ── PAPER TEST + LIVE POSITIONS FUNCTIONS ──────────────────────────────────
@@ -4848,18 +4839,12 @@ var paperPositions = [];
 var livePositions = [];
 
 function openPaperTest(){
-  document.querySelectorAll('.pnl').forEach(function(p){p.classList.remove('active');p.removeAttribute('style');});
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  var pp=document.getElementById('pnl-paper');
-  if(pp){pp.removeAttribute('style');pp.classList.add('active');}
+  show('paper', null);
   var pt=document.getElementById('tab-paper');
   if(pt)pt.classList.add('active');
   showPaperTab('trade',document.getElementById('pt-trade-btn'));
   loadPaperStats();
-  // Scroll to top
   window.scrollTo(0,0);
-  document.querySelector('.main') && (document.querySelector('.main').scrollTop=0);
-  if(pp) pp.scrollTop=0;
 }
 
 function openLivePositions(){
@@ -4875,22 +4860,8 @@ function openLivePositions(){
 }
 
 function openStrategies(){
-  // Show strategies panel
-  document.querySelectorAll('.pnl').forEach(function(p){
-    p.classList.remove('active'); p.removeAttribute('style');
-  });
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  var sp = document.getElementById('pnl-strats');
-  if(sp){ sp.removeAttribute('style'); sp.classList.add('active'); }
-  // Highlight strategies tab button
-  document.querySelectorAll('.tab').forEach(function(t){
-    if(t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'strats'")>=0){
-      t.classList.add('active');
-    }
-  });
-  window.scrollTo(0,0);
+  show('strats', null);
   loadBuiltin();
-  toast('Strategies loaded','info');
 }
 
 function showPaperTab(tab, btn){
