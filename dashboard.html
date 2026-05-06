@@ -899,15 +899,22 @@ input:focus, select:focus {
   <button class="btn ba" onclick="toggleNLP()">◆ NLP BUILDER</button>
   <button class="btn bg" style="border-color:var(--am);background:#1a0e00;color:var(--am)" onclick="loadAIApprovedStrats()">🤖 AI STRATEGIES</button>
 </div>
-  <div id="nlp-bld" class="card" style="display:none;border-color:var(--gr)30">
-    <div class="chdr" style="color:var(--gr)">NLP STRATEGY BUILDER</div>
-    <textarea id="ns-nlp" rows="4" placeholder="Paste strategy text here (or type) — e.g: buy nifty CE rsi under 30 ema cross sl 100 target 200" style="font-size:10px"></textarea>
-    <button class="btn bg blg" onclick="parseNLPStrat()" style="margin-top:6px;margin-bottom:8px">PARSE AND AUTO-FILL</button>
-    <div id="ns-parsed" style="display:none;background:#001a0e;border:1px solid var(--gr)30;border-radius:4px;padding:6px;font-size:8px;margin-bottom:8px;color:var(--gr)"></div>
-    <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">NAME</div><input id="ns-nm" placeholder="Strategy name"></div><div><div class="lbl">INST</div><select id="ns-i"><option value="NIFTY">NIFTY</option><option value="BANKNIFTY">BANKNIFTY</option><option value="FINNIFTY">FINNIFTY</option><option value="SENSEX">SENSEX</option></select></div></div>
-    <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">SL PTS</div><input type="number" id="ns-sl" value="100"></div><div><div class="lbl">TGT PTS</div><input type="number" id="ns-tg" value="200"></div></div>
-    <div><div class="lbl">ENTRY CONDITIONS</div><textarea id="ns-en" rows="2" placeholder="RSI below 30, EMA crossover..."></textarea></div>
-    <div style="display:flex;gap:6px;margin-top:8px"><button class="btn bg" onclick="saveStrat()" style="flex:1">SAVE</button><button class="btn ba" onclick="show('bt',null)" style="flex:1">BACKTEST</button><button class="btn br" onclick="toggleNLP()">X</button></div>
+  <div id="nlp-bld" class="card" style="display:none;border-color:rgba(0,255,136,.3)">
+    <div class="chdr" style="color:var(--gr)">💾 SAVE STRATEGY
+      <button onclick="toggleNLP()" style="font-size:10px;padding:2px 8px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">✕ CLOSE</button>
+    </div>
+    <div style="margin-bottom:10px">
+      <div class="lbl">STRATEGY NAME *</div>
+      <input id="ns-nm" placeholder="e.g. Noor BankNifty Scalp" style="font-size:13px;font-weight:600;border-color:rgba(0,255,136,.3)">
+    </div>
+    <div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:10px;margin-bottom:10px;max-height:160px;overflow-y:auto">
+      <div style="font-size:8px;color:var(--mu);margin-bottom:4px;letter-spacing:0.5px">STRATEGY TEXT (SAVED AS-IS):</div>
+      <div id="ns-preview" style="font-size:10px;color:var(--tx);white-space:pre-wrap;line-height:1.7;font-family:monospace">—</div>
+    </div>
+    <button onclick="saveStratDirect()" class="btn bg blg" style="width:100%;font-size:12px;letter-spacing:0.5px">💾 SAVE TO MY STRATEGIES</button>
+    <div id="ns-save-msg" style="margin-top:8px;font-size:11px;text-align:center;display:none"></div>
+  </div>
+  
   </div>
   <div id="strat-list" style="display:flex;flex-direction:column;gap:8px"><div style="color:var(--mu);padding:20px;text-align:center">Select tab above</div></div>
 </div>
@@ -3404,7 +3411,21 @@ function calcMargin(){req('/margin/calculate?instrument='+gv('mg-i')+'&quantity=
 
 
 // STRATEGIES
-function toggleNLP(){var e=$('nlp-bld');if(e)e.style.display=e.style.display==='none'?'block':'none';}
+function toggleNLP(){
+  var e=$('nlp-bld');
+  if(!e) return;
+  var showing = e.style.display !== 'none';
+  e.style.display = showing ? 'none' : 'block';
+  if(!showing){
+    // Sync current NLP text to preview
+    var txt = (document.getElementById('nlp-in') || {}).value || '';
+    var prev = document.getElementById('ns-preview');
+    if(prev) prev.textContent = txt.trim() || '— Paste strategy text in NLP area above —';
+    // Focus name field
+    var nm = document.getElementById('ns-nm');
+    if(nm) setTimeout(function(){ nm.focus(); }, 100);
+  }
+}
 
 // ── STRATEGY → ORDER ENTRY + NLP FILL ────────────────────────────────────────
 function applyStrategyToOrderEntry(s, paperMode){
@@ -4921,77 +4942,63 @@ function execPaperTrade(){
 // ── COPY STRATEGY AS NATURAL LANGUAGE ────────────────────────────────────────
 function copyStrategyText(s){
   if(!s){toast('No strategy data','warn');return;}
-  var lines=[];
-  var name=s.name||s.strategy_name||'Strategy';
-  var inst=s.instrument||'NIFTY';
-  var action=s.action||'BUY';
-  var otype=s.option_type||'CE';
-  var lots=s.quantity||s.lots||1;
-  var sl=s.stop_loss||s.sl_value||s.sl||80;
-  var tgt=s.target||s.target_value||s.tp||160;
-  var tf=s.timeframe||'5m';
-  var wr=s.avg_win_rate||s.win_rate||0;
 
-  // Header
-  lines.push('=== '+name.toUpperCase()+' ===');
-  lines.push('');
+  var text = '';
 
-  // Order command
-  lines.push('📌 ORDER COMMAND:');
-  lines.push(action+' '+inst+' '+otype+' '+lots+' LOT');
-  lines.push('Stop Loss: '+sl+' pts | Target: '+tgt+' pts');
-  lines.push('Timeframe: '+tf+' | R/R: 1:'+(tgt/sl).toFixed(2));
-  lines.push('');
-
-  // Entry conditions - handle array
-  var ec=s.entry_conditions||s.conditions||[];
-  if(typeof ec==='string') ec=ec.split('\n').filter(Boolean);
-  if(ec.length){
-    lines.push('📊 ENTRY CONDITIONS:');
-    ec.forEach(function(c,i){if(c&&c.trim())lines.push((i+1)+'. '+c.trim());});
-    lines.push('');
+  // Priority 1: original text stored in nlp_input or description
+  if(s.nlp_input && s.nlp_input.length > 20){
+    text = s.nlp_input;
+  } else if(s.description && s.description.length > 20 && s.description.indexOf('\n') >= 0){
+    text = s.description;
   }
 
-  // Description - SKIP if it duplicates entry conditions
-  var desc=(s.description||'').trim();
-  var condStr=ec.join(' ').toLowerCase();
-  // Check if desc is just pipe-separated version of conditions
-  var descParts=desc.split('|').map(function(p){return p.trim().toLowerCase().slice(0,8);});
-  var isDuplicate=descParts.length>1&&descParts.every(function(p){
-    return !p||condStr.indexOf(p)>=0;
-  });
-  if(desc&&!isDuplicate&&desc.length<150&&desc.indexOf('📌')<0&&desc.indexOf('===')<0){
-    lines.push('📝 DESCRIPTION:');
-    lines.push(desc);
+  // Priority 2: Build from structured fields (for built-in strategies)
+  if(!text){
+    var name = s.name||s.strategy_name||'Strategy';
+    var inst = s.instrument||'NIFTY';
+    var action = s.action||'BUY';
+    var otype = s.option_type||'CE';
+    var lots = s.quantity||s.lots||1;
+    var sl = s.stop_loss||s.sl_value||s.sl||80;
+    var tgt = s.target||s.target_value||s.tp||160;
+    var tf = s.timeframe||'5m';
+    var wr = s.avg_win_rate||s.win_rate||0;
+    var lines=[];
+    lines.push('=== '+name.toUpperCase()+' ===');
     lines.push('');
+    lines.push('📌 ORDER COMMAND:');
+    lines.push(action+' '+inst+' '+otype+' '+lots+' LOT');
+    lines.push('Stop Loss: '+sl+' pts | Target: '+tgt+' pts');
+    lines.push('Timeframe: '+tf+' | R/R: 1:'+(tgt/sl).toFixed(2));
+    lines.push('');
+    var ec=s.entry_conditions||s.conditions||[];
+    if(typeof ec==='string') ec=ec.split('\n').filter(Boolean);
+    if(ec.length){
+      lines.push('📊 ENTRY CONDITIONS:');
+      ec.forEach(function(c,i){if(c&&c.trim())lines.push((i+1)+'. '+c.trim());});
+      lines.push('');
+    }
+    var xc=s.exit_conditions||[];
+    if(typeof xc==='string') xc=[xc];
+    if(xc.length&&xc[0]){
+      lines.push('🚪 EXIT CONDITIONS:');
+      xc.forEach(function(c){if(c&&c.trim())lines.push('• '+c.trim());});
+      lines.push('');
+    }
+    if(wr>0) lines.push('✅ WIN RATE: '+wr+'%');
+    if(s.ai_score) lines.push('🤖 AI SCORE: '+s.ai_score+'/100');
+    text = lines.join('\n');
   }
 
-  // Exit conditions
-  var xc=s.exit_conditions||[];
-  if(typeof xc==='string') xc=[xc];
-  if(xc.length&&xc[0]){
-    lines.push('🚪 EXIT CONDITIONS:');
-    xc.forEach(function(c){if(c&&c.trim())lines.push('• '+c.trim());});
-    lines.push('');
+  // Add name header if not already there
+  if(s.name && text.indexOf(s.name.toUpperCase())<0 && text.indexOf('===')<0){
+    text = '=== '+s.name.toUpperCase()+' ===\n\n' + text;
   }
 
-  // No trade
-  var nt=s.no_trade||s.no_trade_conditions||'';
-  if(nt){
-    lines.push('❌ NO-TRADE CONDITIONS:');
-    lines.push(nt);
-    lines.push('');
-  }
-
-  // Indicators
-  if(s.indicators) lines.push('📈 INDICATORS: '+s.indicators);
-  if(wr>0) lines.push('✅ WIN RATE: '+wr+'%');
-  if(s.ai_score) lines.push('🤖 AI SCORE: '+s.ai_score+'/100');
-
-  var text=lines.join('\n');
+  // Copy to clipboard
   try{
     navigator.clipboard.writeText(text).then(function(){
-      toast('✅ Strategy copied!','success');
+      toast('✅ Copied!','success');
     }).catch(function(){fallbackCopy(text);});
   }catch(e){fallbackCopy(text);}
   return text;
@@ -7284,6 +7291,14 @@ document.addEventListener('DOMContentLoaded', function(){
         trdSave('order_entry', oe);
       });
     });
+    // Sync nlp-in to preview on input
+    var nlpIn = document.getElementById('nlp-in');
+    if(nlpIn) nlpIn.addEventListener('input', function(){
+      var prev = document.getElementById('ns-preview');
+      if(prev && document.getElementById('nlp-bld') && document.getElementById('nlp-bld').style.display !== 'none'){
+        prev.textContent = nlpIn.value.trim() || '—';
+      }
+    });
   }, 800);
 });
 
@@ -7488,140 +7503,90 @@ function rollbackToVersion(stratId, versionNum){
 }
 
 
-// ── SAVE MY STRATEGY ──────────────────────────────────────────────────────────
-function saveStrat(){
-  var name = (gv('ns-nm')||'').trim();
-  if(name.length < 2){ toast('Enter strategy name first','warn'); return; }
+// ── SAVE STRATEGY AS-IS (CANONICAL) ─────────────────────────────────────────
+function saveStrat(){ saveStratDirect(); }  // backward compat
 
-  // Read from ns-nlp (MY STRATEGIES builder) OR nlp-in (TRADE NLP tab)
-  var nlpText = (gv('ns-nlp') || '').trim();
-  if(!nlpText) nlpText = (gv('nlp-in') || '').trim();
-  // Also sync to ns-nlp for display
-  if(nlpText && !gv('ns-nlp')){
-    var nsNlpEl = document.getElementById('ns-nlp');
-    if(nsNlpEl) nsNlpEl.value = nlpText;
-  }
-  var tl = nlpText.toLowerCase();
+function saveStratDirect(){
+  var name = (document.getElementById('ns-nm') || {}).value;
+  name = name ? name.trim() : '';
+  if(name.length < 2){ toast('Enter a strategy name first','warn'); document.getElementById('ns-nm').focus(); return; }
 
-  // Parse instrument directly from text
+  // Get original text AS-IS from nlp-in
+  var originalText = (document.getElementById('nlp-in') || {}).value || '';
+  originalText = originalText.trim();
+  if(!originalText){ toast('Paste strategy text in NLP area first','warn'); return; }
+
+  // Parse ONLY what is needed for indexing (instrument, timeframe, sl, target)
+  // DO NOT transform or modify the original text
+  var tl = originalText.toLowerCase();
   var inst = 'NIFTY';
-  if(tl.indexOf('banknifty') >= 0) inst = 'BANKNIFTY';
-  else if(tl.indexOf('finnifty') >= 0) inst = 'FINNIFTY';
-  else if(tl.indexOf('sensex') >= 0) inst = 'SENSEX';
-  else if(window._lastNLPResult && window._lastNLPResult.order && window._lastNLPResult.order.asset)
-    inst = window._lastNLPResult.order.asset;
-  else inst = gv('ns-i') || 'NIFTY';
+  if(tl.indexOf('banknifty')>=0) inst='BANKNIFTY';
+  else if(tl.indexOf('finnifty')>=0) inst='FINNIFTY';
+  else if(tl.indexOf('sensex')>=0) inst='SENSEX';
 
-  // Parse order params from text
-  var act = tl.indexOf('sell') >= 0 ? 'SELL' : 'BUY';
-  var otype = tl.indexOf(' pe ') >= 0 ? 'PE' : 'CE';
-  var lots = 1;
-  var lotsM = tl.match(/(\d+)\s*lot/); if(lotsM) lots = parseInt(lotsM[1]);
-  var sl = 100, tgt = 200;
-  var slM = tl.match(/stop.?loss[:\s]+(\d+)/); if(slM) sl = parseInt(slM[1]);
-  var tgM = tl.match(/target[:\s]+(\d+)/); if(tgM) tgt = parseInt(tgM[1]);
-  sl = sl || parseFloat(gv('ns-sl')) || 100;
-  tgt = tgt || parseFloat(gv('ns-tg')) || 200;
-
-  // Parse timeframe
   var tf = '5m';
-  var tfMap = {'3min':'3m','5min':'5m','15min':'15m','1min':'1m','30min':'30m',
-               '3m':'3m','5m':'5m','15m':'15m','1m':'1m','1h':'1h','3MIN':'3m'};
-  var tfFound = tl.match(/timeframe[:\s]+([0-9]+(?:min|m|h))/i);
-  if(tfFound){ tf = tfFound[1].replace(/min/i,'m'); }
-  else {
-    for(var k in tfMap){ if(tl.indexOf(k.toLowerCase()) >= 0){ tf = tfMap[k]; break; } }
-  }
-  tf = tf || gv('ns-tf') || '5m';
+  var tfM = tl.match(/timeframe[:\s]+([0-9]+(?:min|m|h))/i);
+  if(tfM) tf = tfM[1].toLowerCase().replace('min','m');
+  else if(tl.indexOf('15m')>=0||tl.indexOf('15min')>=0) tf='15m';
+  else if(tl.indexOf('3min')>=0||tl.indexOf('3m ')>=0) tf='3m';
+  else if(tl.indexOf('5m')>=0||tl.indexOf('5min')>=0) tf='5m';
+  else if(tl.indexOf('1h')>=0) tf='1h';
 
-  // Parse entry conditions directly from pasted text
-  var conditions = [];
-  
-  // Method 1: Parse from 📊 ENTRY CONDITIONS section in text
-  var entrySection = nlpText.match(/📊\s*ENTRY CONDITIONS[:\s]*([\s\S]*?)(?=📝|🚪|❌|$)/i);
-  if(!entrySection) entrySection = nlpText.match(/ENTRY CONDITIONS[:\s]*([\s\S]*?)(?=DESCRIPTION|EXIT|NO.TRADE|$)/i);
-  if(entrySection){
-    var lines = entrySection[1].split('\n');
-    lines.forEach(function(line){
-      var clean = line.replace(/^\d+[.\)\s]+/,'').trim();
-      if(clean && clean.length > 3 && clean.length < 100) conditions.push(clean);
+  var sl=100, tgt=200;
+  var slM=tl.match(/stop.?loss[:\s]+(\d+)/); if(slM) sl=parseInt(slM[1]);
+  var tgM=tl.match(/target[:\s]+(\d+)/); if(tgM) tgt=parseInt(tgM[1]);
+
+  // Parse entry conditions from numbered list in text
+  var conditions=[];
+  var entryM = originalText.match(/📊[^\n]*\n([\s\S]*?)(?=📝|🚪|❌|$)/);
+  if(!entryM) entryM = originalText.match(/ENTRY CONDITIONS[^\n]*\n([\s\S]*?)(?=DESCRIPTION|EXIT|NO.TRADE|$)/i);
+  if(entryM){
+    entryM[1].split('\n').forEach(function(l){
+      var c=l.replace(/^\s*\d+[.\)]\s*/,'').trim();
+      if(c&&c.length>3) conditions.push(c);
     });
   }
-  
-  // Method 2: From NLP output panel (if PARSE was clicked)
-  if(!conditions.length){
-    var nlpOut = document.getElementById('nlp-out');
-    if(nlpOut && nlpOut.style.display !== 'none'){
-      nlpOut.querySelectorAll('div').forEach(function(el){
-        var t = el.textContent.replace(/^[✓\s]+/,'').trim();
-        if(t && t.length > 3 && t.length < 100
-           && !t.match(/^(NLP|STRATEGY|INSTRUMENT|ACTION|SL|R\/R|AUTO|FILTER|EXIT|ADD |💡|🔧|📊|Suggest)/))
-          conditions.push(t);
-      });
-    }
-  }
-  
-  // Method 3: From textarea ns-en
-  if(!conditions.length){
-    var nsEn = gv('ns-en') || '';
-    if(nsEn) conditions = nsEn.split('\n').map(function(l){return l.trim();}).filter(Boolean);
-  }
 
-  // Parse exit conditions from text
-  var exitConds = [];
-  var exitSection = nlpText.match(/🚪\s*EXIT[^:]*:[\s]*([^\n❌📌===]+)/i);
-  if(exitSection) exitConds = [exitSection[1].trim()];
-  
-  // Parse no-trade conditions
-  var noTrade = [];
-  var noTradeSection = nlpText.match(/❌\s*NO.TRADE[^:]*:[\s]*([^\n📌===]+)/i);
-  if(noTradeSection) noTrade = [noTradeSection[1].trim()];
-  
-  // Short description
-  var desc = name;
-  var descM = nlpText.match(/(?:📝\s*DESCRIPTION)[:\s]*([^\n📌===📊🚪❌]+)/i);
-  if(descM) desc = descM[1].trim().slice(0,120);
+  // Parse exit conditions
+  var exitConds=[];
+  var exitM=originalText.match(/🚪[^\n]*\n([^\n❌📌===]+)/);
+  if(exitM) exitConds=[exitM[1].trim()];
 
-  var saveBtn = document.querySelector('[onclick="saveStrat()"]');
-  if(saveBtn){ saveBtn.textContent='💾 Saving...'; saveBtn.disabled=true; }
+  var btn=document.querySelector('[onclick="saveStratDirect()"]')||document.querySelector('[onclick="saveStrat()"]');
+  if(btn){btn.textContent='💾 Saving...';btn.disabled=true;}
 
   req('/strategies/save','POST',{
     user_id: UID,
     name: name,
     instrument: inst,
     timeframe: tf,
+    description: originalText,  // ← STORE FULL ORIGINAL TEXT AS DESCRIPTION
+    nlp_input: originalText,     // ← ALSO STORE IN nlp_input field
     entry_conditions: conditions,
-    exit_conditions: [],
-    sl_type: 'POINTS',
-    sl_value: sl,
-    target_type: 'POINTS',
-    target_value: tgt,
-    quantity: lots,
-    risk_per_trade: 0.01,
-    tags: [],
-    is_public: false,
-    description: desc,
-    action: act,
-    option_type: otype
+    exit_conditions: exitConds,
+    sl_type: 'POINTS', sl_value: sl,
+    target_type: 'POINTS', target_value: tgt,
+    quantity: 1, risk_per_trade: 0.01,
+    tags: [], is_public: false
   }, function(err, r){
-    if(saveBtn){ saveBtn.textContent='SAVE'; saveBtn.disabled=false; }
-    if(err || !r){
-      toast('Save failed - server error','error');
+    if(btn){btn.textContent='💾 SAVE TO MY STRATEGIES';btn.disabled=false;}
+    var msg = document.getElementById('ns-save-msg');
+    if(err||!r){
+      toast('Save failed','error');
+      if(msg){msg.textContent='❌ Save failed - try again';msg.style.color='var(--rd)';msg.style.display='block';}
       return;
     }
-    toast('✅ "'+name+'" saved! ('+inst+' '+tf+')','success');
-    // Clear form
-    ['ns-nm','ns-nlp','ns-en'].forEach(function(id){
-      var el=document.getElementById(id); if(el) el.value='';
-    });
-    var nlpOutEl=document.getElementById('nlp-out');
-    if(nlpOutEl) nlpOutEl.style.display='none';
-    // Refresh both MY STRATEGIES lists
+    toast('✅ "'+name+'" saved!','success');
+    if(msg){msg.textContent='✅ Saved! Check MY STRATEGIES below.';msg.style.color='var(--gr)';msg.style.display='block';}
+    // Refresh both lists
     loadMy();
     if(typeof loadPaperStrats==='function') loadPaperStrats('my');
-    // Switch to MY tab in TRADE section to show saved strategy
-    var myTab = document.getElementById('strat-list');
-    if(myTab) myTab.scrollIntoView({behavior:'smooth', block:'start'});
+    // Clear name, keep text
+    document.getElementById('ns-nm').value='';
+    setTimeout(function(){
+      document.getElementById('nlp-bld').style.display='none';
+      if(msg) msg.style.display='none';
+    }, 2000);
   });
 }
 </script>
