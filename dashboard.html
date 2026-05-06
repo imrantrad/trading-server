@@ -4948,12 +4948,13 @@ function copyStrategyText(s){
 
   var text = '';
 
-  // Priority 1: original text stored in nlp_input or description
-  if(s.nlp_input && s.nlp_input.length > 20){
-    text = s.nlp_input;
-  } else if(s.description && s.description.length > 20 && s.description.indexOf('\n') >= 0){
-    text = s.description;
+  // Priority 1: original text ONLY if it has correct format
+  var raw = s.nlp_input || '';
+  var hasCorrectFormat = raw.indexOf('📌 ORDER COMMAND:') >= 0 && raw.indexOf('===') >= 0;
+  if(hasCorrectFormat){
+    text = raw;
   }
+  // NOTE: Do NOT use description as text - always rebuild from structured fields
 
   // Priority 2: Build from structured fields (for built-in strategies)
   if(!text){
