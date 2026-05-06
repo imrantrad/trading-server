@@ -501,7 +501,18 @@ input:focus, select:focus {
         <div id="trade-strat-list" style="max-height:220px;overflow-y:auto"></div>
       </div>
 
-      <div class="card">
+            <div class="card" id="trade-strat-section">
+        <div class="chdr">📂 STRATEGIES
+          <div style="display:flex;gap:4px">
+            <button id="ts-bi" onclick="tradeStratTab('builtin',this)" style="font-size:8px;padding:2px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:4px;cursor:pointer">★ BUILT-IN</button>
+            <button id="ts-my" onclick="tradeStratTab('my',this)" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">MY</button>
+            <button id="ts-nlp" onclick="tradeStratTab('nlp',this)" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">NLP</button>
+            <button id="ts-ai" onclick="tradeStratTab('ai',this)" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">🤖 AI</button>
+          </div>
+        </div>
+        <div id="trade-strat-list" style="max-height:220px;overflow-y:auto"></div>
+      </div>
+<div class="card">
         <div class="chdr">LOG <button class="btn ba" onclick="document.getElementById('log-box').innerHTML=''" style="padding:2px 8px;font-size:8px">CLR</button></div>
         <div id="log-box" style="max-height:100px;overflow-y:auto;font-size:9px"></div>
       </div>
