@@ -4989,7 +4989,11 @@ function copyStrategyText(s){
     lines.push('Timeframe: ' + tf + ' | R/R: 1:' + (tgt/sl).toFixed(2));
     lines.push('');
     
-    var ec = s.entry_conditions || s.conditions || [];
+    var ec = s.entry_conditions || [];
+    if(!ec.length && s.conditions){
+      // Built-in strategy: conditions is AND-separated string
+      ec = s.conditions.split(' AND ').map(function(c){return c.trim();}).filter(Boolean);
+    }
     if(typeof ec === 'string') ec = ec.split('\n').filter(Boolean);
     if(ec.length){
       lines.push('📊 ENTRY CONDITIONS:');
@@ -4997,8 +5001,8 @@ function copyStrategyText(s){
       lines.push('');
     }
     
-    var xc = s.exit_conditions || [];
-    if(typeof xc === 'string') xc = [xc];
+    var xc = s.exit_conditions || s.exit || [];
+    if(typeof xc === 'string') xc = xc.split(' OR ').map(function(c){return c.trim();});
     if(xc.length && xc[0]){
       lines.push('🚪 EXIT CONDITIONS:');
       xc.forEach(function(c){ if(c&&c.trim()) lines.push('• '+c.trim()); });
@@ -5009,6 +5013,7 @@ function copyStrategyText(s){
     if(s.indicators){ lines.push('📈 INDICATORS: '+s.indicators); }
     if(wr > 0) lines.push('✅ WIN RATE: '+wr+'%');
     if(s.ai_score) lines.push('🤖 AI SCORE: '+s.ai_score+'/100');
+    if(s.notes){ lines.push(''); lines.push('💡 NOTES: '+s.notes); }
     
     text = lines.join('\n');
   }
@@ -5110,6 +5115,7 @@ function _fallbackCopyMethod(text){
     }
     if(wr>0) lines.push('✅ WIN RATE: '+wr+'%');
     if(s.ai_score) lines.push('🤖 AI SCORE: '+s.ai_score+'/100');
+    if(s.notes){ lines.push(''); lines.push('💡 NOTES: '+s.notes); }
     text = lines.join('\n');
   }
 
