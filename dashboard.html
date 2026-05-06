@@ -2843,6 +2843,8 @@ function show(name, btn) {
     loadAdmin();
   }
   if(name==='prof')loadProfStats();
+  if(name==='strats'){ setTimeout(function(){loadBuiltin();},200); }
+  if(name==='trade'){ setTimeout(function(){tradeStratTab('builtin',document.getElementById('ts-bi'));},200); }
 }
 
 // STATS
@@ -3522,6 +3524,11 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 function loadBuiltin(){
+  // Highlight active button
+  document.querySelectorAll('#pnl-strats .btn').forEach(function(b){
+    if(b.textContent.trim()==='★ BUILT-IN'){ b.style.background='rgba(0,255,136,.1)';b.style.borderColor='rgba(0,255,136,.3)';b.style.color='var(--gr)'; }
+    else{ b.style.background='';b.style.borderColor='';b.style.color=''; }
+  });
   req('/strategies/builtin','GET',null,function(err,d){
     var list=$('strat-list');if(!list)return;
     if(err||!d||!d.strategies){list.innerHTML='<div style="color:var(--rd);padding:16px">Failed to load</div>';return;}
@@ -3542,7 +3549,12 @@ function loadBuiltin(){
     });
   });
 }
-function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){
+function loadMy(){
+  document.querySelectorAll('#pnl-strats .btn').forEach(function(b){
+    if(b.textContent.trim()==='MY STRATEGIES'){ b.style.background='rgba(79,142,247,.1)';b.style.borderColor='rgba(79,142,247,.3)';b.style.color='var(--bl)'; }
+    else{ b.style.background='';b.style.borderColor='';b.style.color=''; }
+  });
+  req('/strategies/user/'+UID,'GET',null,function(err,d){
   var list=$('strat-list');if(!list)return;
   var strats=(d&&d.user_strategies)||[];
   if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="toggleNLP()">CREATE WITH NLP</button></div>';return;}
