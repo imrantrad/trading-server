@@ -374,13 +374,10 @@ input:focus, select:focus {
 
 
 /* ── PANEL VISIBILITY - DO NOT MODIFY ── */
-/* .pnl display managed by main CSS */
-/* .pnl.active managed by main CSS */
 
 /* ═══ DEFINITIVE PANEL RULES - OVERRIDES ALL ABOVE ═══ */
 .pnl { display: none !important; }
 .pnl.active { display: flex !important; flex-direction: column; padding: 8px; }
-.main { flex: 1; overflow-y: auto; min-height: 0; }
 </style>
 </head>
 <body>
@@ -2400,6 +2397,30 @@ input:focus, select:focus {
 .sym-btn{font-family:monospace;font-size:8px;padding:3px 10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);cursor:pointer;border-radius:4px;letter-spacing:1px}
 .sym-btn.active{background:#001a0e;border-color:var(--gr);color:var(--gr);font-weight:700}
 .rm-fill{height:100%;border-radius:2px;transition:width 1.5s ease}
+
+/* ═══ DEFINITIVE LAYOUT RULES ═══ */
+.pnl { display: none !important; }
+.pnl.active { 
+  display: flex !important; 
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  padding: 8px !important;
+  min-height: 0 !important;
+}
+.main { 
+  flex: 1 !important; 
+  overflow-y: auto !important;
+  min-height: 0 !important;
+}
+body {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+.hdr { flex-shrink: 0 !important; }
+.tabs { flex-shrink: 0 !important; }
 </style>
 
 
