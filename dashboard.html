@@ -14,7 +14,8 @@ body{background:var(--bg);color:var(--tx);font-family:monospace;min-height:100vh
 .tab{padding:10px 14px;font-size:10px;letter-spacing:.5px;cursor:pointer;border:none;background:none;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
 .tab.active{color:var(--gr);border-bottom-color:var(--gr)}
 .main{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;-webkit-overflow-scrolling:touch}
-.pnl{display:none;flex-direction:column;padding:10px;min-height:100%}.pnl.active{display:flex;flex-direction:column}
+.pnl{display:none;flex-direction:column;padding:10px;min-height:100%}
+.pnl.active{display:flex}.pnl.active{display:flex;flex-direction:column}
 .pnl.active{display:flex}
 .card{background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px}
 .chdr{font-size:8px;color:var(--mu);letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
@@ -2813,8 +2814,6 @@ function show(name, btn) {
   // Show ONLY target panel
   var p = $('pnl-'+name);
   if(p){ 
-    // Restore admin/paper inline styles if needed
-    if(name==='admin') p.style.padding='0';
     p.classList.add('active'); 
   }
   if(btn && btn.classList) btn.classList.add('active');
@@ -3893,7 +3892,7 @@ function fallbackToPolling() {
   // Hide ALL panels first
   document.querySelectorAll('.pnl').forEach(function(p){
     p.classList.remove('active');
-    p.removeAttribute('style');
+    // Do NOT remove style - preserves display:none on pnl-livepos etc
   });
   document.querySelectorAll('.tab').forEach(function(t2){t2.classList.remove('active');});
   
@@ -4855,7 +4854,7 @@ function openLivePositions(){
   });
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   var lp = document.getElementById('pnl-livepos');
-  if(lp){ lp.removeAttribute('style'); lp.classList.add('active'); }
+  if(lp){ lp.classList.add('active'); }
   loadLivePositions();
 }
 
