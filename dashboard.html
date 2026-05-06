@@ -3549,7 +3549,7 @@ function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){
     bCp.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
     var bDel=document.createElement('button');bDel.style.cssText='padding:5px 8px;font-size:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);border-radius:5px;cursor:pointer;color:var(--rd)';bDel.textContent='🗑️';
     bDel.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};
-    btns.appendChild(bUse);btns.appendChild(bBt);btns.appendChild(bCp);btns.appendChild(bHist);btns.appendChild(bDel);
+    btns.appendChild(bUse);btns.appendChild(bBt);btns.appendChild(bCp);btns.appendChild(bDel);
     div.appendChild(btns);list.appendChild(div);
   });
 });}
