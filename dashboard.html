@@ -1120,6 +1120,9 @@
 .prof-panel{background:var(--bg3);border:1px solid var(--bo);border-radius:12px;padding:16px;margin-top:4px}
 .prof-panel-header{font-size:12px;font-weight:700;color:var(--gr);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--bo);cursor:pointer;display:flex;align-items:center;gap:6px}
 .rm-fill{height:100%;border-radius:2px;transition:width 1.5s ease}
+/* CRITICAL: Hide all inactive panels */
+.pnl:not(.active) { display: none !important; }
+.pnl.active { display: flex !important; flex-direction: column; }
 </style>
 <div id="pnl-prof" class="pnl" style="padding:0;background:var(--bg)">
 
