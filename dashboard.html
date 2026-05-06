@@ -102,7 +102,7 @@ input:focus, select:focus, textarea:focus {
 /* ── MOBILE SCROLL FIX ── */
 @media(max-width:768px){
   body{height:auto;min-height:100vh}
-  .main{height:auto;min-height:calc(100vh - 110px)}
+  .main{height:auto}
   
   #pnl-prof{overflow-y:auto;-webkit-overflow-scrolling:touch}
   .card{margin-bottom:10px}
@@ -2823,6 +2823,11 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 // PANELS
 function show(name, btn) {
   try{ localStorage.setItem('trd_last_tab', name); }catch(e){}
+  
+  // Reset scroll position to TOP
+  var mainEl = document.querySelector('.main');
+  if(mainEl) mainEl.scrollTop = 0;
+  window.scrollTo(0, 0);
   
   // Hide ALL panels
   document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
