@@ -14,9 +14,9 @@ body{background:var(--bg);color:var(--tx);font-family:monospace;min-height:100vh
 .tab{padding:10px 14px;font-size:10px;letter-spacing:.5px;cursor:pointer;border:none;background:none;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
 .tab.active{color:var(--gr);border-bottom-color:var(--gr)}
 .main{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;-webkit-overflow-scrolling:touch}
-.pnl{display:none;flex-direction:column;padding:10px;min-height:100%}
-.pnl.active{display:flex}
-.pnl.active{display:flex}
+
+
+
 .card{background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px}
 .chdr{font-size:8px;color:var(--mu);letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -95,7 +95,7 @@ input:focus, select:focus, textarea:focus {
 #chart-modal { backdrop-filter: blur(4px); }
 
 /* Smooth panel transitions */
-.pnl.active { animation: fadeIn .2s ease; }  /* Only animate when showing */
+  /* Only animate when showing */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
 
@@ -103,7 +103,7 @@ input:focus, select:focus, textarea:focus {
 @media(max-width:768px){
   body{height:auto;min-height:100vh}
   .main{height:auto;min-height:calc(100vh - 110px)}
-  .pnl.active{min-height:calc(100vh - 110px);padding-bottom:40px}
+  
   #pnl-prof{overflow-y:auto;-webkit-overflow-scrolling:touch}
   .card{margin-bottom:10px}
   /* Prevent horizontal overflow */
@@ -176,12 +176,7 @@ body { font-family: -apple-system, 'SF Pro Display', 'Segoe UI', sans-serif; }
 }
 
 /* Panel - zero waste space */
-/* .pnl display is controlled by JS - do not override here */
-.pnl.active {
-  padding: 10px;
-  max-width: 480px;
-  margin: 0 auto;
-}
+/* 
 
 /* Cards - professional */
 .card {
@@ -368,22 +363,19 @@ input:focus, select:focus {
 
 /* Mobile optimizations */
 @media (max-width: 480px) {
-  .pnl.active { padding: 8px; }
+  
   .card { padding: 10px !important; }
   .blg { padding: 10px !important; }
 }
 
 /* CRITICAL: Panels hidden by default - MUST be last rule */
-.pnl:not(.active) { display: none !important; }
-.pnl.active { display: flex !important; }
 
-/* ── COMPACT LAYOUT ── */
-html { height: 100%; }
-body { min-height: 100vh; overflow-x: hidden; }
-.hdr { height: 40px !important; flex-shrink: 0; }
-.main { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
-.pnl:not(.active) { display: none !important; }
-.pnl.active { display: flex !important; flex-direction: column; }
+
+
+
+/* ── PANEL VISIBILITY - DO NOT MODIFY ── */
+.pnl { display: none; flex-direction: column; padding: 10px; min-height: 100%; }
+.pnl.active { display: flex; }
 </style>
 </head>
 <body>
@@ -2832,18 +2824,18 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 function show(name, btn) {
   try{ localStorage.setItem('trd_last_tab', name); }catch(e){}
   
-  // Hide ALL panels - just remove active class, CSS handles display
+  // Hide ALL panels
   document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
+    p.style.display = 'none';
     p.classList.remove('active');
-    p.style.display = '';  // Clear any inline display
   });
   document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
   
-  // Show target panel
+  // Show ONLY target
   var target = document.getElementById('pnl-' + name);
   if(target){
+    target.style.display = 'flex';
     target.classList.add('active');
-    target.style.display = 'flex';  // Force show with inline style
   }
   
   // Highlight tab button
@@ -3939,7 +3931,7 @@ function fallbackToPolling() {
   
   // Show the target panel
   var tp2 = document.getElementById('pnl-'+lastTab);
-  if(tp2){ tp2.style.cssText=''; tp2.style.display='flex'; tp2.classList.add('active'); }
+  if(tp2){ tp2.style.display='flex'; tp2.classList.add('active'); }
   
   // Highlight matching tab button
   var tabFound = false;
