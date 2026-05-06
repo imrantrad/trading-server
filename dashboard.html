@@ -4960,6 +4960,110 @@ function execPaperTrade(){
 // ── COPY STRATEGY AS NATURAL LANGUAGE ────────────────────────────────────────
 function copyStrategyText(s){
   if(!s){toast('No strategy data','warn');return;}
+  
+  // Build text from strategy object
+  var text = '';
+  var raw = s.nlp_input || '';
+  if(raw.indexOf('📌 ORDER COMMAND:') >= 0 && raw.indexOf('===') >= 0){
+    text = raw; // Use original if properly formatted
+  }
+  
+  if(!text){
+    // Build from fields
+    var name = s.name || s.strategy_name || 'Strategy';
+    var inst = s.instrument || 'NIFTY';
+    var act  = s.action || 'BUY';
+    var ot   = s.option_type || 'CE';
+    var lots = s.quantity || s.lots || 1;
+    var sl   = s.sl_value || s.stop_loss || s.sl || 80;
+    var tgt  = s.target_value || s.target || s.tp || 160;
+    var tf   = s.timeframe || '5m';
+    var wr   = s.avg_win_rate || s.win_rate || 0;
+    
+    var lines = [];
+    lines.push('=== ' + name.toUpperCase() + ' ===');
+    lines.push('');
+    lines.push('📌 ORDER COMMAND:');
+    lines.push(act + ' ' + inst + ' ' + ot + ' ' + lots + ' LOT');
+    lines.push('Stop Loss: ' + sl + ' pts | Target: ' + tgt + ' pts');
+    lines.push('Timeframe: ' + tf + ' | R/R: 1:' + (tgt/sl).toFixed(2));
+    lines.push('');
+    
+    var ec = s.entry_conditions || s.conditions || [];
+    if(typeof ec === 'string') ec = ec.split('\n').filter(Boolean);
+    if(ec.length){
+      lines.push('📊 ENTRY CONDITIONS:');
+      ec.forEach(function(c,i){ if(c&&c.trim()) lines.push((i+1)+'. '+c.trim()); });
+      lines.push('');
+    }
+    
+    var xc = s.exit_conditions || [];
+    if(typeof xc === 'string') xc = [xc];
+    if(xc.length && xc[0]){
+      lines.push('🚪 EXIT CONDITIONS:');
+      xc.forEach(function(c){ if(c&&c.trim()) lines.push('• '+c.trim()); });
+      lines.push('');
+    }
+    
+    if(s.no_trade){ lines.push('❌ NO-TRADE: '+s.no_trade); lines.push(''); }
+    if(s.indicators){ lines.push('📈 INDICATORS: '+s.indicators); }
+    if(wr > 0) lines.push('✅ WIN RATE: '+wr+'%');
+    if(s.ai_score) lines.push('🤖 AI SCORE: '+s.ai_score+'/100');
+    
+    text = lines.join('\n');
+  }
+  
+  if(!text){ toast('No content to copy','warn'); return; }
+  
+  // Add name header if missing
+  if(s.name && text.indexOf('===') < 0){
+    text = '=== '+s.name.toUpperCase()+' ===\n\n' + text;
+  }
+  
+  // Try multiple copy methods
+  _doCopy(text);
+}
+
+function _doCopy(text){
+  // Method 1: Modern clipboard API
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(function(){
+      toast('✅ Strategy copied to clipboard!','success');
+    }).catch(function(){
+      _fallbackCopyMethod(text);
+    });
+    return;
+  }
+  // Method 2: Fallback
+  _fallbackCopyMethod(text);
+}
+
+function _fallbackCopyMethod(text){
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;width:2em;height:2em;padding:0;border:none;outline:none;box-shadow:none;background:transparent;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  // iOS fix
+  var range = document.createRange();
+  range.selectNodeContents(ta);
+  var sel = window.getSelection();
+  if(sel){ sel.removeAllRanges(); sel.addRange(range); }
+  ta.setSelectionRange(0, 999999);
+  var ok = false;
+  try{ ok = document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+  if(ok){ toast('✅ Strategy copied!','success'); }
+  else { 
+    // Last resort: show text in prompt so user can copy manually
+    window.prompt('Copy this strategy (Ctrl+C / Long press):', text.slice(0,200));
+  }
+}
+
+
+  if(!s){toast('No strategy data','warn');return;}
 
   var text = '';
 
@@ -5024,20 +5128,7 @@ function copyStrategyText(s){
 }
 
 
-function fallbackCopy(text){
-  var ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
-  document.body.appendChild(ta);
-  ta.select();
-  try {
-    document.execCommand('copy');
-    toast('✅ Strategy copied!','success');
-  } catch(e){
-    toast('Copy failed - long press to copy','warn');
-  }
-  document.body.removeChild(ta);
-}
+function fallbackCopy(text){ _doCopy(text); }
 
 function loadPaperStrats(type){
   var psl = document.getElementById('paper-strat-list');
