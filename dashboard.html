@@ -374,8 +374,13 @@ input:focus, select:focus {
 
 
 /* ── PANEL VISIBILITY - DO NOT MODIFY ── */
-.pnl { display: none; flex-direction: column; padding: 10px; min-height: 100%; }
-.pnl.active { display: flex; }
+/* .pnl display managed by main CSS */
+/* .pnl.active managed by main CSS */
+
+/* ═══ DEFINITIVE PANEL RULES - OVERRIDES ALL ABOVE ═══ */
+.pnl { display: none !important; }
+.pnl.active { display: flex !important; flex-direction: column; padding: 8px; }
+.main { flex: 1; overflow-y: auto; min-height: 0; }
 </style>
 </head>
 <body>
