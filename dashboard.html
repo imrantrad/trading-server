@@ -5074,19 +5074,28 @@ function showCopyModal(text){
   var modal = document.createElement('div');
   modal.id = 'copy-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;flex-direction:column;padding:16px;gap:10px';
-  modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center">'
-    + '<div style="color:#00ff88;font-weight:700;font-size:13px">📋 STRATEGY — Long Press to Copy</div>'
-    + '<button id="copy-modal-close" style="background:rgba(255,51,102,.2);border:1px solid rgba(255,51,102,.4);color:#ff3366;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px" onclick="document.getElementById('copy-modal').remove()">✕ CLOSE</button>'
-    + '</div>'
-    + '<textarea readonly style="flex:1;background:#0a0d18;color:#fff;border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;font-size:10px;font-family:monospace;resize:none;line-height:1.6">' 
-    + text.replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    + '</textarea>'
-    + '<div style="color:rgba(255,255,255,.5);font-size:10px;text-align:center">Select all text → Long press → Copy</div>';
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center';
+  var title = document.createElement('div');
+  title.style.cssText = 'color:#00ff88;font-weight:700;font-size:13px';
+  title.textContent = '📋 STRATEGY — Long Press to Copy';
+  var closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'background:rgba(255,51,102,.2);border:1px solid rgba(255,51,102,.4);color:#ff3366;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px';
+  closeBtn.textContent = '✕ CLOSE';
+  closeBtn.onclick = function(){ document.getElementById('copy-modal').remove(); };
+  hdr.appendChild(title); hdr.appendChild(closeBtn);
+  var ta2 = document.createElement('textarea');
+  ta2.readOnly = true;
+  ta2.value = text;
+  ta2.style.cssText = 'flex:1;background:#0a0d18;color:#fff;border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;font-size:10px;font-family:monospace;resize:none;line-height:1.6;min-height:300px';
+  var hint = document.createElement('div');
+  hint.style.cssText = 'color:rgba(255,255,255,.5);font-size:10px;text-align:center';
+  hint.textContent = 'Select all → Long press → Copy';
+  modal.appendChild(hdr); modal.appendChild(ta2); modal.appendChild(hint);
   document.body.appendChild(modal);
   // Auto-select the textarea
   setTimeout(function(){
-    var ta = modal.querySelector('textarea');
-    if(ta){ ta.focus(); ta.select(); ta.setSelectionRange(0,99999); }
+    if(ta2){ ta2.focus(); ta2.select(); ta2.setSelectionRange(0,99999); }
   }, 100);
 }
 
