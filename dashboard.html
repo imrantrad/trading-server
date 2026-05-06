@@ -494,6 +494,19 @@ input:focus, select:focus {
         <div class="chdr">MARKET WATCH <span id="mkt-status" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
         <div id="mkt-grd" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
       </div>
+      <!-- STRATEGY SELECTOR IN TRADE TAB -->
+      <div class="card" id="trade-strat-section">
+        <div class="chdr">📂 STRATEGIES
+          <div style="display:flex;gap:4px">
+            <button id="ts-bi" onclick="tradeStratTab('builtin',this)" style="font-size:8px;padding:2px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:4px;cursor:pointer">★ BUILT-IN</button>
+            <button id="ts-my" onclick="tradeStratTab('my',this)" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">MY</button>
+            <button id="ts-nlp" onclick="tradeStratTab('nlp',this)" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">◆ NLP</button>
+            <button id="ts-ai" onclick="tradeStratTab('ai',this)" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">🤖 AI</button>
+          </div>
+        </div>
+        <div id="trade-strat-list" style="max-height:220px;overflow-y:auto"></div>
+      </div>
+
       <div class="card">
         <div class="chdr">LOG <button class="btn ba" onclick="document.getElementById('log-box').innerHTML=''" style="padding:2px 8px;font-size:8px">CLR</button></div>
         <div id="log-box" style="max-height:100px;overflow-y:auto;font-size:9px"></div>
@@ -7601,4 +7614,111 @@ function saveStratDirect(){
     }, 2000);
   });
 }
+
+// ── STRATEGY SELECTOR IN TRADE TAB ───────────────────────────────────────────
+function tradeStratTab(type, btn){
+  // Highlight active button
+  ['ts-bi','ts-my','ts-nlp','ts-ai'].forEach(function(id){
+    var b=document.getElementById(id);
+    if(b){b.style.background='var(--bg4)';b.style.borderColor='var(--bo)';b.style.color='var(--mu)';}
+  });
+  if(btn){btn.style.background='rgba(0,255,136,.1)';btn.style.borderColor='rgba(0,255,136,.3)';btn.style.color='var(--gr)';}
+
+  var list = document.getElementById('trade-strat-list');
+  if(!list) return;
+
+  if(type==='nlp'){
+    // Show NLP builder inline
+    list.innerHTML='<div style="padding:8px">'
+      +'<div class="lbl" style="margin-bottom:6px">PASTE OR TYPE STRATEGY</div>'
+      +'<textarea id="trade-nlp-in" rows="3" placeholder="buy nifty ce rsi 60 ema cross sl 80 target 160..." style="width:100%;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);border-radius:6px;padding:8px;font-size:10px;font-family:monospace"></textarea>'
+      +'<div style="display:flex;gap:6px;margin-top:6px">'
+      +'<button onclick="tradeNLPParse()" class="btn bb" style="flex:1;padding:7px;font-size:10px">🧠 PARSE</button>'
+      +'<button onclick="tradeNLPSave()" class="btn bg" style="flex:1;padding:7px;font-size:10px">💾 SAVE</button>'
+      +'</div>'
+      +'<div id="trade-nlp-out" style="display:none;margin-top:6px;font-size:9px;color:var(--gr)"></div>'
+      +'</div>';
+    return;
+  }
+
+  list.innerHTML='<div style="text-align:center;color:var(--am);padding:8px;font-size:10px">Loading...</div>';
+
+  var ep = type==='my' ? '/strategies/user/'+UID 
+         : type==='ai' ? '/ai/strategies/approved' 
+         : '/strategies/builtin';
+
+  req(ep,'GET',null,function(err,d){
+    if(err||!d){list.innerHTML='<div style="color:var(--rd);padding:8px;font-size:10px">Failed to load</div>';return;}
+    var strats = d.strategies || d.user_strategies || d.approved_strategies || [];
+    if(!strats.length){list.innerHTML='<div style="color:var(--mu);padding:8px;text-align:center;font-size:10px">No strategies found</div>';return;}
+    list.innerHTML='';
+    strats.forEach(function(s){
+      var div=document.createElement('div');
+      div.style.cssText='border-bottom:1px solid var(--bo);padding:8px 0;display:flex;justify-content:space-between;align-items:center';
+      var wr=s.avg_win_rate||s.win_rate||0;
+      var color=wr>=70?'var(--gr)':wr>=60?'var(--am)':'var(--mu)';
+      div.innerHTML='<div>'
+        +'<div style="font-size:10px;font-weight:600">'+(s.name||s.strategy_name||'Strategy')+'</div>'
+        +'<div style="font-size:8px;color:var(--mu)">'+(s.instrument||'NIFTY')+' · WR:'+(wr||'—')+'%</div>'
+        +'</div>';
+      var btns=document.createElement('div');btns.style.cssText='display:flex;gap:4px';
+      var bUse=document.createElement('button');
+      bUse.style.cssText='font-size:8px;padding:3px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:4px;cursor:pointer';
+      bUse.textContent='USE';
+      bUse.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat);toast('Strategy loaded!','success');};})(s);
+      var bCpy=document.createElement('button');
+      bCpy.style.cssText='font-size:8px;padding:3px 6px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer';
+      bCpy.textContent='📋';
+      bCpy.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
+      btns.appendChild(bUse);btns.appendChild(bCpy);
+      div.appendChild(btns);list.appendChild(div);
+    });
+  });
+}
+
+function tradeNLPParse(){
+  var ta=document.getElementById('trade-nlp-in');
+  if(!ta||!ta.value.trim()){toast('Enter strategy text first','warn');return;}
+  // Copy to main NLP input and parse
+  var mainNLP=document.getElementById('nlp-in');
+  if(mainNLP) mainNLP.value=ta.value;
+  window._lastNLPText=ta.value;
+  req('/nlp/parse','POST',{nlp_text:ta.value,user_id:UID},function(err,r){
+    if(!err&&r&&r.success){
+      window._lastNLPResult=r;
+      _renderNLPResult(r, ta.value, null);
+      var out=document.getElementById('trade-nlp-out');
+      if(out){
+        out.style.display='block';
+        var ord=r.order||{};
+        out.innerHTML='✅ Parsed: '+( ord.side||'BUY')+' '+(ord.asset||'NIFTY')+' '+(ord.option_type||'CE')
+          +' | SL:'+(ord.sl||'—')+' TGT:'+(ord.tp||'—')+' TF:'+r.timeframe
+          +' | Conditions: '+r.condition_count;
+      }
+      toast('✅ Parsed & filled!','success');
+    } else {
+      toast('Parse error','error');
+    }
+  });
+}
+
+function tradeNLPSave(){
+  var ta=document.getElementById('trade-nlp-in');
+  if(!ta||!ta.value.trim()){toast('Enter strategy first','warn');return;}
+  var name=prompt('Strategy name:','My Strategy');
+  if(!name) return;
+  var mainNM=document.getElementById('ns-nm');
+  if(mainNM) mainNM.value=name;
+  var mainNLP=document.getElementById('ns-nlp');
+  if(mainNLP) mainNLP.value=ta.value;
+  var mainNLPIn=document.getElementById('nlp-in');
+  if(mainNLPIn) mainNLPIn.value=ta.value;
+  window._lastNLPText=ta.value;
+  window._lastNLPResult=window._lastNLPResult||{};
+  saveStrat();
+}
+
+// Auto-load BUILT-IN when trade tab opens
+var _tradeStratLoaded = false;
+
 </script>
