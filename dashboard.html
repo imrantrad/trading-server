@@ -418,6 +418,7 @@ input:focus, select:focus {
   <button class="tab" onclick="show('risk',this)">RISK</button>
   <button class="tab" onclick="show('scan',this)">SCANNER</button>
   <button class="tab" onclick="show('opts',this)">OPTIONS</button>
+  <button class="tab" onclick="show('strats',this)">📂 STRATEGIES</button>
   <button class="tab" onclick="show('bt',this)">BACKTEST</button>
   <button class="tab" onclick="show('jnl',this)">JOURNAL</button>
   <button class="tab" onclick="show('rep',this)">REPORTS</button>
@@ -3412,19 +3413,21 @@ function calcMargin(){req('/margin/calculate?instrument='+gv('mg-i')+'&quantity=
 
 // STRATEGIES
 function toggleNLP(){
-  var e=$('nlp-bld');
-  if(!e) return;
-  var showing = e.style.display !== 'none';
-  e.style.display = showing ? 'none' : 'block';
-  if(!showing){
-    // Sync current NLP text to preview
-    var txt = (document.getElementById('nlp-in') || {}).value || '';
-    var prev = document.getElementById('ns-preview');
-    if(prev) prev.textContent = txt.trim() || '— Paste strategy text in NLP area above —';
-    // Focus name field
-    var nm = document.getElementById('ns-nm');
-    if(nm) setTimeout(function(){ nm.focus(); }, 100);
-  }
+  // Navigate to STRATEGIES tab and show NLP builder
+  show('strats', null);
+  setTimeout(function(){
+    var e=$('nlp-bld');
+    if(!e) return;
+    var showing = e.style.display !== 'none';
+    e.style.display = showing ? 'none' : 'block';
+    if(!showing){
+      var txt = (document.getElementById('nlp-in') || {}).value || '';
+      var prev = document.getElementById('ns-preview');
+      if(prev) prev.textContent = txt.trim() || '— Paste strategy text in NLP area above, then save —';
+      var nm = document.getElementById('ns-nm');
+      if(nm) setTimeout(function(){ nm.focus(); }, 150);
+    }
+  }, 200);
 }
 
 // ── STRATEGY → ORDER ENTRY + NLP FILL ────────────────────────────────────────
@@ -7509,12 +7512,20 @@ function saveStrat(){ saveStratDirect(); }  // backward compat
 function saveStratDirect(){
   var name = (document.getElementById('ns-nm') || {}).value;
   name = name ? name.trim() : '';
-  if(name.length < 2){ toast('Enter a strategy name first','warn'); document.getElementById('ns-nm').focus(); return; }
+  if(name.length < 2){ toast('Enter a strategy name first','warn'); return; }
 
-  // Get original text AS-IS from nlp-in
-  var originalText = (document.getElementById('nlp-in') || {}).value || '';
-  originalText = originalText.trim();
-  if(!originalText){ toast('Paste strategy text in NLP area first','warn'); return; }
+  // Get original text AS-IS - try multiple sources
+  var originalText = '';
+  var nlpEl = document.getElementById('nlp-in');
+  var nsNlpEl = document.getElementById('ns-nlp');
+  if(nlpEl && nlpEl.value.trim()) originalText = nlpEl.value.trim();
+  else if(nsNlpEl && nsNlpEl.value.trim()) originalText = nsNlpEl.value.trim();
+  
+  if(!originalText){ 
+    toast('Paste your strategy text in the NLP text area first, then save','warn'); 
+    if(nlpEl) nlpEl.focus();
+    return; 
+  }
 
   // Parse ONLY what is needed for indexing (instrument, timeframe, sl, target)
   // DO NOT transform or modify the original text
