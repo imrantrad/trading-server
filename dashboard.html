@@ -940,7 +940,7 @@ input:focus, select:focus {
           <button onclick="toggleNLPSize()" id="nlp-resize-btn" style="font-size:10px;padding:2px 6px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">⤢ MAX</button>
         </div>
       </div>
-      <div id="nlp-wrap"><textarea id="nlp-in" rows="4" placeholder="Paste strategy here or type: buy nifty ce rsi 60 ema cross sl 80 target 160..." style="width:100%;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);border-radius:6px;padding:8px;font-size:10px;font-family:monospace;resize:vertical"></textarea></div>
+      <div id="nlp-wrap"><textarea id="strat-nlp-in" rows="4" placeholder="Paste strategy here or type: buy nifty ce rsi 60 ema cross sl 80 target 160..." style="width:100%;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);border-radius:6px;padding:8px;font-size:10px;font-family:monospace;resize:vertical"></textarea></div>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:8px">
       <button onclick="nlpParse()" class="btn bb" style="flex:1;padding:8px;font-size:10px">🧠 PARSE</button>
@@ -3067,7 +3067,11 @@ function toggleNLPGuide(){
 }
 
 function nlpParse(){
-  var text = (document.getElementById('nlp-in').value||'').trim();
+  var stratTa = document.getElementById('strat-nlp-in');
+  var tradeTa = document.getElementById('nlp-in');
+  var text = ((stratTa&&stratTa.offsetParent?stratTa:tradeTa)||{value:''}).value.trim();
+  if(!text && stratTa) text = (stratTa.value||'').trim();
+  if(!text && tradeTa) text = (tradeTa.value||'').trim();
   if(!text){toast('Strategy likhiye pehle!','warn');return;}
   
   var outEl = document.getElementById('nlp-out');
@@ -7432,7 +7436,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // ── NLP TEXTAREA EXPAND/COLLAPSE ─────────────────────────────────────────────
 var _nlpExpanded = false;
 function toggleNLPSize(){
-  var ta = document.getElementById('nlp-in');
+  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
   var btn = document.getElementById('nlp-resize-btn');
   var wrap = document.getElementById('nlp-wrap');
   _nlpExpanded = !_nlpExpanded;
@@ -7480,7 +7484,7 @@ function toggleNLPSize(){
 }
 
 function clearNLP(){
-  var ta = document.getElementById('nlp-in');
+  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
   if(ta) ta.value = '';
   var out = document.getElementById('nlp-out');
   if(out) out.style.display = 'none';
@@ -7494,7 +7498,7 @@ var _recognition = null;
 
 function startVoiceInput(){
   var btn = document.getElementById('nlp-mic-btn');
-  var ta = document.getElementById('nlp-in');
+  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
   
   // Check browser support
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
