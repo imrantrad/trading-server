@@ -375,6 +375,7 @@ input:focus, select:focus {
 
 /* CRITICAL: Panels hidden by default - MUST be last rule */
 .pnl:not(.active) { display: none !important; }
+.pnl.active { display: flex !important; }
 
 /* ── COMPACT LAYOUT - No blank space ── */
 html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
@@ -2833,22 +2834,18 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 function show(name, btn) {
   try{ localStorage.setItem('trd_last_tab', name); }catch(e){}
   
-  // Hide ALL panels with absolute certainty
-  var allPnl = document.querySelectorAll('[id^="pnl-"]');
-  allPnl.forEach(function(p){
-    p.style.cssText = 'display:none !important';
+  // Hide ALL panels - just remove active class, CSS handles display
+  document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
     p.classList.remove('active');
+    p.style.display = '';  // Clear any inline display
   });
-  
-  // Remove active from all tabs
   document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
   
-  // Show ONLY the target panel
+  // Show target panel
   var target = document.getElementById('pnl-' + name);
   if(target){
-    target.style.cssText = '';
-    target.style.display = 'flex';
     target.classList.add('active');
+    target.style.display = 'flex';  // Force show with inline style
   }
   
   // Highlight tab button
