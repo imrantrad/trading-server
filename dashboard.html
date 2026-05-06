@@ -2803,16 +2803,20 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 function show(name, btn) {
   // Save current tab
   try{ localStorage.setItem('trd_last_tab', name); }catch(e){}
-  // Hide ALL panels
+  // Hide ALL panels - only remove active class, keep inline styles
   document.querySelectorAll('.pnl').forEach(function(p){
     p.classList.remove('active');
-    p.removeAttribute('style');
+    // Don't remove style attribute - some panels need it (padding:0 etc)
   });
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   
   // Show ONLY target panel
   var p = $('pnl-'+name);
-  if(p){ p.removeAttribute('style'); p.classList.add('active'); }
+  if(p){ 
+    // Restore admin/paper inline styles if needed
+    if(name==='admin') p.style.padding='0';
+    p.classList.add('active'); 
+  }
   if(btn && btn.classList) btn.classList.add('active');
   
   // Auto-highlight matching tab if btn not passed
@@ -4859,10 +4863,10 @@ function openPaperTest(){
 }
 
 function openLivePositions(){
-  // Hide ALL panels
+  // Hide ALL panels - only remove active class, keep inline styles
   document.querySelectorAll('.pnl').forEach(function(p){
     p.classList.remove('active');
-    p.removeAttribute('style');
+    // Don't remove style attribute - some panels need it (padding:0 etc)
   });
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   var lp = document.getElementById('pnl-livepos');
