@@ -419,7 +419,7 @@ input:focus, select:focus {
   <button class="tab" onclick="show('risk',this)">RISK</button>
   <button class="tab" onclick="show('scan',this)">SCANNER</button>
   <button class="tab" onclick="show('opts',this)">OPTIONS</button>
-  <button class="tab" onclick="show('strats',this)">📂 STRATEGIES</button>
+  <button class="tab" onclick="show('strats',this);loadBuiltin()">📂 STRATEGIES</button>
   <button class="tab" onclick="show('bt',this)">BACKTEST</button>
   <button class="tab" onclick="show('jnl',this)">JOURNAL</button>
   <button class="tab" onclick="show('rep',this)">REPORTS</button>
@@ -2801,6 +2801,8 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 
 // PANELS
 function show(name, btn) {
+  // Save current tab
+  try{ localStorage.setItem('trd_last_tab', name); }catch(e){}
   // Hide ALL panels
   document.querySelectorAll('.pnl').forEach(function(p){
     p.classList.remove('active');
@@ -2844,8 +2846,7 @@ function show(name, btn) {
     loadAdmin();
   }
   if(name==='prof')loadProfStats();
-  if(name==='strats'){ setTimeout(function(){loadBuiltin();},200); }
-  if(name==='trade'){ setTimeout(function(){tradeStratTab('builtin',document.getElementById('ts-bi'));},200); }
+  // Strategies load only when explicitly clicked - not auto
 }
 
 // STATS
