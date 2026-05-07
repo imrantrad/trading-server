@@ -151,6 +151,28 @@ class UserDB:
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             );
             """)
+        # Seed demo user if not exists
+        self._seed_demo()
+
+    def _seed_demo(self):
+        """Create demo and admin users on first run"""
+        import hashlib
+        demo_users = [
+            ('USR124535215', 'demo', 'demo@trading.com', 'demo123', 'Demo Trader', 500000, 'PRO'),
+            ('USR000000001', 'admin', 'admin@trading.com', 'admin123', 'Admin User', 1000000, 'ENTERPRISE'),
+        ]
+        try:
+            with self.conn() as c:
+                for uid, uname, email, pwd, name, cap, plan in demo_users:
+                    exists = c.execute('SELECT id FROM users WHERE username=?', (uname,)).fetchone()
+                    if not exists:
+                        pwd_hash = hashlib.sha256(pwd.encode()).hexdigest()
+                        c.execute("""INSERT OR IGNORE INTO users 
+                            (id,username,email,password_hash,full_name,capital,subscription_plan,email_verified,is_active)
+                            VALUES (?,?,?,?,?,?,?,1,1)""",
+                            (uid, uname, email, pwd_hash, name, cap, plan))
+        except Exception as e:
+            print(f"Seed demo: {e}")
 
     def _hash(self, pw): return hashlib.sha256(pw.encode()).hexdigest()
     def _uid(self): return f"USR{int(time.time()*1000)%999999999:09d}"

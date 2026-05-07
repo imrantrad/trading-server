@@ -492,18 +492,20 @@ function demoLogin(){
   if(btn){ btn.style.opacity='0.5'; btn.style.pointerEvents='none'; }
   
   req('/users/login','POST',{username:'demo',password:'demo123'},function(err,r){
-    if(err||!r||r.error){
-      // Use hardcoded demo
-      var demoUser = {
+    var user = null;
+    if(r && r.user){ user = r.user; user.plan = (r.subscription && r.subscription.plan) || 'PRO'; user.token = r.token; }
+    else if(r && r.user_id){ user = r; }
+    
+    if(!user || err){
+      // Hardcoded fallback - always works
+      user = {
         user_id:'USR124535215', username:'demo', email:'demo@trading.com',
-        full_name:'Demo Trader', plan:'PRO', capital:500000, broker:'PAPER'
+        full_name:'Demo Trader', plan:'PRO', capital:500000, broker:'PAPER MODE',
+        subscription_plan:'PRO'
       };
-      localStorage.setItem('trd_user', JSON.stringify(demoUser));
-      loginSuccess(demoUser, false);
-    } else {
-      localStorage.setItem('trd_user', JSON.stringify(r));
-      loginSuccess(r, false);
     }
+    localStorage.setItem('trd_user', JSON.stringify(user));
+    loginSuccess(user, false);
   });
 }
 
@@ -517,19 +519,23 @@ function manualLogin(){
       showLoginError('Invalid username or password');
       return;
     }
-    localStorage.setItem('trd_user', JSON.stringify(r));
-    loginSuccess(r, false);
+    var u = (r && r.user) ? r.user : r;
+    if(r && r.user){ u.plan = (r.subscription && r.subscription.plan) || u.subscription_plan || 'FREE'; u.token = r.token; }
+    localStorage.setItem('trd_user', JSON.stringify(u));
+    loginSuccess(u, false);
   });
 }
 
 function loginSuccess(user, isNew){
   // Set global user variables
-  window.UID = user.user_id || 'USR124535215';
+  window.UID = user.user_id || user.id || 'USR124535215';
   window.USER_NAME = user.full_name || user.username || 'Trader';
   window.USER_EMAIL = user.email || '';
-  window.USER_PLAN = user.plan || 'FREE';
+  window.USER_PLAN = user.plan || user.subscription_plan || 'FREE';
   window.USER_CAPITAL = user.capital || 500000;
-  window.USER_PICTURE = user.picture || '';
+  window.USER_PICTURE = user.picture || user.avatar || '';
+  // Update global UID variable used throughout app
+  try{ if(window.UID) { var s=document.createElement('script'); s.text='UID="'+window.UID+'"'; document.head.appendChild(s); } }catch(e){}
   
   // Update UID in script
   try{
