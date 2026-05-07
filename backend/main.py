@@ -3930,6 +3930,196 @@ def google_auth(payload: dict):
         return {"error": str(e)}
 
 
+# ═══════════════════════════════════════════════════════════
+# REFERRAL & REWARD SYSTEM
+# ═══════════════════════════════════════════════════════════
+import random, string, sqlite3
+from datetime import datetime, timedelta
+
+def _get_ref_db():
+    """Get referral DB (uses same SQLite file as user_db)"""
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../database/referrals.db")
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    # Create tables
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS referral_codes (
+            id TEXT PRIMARY KEY,
+            code TEXT UNIQUE NOT NULL,
+            owner_user_id TEXT NOT NULL,
+            owner_email TEXT DEFAULT '',
+            bonus_amount REAL DEFAULT 0,
+            discount_amount REAL DEFAULT 0,
+            validity_days INTEGER DEFAULT 30,
+            expires_at TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            uses_count INTEGER DEFAULT 0,
+            total_bonus_paid REAL DEFAULT 0,
+            total_discount_given REAL DEFAULT 0,
+            created_by_admin TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS referral_uses (
+            id TEXT PRIMARY KEY,
+            code TEXT NOT NULL,
+            code_owner_id TEXT NOT NULL,
+            new_user_id TEXT NOT NULL,
+            new_user_email TEXT DEFAULT '',
+            bonus_amount REAL DEFAULT 0,
+            discount_amount REAL DEFAULT 0,
+            used_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    conn.commit()
+    return conn
+
+def _gen_code():
+    return "TRD" + "".join(random.choices(string.ascii_uppercase + string.digits, k=7))
+
+# ─── ADMIN: Create Referral Code ───────────────────────────
+@app.post("/admin/referral/create")
+def create_referral_code(payload: dict):
+    target_user_id = payload.get("target_user_id", "")
+    target_email = payload.get("target_email", "")
+    bonus_amount = float(payload.get("bonus_amount", 500))
+    discount_amount = float(payload.get("discount_amount", 200))
+    validity_days = int(payload.get("validity_days", 30))
+    created_by = payload.get("admin_id", "admin")
+
+    if not target_user_id and not target_email:
+        return {"error": "target_user_id or target_email required"}
+
+    # Find user
+    if USER_SYSTEM and not target_user_id:
+        try:
+            user = user_db.get_user_by_email(target_email)
+            if user: target_user_id = user.get("id", user.get("user_id", ""))
+        except: pass
+
+    code = _gen_code()
+    expires = (datetime.now() + timedelta(days=validity_days)).strftime("%Y-%m-%d")
+    rid = "REF" + "".join(random.choices(string.digits, k=10))
+
+    db = _get_ref_db()
+    db.execute("""INSERT INTO referral_codes 
+        (id,code,owner_user_id,owner_email,bonus_amount,discount_amount,
+         validity_days,expires_at,created_by_admin)
+        VALUES (?,?,?,?,?,?,?,?,?)""",
+        (rid, code, target_user_id, target_email, bonus_amount, 
+         discount_amount, validity_days, expires, created_by))
+    db.commit()
+    db.close()
+    return {
+        "success": True, "code": code, "owner": target_user_id or target_email,
+        "bonus_amount": bonus_amount, "discount_amount": discount_amount,
+        "expires_at": expires, "validity_days": validity_days
+    }
+
+# ─── USER: Apply Referral Code ─────────────────────────────
+@app.post("/referral/apply")
+def apply_referral(payload: dict):
+    code = payload.get("code", "").strip().upper()
+    new_user_id = payload.get("user_id", "")
+    new_user_email = payload.get("email", "")
+
+    if not code or not new_user_id:
+        return {"error": "code and user_id required"}
+
+    db = _get_ref_db()
+    row = db.execute("SELECT * FROM referral_codes WHERE code=? AND is_active=1", (code,)).fetchone()
+    if not row:
+        db.close()
+        return {"error": "Invalid or expired referral code"}
+
+    r = dict(row)
+    if r["expires_at"] < datetime.now().strftime("%Y-%m-%d"):
+        db.close()
+        return {"error": "Referral code expired"}
+
+    # Check not already used by same user
+    used = db.execute("SELECT id FROM referral_uses WHERE code=? AND new_user_id=?",
+                      (code, new_user_id)).fetchone()
+    if used:
+        db.close()
+        return {"error": "Code already used"}
+
+    # Apply rewards
+    use_id = "USE" + "".join(random.choices(string.digits, k=10))
+    db.execute("""INSERT INTO referral_uses 
+        (id,code,code_owner_id,new_user_id,new_user_email,bonus_amount,discount_amount)
+        VALUES (?,?,?,?,?,?,?)""",
+        (use_id, code, r["owner_user_id"], new_user_id, new_user_email,
+         r["bonus_amount"], r["discount_amount"]))
+    db.execute("""UPDATE referral_codes SET 
+        uses_count=uses_count+1,
+        total_bonus_paid=total_bonus_paid+?,
+        total_discount_given=total_discount_given+?
+        WHERE code=?""", (r["bonus_amount"], r["discount_amount"], code))
+    db.commit()
+    db.close()
+    return {
+        "success": True, "discount": r["discount_amount"],
+        "bonus_to_referrer": r["bonus_amount"],
+        "message": f"₹{r['discount_amount']} discount applied! Referrer gets ₹{r['bonus_amount']} bonus."
+    }
+
+# ─── ADMIN: List All Referral Codes ────────────────────────
+@app.get("/admin/referral/list")
+def list_referral_codes(limit: int = 50):
+    db = _get_ref_db()
+    rows = db.execute("""SELECT * FROM referral_codes ORDER BY created_at DESC LIMIT ?""",
+                      (limit,)).fetchall()
+    db.close()
+    return {"codes": [dict(r) for r in rows], "total": len(rows)}
+
+# ─── ADMIN: Referral Analytics ─────────────────────────────
+@app.get("/admin/referral/analytics")
+def referral_analytics():
+    db = _get_ref_db()
+    total_codes = db.execute("SELECT COUNT(*) as c FROM referral_codes").fetchone()["c"]
+    active_codes = db.execute("SELECT COUNT(*) as c FROM referral_codes WHERE is_active=1").fetchone()["c"]
+    total_uses = db.execute("SELECT COUNT(*) as c FROM referral_uses").fetchone()["c"]
+    total_bonus = db.execute("SELECT COALESCE(SUM(bonus_amount),0) as s FROM referral_uses").fetchone()["s"]
+    total_discount = db.execute("SELECT COALESCE(SUM(discount_amount),0) as s FROM referral_uses").fetchone()["s"]
+    top_codes = db.execute("""SELECT code, owner_user_id, owner_email, uses_count, 
+        total_bonus_paid, total_discount_given FROM referral_codes 
+        ORDER BY uses_count DESC LIMIT 10""").fetchall()
+    db.close()
+    return {
+        "total_codes": total_codes, "active_codes": active_codes,
+        "total_uses": total_uses, "total_bonus_paid": total_bonus,
+        "total_discount_given": total_discount,
+        "top_codes": [dict(r) for r in top_codes]
+    }
+
+# ─── ADMIN: Deactivate Code ────────────────────────────────
+@app.post("/admin/referral/deactivate")
+def deactivate_referral(payload: dict):
+    code = payload.get("code", "")
+    db = _get_ref_db()
+    db.execute("UPDATE referral_codes SET is_active=0 WHERE code=?", (code,))
+    db.commit()
+    db.close()
+    return {"success": True, "message": f"Code {code} deactivated"}
+
+# ─── USER: Validate Code (before applying) ─────────────────
+@app.get("/referral/validate/{code}")
+def validate_referral(code: str):
+    db = _get_ref_db()
+    row = db.execute("SELECT * FROM referral_codes WHERE code=? AND is_active=1",
+                     (code.upper(),)).fetchone()
+    db.close()
+    if not row: return {"valid": False, "message": "Invalid code"}
+    r = dict(row)
+    if r["expires_at"] < datetime.now().strftime("%Y-%m-%d"):
+        return {"valid": False, "message": "Code expired"}
+    return {
+        "valid": True, "discount": r["discount_amount"],
+        "bonus": r["bonus_amount"], "expires": r["expires_at"],
+        "message": f"Valid! Get ₹{r['discount_amount']} discount"
+    }
+
+
 @app.get("/strategies/v2/list/{user_id}")
 def strategies_list(user_id: str):
     """List all strategies"""

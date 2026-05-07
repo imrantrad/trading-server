@@ -644,6 +644,15 @@ setInterval(function(){
       
       <!-- Google Sign In Button - Official Rendered -->
       <div id="google-btn-render" style="margin-bottom:12px;display:flex;justify-content:center"></div>
+      <!-- Referral Code -->
+      <div id="referral-section" style="margin-bottom:12px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="referral-code-input" placeholder="Referral Code (optional)" 
+            style="flex:1;font-size:11px;padding:7px 10px;background:rgba(255,255,255,.05);border:1px solid var(--bo);border-radius:6px;color:var(--tx)"
+            oninput="validateReferralCode(this.value)">
+        </div>
+        <div id="referral-msg" style="font-size:10px;margin-top:4px;display:none"></div>
+      </div>
       <!-- Fallback button if render fails -->
       <div id="google-signin-btn" onclick="signInWithGoogle()" style="background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;padding:12px 16px;cursor:pointer;display:none;align-items:center;gap:12px;font-size:13px;font-weight:500;justify-content:center;margin-bottom:12px">
         <span style="font-size:18px">G</span>
@@ -7680,10 +7689,10 @@ function toggleSupport(){
       +'<div style="background:rgba(0,255,136,.1);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px">'
       +'👋 Namaste! TRD Support mein aapka swagat hai.<br><br>'
       +'<b>Quick Help:</b><br>'
-      +'• Demo login: demo/demo123<br>'
       +'• Paper trading: PAPER mode select karo<br>'
       +'• Strategy copy: 📋 button dabao<br>'
-      +'• Admin: TRD logo pe 3x click karo'
+      +'• Live prices: Market Watch dekho<br>'
+      +'• Backtest: Strategies test karo'
       +'</div>'
       +'</div>'
       +'<div style="padding:8px;border-top:1px solid var(--bo);display:flex;gap:6px">'
@@ -7718,6 +7727,127 @@ function sendSupportMsg(){
     msgs.scrollTop = msgs.scrollHeight;
   }, 800);
   msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════
+// REFERRAL SYSTEM - Frontend
+// ═══════════════════════════════════════════════════════════
+var _pendingReferralCode = '';
+
+function validateReferralCode(code){
+  var msgEl = document.getElementById('referral-msg');
+  if(!code || code.length < 5){
+    if(msgEl){ msgEl.style.display='none'; }
+    _pendingReferralCode = '';
+    return;
+  }
+  req('/referral/validate/'+code.toUpperCase(),'GET',null,function(err,d){
+    if(!msgEl) return;
+    msgEl.style.display = 'block';
+    if(err || !d || !d.valid){
+      msgEl.style.color = 'var(--rd)';
+      msgEl.textContent = '❌ Invalid referral code';
+      _pendingReferralCode = '';
+    } else {
+      msgEl.style.color = 'var(--gr)';
+      msgEl.textContent = '✅ ' + d.message;
+      _pendingReferralCode = code.toUpperCase();
+    }
+  });
+}
+
+function applyReferralAfterLogin(userId, email){
+  if(!_pendingReferralCode) return;
+  req('/referral/apply','POST',{
+    code: _pendingReferralCode,
+    user_id: userId,
+    email: email
+  }, function(err, d){
+    if(!err && d && d.success){
+      toast('🎁 Referral applied! ₹'+d.discount+' discount credited!','success');
+    }
+    _pendingReferralCode = '';
+  });
+}
+
+// ── Admin Referral Management ─────────────────────────────
+function loadAdminReferral(){
+  var el = document.getElementById('adm-referral-content');
+  if(!el) return;
+  
+  // Load analytics
+  req('/admin/referral/analytics','GET',null,function(err,d){
+    if(err||!d) return;
+    var stats = document.getElementById('ref-stats');
+    if(stats){
+      stats.innerHTML = 
+        '<div class="g4" style="margin-bottom:12px">'
+        +'<div class="stat"><div class="sl">TOTAL CODES</div><div class="sv" style="color:var(--bl)">'+d.total_codes+'</div></div>'
+        +'<div class="stat"><div class="sl">ACTIVE</div><div class="sv" style="color:var(--gr)">'+d.active_codes+'</div></div>'
+        +'<div class="stat"><div class="sl">TOTAL USES</div><div class="sv" style="color:var(--am)">'+d.total_uses+'</div></div>'
+        +'<div class="stat"><div class="sl">BONUS PAID</div><div class="sv" style="color:var(--gr)">₹'+d.total_bonus_paid+'</div></div>'
+        +'</div>';
+    }
+  });
+  
+  // Load code list
+  req('/admin/referral/list','GET',null,function(err,d){
+    var listEl = document.getElementById('ref-code-list');
+    if(!listEl || !d || !d.codes) return;
+    if(!d.codes.length){
+      listEl.innerHTML = '<div style="color:var(--mu);text-align:center;padding:16px">No referral codes yet</div>';
+      return;
+    }
+    listEl.innerHTML = d.codes.map(function(c){
+      return '<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:10px;margin-bottom:6px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+        +'<span style="font-family:monospace;font-weight:700;color:var(--gr);font-size:13px">'+c.code+'</span>'
+        +'<span style="font-size:9px;padding:2px 6px;background:'+(c.is_active?'rgba(0,255,136,.1)':'rgba(255,51,51,.1)')
+        +';color:'+(c.is_active?'var(--gr)':'var(--rd)')+';border-radius:4px">'+(c.is_active?'ACTIVE':'INACTIVE')+'</span>'
+        +'</div>'
+        +'<div style="font-size:9px;color:var(--mu)">User: '+(c.owner_email||c.owner_user_id)+' | Uses: '+c.uses_count
+        +' | Bonus: ₹'+c.total_bonus_paid+' | Discount: ₹'+c.total_discount_given+'</div>'
+        +'<div style="font-size:9px;color:var(--mu)">Expires: '+c.expires_at+' | Bonus/use: ₹'+c.bonus_amount+' | Discount/use: ₹'+c.discount_amount+'</div>'
+        +(c.is_active ? '<button onclick="deactivateRefCode(\''+c.code+'\')" style="margin-top:4px;font-size:9px;padding:2px 8px;background:rgba(255,51,51,.1);border:1px solid rgba(255,51,51,.3);color:var(--rd);border-radius:4px;cursor:pointer">Deactivate</button>' : '')
+        +'</div>';
+    }).join('');
+  });
+}
+
+function createReferralCode(){
+  var userId = (document.getElementById('ref-user-id')||{}).value||'';
+  var email = (document.getElementById('ref-email')||{}).value||'';
+  var bonus = parseFloat((document.getElementById('ref-bonus')||{}).value)||500;
+  var discount = parseFloat((document.getElementById('ref-discount')||{}).value)||200;
+  var validity = parseInt((document.getElementById('ref-validity')||{}).value)||30;
+  
+  if(!userId && !email){ toast('User ID ya Email daalo','warn'); return; }
+  
+  req('/admin/referral/create','POST',{
+    target_user_id: userId, target_email: email,
+    bonus_amount: bonus, discount_amount: discount,
+    validity_days: validity, admin_id: 'admin'
+  }, function(err,d){
+    if(err||!d||!d.success){ toast('Error creating code','error'); return; }
+    toast('✅ Code created: '+d.code,'success');
+    var codeDisplay = document.getElementById('new-code-display');
+    if(codeDisplay){
+      codeDisplay.style.display = 'block';
+      codeDisplay.innerHTML = '<div style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;text-align:center">'
+        +'<div style="font-size:20px;font-weight:800;color:var(--gr);letter-spacing:3px">'+d.code+'</div>'
+        +'<div style="font-size:10px;color:var(--mu);margin-top:4px">Bonus: ₹'+d.bonus_amount+' | Discount: ₹'+d.discount_amount+' | Expires: '+d.expires_at+'</div>'
+        +'</div>';
+    }
+    loadAdminReferral();
+  });
+}
+
+function deactivateRefCode(code){
+  if(!confirm('Deactivate code '+code+'?')) return;
+  req('/admin/referral/deactivate','POST',{code:code},function(err,d){
+    toast(d.success?'Code deactivated':'Error','info');
+    loadAdminReferral();
+  });
 }
 </script>
 </body>
