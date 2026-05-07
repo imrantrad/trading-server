@@ -427,7 +427,7 @@ function initGoogleAuth(){
 
 function signInWithGoogle(){
   if(!window.google || !window.google.accounts || !window.google.accounts.id){
-    showLoginError('Google login load nahi hua. Demo try karo.');
+    showLoginError('Google load nahi hua. Demo Account try karo ↓');
     return;
   }
   google.accounts.id.prompt(function(n){
@@ -665,6 +665,10 @@ setInterval(function(){
       <div onclick="document.getElementById('manual-login-form').style.display=document.getElementById('manual-login-form').style.display==='none'?'block':'none'" style="font-size:10px;color:var(--mu);cursor:pointer;margin-top:8px">Username/Password Login</div>
       
       <div id="login-error" style="color:var(--rd);font-size:11px;margin-top:8px;display:none"></div>
+      <div style="font-size:9px;color:rgba(255,255,255,.25);margin-top:12px;text-align:center;line-height:1.6">
+        Google login ke liye developer se sampark karen<br>
+        Ya <b style="color:var(--gr)">Demo Account</b> use karen
+      </div>
     </div>
     
     <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:16px;line-height:1.6">
@@ -2591,7 +2595,7 @@ setInterval(function(){
     <div id="chat-sugg" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border-top:1px solid var(--bo);flex-shrink:0"></div>
     <div style="display:flex;gap:6px;padding:10px;border-top:1px solid var(--bo);flex-shrink:0"><input id="chat-inp" placeholder="Type your question..." style="border-radius:20px;font-size:11px;padding:8px 14px"><button id="chat-send" style="width:36px;height:36px;border-radius:50%;background:var(--gr);border:none;cursor:pointer;color:#000;font-size:16px;flex-shrink:0">></button></div>
   </div>
-  <button id="chat-btn" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3)">?</button>
+  <button id="chat-btn" onclick="toggleSupport()" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3)">💬</button>
 </div>
 
 
@@ -2761,7 +2765,6 @@ function openDashModal(){
       ['rep','REPORTS','P&L reports'],
       ['calc','CALCULATOR','Options calc'],
       ['ai','AI ENGINE','AI signals'],
-      ['admin','ADMIN','Admin panel'],
       ['legal','LEGAL','Legal docs']
     ];
     tabs.forEach(function(t){
