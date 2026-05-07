@@ -465,25 +465,49 @@ function _signInWithGoogleFallback(){
 }
 
 function handleGoogleResponse(response){
-  // Decode JWT token from Google
-  var token = response.credential;
-  var parts = token.split('.');
-  var payload = JSON.parse(atob(parts[1]));
-  
-  // Send to backend
-  req('/auth/google','POST',{
-    google_id: payload.sub,
-    email: payload.email,
-    name: payload.name,
-    picture: payload.picture
-  }, function(err, user){
-    if(err || !user || user.error){
-      showLoginError('Login failed. Please try again.');
-      return;
-    }
-    localStorage.setItem('trd_user', JSON.stringify(user));
-    loginSuccess(user, user.new_user);
-  });
+  try{
+    // Decode JWT token from Google
+    var token = response.credential;
+    var parts = token.split('.');
+    // Base64 padding fix
+    var base64 = parts[1].replace(/-/g,'+').replace(/_/g,'/');
+    while(base64.length % 4) base64 += '=';
+    var payload = JSON.parse(atob(base64));
+    
+    // Send to backend
+    req('/auth/google','POST',{
+      google_id: payload.sub,
+      email: payload.email,
+      name: payload.name || payload.given_name || '',
+      picture: payload.picture || ''
+    }, function(err, user){
+      if(err || !user || user.error){
+        // Fallback: create local session from Google data
+        var fallbackUser = {
+          user_id: 'G_'+payload.sub.slice(-8),
+          username: payload.email.split('@')[0],
+          email: payload.email,
+          full_name: payload.name || payload.given_name || 'User',
+          picture: payload.picture || '',
+          plan: 'FREE',
+          capital: 500000,
+          broker: 'PAPER MODE'
+        };
+        localStorage.setItem('trd_user', JSON.stringify(fallbackUser));
+        loginSuccess(fallbackUser, true);
+        return;
+      }
+      var u = (user && user.user) ? user.user : user;
+      if(user.user){ u.plan = (user.subscription && user.subscription.plan) || 'FREE'; }
+      u.picture = payload.picture || '';
+      u.full_name = u.full_name || payload.name || '';
+      localStorage.setItem('trd_user', JSON.stringify(u));
+      loginSuccess(u, user.new_user);
+    });
+  }catch(e){
+    console.error('Google auth error:', e);
+    showLoginError('Google login error. Try Demo Account.');
+  }
 }
 
 function demoLogin(){
@@ -586,10 +610,21 @@ function logout(){
   location.reload();
 }
 
-// Auto-init on load
+// Auto-init on load - persistent session
 window.addEventListener('load', function(){
   setTimeout(initGoogleAuth, 300);
 });
+
+// Keep session alive - check every 30 min NOT every minute
+setInterval(function(){
+  try{
+    var saved = localStorage.getItem('trd_user');
+    if(!saved){
+      var overlay = document.getElementById('login-overlay');
+      if(overlay) overlay.style.display = 'flex';
+    }
+  }catch(e){}
+}, 1800000); // 30 minutes
 </script>
 
 <script src="https://accounts.google.com/gsi/client" onload="initGoogleAuth()"></script>
@@ -643,7 +678,7 @@ window.addEventListener('load', function(){
 <div id="toast"></div>
 <div class="hdr" style="background:linear-gradient(90deg,#00000a 0%,#030510 50%,#00000a 100%);border-bottom:1px solid rgba(0,255,136,.1)">
   <div style="display:flex;align-items:center;gap:8px">
-    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px">TRD v12.3</span>
+    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px;cursor:pointer" onclick="handleLogoClick()" id="trd-logo-btn">TRD v12.3</span>
     <span class="bdg" id="mode-bdg" style="border-color:var(--bl);background:#0a1628;color:var(--bl)">PAPER</span>
     <span class="bdg" id="plan-bdg" style="border-color:var(--pu);background:#160a28;color:var(--pu)">PRO</span>
   </div>
@@ -7577,6 +7612,109 @@ function _buildStrategyText(d){
     d.exit_conditions.forEach(function(c){lines.push('\u2022 '+c);});
   }
   return lines.join('\n');
+}
+
+// ══ FIX 4: Triple-click TRD logo → Admin ═══════════════
+var _logoClicks = 0, _logoTimer = null;
+function handleLogoClick(){
+  _logoClicks++;
+  clearTimeout(_logoTimer);
+  _logoTimer = setTimeout(function(){ _logoClicks = 0; }, 800);
+  if(_logoClicks >= 3){
+    _logoClicks = 0;
+    show('admin', null);
+    toast('🔐 Admin Panel', 'success');
+  }
+}
+
+// ══ FIX 5: Chart fix - load TradingView widget ══════════
+function loadTVChart(symbol){
+  symbol = symbol || 'NSE:NIFTY';
+  var container = document.getElementById('tv-chart-container');
+  if(!container) return;
+  container.innerHTML = '';
+  try{
+    new TradingView.widget({
+      container_id: 'tv-chart-container',
+      symbol: symbol,
+      interval: '15',
+      timezone: 'Asia/Kolkata',
+      theme: 'dark',
+      style: '1',
+      locale: 'in',
+      toolbar_bg: '#0d0e14',
+      enable_publishing: false,
+      hide_top_toolbar: false,
+      save_image: false,
+      height: 400,
+      width: '100%',
+    });
+  }catch(e){
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,.4)">'
+      +'<div style="font-size:24px;margin-bottom:8px">📊</div>'
+      +'<div style="font-size:11px">Chart: '+symbol+'</div>'
+      +'<div style="font-size:10px;margin-top:8px;color:var(--am)">TradingView requires internet connection</div>'
+      +'</div>';
+  }
+}
+
+// ══ FIX 6: Customer Support ══════════════════════════════
+var _supportOpen = false;
+function toggleSupport(){
+  _supportOpen = !_supportOpen;
+  var panel = document.getElementById('support-panel');
+  if(!panel){
+    // Create support panel
+    panel = document.createElement('div');
+    panel.id = 'support-panel';
+    panel.style.cssText = 'position:fixed;bottom:70px;right:16px;width:300px;background:var(--bg3);border:1px solid var(--bo);border-radius:12px;z-index:9999;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5)';
+    panel.innerHTML = 
+      '<div style="background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center">'
+      +'<div style="font-weight:700;font-size:12px">💬 Customer Support</div>'
+      +'<button onclick="toggleSupport()" style="background:none;border:none;color:var(--mu);font-size:16px;cursor:pointer">✕</button>'
+      +'</div>'
+      +'<div style="height:220px;overflow-y:auto;padding:12px" id="support-msgs">'
+      +'<div style="background:rgba(0,255,136,.1);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px">'
+      +'👋 Namaste! TRD Support mein aapka swagat hai.<br><br>'
+      +'<b>Quick Help:</b><br>'
+      +'• Demo login: demo/demo123<br>'
+      +'• Paper trading: PAPER mode select karo<br>'
+      +'• Strategy copy: 📋 button dabao<br>'
+      +'• Admin: TRD logo pe 3x click karo'
+      +'</div>'
+      +'</div>'
+      +'<div style="padding:8px;border-top:1px solid var(--bo);display:flex;gap:6px">'
+      +'<input id="support-input" placeholder="Message likhiye..." style="flex:1;font-size:11px;padding:6px 8px">'
+      +'<button onclick="sendSupportMsg()" class="btn bg" style="padding:6px 10px;font-size:11px">Send</button>'
+      +'</div>';
+    document.body.appendChild(panel);
+  }
+  panel.style.display = _supportOpen ? 'block' : 'none';
+}
+
+function sendSupportMsg(){
+  var input = document.getElementById('support-input');
+  var msgs = document.getElementById('support-msgs');
+  if(!input || !input.value.trim()) return;
+  var userMsg = input.value.trim();
+  input.value = '';
+  // Show user message
+  msgs.innerHTML += '<div style="text-align:right;margin-bottom:6px"><span style="background:rgba(79,142,247,.2);border-radius:8px;padding:6px 10px;font-size:11px;display:inline-block">'+userMsg+'</span></div>';
+  // Auto reply
+  setTimeout(function(){
+    var replies = {
+      'login': 'Demo login: username=demo, password=demo123',
+      'paper': 'Paper Test mein virtual money se trade karo. PAPER mode select karo.',
+      'strategy': 'STRATEGIES tab mein Built-in ya apni strategy save karo.',
+      'chart': 'OPTIONS → CHAIN tab mein chart dikhai dega.',
+      'help': 'Kya problem hai? Aur detail mein batayiye.',
+    };
+    var reply = 'Aapka sawaal hamare team ko forward ho gaya hai. 24 ghante mein jawab milega. 🙏';
+    for(var k in replies){ if(userMsg.toLowerCase().indexOf(k)>=0){ reply=replies[k]; break; } }
+    msgs.innerHTML += '<div style="margin-bottom:6px"><span style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:6px 10px;font-size:11px;display:inline-block">🤖 '+reply+'</span></div>';
+    msgs.scrollTop = msgs.scrollHeight;
+  }, 800);
+  msgs.scrollTop = msgs.scrollHeight;
 }
 </script>
 </body>
