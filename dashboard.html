@@ -7118,63 +7118,57 @@ function adminAction(action){
 function copyStrategyText(s){
   if(!s){ toast('No strategy data','warn'); return; }
 
-  var lines = [];
-  var name = s.name || s.strategy_name || 'Strategy';
-  var inst = s.instrument || 'NIFTY';
-  var act  = s.action || 'BUY';
-  var ot   = s.option_type || 'CE';
-  var lots = s.quantity || s.lots || 1;
-  var sl   = s.sl_value || s.stop_loss || s.sl || 80;
-  var tgt  = s.target_value || s.target || s.tp || 160;
-  var tf   = s.timeframe || '5m';
-  var wr   = s.avg_win_rate || s.win_rate || 0;
+  var text = '';
 
-  lines.push('=== ' + name.toUpperCase() + ' ===');
-  lines.push('');
-  lines.push('\uD83D\uDCCC ORDER COMMAND:');
-  lines.push(act + ' ' + inst + ' ' + ot + ' ' + lots + ' LOT');
-  lines.push('Stop Loss: ' + sl + ' pts | Target: ' + tgt + ' pts');
-  lines.push('Timeframe: ' + tf + ' | R/R: 1:' + (tgt/sl).toFixed(2));
-  lines.push('');
-
-  // Entry conditions
-  var ec = s.entry_conditions || s.conditions || [];
-  if(typeof ec === 'string') ec = ec.split(' AND ').map(function(c){return c.trim();});
-  if(ec && ec.length){
-    lines.push('\uD83D\uDCCA ENTRY CONDITIONS:');
-    ec.forEach(function(c,i){ if(c && c.trim()) lines.push((i+1)+'. '+c.trim()); });
+  // PRIORITY 1: Use original nlp_input EXACTLY as saved (no transformation)
+  if(s.nlp_input && s.nlp_input.trim().length > 10){
+    text = s.nlp_input.trim();
+  }
+  // PRIORITY 2: Build from structured fields (only if no nlp_input)
+  else {
+    var name = s.name || s.strategy_name || 'Strategy';
+    var inst = s.instrument || 'NIFTY';
+    var act  = s.action || 'BUY';
+    var ot   = s.option_type || 'CE';
+    var lots = s.quantity || s.lots || 1;
+    var sl   = s.sl_value || s.stop_loss || s.sl || 80;
+    var tgt  = s.target_value || s.target || s.tp || 160;
+    var tf   = s.timeframe || '5m';
+    var wr   = s.avg_win_rate || s.win_rate || 0;
+    var lines = [];
+    lines.push('=== ' + name.toUpperCase() + ' ===');
     lines.push('');
+    lines.push('\uD83D\uDCCC ORDER COMMAND:');
+    lines.push(act + ' ' + inst + ' ' + ot + ' ' + lots + ' LOT');
+    lines.push('Stop Loss: ' + sl + ' pts | Target: ' + tgt + ' pts');
+    lines.push('Timeframe: ' + tf + ' | R/R: 1:' + (tgt/sl).toFixed(2));
+    lines.push('');
+    var ec = s.entry_conditions || s.conditions || [];
+    if(typeof ec === 'string') ec = ec.split(' AND ').map(function(c){return c.trim();});
+    if(ec && ec.length){
+      lines.push('\uD83D\uDCCA ENTRY CONDITIONS:');
+      ec.forEach(function(c,i){ if(c&&c.trim()) lines.push((i+1)+'. '+c.trim()); });
+      lines.push('');
+    }
+    var xc = s.exit_conditions || s.exit || '';
+    if(typeof xc === 'string' && xc) xc = [xc];
+    if(Array.isArray(xc) && xc.length && xc[0]){
+      lines.push('\uD83D\uDEAA EXIT CONDITIONS:');
+      xc.forEach(function(c){ if(c&&c.trim()) lines.push('\u2022 '+c.trim()); });
+      lines.push('');
+    }
+    if(s.no_trade) lines.push('\u274C NO-TRADE: '+s.no_trade);
+    if(s.indicators) lines.push('\uD83D\uDCC8 INDICATORS: '+s.indicators);
+    if(wr>0) lines.push('\u2705 WIN RATE: '+wr+'%');
+    if(s.ai_score) lines.push('\uD83E\uDD16 AI SCORE: '+s.ai_score+'/100');
+    text = lines.join('\n');
   }
 
-  // Exit conditions
-  var xc = s.exit_conditions || s.exit || '';
-  if(typeof xc === 'string' && xc) xc = [xc];
-  if(Array.isArray(xc) && xc.length && xc[0]){
-    lines.push('\uD83D\uDEAA EXIT CONDITIONS:');
-    xc.forEach(function(c){ if(c && c.trim()) lines.push('\u2022 '+c.trim()); });
-    lines.push('');
-  }
+  if(!text){ toast('No content to copy','warn'); return; }
 
-  // No trade
-  if(s.no_trade){ lines.push('\u274C NO-TRADE: '+s.no_trade); lines.push(''); }
-
-  // Description
-  var desc = (s.description||s.notes||'').trim();
-  if(desc && desc.length > 5 && desc.length < 200 && desc.indexOf('\uD83D\uDCCC') < 0)
-    lines.push('\uD83D\uDCDD DESCRIPTION: '+desc);
-
-  // Indicators + stats
-  if(s.indicators) lines.push('\uD83D\uDCC8 INDICATORS: '+s.indicators);
-  if(wr > 0) lines.push('\u2705 WIN RATE: '+wr+'%');
-  if(s.ai_score) lines.push('\uD83E\uDD16 AI SCORE: '+s.ai_score+'/100');
-  if(s.avg_monthly_return) lines.push('\uD83D\uDCB0 AVG MONTHLY RETURN: '+s.avg_monthly_return+'%');
-
-  var text = lines.join('\n');
-
-  // Try clipboard API first, then fallback to modal
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text).then(function(){
-      toast('\u2705 Strategy copied to clipboard!','success');
+      toast('\u2705 Copied!','success');
     }).catch(function(){ _showCopyModal(text); });
   } else {
     _showCopyModal(text);
