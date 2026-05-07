@@ -7109,9 +7109,17 @@ function loadAdminDash(){
 // ── Users ─────────────────────────────────────────────────────────────────────
 function loadAdminUsers(){
   req('/admin/users','GET',null,function(err,d){
-    if(err||!d){return;}
-    _adminUsers = d.users||d||[];
+    if(err||!d){ toast('Users load failed - check connection','warn'); return; }
+    _adminUsers = (d.users || d || []).map(function(u){
+      if(!u.user_id && u.id) u.user_id = u.id;
+      if(!u.full_name && u.username) u.full_name = u.username;
+      if(!u.plan && u.subscription_plan) u.plan = u.subscription_plan;
+      return u;
+    });
     renderUsersTable(_adminUsers);
+    var cnt = document.getElementById('adm-user-count');
+    if(cnt) cnt.textContent = _adminUsers.length + ' users';
+    toast(_adminUsers.length + ' users loaded','success');
   });
 }
 
@@ -7148,14 +7156,17 @@ function searchAdminUsers(q){
 }
 
 function showAddUser(){
-  document.getElementById('adm-user-form').style.display='block';
-  document.getElementById('adm-form-title').textContent='ADD NEW USER';
-  document.getElementById('adm-uid').value='';
-  ['adm-name','adm-email','adm-phone','adm-notes'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('adm-capital').value='500000';
-  document.getElementById('adm-plan').value='PRO';
-  document.getElementById('adm-status').value='active';
-  document.getElementById('adm-freeaccess').checked=false;
+  var form=document.getElementById('adm-user-form');
+  if(form) form.style.display='block';
+  var t=document.getElementById('adm-form-title');
+  if(t) t.textContent='ADD NEW USER';
+  ['adm-uid','adm-name','adm-email','adm-phone','adm-notes','adm-payment'].forEach(function(id){
+    var e=document.getElementById(id); if(e) e.value='';
+  });
+  var cap=document.getElementById('adm-capital'); if(cap) cap.value='500000';
+  var plan=document.getElementById('adm-plan'); if(plan) plan.value='FREE';
+  var status=document.getElementById('adm-status'); if(status) status.value='active';
+  var msg=document.getElementById('adm-form-msg'); if(msg) msg.style.display='none';
 }
 
 function editUser(uid){
