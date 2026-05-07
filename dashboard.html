@@ -1900,13 +1900,7 @@ setInterval(function(){
           <button onclick="if(confirm('RESTART SERVER? All connections will drop for 10s'))adminAction('restart')" style="padding:10px;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.4);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px;font-weight:700">⚡ RESTART SERVER</button>
         </div>
       </div>
-    </div>
-
-    </div><!-- end padding -->
-  </div><!-- end panel content -->
-</div>
-
-
+    
 <div id="adm-ref" style="display:none">
   <div id="ref-stats"></div>
   
@@ -1936,7 +1930,13 @@ setInterval(function(){
     <div class="chdr">📋 ACTIVE CODES <button onclick="loadAdminReferral()" class="btn ba" style="font-size:9px;padding:2px 6px">↻ Refresh</button></div>
     <div id="ref-code-list"><div style="color:var(--mu);text-align:center;padding:16px"><div style="font-size:20px;margin-bottom:6px">⏳</div>Loading...</div></div>
   </div>
+</div></div>
+
+    </div><!-- end padding -->
+  </div><!-- end panel content -->
 </div>
+
+
 <div id="pnl-legal" class="pnl">
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px"><button class="btn bg" onclick="showLegal('tos')">ToS</button><button class="btn bb" onclick="showLegal('privacy')">Privacy</button><button class="btn br" onclick="showLegal('risk_disclosure')">Risk</button></div>
   <div class="card" id="legal-card"><div class="chdr">LEGAL</div><div style="color:var(--mu)">Select above</div></div>
