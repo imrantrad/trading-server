@@ -1191,10 +1191,13 @@ class UserLogin(BaseModel):
     username: str; password: str
 
 class UserUpdate(BaseModel):
-    full_name: str = None; email: str = None; phone: str = None
-    broker: str = None; capital: float = None; risk_per_trade: float = None
-    max_daily_loss: float = None; preferred_instruments: str = None
-    theme: str = None; telegram_chat_id: str = None
+    user_id: str = None; full_name: str = None; email: str = None
+    phone: str = None; broker: str = None; capital: float = None
+    risk_per_trade: float = None; max_daily_loss: float = None
+    preferred_instruments: str = None; theme: str = None
+    telegram_chat_id: str = None; plan: str = None
+    status: str = None; free_access: bool = False
+    notes: str = None; payment_id: str = None
 
 @app.post("/users/register")
 def register(payload: UserCreate):

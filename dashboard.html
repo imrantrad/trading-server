@@ -7893,8 +7893,6 @@ function applyReferralAfterLogin(userId, email){
 
 // ── Admin Referral Management ─────────────────────────────
 function loadAdminReferral(){
-  var el = document.getElementById('adm-referral-content');
-  if(!el) return;
   
   // Load analytics
   req('/admin/referral/analytics','GET',null,function(err,d){
@@ -7922,7 +7920,8 @@ function loadAdminReferral(){
   // Load code list
   req('/admin/referral/list','GET',null,function(err,d){
     var listEl = document.getElementById('ref-code-list');
-    if(!listEl || !d || !d.codes) return;
+    if(!listEl){ listEl = document.createElement('div'); } // safety
+    if(!d || !d.codes){ if(listEl) listEl.innerHTML='<div style="color:var(--rd);padding:12px">Error loading codes. Try refresh.</div>'; return; }
     if(!d.codes.length){
       listEl.innerHTML = '<div style="color:var(--mu);text-align:center;padding:20px"><div style="font-size:20px;margin-bottom:8px">🎁</div>Koi code nahi hai. Upar se banao!</div>';
       return;
