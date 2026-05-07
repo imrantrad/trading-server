@@ -7247,4 +7247,108 @@ document.addEventListener('DOMContentLoaded', function(){
     };
   }
 });
+
+// ══ SAVE AS-IS ═══════════════════════════════════════════
+function saveStratAsIs(){
+  var nm = (document.getElementById('ns-nm')||{}).value||'';
+  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
+  var text = ta ? ta.value.trim() : '';
+  
+  if(!nm.trim()){ toast('Strategy name required!','warn'); 
+    var el=document.getElementById('ns-nm'); if(el){el.focus();el.style.borderColor='var(--rd)';} return; }
+  if(!text){ toast('Strategy text likhiye!','warn'); if(ta){ta.focus();ta.style.borderColor='var(--rd)';} return; }
+  
+  // Extract minimal fields from text (only for API payload)
+  var sl = 80, tgt = 160, tf = '15m', inst = 'NIFTY', lots = 1;
+  var slM = text.match(/(?:Stop Loss|SL)[:\s]+(\d+)/i);
+  var tgM = text.match(/Target[:\s]+(\d+)/i);
+  var tfM = text.match(/Timeframe[:\s]+([\w]+)/i);
+  var instM = text.match(/(NIFTY|BANKNIFTY|FINNIFTY|SENSEX)/i);
+  if(slM) sl = parseInt(slM[1]);
+  if(tgM) tgt = parseInt(tgM[1]);
+  if(tfM) tf = tfM[1];
+  if(instM) inst = instM[1].toUpperCase();
+  
+  var payload = {
+    user_id: UID, name: nm.trim(),
+    instrument: inst, timeframe: tf,
+    sl_value: sl, target_value: tgt,
+    quantity: lots, action: 'BUY',
+    description: text.slice(0, 200),
+    nlp_input: text,      // ← FULL original text saved as-is
+    entry_conditions: [], exit_conditions: [],
+    tags: ['user-saved'], is_public: false
+  };
+  
+  var msgEl = document.getElementById('ns-save-msg');
+  if(msgEl){ msgEl.style.display='block'; msgEl.style.color='var(--am)'; msgEl.textContent='Saving...'; }
+  
+  req('/strategies/save','POST',payload,function(err,r){
+    if(err||!r||r.error){ 
+      toast('Save failed!','error');
+      if(msgEl){ msgEl.style.color='var(--rd)'; msgEl.textContent='❌ Save failed'; }
+      return;
+    }
+    toast('✅ Strategy saved as-is!','success');
+    if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ Saved: '+nm.trim(); }
+    if(ta) ta.value='';
+    var nmEl=document.getElementById('ns-nm'); if(nmEl) nmEl.value='';
+    setTimeout(function(){
+      if(msgEl) msgEl.style.display='none';
+      loadMy();
+    }, 1500);
+  });
+}
+
+// ══ SAVE WITH AI ENHANCEMENT ════════════════════════════
+function saveStratWithAI(){
+  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
+  var text = ta ? ta.value.trim() : '';
+  if(!text){ toast('Strategy text likhiye pehle!','warn'); return; }
+  
+  var msgEl = document.getElementById('ns-save-msg');
+  if(msgEl){ msgEl.style.display='block'; msgEl.style.color='var(--am)'; msgEl.textContent='🤖 AI analyzing...'; }
+  
+  // Parse first, then save
+  req('/nlp/parse','POST',{text:text},function(err,d){
+    if(err||!d){
+      toast('NLP parse failed, saving as-is...','warn');
+      if(msgEl) msgEl.style.display='none';
+      saveStratAsIs();
+      return;
+    }
+    // Show AI result to user - let them confirm
+    var aiText = d.original_text || text;
+    if(d.strategy_name||d.instrument||d.action){
+      aiText = _buildStrategyText(d);
+    }
+    
+    // Update textarea with AI version
+    if(ta){ ta.value = aiText; ta.style.borderColor='rgba(0,255,136,.4)'; }
+    if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ AI enhanced! Review above then click 💾 SAVE AS-IS'; }
+    toast('AI enhanced! Review and click SAVE AS-IS','success');
+  });
+}
+
+function _buildStrategyText(d){
+  var lines = [];
+  var name = d.strategy_name || 'Strategy';
+  lines.push('=== '+name.toUpperCase()+' ===');
+  lines.push('');
+  lines.push('📌 ORDER COMMAND:');
+  lines.push((d.action||'BUY')+' '+(d.instrument||'NIFTY')+' '+(d.option_type||'CE')+' '+(d.quantity||1)+' LOT');
+  lines.push('Stop Loss: '+(d.stop_loss||80)+' pts | Target: '+(d.target||160)+' pts');
+  lines.push('Timeframe: '+(d.timeframe||'15m'));
+  lines.push('');
+  if(d.entry_conditions&&d.entry_conditions.length){
+    lines.push('📊 ENTRY CONDITIONS:');
+    d.entry_conditions.forEach(function(c,i){ lines.push((i+1)+'. '+c); });
+    lines.push('');
+  }
+  if(d.exit_conditions&&d.exit_conditions.length){
+    lines.push('🚪 EXIT CONDITIONS:');
+    d.exit_conditions.forEach(function(c){ lines.push('• '+c); });
+  }
+  return lines.join('\n');
+}
 </script>
