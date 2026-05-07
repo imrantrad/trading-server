@@ -589,9 +589,19 @@ function loginSuccess(user, isNew){
     setTimeout(function(){ overlay.style.display='none'; }, 500);
   }
   
-  // Welcome toast
-  var msg = isNew ? 'Welcome to TRD, '+window.USER_NAME+'! 🎉' : 'Welcome back, '+window.USER_NAME+'!';
-  setTimeout(function(){ toast(msg,'success'); }, 600);
+  // Check T&C acceptance
+  try{
+    var savedUser = JSON.parse(localStorage.getItem('trd_user')||'{}');
+    if(!savedUser.tnc_accepted){
+      // Show T&C page
+      setTimeout(function(){ showTnC(); }, 600);
+    } else {
+      var msg = isNew ? 'Welcome to TRD, '+window.USER_NAME+'! 🎉' : 'Welcome back, '+window.USER_NAME+'!';
+      setTimeout(function(){ toast(msg,'success'); }, 600);
+    }
+  }catch(e){
+    setTimeout(function(){ showTnC(); }, 600);
+  }
   
   // Init dashboard
   setTimeout(function(){
@@ -630,6 +640,67 @@ setInterval(function(){
 <script src="https://accounts.google.com/gsi/client" onload="initGoogleAuth()"></script>
 </head>
 <body>
+<!-- ════ TERMS & CONDITIONS OVERLAY ════ -->
+<div id="tnc-overlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#060608,#0d0e14);z-index:99998;display:none;overflow-y:auto">
+  <div style="max-width:500px;margin:0 auto;padding:24px 20px;min-height:100vh;display:flex;flex-direction:column">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:22px;font-weight:800;color:var(--gr);letter-spacing:3px;margin-bottom:4px">TRD v12.3</div>
+      <div style="font-size:12px;color:var(--mu)">Terms, Conditions & Risk Disclosure</div>
+    </div>
+    
+    <!-- T&C Content -->
+    <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:12px;padding:20px;flex:1;overflow-y:auto;margin-bottom:16px;max-height:60vh">
+      <div style="font-size:11px;line-height:1.8;color:var(--tx)">
+        <div style="color:var(--am);font-weight:700;font-size:12px;margin-bottom:12px">⚠️ IMPORTANT RISK DISCLOSURE</div>
+        
+        <b style="color:var(--gr)">1. Risk Warning</b><br>
+        Derivative trading involves substantial risk of loss. You may lose all or more than your initial investment. Past performance does not guarantee future results.<br><br>
+        
+        <b style="color:var(--gr)">2. Not Financial Advice</b><br>
+        TRD v12.3 is a trading tool and analytics platform. It does NOT provide financial, investment, or trading advice. All trading decisions are solely your responsibility.<br><br>
+        
+        <b style="color:var(--gr)">3. SEBI Compliance</b><br>
+        TRD is not a SEBI-registered investment advisor. This platform is for educational and analytical purposes only.<br><br>
+        
+        <b style="color:var(--gr)">4. Paper Trading</b><br>
+        Paper/simulated trading does not involve real money. Performance in paper trading does not guarantee similar results in live trading.<br><br>
+        
+        <b style="color:var(--gr)">5. Data Accuracy</b><br>
+        Market data shown may be delayed. Always verify with your broker before placing trades.<br><br>
+        
+        <b style="color:var(--gr)">6. User Responsibility</b><br>
+        You confirm that you are 18+ years old, legally permitted to trade in your jurisdiction, and understand the risks involved in derivative trading.<br><br>
+        
+        <b style="color:var(--gr)">7. Privacy Policy</b><br>
+        We collect minimal data (email, trading preferences) to provide our services. Your data is never sold to third parties.<br><br>
+        
+        <b style="color:var(--gr)">8. Limitation of Liability</b><br>
+        TRD and its developers are not liable for any trading losses, technical failures, or data inaccuracies experienced while using this platform.<br><br>
+        
+        <b style="color:var(--am)">By accepting, you confirm you have read, understood, and agree to all the above terms and take full responsibility for your trading decisions.</b>
+      </div>
+    </div>
+    
+    <!-- Checkbox + Accept -->
+    <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:12px;padding:16px;margin-bottom:12px">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:11px;color:var(--tx);line-height:1.5">
+        <input type="checkbox" id="tnc-checkbox" onchange="document.getElementById('tnc-accept-btn').disabled=!this.checked;document.getElementById('tnc-accept-btn').style.opacity=this.checked?'1':'0.4'" style="margin-top:2px;width:16px;height:16px;cursor:pointer">
+        <span>मैं/I confirm that I have read and understood the Risk Disclosure and Terms of Service. मैं समझता/समझती हूँ कि derivatives trading में risk है और मैं अपने decisions के लिए खुद जिम्मेदार हूँ।</span>
+      </label>
+    </div>
+    
+    <button id="tnc-accept-btn" onclick="acceptTnC()" disabled
+      style="width:100%;padding:14px;background:var(--gr);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;transition:all .2s">
+      ✅ I ACCEPT — TRADING SHURU KARO
+    </button>
+    
+    <div style="text-align:center;margin-top:12px">
+      <span onclick="logout()" style="font-size:10px;color:var(--mu);cursor:pointer">← Wapas Jao / Go Back</span>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════ GOOGLE LOGIN OVERLAY ════════════ -->
 <div id="login-overlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#060608 0%,#0d0e14 50%,#060608 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column">
   <div style="text-align:center;max-width:340px;width:90%;padding:0 20px">
@@ -1565,6 +1636,7 @@ setInterval(function(){
       <button id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">💳 PAYMENTS</button>
       <button id="adm-tab-notifs" onclick="adminTab('notifs',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🔔 ALERTS</button>
       <button id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🖥️ SYSTEM</button>
+      <button id="adm-tab-ref" onclick="adminTab('ref',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🎁 REFERRAL</button>
     </div>
 
     <div style="padding:10px">
@@ -1834,6 +1906,37 @@ setInterval(function(){
   </div><!-- end panel content -->
 </div>
 
+
+<div id="adm-ref" style="display:none">
+  <div id="ref-stats"></div>
+  
+  <div class="card" style="margin-bottom:8px">
+    <div class="chdr">✨ CODE BANAO</div>
+    <div class="g2" style="gap:6px;margin-bottom:6px">
+      <div><div class="lbl">User ID</div><input id="ref-user-id" placeholder="USR123..." style="font-size:11px"></div>
+      <div><div class="lbl">Email</div><input id="ref-email" placeholder="user@email.com" style="font-size:11px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+      <div><div class="lbl">Bonus (₹)</div><input id="ref-bonus" type="number" value="500" style="font-size:11px"></div>
+      <div><div class="lbl">Discount (₹)</div><input id="ref-discount" type="number" value="200" style="font-size:11px"></div>
+      <div><div class="lbl">Validity</div>
+        <select id="ref-validity" style="font-size:11px;width:100%;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);padding:6px;border-radius:6px">
+          <option value="30">1 Month</option>
+          <option value="60">2 Months</option>
+          <option value="90">3 Months</option>
+          <option value="365">1 Year</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="createReferralCode()" class="btn bg blg" style="width:100%;font-size:11px">🎁 REFERRAL CODE BANAO</button>
+    <div id="new-code-display" style="display:none;margin-top:8px"></div>
+  </div>
+  
+  <div class="card">
+    <div class="chdr">📋 ACTIVE CODES <button onclick="loadAdminReferral()" class="btn ba" style="font-size:9px;padding:2px 6px">↻ Refresh</button></div>
+    <div id="ref-code-list"><div style="color:var(--mu);text-align:center;padding:16px">↑ Tab kholo to load hoga</div></div>
+  </div>
+</div>
 <div id="pnl-legal" class="pnl">
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px"><button class="btn bg" onclick="showLegal('tos')">ToS</button><button class="btn bb" onclick="showLegal('privacy')">Privacy</button><button class="btn br" onclick="showLegal('risk_disclosure')">Risk</button></div>
   <div class="card" id="legal-card"><div class="chdr">LEGAL</div><div style="color:var(--mu)">Select above</div></div>
@@ -6937,7 +7040,7 @@ function adminLogout(){
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function adminTab(tab,btn){
-  ['dash','users','analytics','pay','notifs','sys'].forEach(function(t){
+  ['dash','users','analytics','pay','notifs','sys','ref'].forEach(function(t){
     var el=document.getElementById('adm-'+t);
     if(el) el.style.display=t===tab?'block':'none';
     var b=document.getElementById('adm-tab-'+t);
@@ -6946,7 +7049,7 @@ function adminTab(tab,btn){
   if(tab==='dash') loadAdminDash();
   if(tab==='users') loadAdminUsers();
   if(tab==='pay') loadPaymentConfig();
-  if(tab==='sys') loadSysStatus();
+  if(tab==='sys') loadSysStatus(); if(tab==='ref') loadAdminReferral();
   if(tab==='analytics') loadAdminAnalytics();
   if(tab==='notifs') {} // static UI
 }
@@ -7848,6 +7951,34 @@ function deactivateRefCode(code){
     toast(d.success?'Code deactivated':'Error','info');
     loadAdminReferral();
   });
+}
+
+// ══ TERMS & CONDITIONS ════════════════════════════════════
+function showTnC(){
+  var overlay = document.getElementById('tnc-overlay');
+  if(overlay) overlay.style.display = 'block';
+}
+
+function acceptTnC(){
+  var cb = document.getElementById('tnc-checkbox');
+  if(!cb || !cb.checked){ toast('Pehle checkbox tick karo','warn'); return; }
+  
+  // Save acceptance
+  try{
+    var user = JSON.parse(localStorage.getItem('trd_user')||'{}');
+    user.tnc_accepted = true;
+    user.tnc_date = new Date().toISOString();
+    localStorage.setItem('trd_user', JSON.stringify(user));
+  }catch(e){}
+  
+  // Hide T&C, show dashboard
+  var overlay = document.getElementById('tnc-overlay');
+  if(overlay){
+    overlay.style.transition = 'opacity .4s';
+    overlay.style.opacity = '0';
+    setTimeout(function(){ overlay.style.display='none'; }, 400);
+  }
+  toast('✅ Welcome to TRD! Trading shuru karo 🚀','success');
 }
 </script>
 </body>
