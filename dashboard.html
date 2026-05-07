@@ -4060,8 +4060,8 @@ function fallbackToPolling() {
   
   loadStats();
   loadMkt();
-  setInterval(loadStats, 20000);
-  setInterval(loadMkt, 8000);
+  setInterval(loadStats, 60000);   // every 60s (was 20s)
+  setInterval(loadMkt, 15000);    // every 15s (was 8s)
 }
 
 // INIT
