@@ -3395,38 +3395,36 @@ function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){var lis
       btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(bCp);div.appendChild(btns);list.appendChild(div);});});}
 function parseNLPStrat(){var text=gv('ns-nlp').trim();if(!text){toast('Type strategy','warn');return;}req('/strategies/from_nlp','POST',{user_id:UID,nlp_text:text},function(err,r){if(err){toast('NLP failed','error');return;}var s=r.strategy||{},p=r.parsed||{};if(s.name&&$('ns-nm'))$('ns-nm').value=s.name;if(p.instrument&&$('ns-i'))$('ns-i').value=p.instrument;if(s.sl_value&&$('ns-sl'))$('ns-sl').value=s.sl_value;if(s.target_value&&$('ns-tg'))$('ns-tg').value=s.target_value;if(s.entry_conditions&&$('ns-en'))$('ns-en').value=(s.entry_conditions||[]).join('\n');var box=$('ns-parsed');if(box){box.style.display='block';box.textContent='Parsed: '+JSON.stringify(p).slice(0,100);}toast('Auto-filled!','success');});}
 function saveStrat(){
-  // Read from strat-nlp-in (STRATEGIES panel textarea)
-  var ta = document.getElementById('strat-nlp-in') || document.getElementById('ns-nlp') || document.getElementById('nlp-in');
+  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
   var nlpText = (ta ? ta.value : '').trim();
   
-  if(!nlpText){ toast('Strategy likhiye pehle!','warn'); return; }
+  if(!nlpText || nlpText.length < 10){ 
+    toast('Strategy likhiye pehle!','warn'); return; 
+  }
   
+  // Get name
   var nameEl = document.getElementById('ns-nm');
   var nameVal = (nameEl ? nameEl.value : '').trim();
-  
-  // Auto-extract name from === NAME === pattern
   if(!nameVal){
     var nm = nlpText.match(/===\s*(.+?)\s*===/);
-    if(nm) nameVal = nm[1].trim();
+    nameVal = nm ? nm[1].trim() : 'Strategy '+new Date().toLocaleDateString('en-IN');
   }
-  if(!nameVal) nameVal = 'My Strategy ' + new Date().toLocaleDateString('en-IN');
   
-  // Extract basic fields from text (for backend storage)
+  // Extract ONLY what's needed for backend — use EXACT values from text
   var inst = 'NIFTY';
-  var im = nlpText.match(/(BANKNIFTY|NIFTY|FINNIFTY|SENSEX)/i);
+  var im = nlpText.match(/\b(BANKNIFTY|NIFTY|FINNIFTY|SENSEX)\b/i);
   if(im) inst = im[1].toUpperCase();
   
   var sl = 80, tgt = 160;
-  var slm = nlpText.match(/[Ss]top\s*[Ll]oss[:\s]*(\d+)/);
-  var tgm = nlpText.match(/[Tt]arget[:\s]*(\d+)/);
+  var slm = nlpText.match(/(?:stop\s*loss|sl)[\s:]*([0-9]+)/i);
+  var tgm = nlpText.match(/(?:target|tgt)[\s:]*([0-9]+)/i);
   if(slm) sl = parseInt(slm[1]);
   if(tgm) tgt = parseInt(tgm[1]);
   
   var tf = '15m';
-  var tfm = nlpText.match(/[Tt]imeframe[:\s]*(\w+)/);
+  var tfm = nlpText.match(/(?:timeframe|tf)[\s:]*([0-9]+[mhd])/i);
   if(tfm) tf = tfm[1];
-  
-  // Save exact text as-is
+
   req('/strategies/save','POST',{
     user_id: UID,
     name: nameVal,
@@ -3437,23 +3435,24 @@ function saveStrat(){
     quantity: 1,
     entry_conditions: [],
     exit_conditions: [],
-    description: nlpText.slice(0,200),
-    nlp_input: nlpText   // ← Save EXACT original text
+    description: nlpText.slice(0,150),
+    nlp_input: nlpText  // ← EXACT original text preserved
   }, function(err,r){
     if(r && r.strategy_id){
       toast('✅ "'+nameVal+'" saved!','success');
-      var nlpBld = document.getElementById('nlp-bld');
+      var nlpBld=document.getElementById('nlp-bld');
       if(nlpBld) nlpBld.style.display='none';
       if(ta) ta.value='';
       if(nameEl) nameEl.value='';
+      var outEl=document.getElementById('nlp-out');
+      if(outEl) outEl.style.display='none';
       loadMy();
-    } else {
-      toast('Save failed. Try again.','error');
+    } else { 
+      toast('Save failed','error'); 
     }
   });
 }
 
-// JOURNAL
 function saveJnl(){
   if(!gv('jn-i')){toast('Instrument likhein pehle!','warn');return;}
   req('/journal/add','POST',{
