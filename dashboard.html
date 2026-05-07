@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="google-signin-client_id" content="102590026134-nn0i9p6q319fndocht8p2bedak44bfs1.apps.googleusercontent.com">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>TRD v12.3</title>
 <style>
@@ -372,7 +373,6 @@ input:focus, select:focus {
 }
 
 </style>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 // ══════════════════════════════════════════════════════
 // GOOGLE OAUTH + USER AUTH SYSTEM
@@ -383,15 +383,12 @@ input:focus, select:focus {
 var GOOGLE_CLIENT_ID = '102590026134-nn0i9p6q319fndocht8p2bedak44bfs1.apps.googleusercontent.com';
 
 function initGoogleAuth(){
-  // Check if already logged in
+  // Check saved login
   try{
     var saved = localStorage.getItem('trd_user');
     if(saved){
       var user = JSON.parse(saved);
-      if(user && user.user_id){
-        loginSuccess(user, false);
-        return;
-      }
+      if(user && user.user_id){ loginSuccess(user, false); return; }
     }
   }catch(e){}
   
@@ -399,17 +396,48 @@ function initGoogleAuth(){
   var overlay = document.getElementById('login-overlay');
   if(overlay) overlay.style.display = 'flex';
   
-  // Init Google Sign-In
-  if(window.google && window.google.accounts){
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleGoogleResponse,
-      auto_select: false,
-    });
+  // Init Google Sign-In with proper config
+  if(window.google && window.google.accounts && window.google.accounts.id){
+    try{
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+        auto_select: false,
+        cancel_on_tap_outside: false,
+        ux_mode: 'popup',
+      });
+      // Render button
+      var btnDiv = document.getElementById('google-btn-render');
+      if(btnDiv){
+        google.accounts.id.renderButton(btnDiv, {
+          theme: 'outline',
+          size: 'large',
+          width: 280,
+          text: 'continue_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+        });
+      }
+      console.log('Google auth initialized');
+    }catch(e){
+      console.error('Google init error:', e);
+    }
   }
 }
 
 function signInWithGoogle(){
+  if(!window.google || !window.google.accounts || !window.google.accounts.id){
+    showLoginError('Google login load nahi hua. Demo try karo.');
+    return;
+  }
+  google.accounts.id.prompt(function(n){
+    console.log('Google prompt:', n.getMomentType());
+    if(n.isNotDisplayed()){
+      showLoginError('Popup blocked. Browser settings check karo.');
+    }
+  });
+}
+function _signInWithGoogleFallback(){
   if(!window.google || !window.google.accounts){
     // Fallback: redirect to Google OAuth
     var params = new URLSearchParams({
@@ -558,6 +586,7 @@ window.addEventListener('load', function(){
 });
 </script>
 
+<script src="https://accounts.google.com/gsi/client" onload="initGoogleAuth()"></script>
 </head>
 <body>
 <!-- ════════════ GOOGLE LOGIN OVERLAY ════════════ -->
@@ -572,9 +601,11 @@ window.addEventListener('load', function(){
       <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:6px">Welcome to TRD</div>
       <div style="font-size:11px;color:var(--mu);margin-bottom:24px">Professional Derivative Trading Platform</div>
       
-      <!-- Google Sign In Button -->
-      <div id="google-signin-btn" onclick="signInWithGoogle()" style="background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;font-size:13px;font-weight:500;justify-content:center;margin-bottom:16px;transition:box-shadow .2s">
-        <img src="https://developers.google.com/identity/images/g-logo.png" width="18" height="18" onerror="this.style.display='none'">
+      <!-- Google Sign In Button - Official Rendered -->
+      <div id="google-btn-render" style="margin-bottom:12px;display:flex;justify-content:center"></div>
+      <!-- Fallback button if render fails -->
+      <div id="google-signin-btn" onclick="signInWithGoogle()" style="background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;padding:12px 16px;cursor:pointer;display:none;align-items:center;gap:12px;font-size:13px;font-weight:500;justify-content:center;margin-bottom:12px">
+        <span style="font-size:18px">G</span>
         <span>Continue with Google</span>
       </div>
       
