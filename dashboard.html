@@ -7927,7 +7927,7 @@ function loadAdminReferral(){
         +'<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--gr)">₹'+c.total_bonus_paid+'</div><div style="font-size:9px;color:var(--mu)">Bonus Paid</div></div>'
         +'<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--bl)">₹'+c.total_discount_given+'</div><div style="font-size:9px;color:var(--mu)">Discount</div></div>'
         +'</div>'
-        +(c.is_active ? '<button onclick="deactivateRefCode(''+c.code+'')" style="width:100%;font-size:10px;padding:6px;background:rgba(255,51,51,.1);border:1px solid rgba(255,51,51,.3);color:var(--rd);border-radius:6px;cursor:pointer">🚫 Deactivate Code</button>' : '<div style="font-size:10px;color:var(--rd);text-align:center">Code Deactivated</div>')
+        +(c.is_active ? '<button onclick="deactivateRefCode(this.dataset.code)" data-code="'+c.code+'" style="width:100%;font-size:10px;padding:6px;background:rgba(255,51,51,.1);border:1px solid rgba(255,51,51,.3);color:var(--rd);border-radius:6px;cursor:pointer">🚫 Deactivate Code</button>' : '<div style="font-size:10px;color:var(--rd);text-align:center">Code Deactivated</div>')
         +'</div>';
     }).join('');
   });
@@ -7961,7 +7961,8 @@ function createReferralCode(){
   });
 }
 
-function deactivateRefCode(code){
+function deactivateRefCode(el){
+  var code = typeof el === 'string' ? el : (el.dataset ? el.dataset.code : el);
   if(!confirm('Deactivate code '+code+'?')) return;
   req('/admin/referral/deactivate','POST',{code:code},function(err,d){
     toast(d.success?'Code deactivated':'Error','info');
