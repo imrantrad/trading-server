@@ -3673,58 +3673,124 @@ except Exception as e:
     print(f"NLP v3.5: {e}")
 
 @app.post("/nlp/parse")
-async def nlp_parse_v35(request: Request):
-    """NLP Engine v3.5 - Semantic + AST + Auto-correct"""
-    data = await request.json()
-    text = data.get("nlp_text") or data.get("text", "")
-    if not text:
-        return {"error": "No text provided"}
-    
-    if NLP_V35:
-        try:
-            result = nlp_run_engine(text)
-            return {
-                "success": True,
-                "engine": "NLP_v3.5",
-                "status": result["status"],
-                "order": result["order"],
-                "timeframe": result["timeframe"],
-                "conditions": result["conditions"],
-                "condition_count": result["condition_count"],
-                "score": result["score"],
-                "execute_ready": result["execute_ready"],
-                "auto_fixes": result["auto_fixes"],
-                "suggestions": result["suggestions"],
-                "ast": result["ast"],
-            }
-        except Exception as e:
-            return {"error": str(e), "success": False}
-    
-    # Fallback basic parser
-    return {"success": False, "error": "NLP v3.5 not loaded"}
+def parse_nlp(payload: dict):
+    text = payload.get("text", "")
+    if not text: return {"error": "No text"}
+    import re as _re
 
-# ════════════════════════════════════════════════════════════════════════════
-# STRATEGY ENGINE v2 — Canonical + Versioning + Diff + Rollback
-# ════════════════════════════════════════════════════════════════════════════
-try:
-    from ai_engine.strategy_engine import (
-        create_strategy as se_create,
-        add_version as se_add_version,
-        get_current as se_get_current,
-        get_version as se_get_version,
-        rollback as se_rollback,
-        diff_versions as se_diff,
-        copy_strategy as se_copy,
-        render_clean as se_render,
-        save_strategy as se_save,
-        load_strategy as se_load,
-        list_strategies as se_list,
-        _strategy_store
-    )
-    SE_AVAILABLE = True
-except Exception as e:
-    SE_AVAILABLE = False
-    print(f"Strategy Engine: {e}")
+    def _find(patterns, t, default=None):
+        for p in patterns:
+            m = _re.search(p, t, _re.I)
+            if m: return m
+        return None
+    
+    tu = text.upper()
+    
+    # Action
+    action = "SELL" if _re.search(r"\bSELL\b|\bSHORT\b", tu) else "BUY"
+    
+    # Instrument
+    if _re.search(r"BANKNIFTY|BANK\s*NIFTY", tu): inst = "BANKNIFTY"
+    elif _re.search(r"FINNIFTY|FIN\s*NIFTY", tu): inst = "FINNIFTY"
+    elif _re.search(r"SENSEX", tu): inst = "SENSEX"
+    else: inst = "NIFTY"
+    
+    # Option type
+    if _re.search(r"\bPE\b|\bPUT\b", tu): otype = "PE"
+    elif _re.search(r"\bFUT\b|\bFUTURE\b", tu): otype = "FUT"
+    else: otype = "CE"
+    
+    # Lots
+    m = _re.search(r"(\d+)\s*(?:lot|lots)", text, _re.I)
+    lots = int(m.group(1)) if m else 1
+    
+    # SL
+    sl, sl_type = None, "pts"
+    m = _find([
+        r"(?:stop\s*loss|sl|hard\s*stop)[:\s=]+(\d+\.?\d*)\s*(%|percent)",
+        r"(?:stop\s*loss|sl|hard\s*stop)[:\s=]+(\d+\.?\d*)\s*(?:pts?|points?)?",
+        r"\bsl\s*@?\s*(\d+)\b",
+    ], text)
+    if m:
+        sl = float(m.group(1))
+        if m.lastindex >= 2 and m.group(2) and "%" in m.group(2): sl_type = "pct"
+    
+    # Target
+    tgt, tgt_type = None, "pts"
+    m = _find([
+        r"(?:target|tgt|profit\s*target)[:\s=]+(\d+\.?\d*)\s*(%|percent)",
+        r"(?:target|tgt|tp)[:\s=]+(\d+\.?\d*)\s*(?:pts?|points?)?",
+        r"\btgt\s*(\d+)\b",
+    ], text)
+    if m:
+        tgt = float(m.group(1))
+        if m.lastindex >= 2 and m.group(2) and "%" in m.group(2): tgt_type = "pct"
+    
+    # Timeframe
+    tf = "15m"
+    tf_map = {"1min":"1m","3min":"3m","5min":"5m","10min":"10m","15min":"15m","30min":"30m","1h":"1h","1hr":"1h","4h":"4h","daily":"1d","weekly":"1w"}
+    m = _re.search(r"(?:timeframe|tf|chart)[:\s]*(\d+\s*(?:min|m|h|hr|d|w|day|week))", text, _re.I)
+    if m:
+        key = m.group(1).strip().lower().replace(" ","")
+        tf = tf_map.get(key, key)
+    else:
+        m2 = _re.search(r"\b(\d+)(m|min|h|hr)\b", text, _re.I)
+        if m2: tf = m2.group(1)+m2.group(2).replace("hr","h").replace("min","m")
+    
+    # Entry/Exit time
+    exit_t = _re.search(r"(?:exit|force\s*exit|time\s*cut)[^0-9]*(\d{1,2}:\d{2}\s*(?:AM|PM))", text, _re.I)
+    entry_t = _re.search(r"(?:after|entry\s*time)[^0-9]*(\d{1,2}:\d{2}\s*(?:AM|PM))", text, _re.I)
+    
+    # Entry conditions
+    entry_conds = []
+    ec_section = _re.search(r"(?:ENTRY\s*CONDITIONS?|EntryConditions?)[:\s]*\n?(.+?)(?=\n\n|EXIT|\Z)", text, _re.I|_re.DOTALL)
+    if ec_section:
+        for line in ec_section.group(1).split("\n"):
+            line = _re.sub(r"^[\d.)\-•\s]+", "", line).strip()
+            if len(line) > 5: entry_conds.append(line)
+    if not entry_conds:
+        for p in [r"(RSI\s+(?:between|>|<|bounce|above|below)[^,\n]{3,40})",
+                  r"(EMA\s*\d+\s*(?:>|<|cross)[^,\n]{3,30})",
+                  r"(Price\s*(?:>|<|above|below|crosses?)[^,\n]{3,30})",
+                  r"(VWAP[^,\n]{0,20})", r"(ADX\s*(?:>|<)\s*\d+)",
+                  r"(Volume\s*(?:>|surge|2x|spike)[^,\n]{0,20})"]:
+            m = _re.search(p, text, _re.I)
+            if m: entry_conds.append(m.group(1).strip())
+    if _re.search(r"up.?trend|bullish", text, _re.I): entry_conds.append("Market in Up-Trend")
+    if _re.search(r"high\s+volume|volume\s+surge", text, _re.I): entry_conds.append("High Volume confirmation")
+    if entry_t: entry_conds.append("Enter after "+entry_t.group(1))
+    
+    # Exit conditions
+    exit_conds = []
+    ex_section = _re.search(r"(?:EXIT\s*(?:RULES?|CONDITIONS?)|ExitRules?)[:\s]*\n?(.+?)(?=\n\n|\Z)", text, _re.I|_re.DOTALL)
+    if ex_section:
+        for line in ex_section.group(1).split("\n"):
+            line = _re.sub(r"^[\d.)\-•\s]+", "", line).strip()
+            if len(line) > 5: exit_conds.append(line)
+    if sl: exit_conds.append("Stop Loss: "+str(sl)+("%" if sl_type=="pct" else " pts"))
+    if tgt: exit_conds.append("Target: "+str(tgt)+("%" if tgt_type=="pct" else " pts"))
+    if exit_t: exit_conds.append("Force Exit at "+exit_t.group(1))
+    
+    # Indicators
+    indicators = []
+    ind_checks = [("RSI","RSI"),("EMA\s*\d+","EMA"),("VWAP","VWAP"),("MACD","MACD"),
+                  ("ADX","ADX"),("\bBB\b|Bollinger","BB"),("Volume","Volume")]
+    for p, name in ind_checks:
+        if _re.search(p, text, _re.I): indicators.append(name)
+    
+    return {
+        "action": action, "instrument": inst, "option_type": otype,
+        "quantity": lots, "stop_loss": sl, "target": tgt,
+        "sl_type": sl_type, "target_type": tgt_type, "timeframe": tf,
+        "entry_conditions": list(dict.fromkeys(entry_conds))[:8],
+        "exit_conditions": list(dict.fromkeys(exit_conds))[:6],
+        "indicators": indicators,
+        "time_entry": entry_t.group(1) if entry_t else None,
+        "time_exit": exit_t.group(1) if exit_t else None,
+        "original_text": text,
+        "confidence": min(100, 50 + (len(entry_conds)*10) + (5 if sl else 0) + (5 if tgt else 0) + (5 if tf!="15m" else 0))
+    }
+
 
 @app.post("/strategies/v2/create")
 async def strategy_create(request: Request):
