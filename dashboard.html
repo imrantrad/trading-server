@@ -922,6 +922,26 @@ input:focus, select:focus {
       <button onclick="copyNLPText()" class="btn" style="padding:10px;font-size:13px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl)">📋</button>
     </div>
     <div id="ns-save-msg" style="display:none;font-size:11px;text-align:center;padding:6px;border-radius:4px"></div>
+
+    <!-- NLP AUDIT PANEL -->
+    <div id="nlp-audit" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid rgba(255,193,7,.3);border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:var(--am);margin-bottom:8px">🔍 NLP AUDIT — Kiya samjha?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:9px">
+        <div>
+          <div style="color:var(--mu);margin-bottom:4px">📝 AAPNE LIKHA:</div>
+          <div id="audit-input" style="background:var(--bg3);padding:6px;border-radius:4px;color:var(--tx);line-height:1.5;max-height:120px;overflow-y:auto;font-family:monospace"></div>
+        </div>
+        <div>
+          <div style="color:var(--mu);margin-bottom:4px">🤖 NLP NE SAMJHA:</div>
+          <div id="audit-output" style="background:var(--bg3);padding:6px;border-radius:4px;color:var(--gr);line-height:1.6;font-family:monospace"></div>
+        </div>
+      </div>
+      <div id="audit-accuracy" style="margin-top:8px;text-align:center;font-size:10px;font-weight:700"></div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="confirmAndSave()" class="btn bg" style="flex:1;font-size:10px">✅ SAHI HAI — SAVE KARO</button>
+        <button onclick="document.getElementById('nlp-audit').style.display='none'" class="btn" style="flex:1;font-size:10px">✏️ WAPAS EDIT KARO</button>
+      </div>
+    </div>
   </div>
   <div id="strat-list" style="display:flex;flex-direction:column;gap:8px"><div style="color:var(--mu);padding:20px;text-align:center">Select tab above</div></div>
 </div>
@@ -7262,106 +7282,199 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 });
 
-// ══ SAVE AS-IS ═══════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════
+// NLP AUDIT — VERIFY karo NLP ne kiya samjha
+// ══════════════════════════════════════════════════════════
+
+var _pendingSavePayload = null;
+
 function saveStratAsIs(){
   var nm = (document.getElementById('ns-nm')||{}).value||'';
   var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
   var text = ta ? ta.value.trim() : '';
   
-  if(!nm.trim()){ toast('Strategy name required!','warn'); 
-    var el=document.getElementById('ns-nm'); if(el){el.focus();el.style.borderColor='var(--rd)';} return; }
-  if(!text){ toast('Strategy text likhiye!','warn'); if(ta){ta.focus();ta.style.borderColor='var(--rd)';} return; }
+  if(!nm.trim()){
+    toast('Strategy name daalo!','warn');
+    var el=document.getElementById('ns-nm'); if(el){el.focus();el.style.borderColor='var(--rd)';} return;
+  }
+  if(!text){
+    toast('Strategy text likhiye!','warn');
+    if(ta){ta.focus();ta.style.borderColor='var(--rd)';} return;
+  }
   
-  // Extract minimal fields from text (only for API payload)
-  var sl = 80, tgt = 160, tf = '15m', inst = 'NIFTY', lots = 1;
-  var slM = text.match(/(?:Stop Loss|SL)[:\s]+(\d+)/i);
-  var tgM = text.match(/Target[:\s]+(\d+)/i);
-  var tfM = text.match(/Timeframe[:\s]+([\w]+)/i);
-  var instM = text.match(/(NIFTY|BANKNIFTY|FINNIFTY|SENSEX)/i);
-  if(slM) sl = parseInt(slM[1]);
-  if(tgM) tgt = parseInt(tgM[1]);
-  if(tfM) tf = tfM[1];
-  if(instM) inst = instM[1].toUpperCase();
+  // Parse what NLP understands
+  var parsed = _nlpQuickParse(text);
   
-  var payload = {
+  // Build payload
+  _pendingSavePayload = {
     user_id: UID, name: nm.trim(),
-    instrument: inst, timeframe: tf,
-    sl_value: sl, target_value: tgt,
-    quantity: lots, action: 'BUY',
-    description: text.slice(0, 200),
-    nlp_input: text,      // ← FULL original text saved as-is
-    entry_conditions: [], exit_conditions: [],
+    instrument: parsed.instrument, timeframe: parsed.timeframe,
+    sl_value: parsed.sl, target_value: parsed.target,
+    quantity: parsed.lots, action: parsed.action,
+    option_type: parsed.option_type,
+    description: text.slice(0, 300),
+    nlp_input: text,
+    entry_conditions: parsed.entry_conditions,
+    exit_conditions: parsed.exit_conditions,
     tags: ['user-saved'], is_public: false
   };
+  
+  // Show AUDIT - let user verify
+  _showNLPAudit(text, parsed);
+}
+
+function _nlpQuickParse(text){
+  var t = text.toUpperCase();
+  
+  var action = /\bSELL\b/.test(t) ? 'SELL' : 'BUY';
+  var instrument = 'NIFTY';
+  if(/BANKNIFTY|BANK NIFTY/.test(t)) instrument = 'BANKNIFTY';
+  else if(/FINNIFTY/.test(t)) instrument = 'FINNIFTY';
+  else if(/SENSEX/.test(t)) instrument = 'SENSEX';
+  
+  var option_type = /\bPE\b|\bPUT\b/.test(t) ? 'PE' : 'CE';
+  
+  var slM = text.match(/(?:stop\s*loss|sl|SL)[:\s]+([\d.]+)/i);
+  var tgtM = text.match(/(?:target|tgt|TGT)[:\s]+([\d.]+)/i);
+  var tfM = text.match(/(?:timeframe|tf)[:\s]*([\d]+\s*(?:m|min|h|hr|d|day|MIN|H|D))/i);
+  var lotsM = text.match(/([\d]+)\s*(?:lot|LOT)/i);
+  
+  var sl = slM ? parseFloat(slM[1]) : 80;
+  var target = tgtM ? parseFloat(tgtM[1]) : 160;
+  var timeframe = tfM ? tfM[1].trim() : '15m';
+  var lots = lotsM ? parseInt(lotsM[1]) : 1;
+  
+  // Entry conditions
+  var entry_conditions = [];
+  var ecM = text.match(/(?:ENTRY|entry)[:\s]*([^\n]{5,100})/i);
+  if(ecM) entry_conditions.push(ecM[1].trim());
+  var vwapM = /VWAP/.test(t);
+  var rsiM = text.match(/RSI[\s><=]+([\d]+)/i);
+  var emaM = text.match(/(?:EMA|ema)\s*([\d]+)/i);
+  if(vwapM) entry_conditions.push('Price > VWAP');
+  if(rsiM) entry_conditions.push('RSI > '+rsiM[1]);
+  if(emaM) entry_conditions.push('Price > EMA'+emaM[1]);
+  
+  // Exit conditions
+  var exit_conditions = [];
+  var exitM = text.match(/(?:EXIT|exit|Force Exit)[:\s]*([^\n]{5,80})/i);
+  if(exitM) exit_conditions.push(exitM[1].trim());
+  var timeExitM = text.match(/([\d]{1,2}:[\d]{2}\s*(?:AM|PM))/i);
+  if(timeExitM) exit_conditions.push('Time Exit at '+timeExitM[1]);
+  
+  return {
+    action: action, instrument: instrument, option_type: option_type,
+    sl: sl, target: target, timeframe: timeframe, lots: lots,
+    entry_conditions: entry_conditions, exit_conditions: exit_conditions
+  };
+}
+
+function _showNLPAudit(originalText, parsed){
+  var auditEl = document.getElementById('nlp-audit');
+  var inputEl = document.getElementById('audit-input');
+  var outputEl = document.getElementById('audit-output');
+  var accEl = document.getElementById('audit-accuracy');
+  
+  if(!auditEl) return;
+  
+  // Show original
+  if(inputEl) inputEl.textContent = originalText.slice(0,300) + (originalText.length>300?'...':'');
+  
+  // Show what NLP understood
+  var understood = [
+    'Action    : ' + parsed.action,
+    'Instrument: ' + parsed.instrument,
+    'Type      : ' + parsed.option_type,
+    'Lots      : ' + parsed.lots,
+    'Stop Loss : ' + parsed.sl + ' pts',
+    'Target    : ' + parsed.target + ' pts',
+    'Timeframe : ' + parsed.timeframe,
+  ];
+  if(parsed.entry_conditions.length){
+    understood.push('');
+    understood.push('ENTRY:');
+    parsed.entry_conditions.forEach(function(c){ understood.push('  ✓ '+c); });
+  }
+  if(parsed.exit_conditions.length){
+    understood.push('');
+    understood.push('EXIT:');
+    parsed.exit_conditions.forEach(function(c){ understood.push('  ✓ '+c); });
+  }
+  if(outputEl) outputEl.textContent = understood.join('\n');
+  
+  // Accuracy score
+  var score = 0, total = 4;
+  if(parsed.sl !== 80 || originalText.toLowerCase().indexOf('stop') < 0) score++;
+  if(parsed.target !== 160 || originalText.toLowerCase().indexOf('target') < 0) score++;
+  if(parsed.entry_conditions.length > 0) score++;
+  if(parsed.exit_conditions.length > 0) score++;
+  var pct = Math.round((score/total)*100);
+  var color = pct >= 75 ? 'var(--gr)' : pct >= 50 ? 'var(--am)' : 'var(--rd)';
+  
+  if(accEl){
+    accEl.innerHTML = '<span style="color:'+color+'">NLP Accuracy: '+pct+'%</span> — '
+      + (pct >= 75 ? 'Sahi lag raha hai ✅' : 'Review karo ⚠️');
+  }
+  
+  auditEl.style.display = 'block';
+  auditEl.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function confirmAndSave(){
+  if(!_pendingSavePayload){ toast('Koi pending save nahi','warn'); return; }
   
   var msgEl = document.getElementById('ns-save-msg');
   if(msgEl){ msgEl.style.display='block'; msgEl.style.color='var(--am)'; msgEl.textContent='Saving...'; }
   
-  req('/strategies/save','POST',payload,function(err,r){
-    if(err||!r||r.error){ 
+  req('/strategies/save','POST',_pendingSavePayload,function(err,r){
+    if(err||!r||r.error){
       toast('Save failed!','error');
       if(msgEl){ msgEl.style.color='var(--rd)'; msgEl.textContent='❌ Save failed'; }
       return;
     }
-    toast('✅ Strategy saved as-is!','success');
-    if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ Saved: '+nm.trim(); }
+    toast('✅ Strategy saved!','success');
+    if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ Saved: '+(_pendingSavePayload.name||''); }
+    
+    // Reset
+    var ta = document.getElementById('strat-nlp-in');
     if(ta) ta.value='';
-    var nmEl=document.getElementById('ns-nm'); if(nmEl) nmEl.value='';
-    setTimeout(function(){
-      if(msgEl) msgEl.style.display='none';
-      loadMy();
-    }, 1500);
+    var nm = document.getElementById('ns-nm'); if(nm) nm.value='';
+    var audit = document.getElementById('nlp-audit'); if(audit) audit.style.display='none';
+    _pendingSavePayload = null;
+    
+    setTimeout(function(){ if(msgEl) msgEl.style.display='none'; loadMy(); }, 1500);
   });
 }
 
-// ══ SAVE WITH AI ENHANCEMENT ════════════════════════════
 function saveStratWithAI(){
   var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
   var text = ta ? ta.value.trim() : '';
   if(!text){ toast('Strategy text likhiye pehle!','warn'); return; }
-  
   var msgEl = document.getElementById('ns-save-msg');
   if(msgEl){ msgEl.style.display='block'; msgEl.style.color='var(--am)'; msgEl.textContent='🤖 AI analyzing...'; }
-  
-  // Parse first, then save
   req('/nlp/parse','POST',{text:text},function(err,d){
-    if(err||!d){
-      toast('NLP parse failed, saving as-is...','warn');
-      if(msgEl) msgEl.style.display='none';
-      saveStratAsIs();
-      return;
-    }
-    // Show AI result to user - let them confirm
-    var aiText = d.original_text || text;
-    if(d.strategy_name||d.instrument||d.action){
-      aiText = _buildStrategyText(d);
-    }
-    
-    // Update textarea with AI version
+    if(err||!d){ toast('NLP parse failed, saving as-is...','warn'); saveStratAsIs(); return; }
+    var aiText = _buildStrategyText(d);
     if(ta){ ta.value = aiText; ta.style.borderColor='rgba(0,255,136,.4)'; }
-    if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ AI enhanced! Review above then click 💾 SAVE AS-IS'; }
-    toast('AI enhanced! Review and click SAVE AS-IS','success');
+    if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ AI enhanced! Review and click SAVE AS-IS'; }
+    toast('AI enhanced! Ab SAVE AS-IS dabao','success');
   });
 }
 
 function _buildStrategyText(d){
-  var lines = [];
-  var name = d.strategy_name || 'Strategy';
-  lines.push('=== '+name.toUpperCase()+' ===');
-  lines.push('');
-  lines.push('📌 ORDER COMMAND:');
+  var lines=['=== '+(d.strategy_name||'STRATEGY').toUpperCase()+' ===',''];
+  lines.push('\uD83D\uDCCC ORDER COMMAND:');
   lines.push((d.action||'BUY')+' '+(d.instrument||'NIFTY')+' '+(d.option_type||'CE')+' '+(d.quantity||1)+' LOT');
   lines.push('Stop Loss: '+(d.stop_loss||80)+' pts | Target: '+(d.target||160)+' pts');
   lines.push('Timeframe: '+(d.timeframe||'15m'));
-  lines.push('');
   if(d.entry_conditions&&d.entry_conditions.length){
-    lines.push('📊 ENTRY CONDITIONS:');
-    d.entry_conditions.forEach(function(c,i){ lines.push((i+1)+'. '+c); });
-    lines.push('');
+    lines.push('');lines.push('\uD83D\uDCCA ENTRY CONDITIONS:');
+    d.entry_conditions.forEach(function(c,i){lines.push((i+1)+'. '+c);});
   }
   if(d.exit_conditions&&d.exit_conditions.length){
-    lines.push('🚪 EXIT CONDITIONS:');
-    d.exit_conditions.forEach(function(c){ lines.push('• '+c); });
+    lines.push('');lines.push('\uD83D\uDEAA EXIT CONDITIONS:');
+    d.exit_conditions.forEach(function(c){lines.push('\u2022 '+c);});
   }
   return lines.join('\n');
 }
