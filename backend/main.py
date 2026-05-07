@@ -2636,22 +2636,32 @@ def admin_get_users():
 
 @app.post("/admin/users/add")
 def admin_add_user(user: UserUpdate):
-    uid = user.user_id or f"USR{int(datetime.now().timestamp())}"
+    uid = user.user_id or f"USR{int(datetime.now().timestamp()*1000)%999999999:09d}"
+    import random, string
+    # Add to in-memory
     _all_users[uid] = {
-        "user_id": uid,
-        "full_name": user.full_name,
-        "email": user.email,
-        "phone": user.phone,
-        "plan": user.plan,
-        "capital": user.capital,
-        "status": user.status,
-        "free_access": user.free_access,
-        "notes": user.notes,
-        "payment_id": user.payment_id,
-        "created_at": datetime.now().strftime("%Y-%m-%d"),
-        "broker": "ZERODHA"
+        "user_id": uid, "full_name": user.full_name or "New User",
+        "email": user.email or f"{uid}@trd.app", "phone": user.phone or "",
+        "plan": user.plan or "FREE", "capital": user.capital or 500000,
+        "status": user.status or "active", "broker": "ZERODHA",
+        "created_at": datetime.now().strftime("%Y-%m-%d")
     }
-    return {"added": True, "user_id": uid, "message": f"User {user.full_name} added"}
+    # Also add to user_db if available
+    if USER_SYSTEM:
+        try:
+            pwd = "".join(random.choices(string.ascii_letters+string.digits, k=12))
+            username = (user.email or uid).split("@")[0].replace(" ","_").lower()
+            result = user_db.create_user(
+                username=username, email=user.email or f"{uid}@trd.app",
+                password=pwd, full_name=user.full_name or "New User",
+                capital=user.capital or 500000
+            )
+            actual_uid = result.get("user_id", uid)
+            _all_users[actual_uid] = _all_users.pop(uid, _all_users.get(actual_uid, {}))
+            uid = actual_uid
+        except Exception as e:
+            pass  # Keep in-memory version
+    return {"added": True, "user_id": uid, "message": f"User {user.full_name} added successfully"}
 
 @app.put("/admin/users/{user_id}")
 def admin_update_user(user_id: str, user: UserUpdate):

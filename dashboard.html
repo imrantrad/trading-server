@@ -2126,7 +2126,14 @@ setInterval(function(){
         <div style="font-size:10px;color:var(--mu);margin-top:2px">v12.3.0 · AWS eu-north-1 · Build 2026.04</div>
       </div>
       <div style="color:var(--mu);font-size:16px">›</div>
+    </div
+    <!-- Logout -->
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--bo)">
+      <button onclick="logout()" style="width:100%;padding:14px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span style="font-size:18px">🚪</span> Logout / Sign Out
+      </button>
     </div>
+>
 
     </div><!-- end prof-menu-section -->
 
@@ -7902,16 +7909,25 @@ function loadAdminReferral(){
       return;
     }
     listEl.innerHTML = d.codes.map(function(c){
-      return '<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:10px;margin-bottom:6px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-        +'<span style="font-family:monospace;font-weight:700;color:var(--gr);font-size:13px">'+c.code+'</span>'
-        +'<span style="font-size:9px;padding:2px 6px;background:'+(c.is_active?'rgba(0,255,136,.1)':'rgba(255,51,51,.1)')
-        +';color:'+(c.is_active?'var(--gr)':'var(--rd)')+';border-radius:4px">'+(c.is_active?'ACTIVE':'INACTIVE')+'</span>'
+      var statusColor = c.is_active ? 'var(--gr)' : 'var(--rd)';
+      var statusBg = c.is_active ? 'rgba(0,255,136,.1)' : 'rgba(255,51,51,.1)';
+      return '<div style="background:var(--bg3);border:1px solid '+(c.is_active?'rgba(0,255,136,.2)':'var(--bo)')+';border-radius:10px;padding:12px;margin-bottom:8px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+        +'<div style="font-family:monospace;font-weight:800;color:var(--gr);font-size:16px;letter-spacing:2px">'+c.code+'</div>'
+        +'<span style="font-size:9px;padding:3px 8px;background:'+statusBg+';color:'+statusColor+';border-radius:4px;font-weight:700">'+(c.is_active?'✅ ACTIVE':'❌ INACTIVE')+'</span>'
         +'</div>'
-        +'<div style="font-size:9px;color:var(--mu)">User: '+(c.owner_email||c.owner_user_id)+' | Uses: '+c.uses_count
-        +' | Bonus: ₹'+c.total_bonus_paid+' | Discount: ₹'+c.total_discount_given+'</div>'
-        +'<div style="font-size:9px;color:var(--mu)">Expires: '+c.expires_at+' | Bonus/use: ₹'+c.bonus_amount+' | Discount/use: ₹'+c.discount_amount+'</div>'
-        +(c.is_active ? '<button onclick="deactivateRefCode(\''+c.code+'\')" style="margin-top:4px;font-size:9px;padding:2px 8px;background:rgba(255,51,51,.1);border:1px solid rgba(255,51,51,.3);color:var(--rd);border-radius:4px;cursor:pointer">Deactivate</button>' : '')
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;margin-bottom:8px">'
+        +'<div><span style="color:var(--mu)">👤 User:</span> <span style="color:var(--tx)">'+(c.owner_email||c.owner_user_id||'N/A')+'</span></div>'
+        +'<div><span style="color:var(--mu)">📅 Expires:</span> <span style="color:var(--am)">'+c.expires_at+'</span></div>'
+        +'<div><span style="color:var(--mu)">💰 Bonus/use:</span> <span style="color:var(--gr)">₹'+c.bonus_amount+'</span></div>'
+        +'<div><span style="color:var(--mu)">🏷️ Discount/use:</span> <span style="color:var(--bl)">₹'+c.discount_amount+'</span></div>'
+        +'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:var(--bg4);border-radius:6px;padding:8px;margin-bottom:8px">'
+        +'<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--am)">'+c.uses_count+'</div><div style="font-size:9px;color:var(--mu)">Uses</div></div>'
+        +'<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--gr)">₹'+c.total_bonus_paid+'</div><div style="font-size:9px;color:var(--mu)">Bonus Paid</div></div>'
+        +'<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--bl)">₹'+c.total_discount_given+'</div><div style="font-size:9px;color:var(--mu)">Discount</div></div>'
+        +'</div>'
+        +(c.is_active ? '<button onclick="deactivateRefCode(''+c.code+'')" style="width:100%;font-size:10px;padding:6px;background:rgba(255,51,51,.1);border:1px solid rgba(255,51,51,.3);color:var(--rd);border-radius:6px;cursor:pointer">🚫 Deactivate Code</button>' : '<div style="font-size:10px;color:var(--rd);text-align:center">Code Deactivated</div>')
         +'</div>';
     }).join('');
   });
