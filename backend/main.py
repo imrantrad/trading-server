@@ -1999,10 +1999,29 @@ def get_consents(user_id: str):
 # ── ADMIN ────────────────────────────────────────────────
 # /admin/dashboard handled below
 
-@app.get("/admin/users")
+@app.get("/admin/users")  
 def admin_users(limit: int = 50):
-    if not ENTERPRISE: return {"users":[]}
-    return {"users": admin.get_user_list(limit)}
+    users = list(_all_users.values())
+    # Also include user_db users
+    if USER_SYSTEM:
+        try:
+            import sqlite3 as _sq
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../database/users.db")
+            if os.path.exists(db_path):
+                conn = _sq.connect(db_path)
+                conn.row_factory = _sq.Row
+                rows = conn.execute("SELECT * FROM users WHERE is_active=1 ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+                conn.close()
+                db_users = [dict(r) for r in rows]
+                # Merge with _all_users, db takes priority
+                merged = {u["id"]: u for u in db_users}
+                for uid, u in _all_users.items():
+                    if uid not in merged:
+                        merged[uid] = u
+                users = list(merged.values())
+        except Exception as e:
+            pass
+    return {"users": users, "total": len(users)}
 
 @app.get("/admin/health")
 def admin_health():
@@ -2665,29 +2684,52 @@ def admin_add_user(user: UserUpdate):
 
 @app.put("/admin/users/{user_id}")
 def admin_update_user(user_id: str, user: UserUpdate):
+    # Update in-memory
     if user_id not in _all_users:
         _all_users[user_id] = {}
     _all_users[user_id].update({
-        "user_id": user_id,
-        "full_name": user.full_name,
-        "email": user.email,
-        "phone": user.phone,
-        "plan": user.plan,
-        "capital": user.capital,
-        "status": user.status,
-        "free_access": user.free_access,
-        "notes": user.notes,
-        "payment_id": user.payment_id,
-        "updated_at": datetime.now().isoformat()
+        "user_id": user_id, "full_name": user.full_name,
+        "email": user.email, "phone": user.phone,
+        "plan": user.plan, "capital": user.capital,
+        "status": user.status, "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })
-    return {"updated": True, "user_id": user_id}
+    # Update in user_db (SQLite)
+    if USER_SYSTEM:
+        try:
+            import sqlite3 as _sq
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../database/users.db")
+            if os.path.exists(db_path):
+                conn = _sq.connect(db_path)
+                conn.execute("""UPDATE users SET 
+                    full_name=?, email=?, phone=?, capital=?,
+                    subscription_plan=?
+                    WHERE id=?""",
+                    (user.full_name, user.email, user.phone or '',
+                     user.capital or 500000, user.plan or 'FREE', user_id))
+                conn.commit(); conn.close()
+        except Exception as e:
+            pass
+    return {"updated": True, "user_id": user_id, "message": "User updated successfully"}
+
 
 @app.delete("/admin/users/{user_id}")
 def admin_delete_user(user_id: str):
-    if user_id in _all_users:
-        del _all_users[user_id]
-        return {"deleted": True, "user_id": user_id}
-    return {"deleted": False, "error": "User not found"}
+    # Remove from in-memory
+    _all_users.pop(user_id, None)
+    # Remove from user_db
+    deleted = True
+    if USER_SYSTEM:
+        try:
+            import sqlite3 as _sq
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../database/users.db")
+            if os.path.exists(db_path):
+                conn = _sq.connect(db_path)
+                conn.execute("UPDATE users SET is_active=0 WHERE id=?", (user_id,))
+                conn.commit(); conn.close()
+        except Exception as e:
+            deleted = False
+    return {"deleted": deleted, "user_id": user_id, "message": "User deleted"}
+
 
 @app.post("/admin/users/{user_id}/plan")
 def admin_set_plan(user_id: str, plan: str = "PRO", free_access: bool = False):
