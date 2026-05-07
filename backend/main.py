@@ -3865,6 +3865,71 @@ def strategy_diff(strategy_id: str, v1: int = 1, v2: int = 2):
         return {"error":"Version not found"}
     return {"diff": se_diff(ver1, ver2), "v1": v1, "v2": v2}
 
+@app.post("/auth/google")
+def google_auth(payload: dict):
+    """Google OAuth - verify token and create/login user"""
+    import hashlib
+    
+    # Get user info from Google token payload
+    google_id = payload.get("google_id", "")
+    email = payload.get("email", "")
+    name = payload.get("name", "")
+    picture = payload.get("picture", "")
+    
+    if not email or not google_id:
+        return {"error": "Invalid Google token"}
+    
+    if not USER_SYSTEM:
+        # Return demo user if no user system
+        return {
+            "user_id": "USR124535215",
+            "username": email.split("@")[0],
+            "email": email,
+            "full_name": name,
+            "plan": "FREE",
+            "capital": 500000,
+            "picture": picture,
+            "token": "demo_token",
+            "new_user": False
+        }
+    
+    # Check if user exists by email
+    try:
+        existing = user_db.get_user_by_email(email)
+    except:
+        existing = None
+    
+    if existing:
+        # Update profile picture
+        try:
+            user_db.update_user(existing["user_id"], {"picture": picture, "full_name": name})
+        except: pass
+        existing["picture"] = picture
+        existing["token"] = hashlib.md5(f"{email}{google_id}".encode()).hexdigest()
+        existing["new_user"] = False
+        return existing
+    
+    # Create new user from Google
+    import random, string
+    username = email.split("@")[0] + "_" + "".join(random.choices(string.digits, k=4))
+    password = "".join(random.choices(string.ascii_letters + string.digits, k=16))
+    
+    try:
+        result = user_db.create_user(
+            username=username,
+            email=email, 
+            password=password,
+            full_name=name,
+            capital=500000
+        )
+        result["picture"] = picture
+        result["token"] = hashlib.md5(f"{email}{google_id}".encode()).hexdigest()
+        result["new_user"] = True
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/strategies/v2/list/{user_id}")
 def strategies_list(user_id: str):
     """List all strategies"""

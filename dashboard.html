@@ -372,8 +372,237 @@ input:focus, select:focus {
 }
 
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// ══════════════════════════════════════════════════════
+// GOOGLE OAUTH + USER AUTH SYSTEM
+// ══════════════════════════════════════════════════════
+
+// IMPORTANT: Replace with your Google OAuth Client ID
+// Get from: https://console.cloud.google.com/
+var GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+
+function initGoogleAuth(){
+  // Check if already logged in
+  try{
+    var saved = localStorage.getItem('trd_user');
+    if(saved){
+      var user = JSON.parse(saved);
+      if(user && user.user_id){
+        loginSuccess(user, false);
+        return;
+      }
+    }
+  }catch(e){}
+  
+  // Show login overlay
+  var overlay = document.getElementById('login-overlay');
+  if(overlay) overlay.style.display = 'flex';
+  
+  // Init Google Sign-In
+  if(window.google && window.google.accounts){
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleResponse,
+      auto_select: false,
+    });
+  }
+}
+
+function signInWithGoogle(){
+  if(!window.google || !window.google.accounts){
+    // Fallback: redirect to Google OAuth
+    var params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: window.location.origin,
+      response_type: 'token',
+      scope: 'profile email',
+      state: 'google_auth'
+    });
+    // Show error if no client ID configured
+    if(GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'){
+      showLoginError('Google Client ID not configured. Use Demo login.');
+      return;
+    }
+    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+    return;
+  }
+  
+  google.accounts.id.prompt(function(notification){
+    if(notification.isNotDisplayed() || notification.isSkippedMoment()){
+      // Show One Tap failed - try popup
+      showLoginError('Please use Demo login or configure Google OAuth');
+    }
+  });
+}
+
+function handleGoogleResponse(response){
+  // Decode JWT token from Google
+  var token = response.credential;
+  var parts = token.split('.');
+  var payload = JSON.parse(atob(parts[1]));
+  
+  // Send to backend
+  req('/auth/google','POST',{
+    google_id: payload.sub,
+    email: payload.email,
+    name: payload.name,
+    picture: payload.picture
+  }, function(err, user){
+    if(err || !user || user.error){
+      showLoginError('Login failed. Please try again.');
+      return;
+    }
+    localStorage.setItem('trd_user', JSON.stringify(user));
+    loginSuccess(user, user.new_user);
+  });
+}
+
+function demoLogin(){
+  var overlay = document.getElementById('login-overlay');
+  var btn = document.getElementById('google-signin-btn');
+  if(btn){ btn.style.opacity='0.5'; btn.style.pointerEvents='none'; }
+  
+  req('/users/login','POST',{username:'demo',password:'demo123'},function(err,r){
+    if(err||!r||r.error){
+      // Use hardcoded demo
+      var demoUser = {
+        user_id:'USR124535215', username:'demo', email:'demo@trading.com',
+        full_name:'Demo Trader', plan:'PRO', capital:500000, broker:'PAPER'
+      };
+      localStorage.setItem('trd_user', JSON.stringify(demoUser));
+      loginSuccess(demoUser, false);
+    } else {
+      localStorage.setItem('trd_user', JSON.stringify(r));
+      loginSuccess(r, false);
+    }
+  });
+}
+
+function manualLogin(){
+  var user = (document.getElementById('ml-user')||{}).value||'';
+  var pass = (document.getElementById('ml-pass')||{}).value||'';
+  if(!user||!pass){ showLoginError('Username aur password daalo'); return; }
+  
+  req('/users/login','POST',{username:user,password:pass},function(err,r){
+    if(err||!r||r.error){
+      showLoginError('Invalid username or password');
+      return;
+    }
+    localStorage.setItem('trd_user', JSON.stringify(r));
+    loginSuccess(r, false);
+  });
+}
+
+function loginSuccess(user, isNew){
+  // Set global user variables
+  window.UID = user.user_id || 'USR124535215';
+  window.USER_NAME = user.full_name || user.username || 'Trader';
+  window.USER_EMAIL = user.email || '';
+  window.USER_PLAN = user.plan || 'FREE';
+  window.USER_CAPITAL = user.capital || 500000;
+  window.USER_PICTURE = user.picture || '';
+  
+  // Update UID in script
+  try{
+    var uidScript = document.querySelector('script');
+    // Direct assignment works since UID is global
+  }catch(e){}
+  
+  // Update header
+  var planBdg = document.getElementById('plan-bdg');
+  if(planBdg) planBdg.textContent = window.USER_PLAN;
+  
+  // Update profile
+  var profName = document.getElementById('prof-name-display');
+  if(profName) profName.textContent = window.USER_NAME;
+  
+  // Show profile picture in header if exists
+  var profBtn = document.getElementById('prof-btn');
+  if(profBtn && window.USER_PICTURE){
+    profBtn.innerHTML = '<img src="'+window.USER_PICTURE+'" style="width:24px;height:24px;border-radius:50%;object-fit:cover"> PROFILE';
+  }
+  
+  // Hide overlay
+  var overlay = document.getElementById('login-overlay');
+  if(overlay){
+    overlay.style.transition = 'opacity .5s';
+    overlay.style.opacity = '0';
+    setTimeout(function(){ overlay.style.display='none'; }, 500);
+  }
+  
+  // Welcome toast
+  var msg = isNew ? 'Welcome to TRD, '+window.USER_NAME+'! 🎉' : 'Welcome back, '+window.USER_NAME+'!';
+  setTimeout(function(){ toast(msg,'success'); }, 600);
+  
+  // Init dashboard
+  setTimeout(function(){
+    if(typeof loadPrices === 'function') loadPrices();
+    if(typeof loadPos === 'function') loadPos();
+  }, 1000);
+}
+
+function showLoginError(msg){
+  var el = document.getElementById('login-error');
+  if(el){ el.textContent = msg; el.style.display='block'; }
+}
+
+function logout(){
+  localStorage.removeItem('trd_user');
+  location.reload();
+}
+
+// Auto-init on load
+window.addEventListener('load', function(){
+  setTimeout(initGoogleAuth, 300);
+});
+</script>
+
 </head>
 <body>
+<!-- ════════════ GOOGLE LOGIN OVERLAY ════════════ -->
+<div id="login-overlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#060608 0%,#0d0e14 50%,#060608 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;max-width:340px;width:90%;padding:0 20px">
+    <!-- Logo -->
+    <div style="font-size:28px;font-weight:800;color:var(--gr);letter-spacing:4px;margin-bottom:4px">TRD</div>
+    <div style="font-size:11px;color:var(--mu);letter-spacing:2px;margin-bottom:32px">INSTITUTIONAL TRADING PLATFORM v12.3</div>
+    
+    <!-- Login Card -->
+    <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:16px;padding:28px 24px">
+      <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:6px">Welcome to TRD</div>
+      <div style="font-size:11px;color:var(--mu);margin-bottom:24px">Professional Derivative Trading Platform</div>
+      
+      <!-- Google Sign In Button -->
+      <div id="google-signin-btn" onclick="signInWithGoogle()" style="background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;font-size:13px;font-weight:500;justify-content:center;margin-bottom:16px;transition:box-shadow .2s">
+        <img src="https://developers.google.com/identity/images/g-logo.png" width="18" height="18" onerror="this.style.display='none'">
+        <span>Continue with Google</span>
+      </div>
+      
+      <!-- Demo Login -->
+      <button onclick="demoLogin()" style="width:100%;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:8px;padding:10px;font-size:12px;cursor:pointer;margin-bottom:16px">
+        🎯 Try Demo Account
+      </button>
+      
+      <!-- Manual Login -->
+      <div id="manual-login-form" style="display:none">
+        <input id="ml-user" placeholder="Username" style="width:100%;margin-bottom:8px;font-size:12px">
+        <input id="ml-pass" type="password" placeholder="Password" style="width:100%;margin-bottom:8px;font-size:12px">
+        <button onclick="manualLogin()" class="btn bg blg" style="width:100%;font-size:12px">🔐 LOGIN</button>
+      </div>
+      
+      <div onclick="document.getElementById('manual-login-form').style.display=document.getElementById('manual-login-form').style.display==='none'?'block':'none'" style="font-size:10px;color:var(--mu);cursor:pointer;margin-top:8px">Username/Password Login</div>
+      
+      <div id="login-error" style="color:var(--rd);font-size:11px;margin-top:8px;display:none"></div>
+    </div>
+    
+    <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:16px;line-height:1.6">
+      🔒 Secure · SEBI Compliant Tool · Paper Trading Available<br>
+      By continuing you agree to our Terms of Service
+    </div>
+  </div>
+</div>
+
+
 <div id="toast"></div>
 <div class="hdr" style="background:linear-gradient(90deg,#00000a 0%,#030510 50%,#00000a 100%);border-bottom:1px solid rgba(0,255,136,.1)">
   <div style="display:flex;align-items:center;gap:8px">
