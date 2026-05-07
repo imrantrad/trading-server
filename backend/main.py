@@ -2998,14 +2998,28 @@ def options_greeks(spot:float=24000, strike:float=24000, expiry_days:int=7, iv:f
 
 @app.get("/options/chain")
 def options_chain(spot:float=24000, expiry_days:int=7, vix:float=15.0, rate:float=6.5):
-    sigma = vix/100; T = expiry_days/365; r = rate/100
+    atm_sigma = vix/100; T = expiry_days/365; r = rate/100
     atm = round(spot/50)*50
     chain = []
     for i in range(-5, 6):
         K = atm + i*50
+        # IV Skew: OTM Puts have higher IV, OTM Calls have lower IV (NIFTY skew)
+        moneyness = (K - spot) / spot  # negative = OTM put, positive = OTM call
+        if moneyness < 0:
+            # Below ATM: add IV premium (put skew)
+            skew_adj = abs(moneyness) * 3.5  # ~3.5% IV increase per 1% OTM
+        else:
+            # Above ATM: slightly lower IV (call wing)
+            skew_adj = -moneyness * 1.5
+        sigma_ce = max(0.05, atm_sigma + skew_adj/100 * 0.5)
+        sigma_pe = max(0.05, atm_sigma + skew_adj/100)
+        
         for otype in ["CE","PE"]:
+            sigma = sigma_ce if otype=="CE" else sigma_pe
             g = _calc_greeks(spot, K, T, r, sigma, otype)
-            g.update({"strike":K,"option_type":otype,"expiry_days":expiry_days,"iv_pct":round(vix,2),"lot_size":50,"total_premium":round(g["price"]*50,2),"oi":0,"volume":0})
+            g.update({"strike":K,"option_type":otype,"expiry_days":expiry_days,
+                      "iv_pct":round(sigma*100,2),
+                      "lot_size":50,"total_premium":round(g["price"]*50,2),"oi":0,"volume":0})
             chain.append(g)
     atm_ce = next((x for x in chain if x["strike"]==atm and x["option_type"]=="CE"), {})
     atm_pe = next((x for x in chain if x["strike"]==atm and x["option_type"]=="PE"), {})
