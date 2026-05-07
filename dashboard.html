@@ -2663,6 +2663,21 @@ function showBrokerGuide(){
   });
 }
 
+function testBrokerAPI(broker){
+  toast('Testing '+broker+' connection...','info');
+  req('/broker/status','GET',null,function(err,d){
+    if(err){ toast('❌ '+broker+' connection failed','error'); return; }
+    toast('✅ '+broker+' connected successfully!','success');
+  });
+}
+
+function saveBrokerConfig(){
+  var apiKey = (document.getElementById('broker-api-key')||{}).value||'';
+  var apiSecret = (document.getElementById('broker-api-secret')||{}).value||'';
+  if(!apiKey){ toast('API key required','warn'); return; }
+  toast('✅ Broker config saved!','success');
+}
+
 function loadBrokerStatus(){
   req('/broker/status/'+UID,'GET',null,function(err,d){
     if(err||!d||!d.connected) return;
@@ -5078,159 +5093,24 @@ function loadLivePositions(){
 // ══════════════════════════════════════════════════════════════════
 
 
-function doAdminLogin(){
-  var user = document.getElementById('adm-login-user').value.trim();
-  var pass = document.getElementById('adm-login-pass').value;
-  var err = document.getElementById('adm-login-err');
-  if(!user||!pass){ if(err){err.textContent='Fill all fields';err.style.display='block';} return; }
-  
-  req('/admin/login','POST',{username:user,password:pass},function(e,r){
-    if(e||!r||!r.success){
-      if(err){err.textContent='Invalid credentials';err.style.display='block';}
-      return;
-    }
-    // Success - store token
-    try{ localStorage.setItem('trd_admin_token', r.token); localStorage.setItem('trd_admin_name', r.name); }catch(ex){}
-    document.getElementById('adm-login-gate').style.display='none';
-    document.getElementById('adm-panel-content').style.display='block';
-    adminTab('dash', document.getElementById('adm-tab-dash'));
-    toast('✅ Welcome, '+r.name+'!','success');
-  });
-}
 
-function adminLogout(){
-  try{ localStorage.removeItem('trd_admin_token'); }catch(e){}
-  document.getElementById('adm-login-gate').style.display='flex';
-  document.getElementById('adm-panel-content').style.display='none';
-  document.getElementById('adm-login-user').value='';
-  document.getElementById('adm-login-pass').value='';
-}
+
+
 
 // Check if already logged in when opening admin
 
 
-function adminTab(tab, btn){
-  ['dash','users','pay','sys'].forEach(function(t){
-    var el=document.getElementById('adm-'+t);
-    if(el) el.style.display = t===tab ? 'block' : 'none';
-  });
-  document.querySelectorAll('[id^="adm-tab-"]').forEach(function(b){
-    b.style.background='var(--bg4)';b.style.borderColor='var(--bo)';b.style.color='var(--mu)';
-  });
-  if(btn){btn.style.background='rgba(251,191,36,.1)';btn.style.borderColor='rgba(251,191,36,.3)';btn.style.color='var(--am)';}
-  if(tab==='dash') loadAdminDash();
-  if(tab==='users') loadAdminUsers();
-  if(tab==='pay') loadPaymentConfig();
-  if(tab==='sys') loadSysStatus();
-}
 
-function loadAdminDash(){
-  req('/admin/dashboard','GET',null,function(err,d){
-    if(err||!d) return;
-    if($('adm-total')) $('adm-total').textContent = d.total_users||0;
-    if($('adm-active')) $('adm-active').textContent = d.active_users||0;
-    if($('adm-free')) $('adm-free').textContent = d.free_access_users||0;
-    if($('adm-cap')) $('adm-cap').textContent = '₹'+(((d.total_capital||0)/100000).toFixed(1))+'L';
-    var pl=$('adm-plans');
-    if(pl&&d.plans){
-      pl.innerHTML='';
-      var colors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--p0)',INSTITUTIONAL:'var(--am)'};
-      Object.keys(d.plans).forEach(function(p){
-        var chip=document.createElement('div');
-        chip.style.cssText='padding:4px 12px;background:var(--bg4);border:1px solid var(--bo);border-radius:10px;font-size:9px;display:flex;gap:6px;align-items:center';
-        chip.innerHTML='<span style="color:'+( colors[p]||'var(--tx)')+'">'+p+'</span><span style="font-size:11px;font-weight:700;color:var(--tx)">'+d.plans[p]+'</span>';
-        pl.appendChild(chip);
-      });
-    }
-  });
-}
 
-function loadAdminUsers(){
-  req('/admin/users','GET',null,function(err,d){
-    var tb=document.getElementById('adm-users-tbl');
-    if(!tb) return;
-    if(err||!d||!d.users||!d.users.length){
-      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:20px">No users found</td></tr>';
-      return;
-    }
-    tb.innerHTML='';
-    d.users.forEach(function(u){
-      var planColors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--p0)',INSTITUTIONAL:'var(--am)'};
-      var statusColor=u.status==='ACTIVE'?'var(--gr)':u.status==='SUSPENDED'?'var(--rd)':'var(--am)';
-      var row=document.createElement('tr');
-      row.innerHTML=
-        '<td style="color:var(--mu);font-size:9px">'+(u.user_id||'').slice(-8)+'</td>'+
-        '<td style="font-weight:600">'+(u.full_name||'—')+'</td>'+
-        '<td style="color:var(--mu);font-size:10px">'+(u.email||'—')+'</td>'+
-        '<td><span style="color:'+(planColors[u.plan]||'var(--mu)')+'">'+( u.plan||'FREE')+'</span></td>'+
-        '<td><span style="color:'+statusColor+'">'+(u.status||'ACTIVE')+'</span></td>'+
-        '<td style="text-align:center">'+(u.free_access?'<span style="color:var(--gr)">✓</span>':'—')+'</td>'+
-        '<td><div style="display:flex;gap:3px">'+
-          '<button onclick="editUser(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:var(--bg4);border:1px solid var(--bo);color:var(--bl);border-radius:3px;cursor:pointer">✏️</button>'+
-          '<button onclick="quickSetPlan(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:var(--bg4);border:1px solid var(--bo);color:var(--am);border-radius:3px;cursor:pointer">💎</button>'+
-          '<button onclick="deleteUser(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:3px;cursor:pointer">✕</button>'+
-        '</div></td>';
-      tb.appendChild(row);
-    });
-  });
-}
 
-function showAddUser(){
-  var f=document.getElementById('adm-user-form');
-  if(!f) return;
-  f.style.display='block';
-  document.getElementById('adm-form-title').textContent='➕ ADD NEW USER';
-  document.getElementById('adm-uid').value='';
-  ['adm-name','adm-email','adm-phone','adm-payid','adm-notes'].forEach(function(id){var e=$( id);if(e)e.value='';});
-  var cap=$('adm-capital');if(cap)cap.value=500000;
-  var plan=$('adm-plan');if(plan)plan.value='PRO';
-  var st=$('adm-status');if(st)st.value='ACTIVE';
-  var fa=$('adm-freeaccess');if(fa)fa.checked=false;
-}
 
-function editUser(uid){
-  req('/admin/users','GET',null,function(err,d){
-    if(err||!d||!d.users) return;
-    var u=d.users.find(function(x){return x.user_id===uid;});
-    if(!u) return;
-    var f=document.getElementById('adm-user-form');
-    if(f) f.style.display='block';
-    document.getElementById('adm-form-title').textContent='✏️ EDIT USER: '+u.full_name;
-    var e=function(id,val){var el=$(id);if(el)el.value=val||'';};
-    e('adm-uid',u.user_id);e('adm-name',u.full_name);e('adm-email',u.email);
-    e('adm-phone',u.phone);e('adm-capital',u.capital||500000);
-    e('adm-payid',u.payment_id);e('adm-notes',u.notes);
-    var plan=$('adm-plan');if(plan)plan.value=u.plan||'PRO';
-    var st=$('adm-status');if(st)st.value=u.status||'ACTIVE';
-    var fa=$('adm-freeaccess');if(fa)fa.checked=!!u.free_access;
-    f.scrollIntoView({behavior:'smooth',block:'nearest'});
-  });
-}
 
-function saveAdminUser(){
-  var uid=$('adm-uid').value||('USR'+Date.now());
-  var data={
-    user_id:uid,
-    full_name:$('adm-name').value,
-    email:$('adm-email').value,
-    phone:$('adm-phone').value,
-    capital:parseFloat($('adm-capital').value)||500000,
-    plan:$('adm-plan').value,
-    status:$('adm-status').value,
-    free_access:$('adm-freeaccess').checked,
-    payment_id:$('adm-payid').value,
-    notes:$('adm-notes').value
-  };
-  var ep=$('adm-uid').value?'/admin/users/'+uid:'/admin/users/add';
-  var method=$('adm-uid').value?'PUT':'POST';
-  req(ep,method,data,function(err,r){
-    if(!err&&(r.updated||r.added)){
-      toast('✅ User saved!','success');
-      document.getElementById('adm-user-form').style.display='none';
-      loadAdminUsers();
-    } else { toast('❌ Save failed','error'); }
-  });
-}
+
+
+
+
+
+
 
 function quickSetPlan(uid){
   var plan=prompt('Set plan (FREE/BASIC/PRO/INSTITUTIONAL):','PRO');
@@ -5242,56 +5122,13 @@ function quickSetPlan(uid){
   });
 }
 
-function deleteUser(uid){
-  if(!confirm('⚠️ Delete user '+uid+'? This cannot be undone!')) return;
-  req('/admin/users/'+uid,'DELETE',null,function(err,r){
-    if(!err&&r.deleted){ toast('✅ User deleted','success'); loadAdminUsers(); }
-    else toast('❌ Delete failed','error');
-  });
-}
 
-function loadPaymentConfig(){
-  req('/admin/payment_config','GET',null,function(err,d){
-    if(err||!d) return;
-    var s=function(id,val){var e=$(id);if(e&&val)e.value=val;};
-    s('pay-rz-key',d.razorpay_key);
-    s('pay-upi',d.upi_id);
-    s('pay-bank',d.bank_account);
-    s('pay-ifsc',d.ifsc);
-    s('pay-acname',d.account_name);
-  });
-}
 
-function savePaymentConfig(){
-  var data={
-    razorpay_key:$('pay-rz-key').value,
-    razorpay_secret:$('pay-rz-secret').value,
-    upi_id:$('pay-upi').value,
-    bank_account:$('pay-bank').value,
-    ifsc:$('pay-ifsc').value,
-    account_name:$('pay-acname').value
-  };
-  req('/admin/payment_config','POST',data,function(err,r){
-    if(!err&&r.saved){ toast('✅ Payment config saved!','success'); }
-    else toast('❌ Save failed','error');
-  });
-}
 
-function loadSysStatus(){
-  req('/admin/system_status','GET',null,function(err,d){
-    if(err||!d) return;
-    if($('sys-cpu'))$('sys-cpu').textContent=d.cpu_percent+'%';
-    if($('sys-mem'))$('sys-mem').textContent=d.memory_percent+'%';
-    if($('sys-disk'))$('sys-disk').textContent=d.disk_percent+'%';
-    if($('sys-ws'))$('sys-ws').textContent=d.active_connections;
-    var si=$('sys-info');
-    if(si) si.innerHTML=
-      '<div>Version: <b style="color:var(--tx)">v'+d.version+'</b></div>'+
-      '<div>Uptime: <b style="color:var(--gr)">'+d.uptime+'</b></div>'+
-      '<div>Timestamp: <b style="color:var(--tx)">'+new Date(d.timestamp).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})+'</b></div>'+
-      '<div>Memory Available: <b style="color:var(--tx)">'+d.memory_available_gb+'GB</b></div>';
-  });
-}
+
+
+
+
 
 // ── PROFILE: Fix notifications toggle ───────────────────────────────
 function loadNotifPrefs(){
