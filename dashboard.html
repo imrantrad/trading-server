@@ -7222,4 +7222,29 @@ function copyNLPText(){
     _showCopyModal(text);
   }
 }
+
+function saveStratSmart(){
+  var aiParse = document.getElementById('nlp-ai-parse');
+  if(aiParse && aiParse.checked){
+    // AI MODE: Parse first then save
+    nlpParseAndFill(function(){
+      saveStrat();
+    });
+  } else {
+    // AS-IS MODE: Save exactly what was typed
+    saveStrat();
+  }
+}
+
+// Toggle label
+document.addEventListener('DOMContentLoaded', function(){
+  var cb = document.getElementById('nlp-ai-parse');
+  var lbl = document.getElementById('nlp-ai-label');
+  if(cb && lbl){
+    cb.onchange = function(){
+      lbl.textContent = cb.checked ? 'ON — AI Will Modify' : 'OFF — Save As-Is';
+      lbl.style.color = cb.checked ? 'var(--am)' : 'var(--mu)';
+    };
+  }
+});
 </script>
