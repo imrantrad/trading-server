@@ -15,7 +15,7 @@ body{background:var(--bg);color:var(--tx);font-family:monospace;min-height:100vh
 .tab{padding:10px 14px;font-size:10px;letter-spacing:.5px;cursor:pointer;border:none;background:none;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
 .tab.active{color:var(--gr);border-bottom-color:var(--gr)}
 .main{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;-webkit-overflow-scrolling:touch}
-.pnl{display:none;flex-direction:column;padding:8px}.pnl.active{display:flex;flex-direction:column;align-items:stretch}
+.pnl{display:none;flex-direction:column;padding:8px}.pnl.active{display:flex!important;flex-direction:column;align-items:stretch}
 .pnl.active{display:flex}
 .card{background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px}
 .chdr{font-size:8px;color:var(--mu);letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
@@ -776,7 +776,7 @@ setInterval(function(){
     <div class="dot" id="api-dot" style="background:var(--am)"></div>
     <span style="font-size:8px;color:var(--mu)" id="api-lbl">CONNECTING</span>
     <button class="btn br" id="kill-btn" onclick="toggleKill()" style="padding:3px 8px">KILL</button>
-    <button onclick="show('prof',null)" class="btn" onclick="show('prof',null)" style="padding:3px 10px;background:#160a28;border-color:var(--pu);color:var(--pu);font-size:9px">👤 PROFILE</button>
+    <button onclick="show('prof',null)" style="padding:3px 10px;background:#160a28;border-color:var(--pu);color:var(--pu);font-size:9px;border:1px solid;border-radius:4px;cursor:pointer">👤 PROFILE</button>
     
   </div>
 </div>
@@ -7091,7 +7091,7 @@ function adminTab(tab,btn){
   if(tab==='dash') loadAdminDash();
   if(tab==='users') loadAdminUsers();
   if(tab==='pay') loadPaymentConfig();
-  if(tab==='sys') loadSysStatus(); if(tab==='ref') loadAdminReferral();
+  if(tab==='sys') loadSysStatus(); if(tab==='ref'){ setTimeout(loadAdminReferral, 100); }
   if(tab==='analytics') loadAdminAnalytics();
   if(tab==='notifs') {} // static UI
 }
