@@ -597,6 +597,15 @@ function loginSuccess(user, isNew){
     if(typeof loadPrices === 'function') loadPrices();
     if(typeof loadPos === 'function') loadPos();
   }, 1000);
+  
+  // Show default panel after login
+  setTimeout(function(){
+    try{
+      var lastTab = localStorage.getItem('trd_last_tab') || 'trade';
+      if(['paper','livepos'].indexOf(lastTab) >= 0) lastTab = 'trade';
+      show(lastTab, null);
+    }catch(e){ show('trade', null); }
+  }, 400);
 }
 
 function showLoginError(msg){
