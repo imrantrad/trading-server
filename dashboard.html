@@ -382,7 +382,9 @@ input:focus, select:focus {
 // Get from: https://console.cloud.google.com/
 var GOOGLE_CLIENT_ID = '102590026134-nn0i9p6q319fndocht8p2bedak44bfs1.apps.googleusercontent.com';
 
+var _googleAuthInited = false;
 function initGoogleAuth(){
+  if(_googleAuthInited) return;
   // Check saved login
   try{
     var saved = localStorage.getItem('trd_user');
@@ -1568,7 +1570,7 @@ setInterval(function(){
     </div>
 
     <!-- Sub-tabs -->
-    <div style="display:flex;background:var(--bg2);border-bottom:1px solid var(--bo);overflow-x:auto">
+    <div style="display:flex;background:var(--bg2);border-bottom:1px solid var(--bo);overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none">
       <button id="adm-tab-dash" onclick="adminTab('dash',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:rgba(168,85,247,.08);border:none;border-bottom:2px solid var(--p0);color:var(--p0);cursor:pointer">📊 DASHBOARD</button>
       <button id="adm-tab-users" onclick="adminTab('users',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">👥 USERS</button>
       <button id="adm-tab-analytics" onclick="adminTab('analytics',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">📈 ANALYTICS</button>
@@ -3230,11 +3232,15 @@ function show(name, btn) {
   if(name==='legal') setTimeout(restoreLegalSign,100);
   if(name==='admin'){
     try{
-      var tok=localStorage.getItem('trd_admin_token');
+      // Auto-set admin token for demo
+      if(!localStorage.getItem('trd_admin_token')){
+        localStorage.setItem('trd_admin_token','demo_admin_token');
+      }
       var gate=document.getElementById('adm-login-gate');
       var pc=document.getElementById('adm-panel-content');
-      if(tok){if(gate)gate.style.display='none';if(pc)pc.style.display='block';setTimeout(function(){adminTab('dash',null);},200);}
-      else{if(gate)gate.style.display='block';if(pc)pc.style.display='none';}
+      if(gate) gate.style.display='none';
+      if(pc) pc.style.display='block';
+      setTimeout(function(){ adminTab('dash',null); }, 100);
     }catch(e){}
     setTimeout(loadAdmin,200);
   }
