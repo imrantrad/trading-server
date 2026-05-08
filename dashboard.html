@@ -3193,22 +3193,26 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 function show(name, btn) {
   try{ localStorage.setItem('trd_last_tab',name); }catch(e){}
   
-  // Hide ALL panels with direct style
+  // Hide ALL panels
   document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
     p.classList.remove('active');
-    p.style.cssText = (p.id==='pnl-admin'?'padding:0;':'') + 'display:none!important';
+    p.style.display = 'none';
   });
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   
-  // Show target panel
+  // Show target panel - clear !important first
   var p = document.getElementById('pnl-'+name);
   if(p){
     p.classList.add('active');
+    // MUST clear cssText before setting display (overrides !important)
     p.style.cssText = '';
-    p.style.display = 'block';
-    if(name==='prof') p.style.cssText = 'display:block;padding:0;background:var(--bg)';
-    if(name==='admin') p.style.cssText = 'display:block;padding:0';
-    p.scrollTop = 0;
+    p.style.removeProperty('display');
+    setTimeout(function(){
+      if(name==='prof') p.style.cssText='display:block!important;padding:0;background:var(--bg)';
+      else if(name==='admin') p.style.cssText='display:block!important;padding:0';
+      else p.style.cssText='display:block!important;padding:8px';
+      p.scrollTop=0;
+    },10);
   }
   var m=document.querySelector('.main'); if(m) m.scrollTop=0;
   
