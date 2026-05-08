@@ -7970,7 +7970,7 @@ function loadAdminReferral(){
         +'<div style="background:var(--bg3);border-radius:6px;padding:6px;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--bl)">₹'+(c.total_discount_given||0)+'</div><div style="font-size:8px;color:var(--mu)">Discount</div></div>'
         +'</div>'
         +'<div style="font-size:9px;color:var(--mu);margin-bottom:6px">Expires: '+c.expires_at+' | Bonus/use: ₹'+c.bonus_amount+' | Discount/use: ₹'+c.discount_amount+'</div>'
-        +(active?'<button onclick="this.dataset.code=''+c.code+''; deactivateRefCode(this)" data-code="'+c.code+'" style="width:100%;font-size:10px;padding:6px;background:rgba(255,51,51,.1);border:1px solid rgba(255,51,51,.3);color:var(--rd);border-radius:6px;cursor:pointer">🚫 Deactivate</button>':'<div style="text-align:center;font-size:9px;color:var(--rd)">Deactivated</div>')
+        +(active?'<button data-code="'+c.code+'" onclick="deactivateRefCode(this)" style="width:100%;font-size:10px;padding:6px;background:rgba(255,51,51,.1);border:1px solid rgba(255,51,51,.3);color:var(--rd);border-radius:6px;cursor:pointer">Deactivate</button>' : '<div style="text-align:center;font-size:9px;color:var(--rd)">Deactivated</div>')
         +'</div>';
     }).join('');
   });
