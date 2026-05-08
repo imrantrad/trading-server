@@ -3191,54 +3191,49 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 
 // PANELS
 function show(name, btn) {
-  try{ localStorage.setItem('trd_last_tab', name); }catch(e){}
+  try{ localStorage.setItem('trd_last_tab',name); }catch(e){}
   
-  // Scroll to top
-  var m = document.querySelector('.main');
-  if(m) m.scrollTop = 0;
-  
-  // Hide ALL panels
-  document.querySelectorAll('.pnl').forEach(function(p){
+  // Hide ALL panels with direct style
+  document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
     p.classList.remove('active');
-    p.removeAttribute('style');
+    p.style.cssText = (p.id==='pnl-admin'?'padding:0;':'') + 'display:none!important';
   });
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   
-  // Show ONLY target panel
-  var p = $('pnl-'+name);
-  if(p){ p.removeAttribute('style'); p.classList.add('active'); }
-  if(btn && btn.classList) btn.classList.add('active');
-  
-  // Auto-highlight matching tab if btn not passed
-  if(!btn){
-    document.querySelectorAll('.tab').forEach(function(t){
-      if(t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'"+name+"'") >= 0){
-        t.classList.add('active');
-      }
-    });
+  // Show target panel
+  var p = document.getElementById('pnl-'+name);
+  if(p){
+    p.classList.add('active');
+    p.style.cssText = '';
+    p.style.display = 'block';
+    if(name==='prof') p.style.cssText = 'display:block;padding:0;background:var(--bg)';
+    if(name==='admin') p.style.cssText = 'display:block;padding:0';
+    p.scrollTop = 0;
   }
+  var m=document.querySelector('.main'); if(m) m.scrollTop=0;
   
-  // Load data for panel
-  if(name==='pos')loadPos();
-  if(name==='risk')loadRisk();
-  if(name==='jnl'){loadTrades();loadJnlStats();}
-  if(name==='ai'){loadAIEngineAll();}
-  if(name==='legal'){ setTimeout(restoreLegalSign,100); }
+  if(btn && btn.classList) btn.classList.add('active');
+  else document.querySelectorAll('.tab').forEach(function(t){
+    if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'"+name+"'")>=0) t.classList.add('active');
+  });
+  
+  // Load data
+  if(name==='pos') loadPos();
+  if(name==='risk') loadRisk();
+  if(name==='jnl'){ loadTrades(); loadJnlStats(); }
+  if(name==='ai') setTimeout(function(){loadAIStatus();loadMLStatus();},200);
+  if(name==='legal') setTimeout(restoreLegalSign,100);
+  if(name==='prof') setTimeout(loadProfStats,100);
   if(name==='admin'){
-    // Admin: check token
     try{
       var tok=localStorage.getItem('trd_admin_token');
-      if(tok){
-        var gate=document.getElementById('adm-login-gate');
-        var panel=document.getElementById('adm-panel-content');
-        if(gate) gate.style.display='none';
-        if(panel) panel.style.display='block';
-        setTimeout(function(){adminTab('dash',document.getElementById('adm-tab-dash'));},100);
-      }
+      var gate=document.getElementById('adm-login-gate');
+      var panel=document.getElementById('adm-panel-content');
+      if(tok){ if(gate) gate.style.display='none'; if(panel) panel.style.display='block'; setTimeout(function(){adminTab('dash',null);},100); }
+      else { if(gate) gate.style.display='block'; if(panel) panel.style.display='none'; }
     }catch(e){}
-    loadAdmin();
+    setTimeout(loadAdmin,100);
   }
-  if(name==='prof')loadProfStats();
 }
 
 // STATS
@@ -7020,7 +7015,7 @@ function adminTab(tab,btn){
   if(tab==='dash') loadAdminDash();
   if(tab==='users') loadAdminUsers();
   if(tab==='pay') loadPaymentConfig();
-  if(tab==='sys') loadSysStatus(); if(tab==='ref'){ setTimeout(loadAdminReferral, 200); }
+  if(tab==='sys') loadSysStatus(); if(tab==='ref'){ loadAdminReferral(); }
   if(tab==='analytics') loadAdminAnalytics();
   if(tab==='notifs') {} // static UI
 }
