@@ -1902,20 +1902,26 @@ setInterval(function(){
         </div>
       </div>
     
-<div id="adm-ref" style="display:none">
-  <div id="ref-stats"></div>
+<div id="adm-ref" style="display:none;padding:12px">
+  <!-- Stats -->
+  <div id="ref-stats" style="margin-bottom:12px"></div>
   
-  <div class="card" style="margin-bottom:8px">
-    <div class="chdr">✨ CODE BANAO</div>
-    <div class="g2" style="gap:6px;margin-bottom:6px">
-      <div><div class="lbl">User ID</div><input id="ref-user-id" placeholder="USR123..." style="font-size:11px"></div>
-      <div><div class="lbl">Email</div><input id="ref-email" placeholder="user@email.com" style="font-size:11px"></div>
+  <!-- Create Code Form -->
+  <div style="background:var(--bg3);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:14px;margin-bottom:12px">
+    <div style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:10px">✨ REFERRAL CODE BANAO</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div><div style="font-size:9px;color:var(--mu);margin-bottom:3px">USER ID</div>
+        <input id="ref-user-id" placeholder="USR123..." style="width:100%;font-size:11px"></div>
+      <div><div style="font-size:9px;color:var(--mu);margin-bottom:3px">EMAIL</div>
+        <input id="ref-email" placeholder="user@email.com" style="width:100%;font-size:11px"></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
-      <div><div class="lbl">Bonus (₹)</div><input id="ref-bonus" type="number" value="500" style="font-size:11px"></div>
-      <div><div class="lbl">Discount (₹)</div><input id="ref-discount" type="number" value="200" style="font-size:11px"></div>
-      <div><div class="lbl">Validity</div>
-        <select id="ref-validity" style="font-size:11px;width:100%;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);padding:6px;border-radius:6px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <div><div style="font-size:9px;color:var(--mu);margin-bottom:3px">BONUS (₹)</div>
+        <input id="ref-bonus" type="number" value="500" style="width:100%;font-size:11px"></div>
+      <div><div style="font-size:9px;color:var(--mu);margin-bottom:3px">DISCOUNT (₹)</div>
+        <input id="ref-discount" type="number" value="200" style="width:100%;font-size:11px"></div>
+      <div><div style="font-size:9px;color:var(--mu);margin-bottom:3px">VALIDITY</div>
+        <select id="ref-validity" style="width:100%;font-size:11px;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);padding:6px;border-radius:6px">
           <option value="30">1 Month</option>
           <option value="60">2 Months</option>
           <option value="90">3 Months</option>
@@ -1923,13 +1929,17 @@ setInterval(function(){
         </select>
       </div>
     </div>
-    <button onclick="createReferralCode()" class="btn bg blg" style="width:100%;font-size:11px">🎁 REFERRAL CODE BANAO</button>
-    <div id="new-code-display" style="display:none;margin-top:8px"></div>
+    <button onclick="createReferralCode()" style="width:100%;padding:10px;background:var(--gr);color:#000;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🎁 CODE BANAO</button>
+    <div id="new-code-display" style="margin-top:10px"></div>
   </div>
   
-  <div class="card">
-    <div class="chdr">📋 ACTIVE CODES <button onclick="loadAdminReferral()" class="btn ba" style="font-size:9px;padding:2px 6px">↻ Refresh</button></div>
-    <div id="ref-code-list"><div style="color:var(--mu);text-align:center;padding:16px"><div style="font-size:20px;margin-bottom:6px">⏳</div>Loading...</div></div>
+  <!-- Active Codes -->
+  <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:10px;padding:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700">📋 ACTIVE CODES</div>
+      <button onclick="loadAdminReferral()" style="font-size:10px;padding:4px 10px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:6px;cursor:pointer">↻ Refresh</button>
+    </div>
+    <div id="ref-code-list"><div style="text-align:center;color:var(--am);padding:16px;font-size:11px">⏳ Loading...</div></div>
   </div>
 </div>
 
@@ -4311,14 +4321,28 @@ var SYM_BASE = {
 };
 
 function openChart(sym) {
-  chartSym = sym || 'NIFTY';
-  $('chart-modal').style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  document.querySelectorAll('.sym-btn').forEach(function(b){ b.classList.remove('active'); });
-  var sb = $('sym-'+chartSym);
-  if(sb) sb.classList.add('active');
-  setTimeout(function(){ initChart(); loadChartData(); }, 100);
+  sym = sym || window.INST || 'NIFTY';
+  chartSym = sym;
+  var modal = document.getElementById('chart-modal');
+  if(modal) { modal.style.display='flex'; document.body.style.overflow='hidden'; }
+  
+  // Try LightweightCharts first
+  setTimeout(function(){
+    try {
+      initChart();
+      loadChartData();
+    } catch(e) {
+      // Fallback: embed TradingView widget
+      var container = document.getElementById('chart-container');
+      if(!container) return;
+      var tvSym = sym === 'BANKNIFTY' ? 'NSE:BANKNIFTY' : 
+                  sym === 'FINNIFTY' ? 'NSE:CNXFINANCE' :
+                  sym === 'SENSEX' ? 'BSE:SENSEX' : 'NSE:NIFTY';
+      container.innerHTML = '<iframe src="https://www.tradingview.com/widgetembed/?frameElementId=tv_chart&symbol='+tvSym+'&interval=15&theme=dark&style=1&locale=in&toolbar_bg=%230d0e14&enable_publishing=false&hide_legend=false&save_image=false&utm_source=trd" style="width:100%;height:100%;border:none;"></iframe>';
+    }
+  }, 200);
 }
+
 
 function closeChart() {
   $('chart-modal').style.display = 'none';
