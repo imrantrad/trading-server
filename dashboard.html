@@ -3228,7 +3228,7 @@ function show(name, btn) {
   if(name==='pos') loadPos();
   if(name==='risk') loadRisk();
   if(name==='jnl'){loadTrades();loadJnlStats();}
-  if(name==='prof') setTimeout(loadProfStats,100);
+  if(name==='prof') setTimeout(function(){if(typeof loadProfStats==="function")loadProfStats();},100);
   if(name==='legal') setTimeout(restoreLegalSign,100);
   if(name==='admin'){
     try{
@@ -3242,7 +3242,7 @@ function show(name, btn) {
       if(pc) pc.style.display='block';
       setTimeout(function(){ adminTab('dash',null); }, 100);
     }catch(e){}
-    setTimeout(loadAdmin,200);
+    setTimeout(function(){if(typeof loadAdmin==="function")loadAdmin();},200);
   }
 }
 
@@ -4193,9 +4193,9 @@ function fallbackToPolling() {
   loadMkt();
   
   // ── STEP 7: Delayed tasks ──
-  setTimeout(loadBrokerStatus, 2000);
-  setTimeout(loadAutoExecConfig, 2500);
-  setTimeout(loadStrategyRegistry, 3000);
+  setTimeout(function(){if(typeof loadBrokerStatus==="function")loadBrokerStatus();}, 2000);
+  setTimeout(function(){ if(typeof loadAutoExecConfig==='function') loadAutoExecConfig(); }, 2500);
+  setTimeout(function(){ if(typeof loadStrategyRegistry==='function') loadStrategyRegistry(); }, 3000);
   // NOTE: loadUIConfig removed from auto-run (was causing paper test switch)
   
   setInterval(function(){
@@ -5797,7 +5797,7 @@ function executeAdvPaper(){
     }
     if(status) status.innerHTML='<span style="color:var(--gr)">✅ '+r.legs_executed+' legs executed | Group: '+r.group_id+'</span>';
     toast('✅ '+strategy+' executed - '+r.legs_executed+' legs!','success');
-    setTimeout(loadAdvSummary, 500);
+    setTimeout(function(){if(typeof loadAdvSummary==="function")loadAdvSummary();}, 500);
   });
 }
 
@@ -6467,7 +6467,7 @@ function aiTab(tab, btn){
     }
   });
   if(tab==='strategies'){ loadAIStrats('approved'); loadAIStatus(); }
-  if(tab==='autoexec') loadAutoExecConfig();
+  if(tab==='autoexec' && typeof loadAutoExecConfig==='function') loadAutoExecConfig();
   if(tab==='regime') detectRegime();
 }
 
@@ -7961,7 +7961,7 @@ function createReferralCode(){
         +'<div style="font-size:9px;color:var(--am);margin-top:4px">Share this code with user: '+(d.owner||'')+'</div>'
         +'</div>';
     }
-    setTimeout(loadAdminReferral, 500);
+    setTimeout(function(){if(typeof loadAdminReferral==="function")loadAdminReferral();}, 500);
   });
 }
 
