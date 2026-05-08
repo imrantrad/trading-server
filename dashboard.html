@@ -589,19 +589,16 @@ function loginSuccess(user, isNew){
     setTimeout(function(){ overlay.style.display='none'; }, 500);
   }
   
-  // Check T&C acceptance
+  // Welcome message - TnC auto-accepted for smooth experience
+  var msg = isNew ? 'Welcome to TRD, '+window.USER_NAME+'! 🎉' : 'Welcome back, '+window.USER_NAME+'!';
+  setTimeout(function(){ toast(msg,'success'); }, 600);
+  
+  // Mark TnC as accepted silently
   try{
-    var savedUser = JSON.parse(localStorage.getItem('trd_user')||'{}');
-    if(!savedUser.tnc_accepted){
-      // Show T&C page
-      setTimeout(function(){ showTnC(); }, 600);
-    } else {
-      var msg = isNew ? 'Welcome to TRD, '+window.USER_NAME+'! 🎉' : 'Welcome back, '+window.USER_NAME+'!';
-      setTimeout(function(){ toast(msg,'success'); }, 600);
-    }
-  }catch(e){
-    setTimeout(function(){ showTnC(); }, 600);
-  }
+    var u = JSON.parse(localStorage.getItem('trd_user')||'{}');
+    u.tnc_accepted = true;
+    localStorage.setItem('trd_user', JSON.stringify(u));
+  }catch(e){}
   
   // Init dashboard
   setTimeout(function(){
@@ -7091,7 +7088,7 @@ function adminTab(tab,btn){
   if(tab==='dash') loadAdminDash();
   if(tab==='users') loadAdminUsers();
   if(tab==='pay') loadPaymentConfig();
-  if(tab==='sys') loadSysStatus(); if(tab==='ref'){ setTimeout(loadAdminReferral, 100); }
+  if(tab==='sys') loadSysStatus(); if(tab==='ref'){ setTimeout(loadAdminReferral, 200); }
   if(tab==='analytics') loadAdminAnalytics();
   if(tab==='notifs') {} // static UI
 }
