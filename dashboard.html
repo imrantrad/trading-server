@@ -15,7 +15,7 @@ body{background:var(--bg);color:var(--tx);font-family:monospace;min-height:100vh
 .tab{padding:10px 14px;font-size:10px;letter-spacing:.5px;cursor:pointer;border:none;background:none;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
 .tab.active{color:var(--gr);border-bottom-color:var(--gr)}
 .main{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;-webkit-overflow-scrolling:touch}
-.pnl{display:none;flex-direction:column;padding:8px}.pnl.active{display:flex!important;flex-direction:column;align-items:stretch}
+.pnl{display:none;flex-direction:column;padding:8px}.pnl.active{display:block !important}.pnl.active{display:flex!important;flex-direction:column;align-items:stretch}
 .pnl.active{display:flex}
 .card{background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px}
 .chdr{font-size:8px;color:var(--mu);letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
@@ -3192,53 +3192,45 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 // PANELS
 function show(name, btn) {
   try{ localStorage.setItem('trd_last_tab',name); }catch(e){}
-  
-  // Hide ALL panels
-  document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
-    p.classList.remove('active');
-    p.style.display = 'none';
-  });
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  
-  // Show target panel - clear !important first
-  var p = document.getElementById('pnl-'+name);
-  if(p){
-    p.classList.add('active');
-    // MUST clear cssText before setting display (overrides !important)
-    p.style.cssText = '';
-    p.style.removeProperty('display');
-    setTimeout(function(){
-      if(name==='prof') p.style.cssText='display:block!important;padding:0;background:var(--bg)';
-      else if(name==='admin') p.style.cssText='display:block!important;padding:0';
-      else p.style.cssText='display:block!important;padding:8px';
-      p.scrollTop=0;
-    },10);
-  }
   var m=document.querySelector('.main'); if(m) m.scrollTop=0;
   
-  if(btn && btn.classList) btn.classList.add('active');
-  else document.querySelectorAll('.tab').forEach(function(t){
-    if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'"+name+"'")>=0) t.classList.add('active');
+  // Hide all
+  document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
+    p.classList.remove('active');
+    p.style.display='';
   });
+  document.querySelectorAll('.tab,.tab-btn').forEach(function(t){t.classList.remove('active');});
   
-  // Load data
+  // Show target
+  var p=document.getElementById('pnl-'+name);
+  if(p){ 
+    p.classList.add('active');
+    p.style.cssText='display:block !important';
+    if(name==='prof') p.style.cssText='display:block !important;padding:0;background:var(--bg)';
+    if(name==='admin') p.style.cssText='display:block !important;padding:0';
+  }
+  if(btn&&btn.classList) btn.classList.add('active');
+  else{document.querySelectorAll('.tab').forEach(function(t){
+    if((t.getAttribute('onclick')||'').indexOf("'"+name+"'")>=0)t.classList.add('active');
+  });}
+  
   if(name==='pos') loadPos();
   if(name==='risk') loadRisk();
-  if(name==='jnl'){ loadTrades(); loadJnlStats(); }
-  if(name==='ai') setTimeout(function(){loadAIStatus();loadMLStatus();},200);
-  if(name==='legal') setTimeout(restoreLegalSign,100);
+  if(name==='jnl'){loadTrades();loadJnlStats();}
   if(name==='prof') setTimeout(loadProfStats,100);
+  if(name==='legal') setTimeout(restoreLegalSign,100);
   if(name==='admin'){
     try{
       var tok=localStorage.getItem('trd_admin_token');
       var gate=document.getElementById('adm-login-gate');
-      var panel=document.getElementById('adm-panel-content');
-      if(tok){ if(gate) gate.style.display='none'; if(panel) panel.style.display='block'; setTimeout(function(){adminTab('dash',null);},100); }
-      else { if(gate) gate.style.display='block'; if(panel) panel.style.display='none'; }
+      var pc=document.getElementById('adm-panel-content');
+      if(tok){if(gate)gate.style.display='none';if(pc)pc.style.display='block';setTimeout(function(){adminTab('dash',null);},200);}
+      else{if(gate)gate.style.display='block';if(pc)pc.style.display='none';}
     }catch(e){}
-    setTimeout(loadAdmin,100);
+    setTimeout(loadAdmin,200);
   }
 }
+
 
 // STATS
 function loadStats() {
@@ -4154,13 +4146,12 @@ function fallbackToPolling() {
   
   // Show the target panel
   function _showStartupPanel(){
-    var tp2 = document.getElementById('pnl-'+lastTab);
-    if(tp2){ tp2.classList.add('active'); }
+    show(lastTab, null);
   }
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', _showStartupPanel);
   } else {
-    _showStartupPanel();
+    setTimeout(_showStartupPanel, 50);
   }
   
   // Highlight matching tab button
