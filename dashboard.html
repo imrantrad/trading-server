@@ -375,9 +375,10 @@ input:focus, select:focus {
 
 /* DEFINITIVE PANEL RULES - DO NOT OVERRIDE */
 [id^="pnl-"] { display: none !important; }
-[id^="pnl-"].active { display: block !important; }
+[id^="pnl-"].active { display: block !important; min-height: 100%; }
 #pnl-prof.active { display: block !important; padding: 0 !important; background: var(--bg) !important; }
 #pnl-admin.active { display: block !important; padding: 0 !important; }
+.main { overflow-y: auto !important; }
 </style>
 <script>
 // ══════════════════════════════════════════════════════
@@ -1848,7 +1849,7 @@ setInterval(function(){
         </div>
       </div>
     
-<div id="adm-ref" style="display:none;padding:12px">
+<div id="adm-ref" style="display:none;padding:12px;overflow-y:auto;max-height:calc(100vh - 200px)">
   <!-- Stats -->
   <div id="ref-stats" style="margin-bottom:12px"></div>
   
@@ -4078,8 +4079,8 @@ function connectWS() {
     var wsProto = 'wss';
     var wsHost = API.replace('https://','').replace('http://','');
     var wsUrl = wsProto + '://' + wsHost + '/ws/live';
-    
-    wsConn = new WebSocket(wsUrl);
+    // WebSocket disabled on Cloudflare tunnel
+    return; // wsConn = new WebSocket(wsUrl);
     
     wsConn.onopen = function() {
       wsRetries = 0;
