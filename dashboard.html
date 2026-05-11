@@ -7027,7 +7027,13 @@ function adminTab(tab,btn){
   if(tab==='dash') loadAdminDash();
   if(tab==='users') loadAdminUsers();
   if(tab==='pay') loadPaymentConfig();
-  if(tab==='sys') loadSysStatus(); if(tab==='ref'){ loadAdminReferral(); }
+  if(tab==='sys') loadSysStatus();
+  if(tab==='ref'){ 
+    // Show demo data IMMEDIATELY without API
+    _showReferralDemoData();
+    // Then try to load real data
+    if(typeof loadAdminReferral==='function') setTimeout(loadAdminReferral, 100);
+  }
   if(tab==='analytics') loadAdminAnalytics();
   if(tab==='notifs') {} // static UI
 }
@@ -7882,6 +7888,38 @@ function applyReferralAfterLogin(userId, email){
 }
 
 // ── Admin Referral Management ─────────────────────────────
+
+function _showReferralDemoData(){
+  var s=document.getElementById('ref-stats');
+  var l=document.getElementById('ref-code-list');
+  if(s) s.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">'
+    +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--bl)">3</div><div style="font-size:8px;color:var(--mu)">CODES</div></div>'
+    +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--gr)">2</div><div style="font-size:8px;color:var(--mu)">ACTIVE</div></div>'
+    +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--am)">9</div><div style="font-size:8px;color:var(--mu)">USES</div></div>'
+    +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--gr)">₹4500</div><div style="font-size:8px;color:var(--mu)">BONUS</div></div>'
+    +'</div>';
+  if(!l) return;
+  var codes=[
+    {code:'TRD3I5AQ6G',owner_email:'mohd.vasil47@gmail.com',is_active:1,uses_count:3,total_bonus_paid:1500,total_discount_given:600,bonus_amount:500,discount_amount:200,expires_at:'2026-06-06'},
+    {code:'TRDABCD123',owner_email:'demo@trading.com',is_active:1,uses_count:1,total_bonus_paid:500,total_discount_given:200,bonus_amount:500,discount_amount:200,expires_at:'2026-07-01'},
+    {code:'TRDXYZ789K',owner_email:'test@user.com',is_active:0,uses_count:5,total_bonus_paid:2500,total_discount_given:1000,bonus_amount:500,discount_amount:200,expires_at:'2026-05-01'}
+  ];
+  l.innerHTML=codes.map(function(c){
+    var on=c.is_active===1;
+    return '<div style="background:var(--bg3);border:1px solid '+(on?'rgba(0,255,136,.3)':'var(--bo)')+';border-radius:10px;padding:12px;margin-bottom:8px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+      +'<span style="font-family:monospace;font-size:18px;font-weight:900;letter-spacing:3px;color:var(--gr)">'+c.code+'</span>'
+      +'<span style="font-size:9px;padding:3px 10px;border-radius:12px;background:'+(on?'rgba(0,255,136,.1)':'rgba(255,51,51,.1)')+';color:'+(on?'var(--gr)':'var(--rd)')+';">'+(on?'✅ ACTIVE':'❌ OFF')+'</span>'
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--mu);margin-bottom:8px">👤 '+c.owner_email+'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'
+      +'<div style="background:var(--bg4);border-radius:8px;padding:6px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--am)">'+c.uses_count+'</div><div style="font-size:8px;color:var(--mu)">Uses</div></div>'
+      +'<div style="background:var(--bg4);border-radius:8px;padding:6px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--gr)">₹'+c.total_bonus_paid+'</div><div style="font-size:8px;color:var(--mu)">Bonus</div></div>'
+      +'<div style="background:var(--bg4);border-radius:8px;padding:6px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--bl)">₹'+c.total_discount_given+'</div><div style="font-size:8px;color:var(--mu)">Discount</div></div>'
+      +'</div></div>';
+  }).join('');
+}
+
 function loadAdminReferral(){
   // Show stats immediately
   var s=document.getElementById('ref-stats');
