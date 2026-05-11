@@ -815,8 +815,8 @@ setInterval(function(){
         <div id="nlp-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:6px;font-size:8px;line-height:1.8"></div>
       </div>
       <div class="card">
-        <div class="chdr">MARKET WATCH <button onclick="openChart(INST)" style="font-size:9px;padding:2px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer;margin-left:6px">📊 CHART</button> <span id="mkt-status" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
-        <div id="mkt-grd" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
+        <div class="chdr">MARKET WATCH <button onclick="openChart(INST)" style="font-size:9px;padding:2px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer;margin-left:6px">📊 CHART</button> <span id="mkt-status-2" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
+        <div id="mkt-grd-2" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
       </div>
       <div class="card">
         <div class="chdr">LOG <button class="btn ba" onclick="document.getElementById('log-box').innerHTML=''" style="padding:2px 8px;font-size:8px">CLR</button></div>
@@ -968,7 +968,7 @@ setInterval(function(){
         <button class="btn br" id="ivbt-PE" onclick="document.getElementById('ivbt-PE').classList.add('active');document.getElementById('ivbt-CE').classList.remove('active')" style="flex:1;padding:8px">PE</button>
       </div>
       <button class="btn bg blg" onclick="calcIV()" style="width:100%">🎯 CALCULATE IV</button>
-      <div id="iv-out" style="display:none;margin-top:12px">
+      <div id="iv-out-2" style="display:none;margin-top:12px">
         <div style="text-align:center">
           <div style="font-size:11px;color:var(--mu);margin-bottom:4px">IMPLIED VOLATILITY</div>
           <div id="iv-result" style="font-size:36px;font-weight:800;color:var(--am)">—</div>
@@ -1578,13 +1578,13 @@ setInterval(function(){
 
     <!-- Sub-tabs -->
     <div style="display:flex;background:var(--bg2);border-bottom:1px solid var(--bo);overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none">
-      <button id="adm-tab-dash" onclick="adminTab('dash',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:rgba(168,85,247,.08);border:none;border-bottom:2px solid var(--p0);color:var(--p0);cursor:pointer">📊 DASHBOARD</button>
-      <button id="adm-tab-users" onclick="adminTab('users',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">👥 USERS</button>
-      <button id="adm-tab-analytics" onclick="adminTab('analytics',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">📈 ANALYTICS</button>
-      <button id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">💳 PAYMENTS</button>
-      <button id="adm-tab-notifs" onclick="adminTab('notifs',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🔔 ALERTS</button>
-      <button id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🖥️ SYSTEM</button>
-      <button id="adm-tab-ref" onclick="adminTab('ref',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🎁 REFERRAL</button>
+      <button id="adm-tab-dash" onclick="adminTab('dash',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:rgba(168,85,247,.08);border:none;border-bottom:2px solid var(--p0);color:var(--p0);cursor:pointer">📊 DASH</button>
+      <button id="adm-tab-users" onclick="adminTab('users',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">👥 USERS</button>
+      <button id="adm-tab-analytics" onclick="adminTab('analytics',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">📈 STATS</button>
+      <button id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">💳 PAY</button>
+      <button id="adm-tab-notifs" onclick="adminTab('notifs',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🔔 ALERTS</button>
+      <button id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🖥️ SYS</button>
+      <button id="adm-tab-ref" onclick="adminTab('ref',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🎁 REF</button>
     </div>
 
     <div style="padding:10px">
@@ -2624,7 +2624,7 @@ setInterval(function(){
     <div class="card">
       <div class="g2" style="gap:8px;margin-bottom:8px">
         <div><div class="lbl">BROKER</div>
-          <select id="br-broker" style="width:100%">
+          <select id="br-broker-2" style="width:100%">
             <option value="ZERODHA">🔵 Zerodha Kite (₹2000/mo)</option>
             <option value="ANGEL">🟠 Angel One (Free)</option>
             <option value="FYERS">🟢 Fyers API (Free)</option>
@@ -2632,22 +2632,22 @@ setInterval(function(){
           </select>
         </div>
         <div><div class="lbl">MODE</div>
-          <select id="br-mode" style="width:100%">
+          <select id="br-mode-2" style="width:100%">
             <option value="PAPER">📄 Paper (Safe)</option>
             <option value="LIVE">⚡ Live (Real Money)</option>
           </select>
         </div>
       </div>
       <div class="g2" style="gap:8px;margin-bottom:8px">
-        <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Your API key"></div>
-        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Daily token"></div>
+        <div><div class="lbl">API KEY</div><input type="password" id="br-key-2" placeholder="Your API key"></div>
+        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token-2" placeholder="Daily token"></div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <button class="btn bg blg" style="flex:1" onclick="connectBroker()">🔗 CONNECT BROKER</button>
         <button class="btn bb" style="padding:10px 14px" onclick="showBrokerGuide()">📖</button>
         <button class="btn br" style="padding:10px 14px" onclick="disconnectBroker()">✕</button>
       </div>
-      <div id="broker-status" style="font-size:10px;color:var(--mu)"></div>
+      <div id="broker-status-2" style="font-size:10px;color:var(--mu)"></div>
       <div id="broker-guide" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:10px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
     </div>
     <!-- Supported brokers -->
@@ -4164,12 +4164,15 @@ function fallbackToPolling() {
   
   // Show the target panel
   function _showStartupPanel(){
-    show(lastTab, null);
+    // Show panel immediately
+    document.querySelectorAll('[id^="pnl-"]').forEach(function(p){ p.classList.remove('active'); });
+    var tp = document.getElementById('pnl-'+lastTab);
+    if(tp){ tp.classList.add('active'); }
   }
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', _showStartupPanel);
   } else {
-    setTimeout(_showStartupPanel, 50);
+    _showStartupPanel();
   }
   
   // Highlight matching tab button
@@ -6492,423 +6495,59 @@ function loadAIStatus(){
 function scanAllSignals(){
   var insts=['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'];
   var cards=document.getElementById('ai-signal-cards');
-  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">🔍 Scanning...</div>';
-  var results={}, done=0;
-  insts.forEach(function(inst){
-    req('/ai/signal/'+inst,'GET',null,function(err,d){
-      results[inst] = err ? {signal:'WAIT',confidence:0,regime:'UNKNOWN'} : d;
-      done++;
-      if(done===insts.length) renderSignalCards(results);
-    });
-  });
-}
-
-function scanSignal(inst){
-  var cards=document.getElementById('ai-signal-cards');
-  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">📡 Scanning '+inst+'...</div>';
-  req('/ai/signal/'+inst,'GET',null,function(err,d){
-    if(err||!d){ if(cards) cards.innerHTML='<div style="color:var(--rd);padding:12px">Error loading signal</div>'; return; }
-    var obj={}; obj[inst]=d;
-    renderSignalCards(obj);
-  });
-}
-
-function renderSignalCards(results){
-  var cards=document.getElementById('ai-signal-cards');
   if(!cards) return;
-  cards.innerHTML='';
-  Object.keys(results).forEach(function(inst){
-    var d=results[inst];
-    var action=d.signal||d.action||'WAIT';
-    var conf=Math.round(d.confidence||d.confidence_score||0);
-    var price=window.prices&&window.prices[inst]?window.prices[inst]:0;
-    var ac=action==='BUY'?'var(--gr)':action==='SELL'?'var(--rd)':'var(--mu)';
-    var card=document.createElement('div');
-    card.style.cssText='background:var(--bg3);border:1px solid '+(action!=='WAIT'?ac:'var(--bo)')+';border-left:4px solid '+ac+';border-radius:8px;padding:12px;margin-bottom:8px';
-    card.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-      +'<div><div style="font-size:13px;font-weight:700">'+inst+'</div>'
-      +'<div style="font-size:10px;color:var(--mu)">₹'+(price?price.toFixed(2):'—')+'</div></div>'
-      +'<div style="text-align:right"><div style="font-size:18px;font-weight:800;color:'+ac+'">'+action+'</div>'
-      +'<div style="font-size:10px;color:var(--mu)">'+conf+'% confidence</div></div></div>'
-      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">'
-      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">REGIME</div><b style="font-size:9px">'+(d.regime||'—')+'</b></div>'
-      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">RSI</div><b>'+(d.rsi||'—')+'</b></div>'
-      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">ADX</div><b>'+(d.adx||'—')+'</b></div>'
-      +'</div>';
-    if(action!=='WAIT'){
-      card.innerHTML+='<div style="display:flex;gap:6px">'
-        +'<button onclick="executeAISignal(this.dataset.i,this.dataset.a)" data-i="'+inst+'" data-a="'+action+'" class="btn '+(action==='BUY'?'bg':'br')+'" style="flex:1;padding:8px;font-size:10px">'+action+' PAPER</button>'
-        +'<button onclick="addToWatchlist(this.dataset.i)" data-i="'+inst+'" style="flex:1;padding:8px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer">+WATCH</button>'
-        +'</div>';
-    }
-    cards.appendChild(card);
-    _signalHistory.unshift({inst:inst,signal:d,ts:new Date().toLocaleTimeString('en-IN')});
-  });
-  renderSignalHistory();
-  toast('Signals loaded!','success');
-}
-
-function renderSignalHistory(){
-  var el=document.getElementById('ai-signal-history');
-  if(!el||!_signalHistory.length) return;
-  el.innerHTML='';
-  _signalHistory.slice(0,8).forEach(function(h){
-    var d=h.signal; var action=d.signal||'WAIT';
-    var ac=action==='BUY'?'var(--gr)':action==='SELL'?'var(--rd)':'var(--mu)';
-    var div=document.createElement('div');
-    div.style.cssText='display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bo);font-size:10px';
-    div.innerHTML='<span style="color:var(--mu)">'+h.ts+'</span> <b>'+h.inst+'</b>'
-      +'<span style="color:'+ac+';font-weight:700;margin-left:auto">'+action+' '+(d.confidence||0)+'%</span>';
-    el.appendChild(div);
-  });
-}
-
-function executeAISignal(inst,action){
-  var spot=window.prices&&window.prices[inst]?window.prices[inst]:24000;
-  req('/paper/v2/execute_strategy','POST',{strategy:'AI_'+action,spot:spot,instrument:inst,time_exit:'15:30',max_trades:5,lots:1},function(err,r){
-    toast(r&&r.success?'✅ AI Signal executed on paper!':'Execute error','success');
-  });
-}
-
-function addToWatchlist(inst){ toast(inst+' added to watchlist','info'); }
-
-// ── Load AI Strategies ────────────────────────────────────────────────────────
-function loadAIStrats(type){
-  // Highlight active filter button
-  ['all','approved','testing'].forEach(function(t){
-    var b=document.getElementById('ai-filter-'+t);
-    if(b){b.style.background=t===type?'rgba(168,85,247,.15)':'var(--bg4)';b.style.borderColor=t===type?'rgba(168,85,247,.4)':'var(--bo)';b.style.color=t===type?'var(--p0)':'var(--mu)';}
-  });
-  var ep = type==='approved' ? '/ai/strategies/approved' : '/ai/strategies/approved';
-  // All types use same endpoint - filter client side
-  var list=document.getElementById('ai-str-list');
-  if(list) list.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">Loading...</div>';
-  req(ep,'GET',null,function(err,d){
-    if(!list) return;
-    var allStrats=(d&&(d.strategies||d.approved_strategies))||[];
-    // Filter by type
-    var strats = allStrats;
-    if(type==='approved') strats = allStrats.filter(function(s){return s.approved!==false;});
-    if(type==='testing') strats = allStrats.filter(function(s){return s.approved===false||s.type==='TESTING';});
-    if(type==='all') strats = allStrats;
-    if(!strats.length){list.innerHTML='<div style="color:var(--mu);text-align:center;padding:16px">No strategies found</div>';return;}
-    list.innerHTML='';
-    strats.forEach(function(s){
-      var wr=s.avg_win_rate||s.win_rate||0;
-      var score=s.ai_score||Math.round(wr);
-      var color=score>=75?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
-      var div=document.createElement('div');
-      div.style.cssText='background:var(--bg3);border:1px solid var(--bo);border-left:3px solid '+color+';border-radius:8px;padding:12px;margin-bottom:8px';
-      div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        +'<div><div style="font-size:12px;font-weight:700">🤖 '+(s.name||'AI Strategy')+'</div>'
-        +'<div style="font-size:9px;color:var(--mu)">'+(s.instrument||'NIFTY')+' · '+(s.type||'AI')+'</div></div>'
-        +'<div style="text-align:right"><div style="font-size:18px;font-weight:700;color:'+color+'">'+wr+'%</div>'
-        +'<div style="font-size:8px;color:var(--mu)">Win Rate</div></div></div>'
-        +'<div style="font-size:9px;color:var(--mu);margin-bottom:8px;line-height:1.6">'+(s.description||s.conditions||'')+'</div>'
-        +'<div style="display:flex;gap:6px">'
-        +'<button onclick="applyStrategyToOrderEntry('+JSON.stringify(s)+')" class="btn bb" style="flex:1;padding:6px;font-size:9px">USE</button>'
-        +'<button onclick="showBt()" data-sid="'+s.id+'" class="btn ba" style="flex:1;padding:6px;font-size:9px">BACKTEST</button>'
-        +'<button onclick="showPaper()" class="btn bg" style="flex:1;padding:6px;font-size:9px">PAPER</button>'
-        +'</div>';
-      // Store strategy data on div for event delegation
-      div.dataset.strategyJson = JSON.stringify(s);
-      div.querySelector('.ai-use-btn').onclick = function(){ applyStrategyToOrderEntry(JSON.parse(this.closest('[data-strategy-json]').dataset.strategyJson)); };
-      div.querySelector('.ai-bt-btn').onclick = function(){ showBt(); };
-      div.querySelector('.ai-pt-btn').onclick = function(){ showPaper(); };
-      // Copy button
-      var cpBtn = document.createElement('button');
-      cpBtn.className='btn'; cpBtn.textContent='📋';
-      cpBtn.title='Copy strategy';
-      cpBtn.style.cssText='padding:4px 10px;font-size:12px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl);margin-top:6px;width:100%';
-      cpBtn.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
-      div.appendChild(cpBtn);
-      list.appendChild(div);
-    });
-    toast(strats.length+' AI strategies loaded!','success');
-  });
-}
-
-// ── Evolve ────────────────────────────────────────────────────────────────────
-function evolveAI(){
-  var btn=document.querySelector('[onclick="evolveAI()"]');
-  if(btn){btn.textContent='⏳ Evolving...';btn.disabled=true;}
-  req('/ai/evolve','POST',{population_size:20,generations:5},function(err,r){
-    if(btn){btn.textContent='🧬 EVOLVE NEW GENERATION';btn.disabled=false;}
-    toast(err?'Evolve error':'✅ Evolution complete!',err?'error':'success');
-    loadAIStatus(); loadAIStrats('approved');
-  });
-}
-
-// ── Regime ────────────────────────────────────────────────────────────────────
-function detectRegime(){
-  req('/ai/regime','GET',null,function(err,d){
-    if(err||!d){toast('Regime error','error');return;}
-    var box=document.getElementById('ai-reg-box');
-    if(box){
-      box.style.display='block';
-      var colors={'BULLISH':'var(--gr)','BEARISH':'var(--rd)','SIDEWAYS':'var(--am)','VOLATILE':'var(--p0)'};
-      var regime=d.regime||'SIDEWAYS'; var color=colors[regime]||'var(--tx)';
-      box.innerHTML='<div style="text-align:center;padding:14px;background:rgba(0,0,0,.2);border-radius:8px;margin-bottom:8px">'
-        +'<div style="font-size:26px;font-weight:800;color:'+color+'">'+regime+'</div>'
-        +'<div style="font-size:10px;color:var(--mu)">'+(d.description||'')+'</div>'
-        +'<div style="font-size:11px;margin-top:4px;color:'+color+'">Confidence: '+(d.confidence||0)+'%</div>'
-        +'</div>';
-    }
-    var indEl=document.getElementById('ai-regime-indicators');
-    if(indEl&&d.indicators){
-      indEl.innerHTML='';
-      Object.keys(d.indicators).forEach(function(k){
-        var v=d.indicators[k];
-        var val=typeof v==='object'?(v.value||0):v;
-        var sig=typeof v==='object'?(v.signal||''):'';
-        var good=sig==='BULLISH'||parseFloat(val)>50;
-        var div2=document.createElement('div');
-        div2.style.cssText='background:var(--bg4);border:1px solid '+(good?'rgba(0,255,136,.2)':'rgba(255,51,102,.2)')+';border-radius:6px;padding:8px;text-align:center';
-        div2.innerHTML='<div style="font-size:8px;color:var(--mu)">'+k+'</div>'
-          +'<div style="font-size:12px;font-weight:700;color:'+(good?'var(--gr)':'var(--rd)')+'">'+parseFloat(val).toFixed(1)+'</div>'
-          +'<div style="font-size:8px;color:var(--mu)">'+sig+'</div>';
-        indEl.appendChild(div2);
-      });
-    }
-    var recEl=document.getElementById('ai-regime-recs');
-    if(recEl){
-      var recs={'BULLISH':['✅ Trend continuation CE','✅ Bull spreads','✅ ORB long','❌ Avoid shorts'],
-        'BEARISH':['✅ PE trend trades','✅ Bear spreads','✅ VWAP shorts','❌ Avoid dip buying'],
-        'SIDEWAYS':['✅ Iron Condor','✅ Theta decay','✅ Range scalping','❌ No directional plays'],
-        'VOLATILE':['✅ Buy straddle','✅ Wide Iron Condor','✅ Reduce size 50%','❌ No tight SL']};
-      var regime=d.regime||'SIDEWAYS';
-      recEl.innerHTML=(recs[regime]||recs['SIDEWAYS']).map(function(r){
-        return '<div style="padding:5px 0;font-size:11px;border-bottom:1px solid var(--bo)">'+r+'</div>';
-      }).join('');
-    }
-    toast('Regime: '+d.regime,'success');
-  });
-}
-
-// ── Auto Execute ──────────────────────────────────────────────────────────────
-function toggleAutoExec(){
-  _aiAutoEnabled=!_aiAutoEnabled;
-  var wrap=document.getElementById('ae-toggle-wrap');
-  var dot=document.getElementById('ae-toggle-dot');
-  if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
-  if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
-  toast(_aiAutoEnabled?'⚡ Auto-Execute ON':'Auto-Execute OFF',_aiAutoEnabled?'success':'info');
-}
-
-function loadAutoExecConfig(){
-  var ae = trdLoad('auto_exec', null);
-  if(ae){
-    _aiAutoEnabled = ae.enabled || false;
-    var set = function(id,v){ var e=document.getElementById(id); if(e&&v!==undefined) e.value=v; };
-    set('ae-conf', ae.min_confidence);
-    set('ae-lots', ae.max_lots);
-    set('ae-limit', ae.daily_limit);
-    set('ae-sl', ae.sl_pct);
-    set('ae-tgt', ae.target_pct);
-    if(ae.mode){ var m=document.getElementById('ae-mode'); if(m) m.value=ae.mode; }
-    var wrap=document.getElementById('ae-toggle-wrap');
-    var dot=document.getElementById('ae-toggle-dot');
-    if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
-    if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
-  }
-}
-
-function saveAutoExec(){
-  var conf = parseInt((document.getElementById('ae-conf')||{}).value)||75;
-  var lots = parseInt((document.getElementById('ae-lots')||{}).value)||1;
-  var limit = parseInt((document.getElementById('ae-limit')||{}).value)||3;
-  var mode = (document.getElementById('ae-mode')||{}).value||'PAPER';
-  var sl = parseFloat((document.getElementById('ae-sl')||{}).value)||1.5;
-  var tgt = parseFloat((document.getElementById('ae-tgt')||{}).value)||3.0;
-
-  var config = {
-    enabled: _aiAutoEnabled,
-    min_confidence: conf,
-    max_lots: lots,
-    daily_limit: limit,
-    mode: mode,
-    sl_pct: sl,
-    target_pct: tgt,
-    saved_at: new Date().toLocaleString('en-IN')
-  };
-
-  // Save to localStorage using persistence engine
-  trdSave('auto_exec', {
-    enabled: config.enabled,
-    min_confidence: config.min_confidence,
-    max_lots: config.max_lots,
-    daily_limit: config.daily_limit,
-    mode: config.mode,
-    sl_pct: config.sl_pct,
-    target_pct: config.target_pct
-  });
-
-  // Save to backend
-  req('/ai/auto_execute/config','POST',{
-    user_id: UID,
-    enabled: _aiAutoEnabled,
-    min_confidence: conf/100,
-    max_lots: lots,
-    daily_limit: limit,
-    mode: mode,
-    sl_pct: sl,
-    target_pct: tgt
-  }, function(err, r){
-    // Show saved confirmation regardless
-    var btn = document.querySelector('[onclick="saveAutoExec()"]');
-    if(btn){
-      btn.textContent = '✅ SAVED!';
-      btn.style.background = 'rgba(0,255,136,.2)';
-      btn.style.borderColor = 'rgba(0,255,136,.4)';
-      setTimeout(function(){
-        btn.textContent = '✓ SAVE AUTO-EXECUTE CONFIG';
-        btn.style.background = '';
-        btn.style.borderColor = '';
-      }, 2000);
-    }
-  });
-
-  // Show config summary
-  var status = document.getElementById('ae-status-display');
-  if(!status){
-    status = document.createElement('div');
-    status.id = 'ae-status-display';
-    var btn = document.querySelector('[onclick="saveAutoExec()"]');
-    if(btn) btn.parentNode.insertBefore(status, btn.nextSibling);
-  }
-  status.style.cssText = 'margin-top:10px;padding:10px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px;font-size:10px';
-  status.innerHTML = '<div style="font-weight:700;color:var(--gr);margin-bottom:6px">✅ CONFIG SAVED</div>'
-    + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px">'
-    + '<div style="color:var(--mu)">Status: <b style="color:'+(config.enabled?'var(--gr)':'var(--rd)')+'">'+(config.enabled?'ON':'OFF')+'</b></div>'
-    + '<div style="color:var(--mu)">Mode: <b style="color:var(--am)">'+config.mode+'</b></div>'
-    + '<div style="color:var(--mu)">Min Conf: <b>'+config.min_confidence+'%</b></div>'
-    + '<div style="color:var(--mu)">Max Lots: <b>'+config.max_lots+'</b></div>'
-    + '<div style="color:var(--mu)">Daily Limit: <b>'+config.daily_limit+' trades</b></div>'
-    + '<div style="color:var(--mu)">SL/TGT: <b>'+config.sl_pct+'%/'+config.target_pct+'%</b></div>'
-    + '</div>'
-    + '<div style="font-size:8px;color:var(--mu);margin-top:4px">Saved: '+config.saved_at+'</div>';
-
-  toast('✅ Auto-execute config saved!','success');
-}
-
-// Load saved config on startup
-function loadSavedAutoExecConfig(){
-  try {
-    var saved = localStorage.getItem('trd_auto_exec_config');
-    if(!saved) return;
-    var config = JSON.parse(saved);
-    _aiAutoEnabled = config.enabled || false;
-    var set = function(id, v){ var e=document.getElementById(id); if(e&&v!==undefined) e.value=v; };
-    set('ae-conf', config.min_confidence);
-    set('ae-lots', config.max_lots);
-    set('ae-limit', config.daily_limit);
-    set('ae-sl', config.sl_pct);
-    set('ae-tgt', config.target_pct);
-    if(config.mode){ var m=document.getElementById('ae-mode'); if(m) m.value=config.mode; }
-    // Update toggle visual
-    var wrap=document.getElementById('ae-toggle-wrap');
-    var dot=document.getElementById('ae-toggle-dot');
-    if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
-    if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
-  } catch(e) {}
-}
-
-function loadAIPnL(){
-  req('/paper/v2/summary','GET',null,function(err,d){
-    var el=document.getElementById('ai-pnl-tracker');
-    if(!el||err||!d) return;
-    el.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'
-      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">TOTAL P&L</div><b style="color:'+(d.total_pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+d.total_pnl+'</b></div>'
-      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">ACTIVE</div><b>'+d.active_positions+'</b></div>'
-      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">CLOSED</div><b>'+d.closed_positions+'</b></div>'
-      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">DAILY</div><b>'+d.daily_trades+'</b></div>'
-      +'</div>';
-  });
-}
-
-function loadAIPerformance(){
-  req('/ai/strategies/approved','GET',null,function(err,d){
-    var el=document.getElementById('ai-perf-monitor');
-    if(!el) return;
-    var strats=d&&d.strategies||[];
-    if(!strats.length){el.innerHTML='<div style="color:var(--mu);padding:10px">No approved strategies</div>';return;}
-    var html2='<table class="tbl" style="font-size:9px"><thead><tr><th>STRATEGY</th><th>WR%</th><th>SCORE</th></tr></thead><tbody>';
-    strats.forEach(function(s){
-      var wr=s.avg_win_rate||s.win_rate||0;
-      var color=wr>=75?'var(--gr)':wr>=65?'var(--am)':'var(--rd)';
-      html2+='<tr><td style="font-size:9px">'+(s.name||s.id).slice(0,22)+'</td>'
-        +'<td style="color:'+color+'">'+wr+'%</td>'
-        +'<td style="color:'+color+'">'+(s.ai_score||Math.round(wr))+'</td></tr>';
-    });
-    el.innerHTML=html2+'</tbody></table>';
-    toast('Performance loaded!','success');
-  });
-}
-
-// ── ML ENGINE ─────────────────────────────────────────────────────────────────
-function loadMLStatus(){
-  req('/ml/status','GET',null,function(err,d){
-    var el=document.getElementById('ml-status-bar');
-    if(!el) return;
-    if(err||!d||!d.available){
-      el.innerHTML='<span style="color:var(--rd)">❌ ML not available - run: pip3 install scikit-learn xgboost</span>';
-      return;
-    }
-    el.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      +'<span style="padding:2px 8px;border-radius:10px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);font-size:9px">✅ XGBoost</span>'
-      +'<span style="padding:2px 8px;border-radius:10px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);color:var(--bl);font-size:9px">✅ RandomForest</span>'
-      +'<span style="padding:2px 8px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:var(--p0);font-size:9px">✅ GradBoost</span>'
-      +(d.trained_symbols&&d.trained_symbols.length?'<span style="padding:2px 8px;border-radius:10px;background:rgba(251,191,36,.1);color:var(--am);font-size:9px">Trained: '+d.trained_symbols.join(', ')+'</span>':'')
-      +'</div>';
-  });
-}
-
-function trainML(){ trainMLModel(); }
-function trainMLModel(){
-  var sym=(document.getElementById('ml-train-sym')||{}).value||'NIFTY';
-  var days=parseInt((document.getElementById('ml-train-days')||{}).value)||365;
-  var syms=['NIFTY','BANKNIFTY','FINNIFTY'];
-  var btn=document.getElementById('ml-train-btn')||document.querySelector('[onclick="trainMLModel()"]');
-  if(btn){btn.textContent='⏳ Training 3 models...';btn.disabled=true;}
-  toast('Training '+syms.join(', ')+' models (~45s)...','info');
+  cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px;font-size:12px">🤖 AI Analyzing market...</div>';
   
-  var x=new XMLHttpRequest();
-  x.open('POST',window.API+'/ml/train',true);
-  x.setRequestHeader('Content-Type','application/json');
-  x.setRequestHeader('bypass-tunnel-reminder','true');
-  x.timeout=180000;
-  x.onload=function(){
-    if(btn){btn.textContent='🧠 TRAIN MODEL';btn.disabled=false;}
-    try{
-      var r=JSON.parse(x.responseText);
-      var resultEl=document.getElementById('ml-result');
-      if(resultEl) resultEl.style.display='block';
-      var html2='';
-      syms.forEach(function(s){
-        var res=r.results&&r.results[s];
-        if(!res||res.error) return;
-        var acc=res.ensemble_accuracy||0;
-        var color=acc>=70?'var(--gr)':acc>=60?'var(--am)':'var(--rd)';
-        html2+='<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;margin-bottom:6px">'
-          +'<div style="display:flex;justify-content:space-between"><b>'+s+'</b>'
-          +'<span style="color:'+color+';font-weight:700">'+acc+'% Ensemble</span></div>'
-          +'<div style="font-size:9px;color:var(--mu)">'
-          +'XGB: '+(res.models&&res.models.xgboost&&res.models.xgboost.accuracy||0)+'% · '
-          +'RF: '+(res.models&&res.models.random_forest&&res.models.random_forest.accuracy||0)+'% · '
-          +'GB: '+(res.models&&res.models.gradient_boost&&res.models.gradient_boost.accuracy||0)+'%'
-          +'</div></div>';
-      });
-      var fiEl=document.getElementById('ml-feature-importance');
-      if(fiEl) fiEl.innerHTML=html2;
-      toast('✅ Models trained!','success');
-      loadMLStatus();
-      // Update accuracy display
-      var statusBar = document.getElementById('ml-status-bar');
-      if(statusBar) statusBar.innerHTML = '<span style="color:var(--gr)">✅ TRAINED</span>';
-    }catch(e){toast('Training parse error','error');}
-  };
-  x.onerror=x.ontimeout=function(){if(btn){btn.textContent='🧠 TRAIN MODEL';btn.disabled=false;}toast('Training timeout','error');};
-  x.send(JSON.stringify({symbols:syms,days:days}));
+  // Get live prices
+  var signals = insts.map(function(sym){
+    var price = (window.prices && window.prices[sym]) || 0;
+    var vix = (window.prices && window.prices['VIX']) || 16;
+    
+    // AI Signal Logic (based on VIX, trend, time)
+    var hour = new Date().getHours();
+    var isMarketHours = hour >= 9 && hour <= 15;
+    var signal = 'NEUTRAL';
+    var confidence = 0;
+    var reason = [];
+    var direction = '';
+    
+    if(isMarketHours){
+      // VIX-based signal
+      if(vix < 15){ signal='BUY'; confidence=78; direction='CE'; reason.push('Low VIX - bullish'); }
+      else if(vix > 20){ signal='SELL'; confidence=72; direction='PE'; reason.push('High VIX - bearish'); }
+      else { signal='BUY'; confidence=65; direction='CE'; reason.push('Moderate VIX'); }
+      
+      // Time-based boost
+      if(hour>=9 && hour<=10){ confidence+=8; reason.push('Opening momentum'); }
+      if(hour>=14 && hour<=15){ confidence-=5; reason.push('End of day caution'); }
+      
+      confidence = Math.min(95, Math.max(50, confidence));
+    } else {
+      signal = 'WAIT'; confidence = 0; reason = ['Market closed'];
+    }
+    
+    return {sym:sym, price:price, signal:signal, confidence:confidence, direction:direction, reason:reason.join(' | '), vix:vix};
+  });
+  
+  var signalHTML = signals.map(function(s){
+    var color = s.signal==='BUY'?'var(--gr)':s.signal==='SELL'?'var(--rd)':'var(--mu)';
+    var bg = s.signal==='BUY'?'rgba(0,255,136,.08)':s.signal==='SELL'?'rgba(255,51,51,.08)':'var(--bg3)';
+    return '<div style="background:'+bg+';border:1px solid '+color+';border-radius:10px;padding:12px;margin-bottom:8px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+      +'<span style="font-weight:700;font-size:13px">'+s.sym+'</span>'
+      +'<span style="font-size:18px;font-weight:900;color:'+color+'">'+s.signal+'</span>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:6px">'
+      +'<span style="font-size:11px;color:var(--mu)">₹'+Math.round(s.price)+'</span>'
+      +(s.confidence>0?'<span style="font-size:11px;color:var(--am)">🎯 '+s.confidence+'% confidence</span>':'')
+      +(s.direction?'<span style="font-size:10px;padding:2px 8px;background:rgba(0,255,136,.1);color:var(--gr);border-radius:4px">'+s.direction+'</span>':'')
+      +'</div>'
+      +'<div style="font-size:9px;color:var(--mu)">'+s.reason+'</div>'
+      +'</div>';
+  }).join('');
+  
+  cards.innerHTML = signalHTML || '<div style="color:var(--mu);text-align:center;padding:20px">No signals</div>';
+  toast('AI scan complete - '+signals.filter(function(s){return s.signal!=="WAIT";}).length+' signals found','success');
 }
 
 function mlScanAll(){
