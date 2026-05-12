@@ -7198,7 +7198,7 @@ function toggleSupport(){
       +'• Backtest: BACKTEST tab'
       +'</div></div>'
       +'<div style="padding:8px;border-top:1px solid var(--bo);display:flex;gap:6px;flex-shrink:0">'
-      +'<input id="sp-input" placeholder="Message likhiye..." style="flex:1;font-size:11px;padding:6px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);border-radius:6px" onkeydown="if(event.key==='Enter')sendSupport()">'
+      +'<input id="sp-input" placeholder="Message likhiye..." style="flex:1;font-size:11px;padding:6px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);border-radius:6px">'
       +'<button onclick="sendSupport()" class="btn bg" style="padding:6px 10px;font-size:11px">Send</button>'
       +'</div>';
     document.body.appendChild(p);
@@ -7228,4 +7228,9 @@ function sendSupport(){
     msgs.scrollTop=msgs.scrollHeight;
   },800);
 }
+
+// Enter key support for chat
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter' && document.activeElement && document.activeElement.id==='sp-input') sendSupport();
+});
 </script>
