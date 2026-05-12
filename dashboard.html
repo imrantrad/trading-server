@@ -7000,7 +7000,7 @@ function loadAdminReferral(){
         '<div style="font-size:10px;color:var(--mu);margin-top:4px">'+
         'Owner: '+c.owner_email+' | Uses: <b>'+c.uses_count+'</b> | Bonus paid: <b>₹'+c.total_bonus_paid+'</b></div>'+
         '<div style="font-size:10px;color:var(--mu)">Bonus: ₹'+c.bonus_amount+' | Discount: ₹'+c.discount_amount+' | Expires: '+c.expires_at.slice(0,10)+'</div>'+
-        (c.is_active?'<button onclick="deactivateReferral(''+c.code+'')" style="margin-top:4px;font-size:9px;padding:2px 8px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer">DEACTIVATE</button>':'')+
+        (c.is_active?'<button class="ref-deact-btn" style="margin-top:4px;font-size:9px;padding:2px 8px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer" data-code="'+c.code+'">DEACTIVATE</button>':'')+
         '</div>';
     }).join('');
   });
@@ -7030,6 +7030,14 @@ function validateRefCode(){
     }
   });
 }
+
+// Event delegation for referral deactivate buttons
+document.addEventListener('click', function(e){
+  if(e.target && e.target.classList.contains('ref-deact-btn')){
+    var code = e.target.dataset.code;
+    if(code) deactivateReferral(code);
+  }
+});
 
 function applyReferralOnLogin(userId, email){
   var code = (document.getElementById('ref-code-input')||{}).value||'';
