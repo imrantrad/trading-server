@@ -5056,64 +5056,153 @@ function loadAdminDash(){
 }
 
 function loadAdminUsers(){
+  var tb = document.getElementById('adm-users-tbl');
+  if(tb) tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--am);padding:16px">Loading...</td></tr>';
+  
   req('/admin/users','GET',null,function(err,d){
-    var tb=document.getElementById('adm-users-tbl');
+    if(!tb) tb = document.getElementById('adm-users-tbl');
     if(!tb) return;
-    if(err||!d||!d.users||!d.users.length){
-      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:20px">No users found</td></tr>';
+    if(err||!d||!d.users){
+      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--rd);padding:16px">Error loading users</td></tr>';
       return;
     }
-    tb.innerHTML='';
-    d.users.forEach(function(u){
-      var planColors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--p0)',INSTITUTIONAL:'var(--am)'};
-      var statusColor=u.status==='ACTIVE'?'var(--gr)':u.status==='SUSPENDED'?'var(--rd)':'var(--am)';
-      var row=document.createElement('tr');
-      row.innerHTML=
-        '<td style="color:var(--mu);font-size:9px">'+(u.user_id||'').slice(-8)+'</td>'+
-        '<td style="font-weight:600">'+(u.full_name||'—')+'</td>'+
-        '<td style="color:var(--mu);font-size:10px">'+(u.email||'—')+'</td>'+
-        '<td><span style="color:'+(planColors[u.plan]||'var(--mu)')+'">'+( u.plan||'FREE')+'</span></td>'+
-        '<td><span style="color:'+statusColor+'">'+(u.status||'ACTIVE')+'</span></td>'+
-        '<td style="text-align:center">'+(u.free_access?'<span style="color:var(--gr)">✓</span>':'—')+'</td>'+
-        '<td><div style="display:flex;gap:3px">'+
-          '<button onclick="editUser(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:var(--bg4);border:1px solid var(--bo);color:var(--bl);border-radius:3px;cursor:pointer">✏️</button>'+
-          '<button onclick="quickSetPlan(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:var(--bg4);border:1px solid var(--bo);color:var(--am);border-radius:3px;cursor:pointer">💎</button>'+
-          '<button onclick="deleteUser(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:3px;cursor:pointer">✕</button>'+
-        '</div></td>';
-      tb.appendChild(row);
-    });
+    if(!d.users.length){
+      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:16px">No users found</td></tr>';
+      return;
+    }
+    tb.innerHTML = d.users.map(function(u){
+      var isActive = u.is_active===1||u.is_active===true||u.is_active==='true';
+      return '<tr>'+
+        '<td style="font-size:10px;color:var(--mu)">'+u.user_id+'</td>'+
+        '<td style="font-weight:600">'+(u.full_name||u.username||'—')+'</td>'+
+        '<td style="font-size:10px">'+(u.email||'—')+'</td>'+
+        '<td><span style="background:'+(u.plan==='PRO'?'rgba(168,85,247,.15)':'rgba(79,142,247,.1)')+';border-radius:4px;padding:2px 6px;font-size:9px">'+(u.plan||u.subscription_plan||'FREE')+'</span></td>'+
+        '<td style="color:var(--gr)">₹'+(u.capital||500000).toLocaleString('en-IN')+'</td>'+
+        '<td><span style="color:'+(isActive?'var(--gr)':'var(--rd)')+'">●</span> '+(isActive?'Active':'Inactive')+'</td>'+
+        '<td style="display:flex;gap:4px;flex-wrap:wrap">'+
+          '<button class="btn adm-edit-btn" data-uid="'+u.user_id+'" style="padding:3px 8px;font-size:9px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl)">✏️ EDIT</button>'+
+          '<button class="btn adm-del-btn" data-uid="'+u.user_id+'" data-name="'+encodeURIComponent(u.full_name||u.username||'User')+'" style="padding:3px 8px;font-size:9px;background:rgba(255,51,102,.08);border-color:rgba(255,51,102,.3);color:var(--rd)">🗑️</button>'+
+        '</td>'+
+      '</tr>';
+    }).join('');
+  });
+}
+
+function deleteUserConfirm(uid, name){
+  var dname = decodeURIComponent(name);
+  if(!confirm('Delete user: '+dname+'?\nUser will be deactivated.')) return;
+  req('/admin/users/'+uid,'DELETE',null,function(err,r){
+    if(err||!r||r.error){ toast('Delete failed: '+(r&&r.error||'Error'),'error'); return; }
+    toast('✅ User deleted: '+dname,'success');
+    loadAdminUsers();
   });
 }
 
 function showAddUser(){
-  var f=document.getElementById('adm-user-form');
-  if(!f) return;
-  f.style.display='block';
-  document.getElementById('adm-form-title').textContent='➕ ADD NEW USER';
-  document.getElementById('adm-uid').value='';
-  ['adm-name','adm-email','adm-phone','adm-payid','adm-notes'].forEach(function(id){var e=$( id);if(e)e.value='';});
-  var cap=$('adm-capital');if(cap)cap.value=500000;
-  var plan=$('adm-plan');if(plan)plan.value='PRO';
-  var st=$('adm-status');if(st)st.value='ACTIVE';
-  var fa=$('adm-freeaccess');if(fa)fa.checked=false;
+  var modal = document.getElementById('add-user-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'add-user-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  modal.innerHTML = '<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:12px;width:100%;max-width:360px;overflow:hidden">'+
+    '<div style="background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between">'+
+      '<div style="font-weight:700;font-size:13px">➕ Add New User</div>'+
+      '<button onclick="document.getElementById('add-user-modal').style.display='none'" style="background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer">✕</button>'+
+    '</div>'+
+    '<div style="padding:16px">'+
+      '<div class="lbl" style="margin-bottom:2px">Full Name *</div>'+
+      '<input id="au-name" placeholder="Full Name" style="width:100%;margin-bottom:8px">'+
+      '<div class="lbl" style="margin-bottom:2px">Email *</div>'+
+      '<input id="au-email" placeholder="email@example.com" style="width:100%;margin-bottom:8px">'+
+      '<div class="lbl" style="margin-bottom:2px">Password</div>'+
+      '<input id="au-pass" type="password" placeholder="Auto-generated if empty" style="width:100%;margin-bottom:8px">'+
+      '<div class="lbl" style="margin-bottom:2px">Plan</div>'+
+      '<select id="au-plan" style="width:100%;margin-bottom:8px">'+
+        '<option value="FREE">FREE</option><option value="PRO">PRO</option><option value="ENTERPRISE">ENTERPRISE</option>'+
+      '</select>'+
+      '<div class="lbl" style="margin-bottom:2px">Capital (₹)</div>'+
+      '<input id="au-capital" type="number" value="500000" style="width:100%;margin-bottom:12px">'+
+      '<button onclick="addNewUser()" class="btn bg blg" style="width:100%;padding:10px;font-size:12px">➕ ADD USER</button>'+
+      '<div id="au-result" style="margin-top:8px;display:none;font-size:11px"></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function addNewUser(){
+  var name = (document.getElementById('au-name')||{}).value||'';
+  var email = (document.getElementById('au-email')||{}).value||'';
+  var pass = (document.getElementById('au-pass')||{}).value||'';
+  var plan = (document.getElementById('au-plan')||{}).value||'FREE';
+  var capital = parseFloat((document.getElementById('au-capital')||{}).value)||500000;
+  
+  if(!email){ toast('Email required','warn'); return; }
+  
+  req('/admin/users/add','POST',{full_name:name,email:email,password:pass,plan:plan,capital:capital},function(err,r){
+    var res = document.getElementById('au-result');
+    if(err||!r||r.error){
+      toast('Add failed: '+(r&&r.error||'Error'),'error');
+      if(res){ res.style.display='block'; res.style.color='var(--rd)'; res.textContent='❌ '+(r&&r.error||'Failed'); }
+      return;
+    }
+    toast('✅ User added!','success');
+    if(res){ 
+      res.style.display='block'; res.style.color='var(--gr)'; 
+      res.textContent='✅ Created! Temp password: '+(r.temp_password||'(auto)'); 
+    }
+    loadAdminUsers();
+    setTimeout(function(){ 
+      var m=document.getElementById('add-user-modal'); 
+      if(m) m.style.display='none'; 
+    }, 2000);
+  });
 }
 
 function editUser(uid){
-  req('/admin/users','GET',null,function(err,d){
-    if(err||!d||!d.users) return;
-    var u=d.users.find(function(x){return x.user_id===uid;});
-    if(!u) return;
-    var f=document.getElementById('adm-user-form');
-    if(f) f.style.display='block';
-    document.getElementById('adm-form-title').textContent='✏️ EDIT USER: '+u.full_name;
-    var e=function(id,val){var el=$(id);if(el)el.value=val||'';};
-    e('adm-uid',u.user_id);e('adm-name',u.full_name);e('adm-email',u.email);
-    e('adm-phone',u.phone);e('adm-capital',u.capital||500000);
-    e('adm-payid',u.payment_id);e('adm-notes',u.notes);
-    var plan=$('adm-plan');if(plan)plan.value=u.plan||'PRO';
-    var st=$('adm-status');if(st)st.value=u.status||'ACTIVE';
-    var fa=$('adm-freeaccess');if(fa)fa.checked=!!u.free_access;
-    f.scrollIntoView({behavior:'smooth',block:'nearest'});
+  req('/users/'+uid,'GET',null,function(err,d){
+    var u = (d && d.user) ? d.user : (d||{});
+    if(!u.user_id && !u.id){ u = {user_id:uid}; }
+    
+    // Show edit modal or fill form
+    var modal = document.getElementById('edit-user-modal');
+    if(!modal){
+      // Create modal
+      modal = document.createElement('div');
+      modal.id = 'edit-user-modal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+      document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
+    modal.innerHTML = '<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:12px;width:100%;max-width:360px;overflow:hidden">'+
+      '<div style="background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between">'+
+        '<div style="font-weight:700;font-size:13px">✏️ Edit User</div>'+
+        '<button onclick="document.getElementById('edit-user-modal').style.display='none'" style="background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer">✕</button>'+
+      '</div>'+
+      '<div style="padding:16px">'+
+        '<input type="hidden" id="eu-id" value="'+(u.user_id||u.id||uid)+'">'+
+        '<div class="lbl" style="margin-bottom:2px">Full Name</div>'+
+        '<input id="eu-name" value="'+(u.full_name||'')+'" placeholder="Full Name" style="width:100%;margin-bottom:8px">'+
+        '<div class="lbl" style="margin-bottom:2px">Email</div>'+
+        '<input id="eu-email" value="'+(u.email||'')+'" placeholder="Email" style="width:100%;margin-bottom:8px">'+
+        '<div class="lbl" style="margin-bottom:2px">Phone</div>'+
+        '<input id="eu-phone" value="'+(u.phone||'')+'" placeholder="Phone" style="width:100%;margin-bottom:8px">'+
+        '<div class="lbl" style="margin-bottom:2px">Plan</div>'+
+        '<select id="eu-plan" style="width:100%;margin-bottom:8px">'+
+          '<option value="FREE" '+(( u.plan||u.subscription_plan)==='FREE'?'selected':'')+'>FREE</option>'+
+          '<option value="PRO" '+((u.plan||u.subscription_plan)==='PRO'?'selected':'')+'>PRO</option>'+
+          '<option value="ENTERPRISE" '+((u.plan||u.subscription_plan)==='ENTERPRISE'?'selected':'')+'>ENTERPRISE</option>'+
+        '</select>'+
+        '<div class="lbl" style="margin-bottom:2px">Capital (₹)</div>'+
+        '<input id="eu-capital" type="number" value="'+(u.capital||500000)+'" style="width:100%;margin-bottom:8px">'+
+        '<label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer">'+
+          '<input type="checkbox" id="eu-active" '+(u.is_active!==0&&u.is_active!==false?'checked':'')+' style="width:16px;height:16px">'+
+          '<span style="font-size:11px">Active Account</span>'+
+        '</label>'+
+        '<button id="eu-save-btn" onclick="saveAdminUser()" class="btn bg blg" style="width:100%;padding:10px;font-size:12px">💾 SAVE</button>'+
+      '</div>'+
+    '</div>';
   });
 }
 
@@ -7122,6 +7211,16 @@ function validateRefCode(){
     }
   });
 }
+
+// Event delegation for admin table buttons
+document.addEventListener('click',function(e){
+  if(e.target&&e.target.classList.contains('adm-edit-btn')){
+    editUser(e.target.dataset.uid);
+  }
+  if(e.target&&e.target.classList.contains('adm-del-btn')){
+    deleteUserConfirm(e.target.dataset.uid, e.target.dataset.name);
+  }
+});
 
 // Event delegation for referral deactivate buttons
 document.addEventListener('click', function(e){

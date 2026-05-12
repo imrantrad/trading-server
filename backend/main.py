@@ -1193,76 +1193,10 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     full_name: str = None; email: str = None; phone: str = None
     broker: str = None; capital: float = None; risk_per_trade: float = None
-    max_daily_loss: float = None; preferred_instruments: str = None
-    theme: str = None; telegram_chat_id: str = None
+    max_daily_loss: float = None; plan: str = None; subscription_plan: str = None
+    is_active: int = None; password: str = None; user_id: str = None
+    payment_id: str = None; notes: str = None
 
-@app.post("/users/register")
-def register(payload: UserCreate):
-    if not USER_SYSTEM: return {"error":"User system not loaded"}
-    result = user_db.create_user(
-        payload.username, payload.email, payload.password,
-        payload.full_name, payload.capital)
-    return result
-
-@app.post("/users/login")
-def login(payload: UserLogin):
-    if not USER_SYSTEM: return {"error":"User system not loaded"}
-    result = user_db.login(payload.username, payload.password)
-    if not result:
-        return {"error": "Invalid username or password"}
-    return result
-
-@app.get("/users/{user_id}")
-def get_user(user_id: str):
-    if not USER_SYSTEM: return {"error":"Not loaded"}
-    user = user_db.get_user(user_id)
-    return user if user else {"error":"User not found"}
-
-@app.put("/users/{user_id}")
-def update_user(user_id: str, payload: dict = None):
-    """Save user profile — persists in memory, works without DB"""
-    from datetime import datetime
-    if payload is None:
-        payload = {}
-    
-    # Store in memory (replace with DB in production)
-    if not hasattr(update_user, '_store'):
-        update_user._store = {}
-    
-    update_user._store[user_id] = {
-        **payload,
-        "user_id": user_id,
-        "updated_at": datetime.now().isoformat()
-    }
-    
-    return {
-        "updated": True,
-        "user_id": user_id,
-        "message": "Profile saved successfully",
-        "data": update_user._store[user_id]
-    }
-
-@app.get("/users/{user_id}/profile")
-def get_user_profile(user_id: str):
-    """Get saved profile"""
-    if hasattr(update_user, '_store') and user_id in update_user._store:
-        return update_user._store[user_id]
-    return {
-        "user_id": user_id,
-        "full_name": "Demo Trader",
-        "capital": 500000,
-        "risk_per_trade": 1,
-        "max_daily_loss": 3,
-        "broker": "ZERODHA",
-        "subscription_plan": "PRO"
-    }
-
-@app.get("/users")
-def list_users():
-    if not USER_SYSTEM: return {"users":[]}
-    return {"users": user_db.get_all_users()}
-
-# ── USER STRATEGIES ────────────────────────────────────
 class StrategySave(BaseModel):
     user_id: str; name: str; description: str = ""
     instrument: str = "NIFTY"; timeframe: str = "15MIN"
