@@ -1021,210 +1021,205 @@ setInterval(function(){
 
 <div id="pnl-bt" class="pnl">
 
-  <!-- Header -->
-  <div style="background:linear-gradient(135deg,#0a0d18,#001428);padding:10px 14px;border-bottom:1px solid rgba(79,142,247,.2);display:flex;align-items:center;justify-content:space-between;margin:-10px -10px 12px">
-    <div style="font-size:13px;font-weight:700;color:var(--bl)">📊 BACKTEST ENGINE</div>
-    <div style="font-size:9px;color:var(--mu)">Deterministic · Per-day consistent</div>
+  <!-- ══ INSTITUTIONAL BACKTEST ENGINE ══ -->
+  <div style="background:linear-gradient(135deg,#060818,#0a1428,#060818);padding:12px 14px;border-bottom:1px solid rgba(79,142,247,.25);margin:-8px -8px 12px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(79,142,247,.03) 40px,rgba(79,142,247,.03) 41px);pointer-events:none"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:14px;font-weight:800;color:#4f8ef7;letter-spacing:1px">📊 INSTITUTIONAL BACKTEST</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px">Greeks · Regime · Execution Simulation · Full Analytics</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:9px;color:rgba(0,255,136,.6)">ENGINE v2.0</div>
+        <div style="font-size:8px;color:rgba(255,255,255,.3)">Hedge Fund Grade</div>
+      </div>
+    </div>
   </div>
 
-  <!-- Sub-tabs -->
-  <div style="display:flex;gap:4px;margin-bottom:12px">
-    <button class="btn ba" id="bt-tab-run" onclick="btTab('run',this)" style="flex:1;padding:7px;font-size:9px">⚡ RUN</button>
-    <button class="btn" id="bt-tab-compare" onclick="btTab('compare',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">🔀 COMPARE</button>
-    <button class="btn" id="bt-tab-history" onclick="btTab('history',this)" style="flex:1;padding:7px;font-size:9px;background:var(--bg4);border-color:var(--bo);color:var(--mu)">📋 HISTORY</button>
+  <!-- ══ TAB BAR ══ -->
+  <div style="display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none">
+    <button id="bt-tab-run" onclick="btTab('run',this)" style="flex-shrink:0;padding:7px 14px;font-size:9px;font-weight:700;background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.3);color:#4f8ef7;border-radius:6px;cursor:pointer">⚡ RUN</button>
+    <button id="bt-tab-compare" onclick="btTab('compare',this)" style="flex-shrink:0;padding:7px 14px;font-size:9px;font-weight:700;background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-radius:6px;cursor:pointer">🔀 COMPARE</button>
+    <button id="bt-tab-history" onclick="btTab('history',this)" style="flex-shrink:0;padding:7px 14px;font-size:9px;font-weight:700;background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-radius:6px;cursor:pointer">📋 HISTORY</button>
   </div>
 
-  <!-- RUN TAB -->
+  <!-- ══ RUN TAB ══ -->
   <div id="bt-run">
-    <div class="card" style="margin-bottom:10px">
-      <!-- Strategy Select -->
-      <div style="margin-bottom:8px">
-        <div class="lbl">STRATEGY</div>
-        <select id="bt-s" style="width:100%;margin-top:4px">
-          <optgroup label="── BUILT-IN ──">
-            <option value="STR_THETA_DECAY">Weekly Theta Decay (WR:72%)</option>
-            <option value="STR_ORB">Opening Range Breakout (WR:68%)</option>
-            <option value="STR_IRON_CONDOR_WEEKLY">Weekly Iron Condor (WR:78%)</option>
-            <option value="STR_VWAP_PULLBACK">VWAP Pullback (WR:65%)</option>
-            <option value="STR_GAP_FADE">Gap Fade Strategy (WR:74%)</option>
-            <option value="STR_BANKNIFTY_SCALP">BankNifty Power Hour (WR:62%)</option>
-            <option value="STR_PCR_REVERSAL">PCR Extreme Reversal (WR:71%)</option>
-            <option value="STR_MAX_PAIN_EXPIRY">Max Pain Expiry (WR:76%)</option>
-            <option value="STR_SUPERTREND_EMA">Supertrend+EMA Combo (WR:63%)</option>
-            <option value="STR_FII_MOMENTUM">FII Flow Momentum (WR:69%)</option>
-          </optgroup>
-          <optgroup label="── PREMIUM ──">
-            <option value="STRONG_TREND_CONT">Strong Trend Continuation (WR:72%)</option>
-            <option value="BREAKOUT_TREND">Breakout Trend (WR:68%)</option>
-            <option value="MTF_TREND_ALIGN">Multi-Timeframe Alignment (WR:75%)</option>
-            <option value="TREND_REVERSAL">Trend Reversal (WR:65%)</option>
-            <option value="MOMENTUM_ACCEL">Momentum Acceleration (WR:70%)</option>
-            <option value="CONFLUENCE_930">9:30 AM Confluence (WR:73%)</option>
-            <option value="ORB_ATM_930">ORB ATM 9:30 (WR:71%)</option>
-          </optgroup>
-          <optgroup label="── AI GEN5 ──">
-            <option value="AI_GEN5_001">Gen5 Momentum AI (WR:74%)</option>
-            <option value="AI_GEN5_002">Gen5 Mean Reversion AI (WR:71%)</option>
-            <option value="AI_GEN5_003">Gen5 Breakout AI (WR:67%)</option>
-            <option value="AI_GEN5_004">Gen5 Opening Range AI (WR:73%)</option>
-            <option value="AI_GEN5_005">Gen5 Theta Harvester AI (WR:78%)</option>
-          </optgroup>
-          <optgroup label="── MY STRATEGIES ──" id="bt-my-optgroup">
-            <option value="">Loading...</option>
-          </optgroup>
-        </select>
-        <button onclick="loadBtStrategies()" style="width:100%;margin-top:4px;padding:5px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">↻ Load All Strategies</button>
-      </div>
 
-      <div class="g2" style="gap:8px;margin-bottom:8px">
-        <div><div class="lbl">CAPITAL ₹</div><input type="number" id="bt-c" value="100000" step="10000"></div>
-        <div><div class="lbl">LOTS</div><input type="number" id="bt-l" value="1" min="1"></div>
-      </div>
-
-      <div class="g2" style="gap:8px;margin-bottom:8px">
-        <div><div class="lbl">PERIOD</div>
-          <select id="bt-m">
+    <!-- Config Card -->
+    <div class="card" style="margin-bottom:8px;border-color:rgba(79,142,247,.2)">
+      <div class="chdr" style="color:#4f8ef7">⚙️ CONFIGURATION</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="lbl">STRATEGY</div>
+          <select id="bt-s" style="font-size:10px">
+            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor Weekly</option>
+            <option value="STR_THETA_DECAY" selected>Theta Decay</option>
+            <option value="STR_ORB">Opening Range Breakout</option>
+            <option value="STR_VWAP_BOUNCE">VWAP Bounce</option>
+            <option value="STR_GAP_FADE">Gap Fade</option>
+            <option value="STR_PCR_REVERSAL">PCR Reversal</option>
+            <option value="STR_STRADDLE_EXPIRY">Straddle Expiry</option>
+          </select>
+        </div>
+        <div>
+          <div class="lbl">INSTRUMENT</div>
+          <select id="bt-inst" style="font-size:10px">
+            <option value="NIFTY" selected>NIFTY (Lot:75)</option>
+            <option value="BANKNIFTY">BANKNIFTY (Lot:30)</option>
+            <option value="FINNIFTY">FINNIFTY (Lot:65)</option>
+            <option value="MIDCPNIFTY">MIDCPNIFTY (Lot:150)</option>
+          </select>
+        </div>
+        <div>
+          <div class="lbl">CAPITAL (₹)</div>
+          <input type="number" id="bt-c" value="500000" style="font-size:11px">
+        </div>
+        <div>
+          <div class="lbl">PERIOD</div>
+          <select id="bt-m" style="font-size:10px">
             <option value="1">1 Month</option>
             <option value="3" selected>3 Months</option>
             <option value="6">6 Months</option>
             <option value="12">12 Months</option>
           </select>
         </div>
-        <div><div class="lbl">SL %</div>
-          <select id="bt-sl">
-            <option value="1.0">1% (Conservative)</option>
-            <option value="1.5" selected>1.5% (Moderate)</option>
-            <option value="2.0">2% (Aggressive)</option>
+        <div>
+          <div class="lbl">LOTS</div>
+          <input type="number" id="bt-l" value="1" min="1" style="font-size:11px">
+        </div>
+        <div>
+          <div class="lbl">BROKER</div>
+          <select id="bt-broker" style="font-size:10px">
+            <option value="zerodha" selected>Zerodha</option>
+            <option value="angel">Angel One</option>
+            <option value="default">Other</option>
           </select>
         </div>
       </div>
 
-      <div class="g2" style="gap:8px;margin-bottom:10px">
-        <div><div class="lbl">TARGET %</div>
-          <select id="bt-tgt">
-            <option value="1.5">1.5% (1:1 R/R)</option>
-            <option value="2.0" selected>2% (1:1.33)</option>
-            <option value="3.0">3% (1:2 R/R)</option>
-            <option value="4.5">4.5% (1:3 R/R)</option>
-          </select>
+      <!-- SL / Target -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="lbl">STOP LOSS %</div>
+          <input type="number" id="bt-sl" value="1.5" step="0.1" min="0.5" style="font-size:11px">
         </div>
-        <div><div class="lbl">POSITION SIZE</div>
-          <select id="bt-pos-size">
-            <option value="fixed">Fixed (1 lot)</option>
-            <option value="pct" selected>% of Capital</option>
-            <option value="kelly">Kelly Criterion</option>
-          </select>
+        <div>
+          <div class="lbl">TARGET %</div>
+          <input type="number" id="bt-tgt" value="2.5" step="0.1" min="0.5" style="font-size:11px">
         </div>
       </div>
 
-      <button id="bt-btn" onclick="runBT()" class="btn bg blg" style="width:100%;font-size:12px">⚡ RUN BACKTEST</button>
+      <!-- Options -->
+      <div style="display:flex;gap:12px;margin-bottom:10px;font-size:10px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="bt-kelly" checked style="accent-color:#00ff88">
+          <span style="color:var(--mu)">Kelly Criterion</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="bt-compound" checked style="accent-color:#00ff88">
+          <span style="color:var(--mu)">Compounding</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="bt-regime" checked style="accent-color:#00ff88">
+          <span style="color:var(--mu)">Regime Filter</span>
+        </label>
+      </div>
+
+      <button id="bt-btn" onclick="runInstitutionalBT()" class="btn bg blg" style="width:100%;font-size:12px;padding:11px;letter-spacing:0.5px">⚡ RUN INSTITUTIONAL BACKTEST</button>
     </div>
 
     <!-- Results -->
-    <div id="bt-res" style="display:none">
+    <div id="bt-results" style="display:none">
 
-      <!-- Key metrics -->
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px">
-        <div class="stat"><div class="sl">TOTAL P&L</div><div class="sv" id="bt-pnl" style="font-size:18px">—</div></div>
-        <div class="stat"><div class="sl">RETURN %</div><div class="sv" id="bt-ret" style="font-size:18px">—</div></div>
-        <div class="stat"><div class="sl">WIN RATE</div><div class="sv" id="bt-wr">—</div></div>
-        <div class="stat"><div class="sl">TOTAL TRADES</div><div class="sv" id="bt-tot">—</div></div>
-        <div class="stat"><div class="sl">MAX DRAWDOWN</div><div class="sv" id="bt-dd" style="color:var(--rd)">—</div></div>
-        <div class="stat"><div class="sl">SHARPE RATIO</div><div class="sv" id="bt-sharpe">—</div></div>
-        <div class="stat"><div class="sl">PROFIT FACTOR</div><div class="sv" id="bt-pf">—</div></div>
-        <div class="stat"><div class="sl">MAX CONSEC LOSS</div><div class="sv" id="bt-mcl" style="color:var(--rd)">—</div></div>
-      </div>
-
-      <!-- P&L Equity Curve Chart -->
-      <div class="card" style="margin-bottom:10px">
-        <div class="chdr">📈 EQUITY CURVE</div>
-        <div id="bt-equity-chart" style="height:150px;position:relative"></div>
-      </div>
-
-      <!-- Monthly breakdown -->
-      <div class="card" style="margin-bottom:10px">
-        <div class="chdr">📅 MONTHLY BREAKDOWN</div>
-        <div id="bt-monthly" style="display:flex;flex-direction:column;gap:4px"></div>
-      </div>
-
-      <!-- Trade Calendar -->
-      <div class="card" style="margin-bottom:10px">
-        <div class="chdr">🗓️ DATE-WISE P&L CALENDAR</div>
-        <div id="bt-calendar" style="display:flex;flex-wrap:wrap;gap:3px;font-size:8px"></div>
-        <div style="display:flex;gap:8px;margin-top:8px;font-size:9px;color:var(--mu)">
-          <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:rgba(0,255,136,.3);border-radius:2px;display:inline-block"></span>Profit</span>
-          <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:rgba(255,51,102,.3);border-radius:2px;display:inline-block"></span>Loss</span>
+      <!-- Summary Header -->
+      <div id="bt-summary-bar" style="background:linear-gradient(135deg,rgba(0,255,136,.08),rgba(79,142,247,.08));border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:12px;margin-bottom:8px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center">
+          <div>
+            <div id="bt-total-pnl" style="font-size:20px;font-weight:800;color:#00ff88">—</div>
+            <div style="font-size:8px;color:rgba(255,255,255,.4)">TOTAL P&L</div>
+          </div>
+          <div>
+            <div id="bt-win-rate" style="font-size:20px;font-weight:800;color:#4f8ef7">—</div>
+            <div style="font-size:8px;color:rgba(255,255,255,.4)">WIN RATE</div>
+          </div>
+          <div>
+            <div id="bt-sharpe" style="font-size:20px;font-weight:800;color:#fbbf24">—</div>
+            <div style="font-size:8px;color:rgba(255,255,255,.4)">SHARPE</div>
+          </div>
         </div>
       </div>
 
-      <!-- Trade List -->
-      <div class="card" style="margin-bottom:10px">
-        <div class="chdr">📋 TRADE LIST
-          <button onclick="exportBtCSV()" style="font-size:8px;padding:2px 8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);border-radius:3px;cursor:pointer">⬇ CSV</button>
-        </div>
-        <div style="overflow-x:auto">
-          <table class="tbl" style="font-size:9px">
-            <thead><tr><th>DATE</th><th>TRADES</th><th>W/L</th><th>GROSS P&L</th><th>NET P&L</th><th>CUMULATIVE</th></tr></thead>
-            <tbody id="bt-trade-list"></tbody>
-          </table>
+      <!-- Institutional Metrics Grid -->
+      <div class="card" style="margin-bottom:8px">
+        <div class="chdr">📊 INSTITUTIONAL METRICS</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="bt-metrics-grid">
         </div>
       </div>
 
-      <!-- Position Sizing Recommendation -->
-      <div class="card" style="margin-bottom:10px">
-        <div class="chdr">💰 POSITION SIZING</div>
-        <div id="bt-position-sizing" style="font-size:10px;line-height:2;color:var(--mu)"></div>
+      <!-- Equity Curve (Canvas) -->
+      <div class="card" style="margin-bottom:8px">
+        <div class="chdr" style="display:flex;justify-content:space-between">
+          <span>📈 EQUITY CURVE</span>
+          <span id="bt-cagr-label" style="font-size:9px;color:var(--gr)"></span>
+        </div>
+        <canvas id="bt-equity-canvas" width="340" height="160" style="width:100%;height:160px;border-radius:6px;background:#0a0d18"></canvas>
+      </div>
+
+      <!-- Monthly Heatmap -->
+      <div class="card" style="margin-bottom:8px">
+        <div class="chdr">📅 MONTHLY P&L HEATMAP</div>
+        <div id="bt-monthly-heatmap" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+      </div>
+
+      <!-- Charges breakdown -->
+      <div class="card" style="margin-bottom:8px">
+        <div class="chdr">💸 EXECUTION COSTS</div>
+        <div id="bt-charges-detail" style="font-size:10px;line-height:1.8"></div>
+      </div>
+
+      <!-- Weekday Analysis -->
+      <div class="card" style="margin-bottom:8px">
+        <div class="chdr">📅 WEEKDAY ANALYSIS</div>
+        <div id="bt-weekday-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:4px"></div>
+      </div>
+
+      <!-- Regime Analysis -->
+      <div class="card" style="margin-bottom:8px">
+        <div class="chdr">🎯 REGIME ANALYSIS</div>
+        <div id="bt-regime-grid"></div>
+      </div>
+
+      <!-- Day-wise P&L Calendar -->
+      <div class="card">
+        <div class="chdr">📋 DATE-WISE P&L CALENDAR</div>
+        <div id="bt-calendar" style="max-height:260px;overflow-y:auto"></div>
       </div>
 
     </div>
   </div>
 
-  <!-- COMPARE TAB -->
+  <!-- ══ COMPARE TAB ══ -->
   <div id="bt-compare" style="display:none">
-    <div class="card" style="margin-bottom:10px">
-      <div class="chdr">🔀 COMPARE 2 STRATEGIES</div>
-      <div class="g2" style="gap:8px;margin-bottom:8px">
-        <div><div class="lbl">STRATEGY A</div>
-          <select id="bt-cmp-a" style="width:100%">
-            <option value="STR_THETA_DECAY">Theta Decay</option>
-            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor</option>
-            <option value="STR_ORB">ORB</option>
-            <option value="CONFLUENCE_930">9:30 Confluence</option>
-            <option value="MTF_TREND_ALIGN">MTF Alignment</option>
-          </select>
-        </div>
-        <div><div class="lbl">STRATEGY B</div>
-          <select id="bt-cmp-b" style="width:100%">
-            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor</option>
-            <option value="STR_THETA_DECAY">Theta Decay</option>
-            <option value="BREAKOUT_TREND">Breakout Trend</option>
-            <option value="ORB_ATM_930">ORB ATM 9:30</option>
-            <option value="AI_GEN5_001">Gen5 Momentum AI</option>
-          </select>
+    <div class="card">
+      <div class="chdr">🔀 STRATEGY COMPARISON</div>
+      <div style="font-size:10px;color:var(--mu);margin-bottom:8px">Run multiple strategies and compare performance</div>
+      <div id="bt-compare-list" style="margin-bottom:8px">
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <select id="cmp-s1" style="flex:1;font-size:10px"><option value="STR_THETA_DECAY">Theta Decay</option><option value="STR_ORB">ORB</option><option value="STR_IRON_CONDOR_WEEKLY">Iron Condor</option></select>
+          <select id="cmp-s2" style="flex:1;font-size:10px"><option value="STR_VWAP_BOUNCE">VWAP Bounce</option><option value="STR_GAP_FADE">Gap Fade</option><option value="STR_PCR_REVERSAL">PCR Reversal</option></select>
         </div>
       </div>
-      <div class="g2" style="gap:8px;margin-bottom:10px">
-        <div><div class="lbl">CAPITAL</div><input type="number" id="bt-cmp-cap" value="100000"></div>
-        <div><div class="lbl">PERIOD</div>
-          <select id="bt-cmp-m">
-            <option value="1">1 Month</option>
-            <option value="3" selected>3 Months</option>
-            <option value="6">6 Months</option>
-          </select>
-        </div>
-      </div>
-      <button onclick="runCompare()" class="btn bg blg" style="width:100%">🔀 COMPARE NOW</button>
+      <button onclick="runCompare()" class="btn bg" style="width:100%;font-size:11px">🔀 COMPARE STRATEGIES</button>
     </div>
-    <div id="bt-compare-result" style="display:none"></div>
+    <div id="cmp-results"></div>
   </div>
 
-  <!-- HISTORY TAB -->
+  <!-- ══ HISTORY TAB ══ -->
   <div id="bt-history" style="display:none">
     <div class="card">
-      <div class="chdr">📋 BACKTEST HISTORY</div>
-      <div id="bt-history-list" style="font-size:10px;color:var(--mu)">
-        <div style="text-align:center;padding:20px">Run a backtest to see history</div>
-      </div>
+      <div class="chdr">📋 BACKTEST HISTORY <button onclick="loadBtHistory()" class="btn" style="font-size:9px;padding:2px 8px">🔄</button></div>
+      <div id="bt-hist-list" style="max-height:400px;overflow-y:auto"></div>
     </div>
   </div>
 
@@ -8154,6 +8149,279 @@ document.addEventListener('click',function(e){
     }
   }
 });
+
+// ══════════════════════════════════════════════════════════
+// INSTITUTIONAL BACKTEST — JS ENGINE
+// ══════════════════════════════════════════════════════════
+
+function btTab(tab, btn){
+  ['run','compare','history'].forEach(function(t){
+    var el = document.getElementById('bt-'+t);
+    if(el) el.style.display = t===tab ? 'block' : 'none';
+    var b = document.getElementById('bt-tab-'+t);
+    if(b){
+      b.style.background = t===tab ? 'rgba(79,142,247,.12)' : 'none';
+      b.style.borderColor = t===tab ? 'rgba(79,142,247,.3)' : 'rgba(255,255,255,.1)';
+      b.style.color = t===tab ? '#4f8ef7' : 'rgba(255,255,255,.5)';
+    }
+  });
+  if(tab==='history') loadBtHistory();
+}
+
+function runInstitutionalBT(){
+  var btn = document.getElementById('bt-btn');
+  if(btn){ btn.textContent='⏳ Running Analysis...'; btn.disabled=true; }
+  
+  var payload = {
+    strategy: document.getElementById('bt-s').value,
+    instrument: document.getElementById('bt-inst').value,
+    capital: parseFloat(document.getElementById('bt-c').value)||500000,
+    months: parseInt(document.getElementById('bt-m').value)||3,
+    lots: parseInt(document.getElementById('bt-l').value)||1,
+    sl_pct: parseFloat(document.getElementById('bt-sl').value)||1.5,
+    target_pct: parseFloat(document.getElementById('bt-tgt').value)||2.5,
+    broker: document.getElementById('bt-broker').value,
+    use_kelly: document.getElementById('bt-kelly').checked,
+    compound: document.getElementById('bt-compound').checked,
+  };
+  
+  req('/backtest/institutional','POST',payload,function(err,d){
+    if(btn){ btn.textContent='⚡ RUN INSTITUTIONAL BACKTEST'; btn.disabled=false; }
+    if(err||!d||d.error){
+      toast('Backtest failed: '+(d&&d.error||err||'Error'),'error');
+      return;
+    }
+    _renderInstitutionalResults(d);
+    toast('Backtest complete! '+d.total_trades+' trades analyzed','success');
+    // Save to history
+    try{
+      var hist = JSON.parse(localStorage.getItem('bt_history')||'[]');
+      hist.unshift({
+        id: Date.now(), strategy:payload.strategy, months:payload.months,
+        capital:payload.capital, pnl:d.total_pnl, win_rate:d.win_rate,
+        sharpe:d.sharpe_ratio, time:new Date().toLocaleString()
+      });
+      localStorage.setItem('bt_history', JSON.stringify(hist.slice(0,20)));
+    }catch(e){}
+  });
+}
+
+function _renderInstitutionalResults(d){
+  document.getElementById('bt-results').style.display = 'block';
+  
+  // Summary bar
+  var pnlEl = document.getElementById('bt-total-pnl');
+  var wrEl = document.getElementById('bt-win-rate');
+  var shEl = document.getElementById('bt-sharpe');
+  var pnlColor = d.total_pnl >= 0 ? '#00ff88' : '#ff3366';
+  if(pnlEl){ pnlEl.textContent = (d.total_pnl>=0?'+':'')+'\u20b9'+Math.round(d.total_pnl).toLocaleString('en-IN'); pnlEl.style.color=pnlColor; }
+  if(wrEl) wrEl.textContent = (d.win_rate||0)+'%';
+  if(shEl){ shEl.textContent = (d.sharpe_ratio||0).toFixed(2); shEl.style.color = d.sharpe_ratio>=1?'#00ff88':d.sharpe_ratio>=0.5?'#fbbf24':'#ff3366'; }
+  
+  // CAGR label
+  var cLabel = document.getElementById('bt-cagr-label');
+  if(cLabel) cLabel.textContent = 'CAGR: '+(d.cagr||0)+'%';
+  
+  // Metrics grid
+  var grid = document.getElementById('bt-metrics-grid');
+  if(grid){
+    var metrics = [
+      ['Sharpe', (d.sharpe_ratio||0).toFixed(3), d.sharpe_ratio>=1?'var(--gr)':d.sharpe_ratio>=0.5?'var(--am)':'var(--rd)'],
+      ['Sortino', (d.sortino_ratio||0).toFixed(3), d.sortino_ratio>=1.5?'var(--gr)':'var(--am)'],
+      ['Calmar', (d.calmar_ratio||0).toFixed(3), d.calmar_ratio>=2?'var(--gr)':'var(--am)'],
+      ['Profit Factor', (d.profit_factor||0).toFixed(3), d.profit_factor>=1.5?'var(--gr)':'var(--am)'],
+      ['Max DD', (d.max_drawdown_pct||0)+'%', d.max_drawdown_pct<=10?'var(--gr)':d.max_drawdown_pct<=20?'var(--am)':'var(--rd)'],
+      ['Expectancy', '\u20b9'+(d.expectancy||0).toFixed(0), d.expectancy>0?'var(--gr)':'var(--rd)'],
+      ['CAGR', (d.cagr||0)+'%', d.cagr>=20?'var(--gr)':d.cagr>=10?'var(--am)':'var(--rd)'],
+      ['Risk of Ruin', (d.risk_of_ruin||0)+'%', d.risk_of_ruin<1?'var(--gr)':d.risk_of_ruin<10?'var(--am)':'var(--rd)'],
+      ['Avg Win', '\u20b9'+(d.avg_win||0).toFixed(0), 'var(--gr)'],
+      ['Avg Loss', '\u20b9'+(d.avg_loss||0).toFixed(0), 'var(--rd)'],
+      ['Recovery', (d.recovery_factor||0).toFixed(2), 'var(--bl)'],
+      ['Exposure', (d.exposure_pct||0)+'%', 'var(--mu)'],
+      ['Total Trades', d.total_trades||0, 'var(--tx)'],
+      ['Win/Loss', (d.winning_trades||0)+'/'+(d.losing_trades||0), 'var(--mu)'],
+      ['Avg Quality', (d.avg_quality_score||0)+'/100', d.avg_quality_score>=70?'var(--gr)':'var(--am)'],
+      ['Final Capital', '\u20b9'+(d.final_capital||0).toLocaleString('en-IN'), d.final_capital>d.capital?'var(--gr)':'var(--rd)'],
+    ];
+    grid.innerHTML = metrics.map(function(m){
+      return '<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">'
+        +'<div style="font-size:14px;font-weight:700;color:'+m[2]+'">'+m[1]+'</div>'
+        +'<div style="font-size:8px;color:var(--mu)">'+m[0]+'</div>'
+        +'</div>';
+    }).join('');
+  }
+  
+  // Equity curve
+  _drawEquityCurve(d.equity_curve || []);
+  
+  // Monthly heatmap
+  var hm = document.getElementById('bt-monthly-heatmap');
+  if(hm && d.monthly_pnl){
+    hm.innerHTML = d.monthly_pnl.map(function(m){
+      var isPos = m.pnl >= 0;
+      return '<div style="flex:1;min-width:60px;background:'+(isPos?'rgba(0,255,136,.15)':'rgba(255,51,102,.15)')+';border:1px solid '+(isPos?'rgba(0,255,136,.3)':'rgba(255,51,102,.3)')+';border-radius:6px;padding:6px;text-align:center">'
+        +'<div style="font-size:9px;color:var(--mu)">'+m.month+'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:'+(isPos?'var(--gr)':'var(--rd)')+'">'+m.pct+'%</div>'
+        +'<div style="font-size:8px;color:var(--mu)">\u20b9'+(Math.abs(m.pnl)/1000).toFixed(1)+'k</div>'
+        +'</div>';
+    }).join('');
+  }
+  
+  // Charges breakdown
+  var ch = document.getElementById('bt-charges-detail');
+  if(ch){
+    ch.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+      +'<div>Total Charges: <b style="color:var(--rd)">\u20b9'+(d.total_charges_paid||0).toFixed(0)+'</b></div>'
+      +'<div>Total Slippage: <b style="color:var(--rd)">\u20b9'+(d.total_slippage||0).toFixed(0)+'</b></div>'
+      +'<div>Gross P&L: <b style="color:var(--gr)">\u20b9'+(d.gross_profit||0).toFixed(0)+'</b></div>'
+      +'<div>Net P&L: <b style="color:'+(d.total_pnl>=0?'var(--gr)':'var(--rd)')+'">'+
+      (d.total_pnl>=0?'+':'')+'\u20b9'+(d.total_pnl||0).toFixed(0)+'</b></div>'
+      +'</div>';
+  }
+  
+  // Weekday grid
+  var wg = document.getElementById('bt-weekday-grid');
+  if(wg && d.weekday_analysis){
+    var wdays = ['Mon','Tue','Wed','Thu','Fri'];
+    wg.innerHTML = wdays.map(function(w){
+      var wdata = d.weekday_analysis[['Monday','Tuesday','Wednesday','Thursday','Friday'][wdays.indexOf(w)]];
+      if(!wdata) return '<div style="background:var(--bg4);padding:6px;border-radius:6px;text-align:center"><div style="font-size:9px;color:var(--mu)">'+w+'</div><div style="font-size:10px;color:var(--mu)">—</div></div>';
+      var isPos = wdata.avg_pnl >= 0;
+      return '<div style="background:var(--bg4);padding:6px;border-radius:6px;text-align:center">'
+        +'<div style="font-size:9px;color:var(--mu)">'+w+'</div>'
+        +'<div style="font-size:11px;font-weight:700;color:'+(isPos?'var(--gr)':'var(--rd)')+'">'+wdata.win_rate+'%</div>'
+        +'<div style="font-size:8px;color:var(--mu)">\u20b9'+(wdata.avg_pnl/1000).toFixed(1)+'k avg</div>'
+        +'</div>';
+    }).join('');
+  }
+  
+  // Regime analysis  
+  var rg = document.getElementById('bt-regime-grid');
+  if(rg && d.regime_analysis){
+    rg.innerHTML = Object.entries(d.regime_analysis).map(function(kv){
+      var r=kv[0], ra=kv[1];
+      var isPos = ra.avg_pnl >= 0;
+      var colors = {TRENDING:'#00ff88',SIDEWAYS:'#fbbf24',HIGH_VOL:'#f59e0b',EXPIRY:'#8b5cf6',LOW_VOL:'#6b7280',GAPDAY:'#ef4444'};
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:var(--bg4);border-radius:6px;margin-bottom:4px">'
+        +'<div style="display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:'+(colors[r]||'#fff')+'"></div><span style="font-size:10px;font-weight:600">'+r+'</span></div>'
+        +'<div style="text-align:right"><div style="font-size:10px;font-weight:700;color:'+(isPos?'var(--gr)':'var(--rd)')+'">'+'\u20b9'+(ra.avg_pnl/1000).toFixed(1)+'k avg</div>'
+        +'<div style="font-size:8px;color:var(--mu)">'+ra.trades+' trades</div></div>'
+        +'</div>';
+    }).join('');
+  }
+  
+  // Calendar
+  var cal = document.getElementById('bt-calendar');
+  if(cal && d.daily_results){
+    var trading = d.daily_results.filter(function(r){ return r.trades > 0; });
+    cal.innerHTML = trading.map(function(r){
+      var isPos = r.net_pnl >= 0;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04)">'
+        +'<div>'
+        +'<div style="font-size:10px;font-weight:600">'+r.date+'</div>'
+        +'<div style="font-size:9px;color:var(--mu)">'+r.trades+' trade'+( r.trades>1?'s':'')+' · '+r.regime+' · VIX '+r.vix+'</div>'
+        +'</div>'
+        +'<div style="text-align:right">'
+        +'<div style="font-size:12px;font-weight:700;color:'+(isPos?'var(--gr)':'var(--rd)')+'">'+( isPos?'+':'')+'\u20b9'+r.net_pnl.toLocaleString('en-IN')+'</div>'
+        +'<div style="font-size:8px;color:var(--mu)">'+(r.wins||0)+'W '+(r.losses||0)+'L · DD '+r.drawdown_pct+'%</div>'
+        +'</div></div>';
+    }).join('') || '<div style="color:var(--mu);padding:16px;text-align:center">No trades in this period</div>';
+  }
+  
+  // Scroll to results
+  document.getElementById('bt-results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function _drawEquityCurve(data){
+  var canvas = document.getElementById('bt-equity-canvas');
+  if(!canvas || !data.length) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  
+  // Background
+  ctx.fillStyle = '#0a0d18';
+  ctx.fillRect(0,0,W,H);
+  
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,.05)';
+  ctx.lineWidth = 1;
+  for(var i=0;i<5;i++){
+    var y = H/5*i;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+  
+  var equities = data.map(function(d){ return d.equity; });
+  var minE = Math.min.apply(null, equities);
+  var maxE = Math.max.apply(null, equities);
+  var range = maxE - minE || 1;
+  
+  var x = function(i){ return (i/(equities.length-1)) * W; };
+  var y = function(v){ return H - ((v-minE)/range) * (H-20) - 10; };
+  
+  // Drawdown fill
+  var dd = data.map(function(d){ return d.drawdown; });
+  if(dd.length > 1){
+    ctx.fillStyle = 'rgba(255,51,102,.08)';
+    ctx.beginPath();
+    ctx.moveTo(x(0), H);
+    for(var i=0;i<dd.length;i++){
+      ctx.lineTo(x(i), H * (dd[i]/100));
+    }
+    ctx.lineTo(x(dd.length-1), H);
+    ctx.fill();
+  }
+  
+  // Equity line
+  var isProfit = equities[equities.length-1] >= equities[0];
+  var grad = ctx.createLinearGradient(0,0,W,0);
+  grad.addColorStop(0, isProfit ? 'rgba(0,255,136,.6)' : 'rgba(255,51,102,.6)');
+  grad.addColorStop(1, isProfit ? '#00ff88' : '#ff3366');
+  
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x(0), y(equities[0]));
+  for(var i=1;i<equities.length;i++){
+    ctx.lineTo(x(i), y(equities[i]));
+  }
+  ctx.stroke();
+  
+  // Fill below line
+  ctx.fillStyle = isProfit ? 'rgba(0,255,136,.06)' : 'rgba(255,51,102,.06)';
+  ctx.lineTo(x(equities.length-1), H);
+  ctx.lineTo(x(0), H);
+  ctx.fill();
+}
+
+function loadBtHistory(){
+  var list = document.getElementById('bt-hist-list');
+  if(!list) return;
+  try{
+    var hist = JSON.parse(localStorage.getItem('bt_history')||'[]');
+    if(!hist.length){
+      list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center">No backtest history yet</div>';
+      return;
+    }
+    list.innerHTML = hist.map(function(h){
+      var isPos = h.pnl >= 0;
+      return '<div style="padding:8px;border-bottom:1px solid rgba(255,255,255,.05)">'
+        +'<div style="display:flex;justify-content:space-between">'
+        +'<div style="font-size:10px;font-weight:600">'+h.strategy+'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:'+(isPos?'var(--gr)':'var(--rd)')+'">'+( isPos?'+':'')+'\u20b9'+(h.pnl||0).toFixed(0)+'</div>'
+        +'</div>'
+        +'<div style="font-size:9px;color:var(--mu)">'+h.months+'m · \u20b9'+(h.capital/100000).toFixed(1)+'L · WR: '+h.win_rate+'% · Sharpe: '+h.sharpe+' · '+h.time+'</div>'
+        +'</div>';
+    }).join('');
+  }catch(e){
+    list.innerHTML='<div style="color:var(--rd);padding:16px">Error loading history</div>';
+  }
+}
+
+// Also keep the old runBT working (for compatibility)
+function runBT(){
+  runInstitutionalBT();
+}
 </script>
 </body>
 </html>

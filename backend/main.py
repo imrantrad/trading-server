@@ -3930,6 +3930,36 @@ def nlp_parse(payload: dict):
             "original_text":text,"confidence":min(100,50+len(entry_conds)*10)}
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# INSTITUTIONAL BACKTEST — Full hedge-fund grade engine
+# ══════════════════════════════════════════════════════════════════════════════
+@app.post("/backtest/institutional")
+def run_institutional_bt(payload: dict):
+    """Run institutional-grade backtest with full analytics"""
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+        from backtest.institutional_backtest import run_institutional_backtest
+        from datetime import date as _date
+        
+        result = run_institutional_backtest(
+            strategy=payload.get("strategy", "STR_THETA_DECAY"),
+            capital=float(payload.get("capital", 500000)),
+            months=int(payload.get("months", 3)),
+            lots=int(payload.get("lots", 1)),
+            sl_pct=float(payload.get("sl_pct", 1.5)),
+            target_pct=float(payload.get("target_pct", 2.5)),
+            instrument=payload.get("instrument", "NIFTY"),
+            broker=payload.get("broker", "zerodha"),
+            compound=payload.get("compound", True),
+            use_kelly=payload.get("use_kelly", True),
+        )
+        return result
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()[-500:]}
+
+
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
     """Scan all instruments with ML models - auto-trains if needed"""
