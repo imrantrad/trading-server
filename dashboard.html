@@ -6660,6 +6660,12 @@ function loadAIStrats(type){
       div.querySelector('.ai-bt-btn').onclick = function(){ showBt(); };
       div.querySelector('.ai-pt-btn').onclick = function(){ showPaper(); };
       // Copy button
+      var aiCpBtn = document.createElement('button');
+      aiCpBtn.className='btn'; aiCpBtn.textContent='📋 COPY';
+      aiCpBtn.style.cssText='width:100%;margin-top:6px;font-size:10px;padding:5px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:#4f8ef7';
+      aiCpBtn.onclick=(function(st){return function(){copyStrategyText(st);};})(s);
+      div.appendChild(aiCpBtn);
+      // Copy button
       var cpBtn = document.createElement('button');
       cpBtn.className='btn'; cpBtn.textContent='📋';
       cpBtn.title='Copy strategy';
