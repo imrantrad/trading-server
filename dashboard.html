@@ -2413,14 +2413,34 @@ input:focus, select:focus {
 
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
-// Global variable safety - ensures API and UID always available
-window.API = window.API || (window.location.protocol + '//' + window.location.host);
+// ═══ GLOBAL VARIABLES — Always defined ═══════════════════════════════════
+window.API = window.API || (function(){
+  var l = window.location;
+  return l.protocol + '//' + l.host;
+})();
+
+// User globals
 window.UID = window.UID || (function(){
   try{ var u=JSON.parse(localStorage.getItem('trd_user')||'{}'); return u.user_id||'USR124535215'; }
   catch(e){ return 'USR124535215'; }
 })();
+window.USER_NAME = window.USER_NAME || 'Trader';
+window.USER_EMAIL = window.USER_EMAIL || '';
 window.USER_PLAN = window.USER_PLAN || 'FREE';
 window.USER_CAPITAL = window.USER_CAPITAL || 500000;
+
+// Trade panel globals — prevent ReferenceError
+var INST = window.INST || 'NIFTY';
+var ACT  = window.ACT  || 'BUY';
+var TYP  = window.TYP  || 'CE';
+var TRADE_MODE = window.TRADE_MODE || 'PAPER';
+var SELPLAN = window.SELPLAN || 'PRO';
+
+// Shortcut helpers
+function $(id){ return document.getElementById(id); }
+function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
+function iv(id){ return parseInt(gv(id))||0; }
+function nv(id){ return parseFloat(gv(id))||0; }
 
 
 // ── BELL EASTER EGG: 5 clicks → Admin login ──────────────────────────────
@@ -3607,7 +3627,7 @@ function connectWS() {
     var wsHost = API.replace('https://','').replace('http://','');
     var wsUrl = wsProto + '://' + wsHost + '/ws/live';
     
-    wsConn = new WebSocket(wsUrl);
+    try{ wsConn = new WebSocket(wsUrl); }catch(e){ console.log('WS not available'); return; }
     
     wsConn.onopen = function() {
       wsRetries = 0;
@@ -3718,7 +3738,7 @@ function fallbackToPolling() {
   
   // ── STEP 7: Delayed tasks ──
   setTimeout(function(){ if(typeof loadBrokerStatus==='function') loadBrokerStatus(); }, 2000);
-  setTimeout(function(){ if(typeof loadAutoExecConfig==='function') loadAutoExecConfig(); }, 2500);
+  setTimeout(function(){ try{ if(typeof loadAutoExecConfig==='function') loadAutoExecConfig(); }catch(e){} }, 2500);
   setTimeout(function(){ if(typeof loadStrategyRegistry==='function') loadStrategyRegistry(); }, 3000);
   // NOTE: loadUIConfig removed from auto-run (was causing paper test switch)
   
