@@ -254,12 +254,12 @@ def run_advanced_backtest(
             day_trades = day_rng.randint(1, max(1, max_daily))
             
             for t in range(day_trades):
-                # Win or loss — use day_rng (truly per-day deterministic)
-                is_win = day_rng.random() < win_rate
+                # Win or loss — seeded per day, deterministic
+                is_win = rng.random() < win_rate
                 
                 if is_win:
-                    # Win with ±30% variance — but seeded per day
-                    variance = day_rng.uniform(0.7, 1.3)
+                    # Win with ±30% variance — but seeded
+                    variance = rng.uniform(0.7, 1.3)
                     pnl = avg_win * variance
                     day_wins += 1
                     wins += 1

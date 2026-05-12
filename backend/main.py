@@ -1191,13 +1191,10 @@ class UserLogin(BaseModel):
     username: str; password: str
 
 class UserUpdate(BaseModel):
-    user_id: str = None; full_name: str = None; email: str = None
-    phone: str = None; broker: str = None; capital: float = None
-    risk_per_trade: float = None; max_daily_loss: float = None
-    preferred_instruments: str = None; theme: str = None
-    telegram_chat_id: str = None; plan: str = None
-    status: str = None; free_access: bool = False
-    notes: str = None; payment_id: str = None
+    full_name: str = None; email: str = None; phone: str = None
+    broker: str = None; capital: float = None; risk_per_trade: float = None
+    max_daily_loss: float = None; preferred_instruments: str = None
+    theme: str = None; telegram_chat_id: str = None
 
 @app.post("/users/register")
 def register(payload: UserCreate):
@@ -2002,29 +1999,10 @@ def get_consents(user_id: str):
 # ── ADMIN ────────────────────────────────────────────────
 # /admin/dashboard handled below
 
-@app.get("/admin/users")  
+@app.get("/admin/users")
 def admin_users(limit: int = 50):
-    users = list(_all_users.values())
-    # Also include user_db users
-    if USER_SYSTEM:
-        try:
-            import sqlite3 as _sq
-            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../database/users.db")
-            if os.path.exists(db_path):
-                conn = _sq.connect(db_path)
-                conn.row_factory = _sq.Row
-                rows = conn.execute("SELECT * FROM users WHERE is_active=1 ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
-                conn.close()
-                db_users = [dict(r) for r in rows]
-                # Merge with _all_users, db takes priority
-                merged = {u["id"]: u for u in db_users}
-                for uid, u in _all_users.items():
-                    if uid not in merged:
-                        merged[uid] = u
-                users = list(merged.values())
-        except Exception as e:
-            pass
-    return {"users": users, "total": len(users)}
+    if not ENTERPRISE: return {"users":[]}
+    return {"users": admin.get_user_list(limit)}
 
 @app.get("/admin/health")
 def admin_health():
@@ -2658,81 +2636,48 @@ def admin_get_users():
 
 @app.post("/admin/users/add")
 def admin_add_user(user: UserUpdate):
-    uid = user.user_id or f"USR{int(datetime.now().timestamp()*1000)%999999999:09d}"
-    import random, string
-    # Add to in-memory
+    uid = user.user_id or f"USR{int(datetime.now().timestamp())}"
     _all_users[uid] = {
-        "user_id": uid, "full_name": user.full_name or "New User",
-        "email": user.email or f"{uid}@trd.app", "phone": user.phone or "",
-        "plan": user.plan or "FREE", "capital": user.capital or 500000,
-        "status": user.status or "active", "broker": "ZERODHA",
-        "created_at": datetime.now().strftime("%Y-%m-%d")
+        "user_id": uid,
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone": user.phone,
+        "plan": user.plan,
+        "capital": user.capital,
+        "status": user.status,
+        "free_access": user.free_access,
+        "notes": user.notes,
+        "payment_id": user.payment_id,
+        "created_at": datetime.now().strftime("%Y-%m-%d"),
+        "broker": "ZERODHA"
     }
-    # Also add to user_db if available
-    if USER_SYSTEM:
-        try:
-            pwd = "".join(random.choices(string.ascii_letters+string.digits, k=12))
-            username = (user.email or uid).split("@")[0].replace(" ","_").lower()
-            result = user_db.create_user(
-                username=username, email=user.email or f"{uid}@trd.app",
-                password=pwd, full_name=user.full_name or "New User",
-                capital=user.capital or 500000
-            )
-            actual_uid = result.get("user_id", uid)
-            _all_users[actual_uid] = _all_users.pop(uid, _all_users.get(actual_uid, {}))
-            uid = actual_uid
-        except Exception as e:
-            pass  # Keep in-memory version
-    return {"added": True, "user_id": uid, "message": f"User {user.full_name} added successfully"}
+    return {"added": True, "user_id": uid, "message": f"User {user.full_name} added"}
 
 @app.put("/admin/users/{user_id}")
 def admin_update_user(user_id: str, user: UserUpdate):
-    # Update in-memory
     if user_id not in _all_users:
         _all_users[user_id] = {}
     _all_users[user_id].update({
-        "user_id": user_id, "full_name": user.full_name,
-        "email": user.email, "phone": user.phone,
-        "plan": user.plan, "capital": user.capital,
-        "status": user.status, "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        "user_id": user_id,
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone": user.phone,
+        "plan": user.plan,
+        "capital": user.capital,
+        "status": user.status,
+        "free_access": user.free_access,
+        "notes": user.notes,
+        "payment_id": user.payment_id,
+        "updated_at": datetime.now().isoformat()
     })
-    # Update in user_db (SQLite)
-    if USER_SYSTEM:
-        try:
-            import sqlite3 as _sq
-            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../database/users.db")
-            if os.path.exists(db_path):
-                conn = _sq.connect(db_path)
-                conn.execute("""UPDATE users SET 
-                    full_name=?, email=?, phone=?, capital=?,
-                    subscription_plan=?
-                    WHERE id=?""",
-                    (user.full_name, user.email, user.phone or '',
-                     user.capital or 500000, user.plan or 'FREE', user_id))
-                conn.commit(); conn.close()
-        except Exception as e:
-            pass
-    return {"updated": True, "user_id": user_id, "message": "User updated successfully"}
-
+    return {"updated": True, "user_id": user_id}
 
 @app.delete("/admin/users/{user_id}")
 def admin_delete_user(user_id: str):
-    # Remove from in-memory
-    _all_users.pop(user_id, None)
-    # Remove from user_db
-    deleted = True
-    if USER_SYSTEM:
-        try:
-            import sqlite3 as _sq
-            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../database/users.db")
-            if os.path.exists(db_path):
-                conn = _sq.connect(db_path)
-                conn.execute("UPDATE users SET is_active=0 WHERE id=?", (user_id,))
-                conn.commit(); conn.close()
-        except Exception as e:
-            deleted = False
-    return {"deleted": deleted, "user_id": user_id, "message": "User deleted"}
-
+    if user_id in _all_users:
+        del _all_users[user_id]
+        return {"deleted": True, "user_id": user_id}
+    return {"deleted": False, "error": "User not found"}
 
 @app.post("/admin/users/{user_id}/plan")
 def admin_set_plan(user_id: str, plan: str = "PRO", free_access: bool = False):
@@ -3053,28 +2998,14 @@ def options_greeks(spot:float=24000, strike:float=24000, expiry_days:int=7, iv:f
 
 @app.get("/options/chain")
 def options_chain(spot:float=24000, expiry_days:int=7, vix:float=15.0, rate:float=6.5):
-    atm_sigma = vix/100; T = expiry_days/365; r = rate/100
+    sigma = vix/100; T = expiry_days/365; r = rate/100
     atm = round(spot/50)*50
     chain = []
     for i in range(-5, 6):
         K = atm + i*50
-        # IV Skew: OTM Puts have higher IV, OTM Calls have lower IV (NIFTY skew)
-        moneyness = (K - spot) / spot  # negative = OTM put, positive = OTM call
-        if moneyness < 0:
-            # Below ATM: add IV premium (put skew)
-            skew_adj = abs(moneyness) * 3.5  # ~3.5% IV increase per 1% OTM
-        else:
-            # Above ATM: slightly lower IV (call wing)
-            skew_adj = -moneyness * 1.5
-        sigma_ce = max(0.05, atm_sigma + skew_adj/100 * 0.5)
-        sigma_pe = max(0.05, atm_sigma + skew_adj/100)
-        
         for otype in ["CE","PE"]:
-            sigma = sigma_ce if otype=="CE" else sigma_pe
             g = _calc_greeks(spot, K, T, r, sigma, otype)
-            g.update({"strike":K,"option_type":otype,"expiry_days":expiry_days,
-                      "iv_pct":round(sigma*100,2),
-                      "lot_size":50,"total_premium":round(g["price"]*50,2),"oi":0,"volume":0})
+            g.update({"strike":K,"option_type":otype,"expiry_days":expiry_days,"iv_pct":round(vix,2),"lot_size":50,"total_premium":round(g["price"]*50,2),"oi":0,"volume":0})
             chain.append(g)
     atm_ce = next((x for x in chain if x["strike"]==atm and x["option_type"]=="CE"), {})
     atm_pe = next((x for x in chain if x["strike"]==atm and x["option_type"]=="PE"), {})
@@ -3686,497 +3617,3 @@ async def ml_scan_all(request: Request):
         "wait_count": len([r for r in clean_results.values() if r.get("signal")=="WAIT"]),
         "total": len(clean_results)
     }
-
-@app.post("/admin/action")
-async def admin_action(request: Request):
-    """Admin system actions - reset, clear, restart"""
-    data = await request.json()
-    action = data.get("action", "")
-    
-    if action == "reset_paper":
-        try:
-            adv_paper.positions.clear()
-            adv_paper.closed_positions.clear()
-            adv_paper.daily_trades.clear()
-            adv_paper.daily_pnl.clear()
-            return {"success": True, "message": "Paper trading data reset"}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    elif action == "clear_backtests":
-        return {"success": True, "message": "Backtest history cleared"}
-    
-    elif action == "restart":
-        import threading
-        def _restart():
-            import time, os, sys
-            time.sleep(2)
-            os.execv(sys.executable, [sys.executable] + sys.argv)
-        threading.Thread(target=_restart, daemon=True).start()
-        return {"success": True, "message": "Server restarting in 2 seconds..."}
-    
-    return {"success": False, "error": f"Unknown action: {action}"}
-
-# ════════════════════════════════════════════════════════════════════════════
-# NLP ENGINE V3.5 — Semantic + AST + Auto-correct + Suggestions
-# ════════════════════════════════════════════════════════════════════════════
-try:
-    from ai_engine.nlp_engine_v35 import run_engine as nlp_run_engine
-    NLP_V35 = True
-except Exception as e:
-    NLP_V35 = False
-    print(f"NLP v3.5: {e}")
-
-@app.post("/nlp/parse")
-def parse_nlp(payload: dict):
-    text = payload.get("text", "")
-    if not text: return {"error": "No text"}
-    import re as _re
-
-    def _find(patterns, t, default=None):
-        for p in patterns:
-            m = _re.search(p, t, _re.I)
-            if m: return m
-        return None
-    
-    tu = text.upper()
-    
-    # Action
-    action = "SELL" if _re.search(r"\bSELL\b|\bSHORT\b", tu) else "BUY"
-    
-    # Instrument
-    if _re.search(r"BANKNIFTY|BANK\s*NIFTY", tu): inst = "BANKNIFTY"
-    elif _re.search(r"FINNIFTY|FIN\s*NIFTY", tu): inst = "FINNIFTY"
-    elif _re.search(r"SENSEX", tu): inst = "SENSEX"
-    else: inst = "NIFTY"
-    
-    # Option type
-    if _re.search(r"\bPE\b|\bPUT\b", tu): otype = "PE"
-    elif _re.search(r"\bFUT\b|\bFUTURE\b", tu): otype = "FUT"
-    else: otype = "CE"
-    
-    # Lots
-    m = _re.search(r"(\d+)\s*(?:lot|lots)", text, _re.I)
-    lots = int(m.group(1)) if m else 1
-    
-    # SL
-    sl, sl_type = None, "pts"
-    m = _find([
-        r"(?:stop\s*loss|sl|hard\s*stop)[:\s=]+(\d+\.?\d*)\s*(%|percent)",
-        r"(?:stop\s*loss|sl|hard\s*stop)[:\s=]+(\d+\.?\d*)\s*(?:pts?|points?)?",
-        r"\bsl\s*@?\s*(\d+)\b",
-    ], text)
-    if m:
-        sl = float(m.group(1))
-        if m.lastindex >= 2 and m.group(2) and "%" in m.group(2): sl_type = "pct"
-    
-    # Target
-    tgt, tgt_type = None, "pts"
-    m = _find([
-        r"(?:target|tgt|profit\s*target)[:\s=]+(\d+\.?\d*)\s*(%|percent)",
-        r"(?:target|tgt|tp)[:\s=]+(\d+\.?\d*)\s*(?:pts?|points?)?",
-        r"\btgt\s*(\d+)\b",
-    ], text)
-    if m:
-        tgt = float(m.group(1))
-        if m.lastindex >= 2 and m.group(2) and "%" in m.group(2): tgt_type = "pct"
-    
-    # Timeframe
-    tf = "15m"
-    tf_map = {"1min":"1m","3min":"3m","5min":"5m","10min":"10m","15min":"15m","30min":"30m","1h":"1h","1hr":"1h","4h":"4h","daily":"1d","weekly":"1w"}
-    m = _re.search(r"(?:timeframe|tf|chart)[:\s]*(\d+\s*(?:min|m|h|hr|d|w|day|week))", text, _re.I)
-    if m:
-        key = m.group(1).strip().lower().replace(" ","")
-        tf = tf_map.get(key, key)
-    else:
-        m2 = _re.search(r"\b(\d+)(m|min|h|hr)\b", text, _re.I)
-        if m2: tf = m2.group(1)+m2.group(2).replace("hr","h").replace("min","m")
-    
-    # Entry/Exit time
-    exit_t = _re.search(r"(?:exit|force\s*exit|time\s*cut)[^0-9]*(\d{1,2}:\d{2}\s*(?:AM|PM))", text, _re.I)
-    entry_t = _re.search(r"(?:after|entry\s*time)[^0-9]*(\d{1,2}:\d{2}\s*(?:AM|PM))", text, _re.I)
-    
-    # Entry conditions
-    entry_conds = []
-    ec_section = _re.search(r"(?:ENTRY\s*CONDITIONS?|EntryConditions?)[:\s]*\n?(.+?)(?=\n\n|EXIT|\Z)", text, _re.I|_re.DOTALL)
-    if ec_section:
-        for line in ec_section.group(1).split("\n"):
-            line = _re.sub(r"^[\d.)\-•\s]+", "", line).strip()
-            if len(line) > 5: entry_conds.append(line)
-    if not entry_conds:
-        for p in [r"(RSI\s+(?:between|>|<|bounce|above|below)[^,\n]{3,40})",
-                  r"(EMA\s*\d+\s*(?:>|<|cross)[^,\n]{3,30})",
-                  r"(Price\s*(?:>|<|above|below|crosses?)[^,\n]{3,30})",
-                  r"(VWAP[^,\n]{0,20})", r"(ADX\s*(?:>|<)\s*\d+)",
-                  r"(Volume\s*(?:>|surge|2x|spike)[^,\n]{0,20})"]:
-            m = _re.search(p, text, _re.I)
-            if m: entry_conds.append(m.group(1).strip())
-    if _re.search(r"up.?trend|bullish", text, _re.I): entry_conds.append("Market in Up-Trend")
-    if _re.search(r"high\s+volume|volume\s+surge", text, _re.I): entry_conds.append("High Volume confirmation")
-    if entry_t: entry_conds.append("Enter after "+entry_t.group(1))
-    
-    # Exit conditions
-    exit_conds = []
-    ex_section = _re.search(r"(?:EXIT\s*(?:RULES?|CONDITIONS?)|ExitRules?)[:\s]*\n?(.+?)(?=\n\n|\Z)", text, _re.I|_re.DOTALL)
-    if ex_section:
-        for line in ex_section.group(1).split("\n"):
-            line = _re.sub(r"^[\d.)\-•\s]+", "", line).strip()
-            if len(line) > 5: exit_conds.append(line)
-    if sl: exit_conds.append("Stop Loss: "+str(sl)+("%" if sl_type=="pct" else " pts"))
-    if tgt: exit_conds.append("Target: "+str(tgt)+("%" if tgt_type=="pct" else " pts"))
-    if exit_t: exit_conds.append("Force Exit at "+exit_t.group(1))
-    
-    # Indicators
-    indicators = []
-    ind_checks = [("RSI","RSI"),("EMA\s*\d+","EMA"),("VWAP","VWAP"),("MACD","MACD"),
-                  ("ADX","ADX"),("\bBB\b|Bollinger","BB"),("Volume","Volume")]
-    for p, name in ind_checks:
-        if _re.search(p, text, _re.I): indicators.append(name)
-    
-    return {
-        "action": action, "instrument": inst, "option_type": otype,
-        "quantity": lots, "stop_loss": sl, "target": tgt,
-        "sl_type": sl_type, "target_type": tgt_type, "timeframe": tf,
-        "entry_conditions": list(dict.fromkeys(entry_conds))[:8],
-        "exit_conditions": list(dict.fromkeys(exit_conds))[:6],
-        "indicators": indicators,
-        "time_entry": entry_t.group(1) if entry_t else None,
-        "time_exit": exit_t.group(1) if exit_t else None,
-        "original_text": text,
-        "confidence": min(100, 50 + (len(entry_conds)*10) + (5 if sl else 0) + (5 if tgt else 0) + (5 if tf!="15m" else 0))
-    }
-
-
-@app.post("/strategies/v2/create")
-async def strategy_create(request: Request):
-    """Create new strategy with versioning"""
-    data = await request.json()
-    text = data.get("text","")
-    ast = data.get("ast",{})
-    execution = data.get("execution",{})
-    normalized = data.get("normalized",[])
-    
-    if not SE_AVAILABLE:
-        return {"error":"Strategy Engine not loaded"}
-    
-    strat = se_create(text, ast, execution, normalized)
-    strat_id = se_save(strat)
-    return {"success":True, "strategy_id": strat_id, "strategy": strat}
-
-@app.post("/strategies/v2/{strategy_id}/version")
-async def strategy_add_version(strategy_id: str, request: Request):
-    """Add new version to existing strategy"""
-    data = await request.json()
-    strat = se_load(strategy_id)
-    if not strat:
-        return {"error":"Strategy not found"}
-    
-    updated = se_add_version(
-        strat,
-        data.get("text",""),
-        data.get("ast",{}),
-        data.get("execution",{}),
-        data.get("normalized",[]),
-        data.get("notes","")
-    )
-    se_save(updated)
-    return {"success":True, "version": updated["current_version"], "strategy": updated}
-
-@app.get("/strategies/v2/{strategy_id}")
-def strategy_get(strategy_id: str):
-    """Get strategy with all versions"""
-    strat = se_load(strategy_id)
-    if not strat: return {"error":"Not found"}
-    return strat
-
-@app.get("/strategies/v2/{strategy_id}/copy")
-def strategy_copy(strategy_id: str):
-    """Get copyable natural language text"""
-    strat = se_load(strategy_id)
-    if not strat: return {"error":"Not found"}
-    return {"text": se_copy(strat), "rendered": se_render(strat)}
-
-@app.post("/strategies/v2/{strategy_id}/rollback")
-async def strategy_rollback(strategy_id: str, request: Request):
-    """Rollback to specific version"""
-    data = await request.json()
-    version_num = int(data.get("version",1))
-    strat = se_load(strategy_id)
-    if not strat: return {"error":"Not found"}
-    result = se_rollback(strat, version_num)
-    if isinstance(result, dict) and "error" in result:
-        return result
-    se_save(result)
-    return {"success":True, "current_version": version_num}
-
-@app.get("/strategies/v2/{strategy_id}/diff")
-def strategy_diff(strategy_id: str, v1: int = 1, v2: int = 2):
-    """Compare two versions"""
-    strat = se_load(strategy_id)
-    if not strat: return {"error":"Not found"}
-    ver1 = se_get_version(strat, v1)
-    ver2 = se_get_version(strat, v2)
-    if not ver1 or not ver2:
-        return {"error":"Version not found"}
-    return {"diff": se_diff(ver1, ver2), "v1": v1, "v2": v2}
-
-@app.post("/auth/google")
-def google_auth(payload: dict):
-    """Google OAuth - verify token and create/login user"""
-    import hashlib
-    
-    # Get user info from Google token payload
-    google_id = payload.get("google_id", "")
-    email = payload.get("email", "")
-    name = payload.get("name", "")
-    picture = payload.get("picture", "")
-    
-    if not email or not google_id:
-        return {"error": "Invalid Google token"}
-    
-    if not USER_SYSTEM:
-        # Return demo user if no user system
-        return {
-            "user_id": "USR124535215",
-            "username": email.split("@")[0],
-            "email": email,
-            "full_name": name,
-            "plan": "FREE",
-            "capital": 500000,
-            "picture": picture,
-            "token": "demo_token",
-            "new_user": False
-        }
-    
-    # Check if user exists by email
-    try:
-        existing = user_db.get_user_by_email(email)
-    except:
-        existing = None
-    
-    if existing:
-        # Update profile picture
-        try:
-            user_db.update_user(existing["user_id"], {"picture": picture, "full_name": name})
-        except: pass
-        existing["picture"] = picture
-        existing["token"] = hashlib.md5(f"{email}{google_id}".encode()).hexdigest()
-        existing["new_user"] = False
-        return existing
-    
-    # Create new user from Google
-    import random, string
-    username = email.split("@")[0] + "_" + "".join(random.choices(string.digits, k=4))
-    password = "".join(random.choices(string.ascii_letters + string.digits, k=16))
-    
-    try:
-        result = user_db.create_user(
-            username=username,
-            email=email, 
-            password=password,
-            full_name=name,
-            capital=500000
-        )
-        result["picture"] = picture
-        result["token"] = hashlib.md5(f"{email}{google_id}".encode()).hexdigest()
-        result["new_user"] = True
-        return result
-    except Exception as e:
-        return {"error": str(e)}
-
-
-# ═══════════════════════════════════════════════════════════
-# REFERRAL & REWARD SYSTEM
-# ═══════════════════════════════════════════════════════════
-import random, string, sqlite3
-from datetime import datetime, timedelta
-
-def _get_ref_db():
-    """Get referral DB (uses same SQLite file as user_db)"""
-    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../database/referrals.db")
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    # Create tables
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS referral_codes (
-            id TEXT PRIMARY KEY,
-            code TEXT UNIQUE NOT NULL,
-            owner_user_id TEXT NOT NULL,
-            owner_email TEXT DEFAULT '',
-            bonus_amount REAL DEFAULT 0,
-            discount_amount REAL DEFAULT 0,
-            validity_days INTEGER DEFAULT 30,
-            expires_at TEXT NOT NULL,
-            is_active INTEGER DEFAULT 1,
-            uses_count INTEGER DEFAULT 0,
-            total_bonus_paid REAL DEFAULT 0,
-            total_discount_given REAL DEFAULT 0,
-            created_by_admin TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS referral_uses (
-            id TEXT PRIMARY KEY,
-            code TEXT NOT NULL,
-            code_owner_id TEXT NOT NULL,
-            new_user_id TEXT NOT NULL,
-            new_user_email TEXT DEFAULT '',
-            bonus_amount REAL DEFAULT 0,
-            discount_amount REAL DEFAULT 0,
-            used_at TEXT DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
-    conn.commit()
-    return conn
-
-def _gen_code():
-    return "TRD" + "".join(random.choices(string.ascii_uppercase + string.digits, k=7))
-
-# ─── ADMIN: Create Referral Code ───────────────────────────
-@app.post("/admin/referral/create")
-def create_referral_code(payload: dict):
-    target_user_id = payload.get("target_user_id", "")
-    target_email = payload.get("target_email", "")
-    bonus_amount = float(payload.get("bonus_amount", 500))
-    discount_amount = float(payload.get("discount_amount", 200))
-    validity_days = int(payload.get("validity_days", 30))
-    created_by = payload.get("admin_id", "admin")
-
-    if not target_user_id and not target_email:
-        return {"error": "target_user_id or target_email required"}
-
-    # Find user
-    if USER_SYSTEM and not target_user_id:
-        try:
-            user = user_db.get_user_by_email(target_email)
-            if user: target_user_id = user.get("id", user.get("user_id", ""))
-        except: pass
-
-    code = _gen_code()
-    expires = (datetime.now() + timedelta(days=validity_days)).strftime("%Y-%m-%d")
-    rid = "REF" + "".join(random.choices(string.digits, k=10))
-
-    db = _get_ref_db()
-    db.execute("""INSERT INTO referral_codes 
-        (id,code,owner_user_id,owner_email,bonus_amount,discount_amount,
-         validity_days,expires_at,created_by_admin)
-        VALUES (?,?,?,?,?,?,?,?,?)""",
-        (rid, code, target_user_id, target_email, bonus_amount, 
-         discount_amount, validity_days, expires, created_by))
-    db.commit()
-    db.close()
-    return {
-        "success": True, "code": code, "owner": target_user_id or target_email,
-        "bonus_amount": bonus_amount, "discount_amount": discount_amount,
-        "expires_at": expires, "validity_days": validity_days
-    }
-
-# ─── USER: Apply Referral Code ─────────────────────────────
-@app.post("/referral/apply")
-def apply_referral(payload: dict):
-    code = payload.get("code", "").strip().upper()
-    new_user_id = payload.get("user_id", "")
-    new_user_email = payload.get("email", "")
-
-    if not code or not new_user_id:
-        return {"error": "code and user_id required"}
-
-    db = _get_ref_db()
-    row = db.execute("SELECT * FROM referral_codes WHERE code=? AND is_active=1", (code,)).fetchone()
-    if not row:
-        db.close()
-        return {"error": "Invalid or expired referral code"}
-
-    r = dict(row)
-    if r["expires_at"] < datetime.now().strftime("%Y-%m-%d"):
-        db.close()
-        return {"error": "Referral code expired"}
-
-    # Check not already used by same user
-    used = db.execute("SELECT id FROM referral_uses WHERE code=? AND new_user_id=?",
-                      (code, new_user_id)).fetchone()
-    if used:
-        db.close()
-        return {"error": "Code already used"}
-
-    # Apply rewards
-    use_id = "USE" + "".join(random.choices(string.digits, k=10))
-    db.execute("""INSERT INTO referral_uses 
-        (id,code,code_owner_id,new_user_id,new_user_email,bonus_amount,discount_amount)
-        VALUES (?,?,?,?,?,?,?)""",
-        (use_id, code, r["owner_user_id"], new_user_id, new_user_email,
-         r["bonus_amount"], r["discount_amount"]))
-    db.execute("""UPDATE referral_codes SET 
-        uses_count=uses_count+1,
-        total_bonus_paid=total_bonus_paid+?,
-        total_discount_given=total_discount_given+?
-        WHERE code=?""", (r["bonus_amount"], r["discount_amount"], code))
-    db.commit()
-    db.close()
-    return {
-        "success": True, "discount": r["discount_amount"],
-        "bonus_to_referrer": r["bonus_amount"],
-        "message": f"₹{r['discount_amount']} discount applied! Referrer gets ₹{r['bonus_amount']} bonus."
-    }
-
-# ─── ADMIN: List All Referral Codes ────────────────────────
-@app.get("/admin/referral/list")
-def list_referral_codes(limit: int = 50):
-    db = _get_ref_db()
-    rows = db.execute("""SELECT * FROM referral_codes ORDER BY created_at DESC LIMIT ?""",
-                      (limit,)).fetchall()
-    db.close()
-    return {"codes": [dict(r) for r in rows], "total": len(rows)}
-
-# ─── ADMIN: Referral Analytics ─────────────────────────────
-@app.get("/admin/referral/analytics")
-def referral_analytics():
-    db = _get_ref_db()
-    total_codes = db.execute("SELECT COUNT(*) as c FROM referral_codes").fetchone()["c"]
-    active_codes = db.execute("SELECT COUNT(*) as c FROM referral_codes WHERE is_active=1").fetchone()["c"]
-    total_uses = db.execute("SELECT COUNT(*) as c FROM referral_uses").fetchone()["c"]
-    total_bonus = db.execute("SELECT COALESCE(SUM(bonus_amount),0) as s FROM referral_uses").fetchone()["s"]
-    total_discount = db.execute("SELECT COALESCE(SUM(discount_amount),0) as s FROM referral_uses").fetchone()["s"]
-    top_codes = db.execute("""SELECT code, owner_user_id, owner_email, uses_count, 
-        total_bonus_paid, total_discount_given FROM referral_codes 
-        ORDER BY uses_count DESC LIMIT 10""").fetchall()
-    db.close()
-    return {
-        "total_codes": total_codes, "active_codes": active_codes,
-        "total_uses": total_uses, "total_bonus_paid": total_bonus,
-        "total_discount_given": total_discount,
-        "top_codes": [dict(r) for r in top_codes]
-    }
-
-# ─── ADMIN: Deactivate Code ────────────────────────────────
-@app.post("/admin/referral/deactivate")
-def deactivate_referral(payload: dict):
-    code = payload.get("code", "")
-    db = _get_ref_db()
-    db.execute("UPDATE referral_codes SET is_active=0 WHERE code=?", (code,))
-    db.commit()
-    db.close()
-    return {"success": True, "message": f"Code {code} deactivated"}
-
-# ─── USER: Validate Code (before applying) ─────────────────
-@app.get("/referral/validate/{code}")
-def validate_referral(code: str):
-    db = _get_ref_db()
-    row = db.execute("SELECT * FROM referral_codes WHERE code=? AND is_active=1",
-                     (code.upper(),)).fetchone()
-    db.close()
-    if not row: return {"valid": False, "message": "Invalid code"}
-    r = dict(row)
-    if r["expires_at"] < datetime.now().strftime("%Y-%m-%d"):
-        return {"valid": False, "message": "Code expired"}
-    return {
-        "valid": True, "discount": r["discount_amount"],
-        "bonus": r["bonus_amount"], "expires": r["expires_at"],
-        "message": f"Valid! Get ₹{r['discount_amount']} discount"
-    }
-
-
-@app.get("/strategies/v2/list/{user_id}")
-def strategies_list(user_id: str):
-    """List all strategies"""
-    strats = se_list(user_id)
-    return {"strategies": strats, "count": len(strats)}

@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="google-signin-client_id" content="102590026134-nn0i9p6q319fndocht8p2bedak44bfs1.apps.googleusercontent.com">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>TRD v12.3</title>
 <style>
@@ -15,8 +14,8 @@ body{background:var(--bg);color:var(--tx);font-family:monospace;min-height:100vh
 .tab{padding:10px 14px;font-size:10px;letter-spacing:.5px;cursor:pointer;border:none;background:none;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
 .tab.active{color:var(--gr);border-bottom-color:var(--gr)}
 .main{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;-webkit-overflow-scrolling:touch}
-
-
+.pnl{display:none;flex-direction:column;padding:10px;min-height:100%}.pnl.active{display:flex;flex-direction:column}
+.pnl.active{display:flex}
 .card{background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px}
 .chdr{font-size:8px;color:var(--mu);letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -372,345 +371,13 @@ input:focus, select:focus {
   .blg { padding: 10px !important; }
 }
 
-
-/* DEFINITIVE PANEL RULES - DO NOT OVERRIDE */
-[id^="pnl-"] { display: none !important; }
-[id^="pnl-"].active { display: block !important; min-height: 100%; }
-#pnl-prof.active { display: block !important; padding: 0 !important; background: var(--bg) !important; }
-#pnl-admin.active { display: block !important; padding: 0 !important; }
-.main { overflow-y: auto !important; }
 </style>
-<script>
-// ══════════════════════════════════════════════════════
-// GOOGLE OAUTH + USER AUTH SYSTEM
-// ══════════════════════════════════════════════════════
-
-// IMPORTANT: Replace with your Google OAuth Client ID
-// Get from: https://console.cloud.google.com/
-var GOOGLE_CLIENT_ID = '102590026134-nn0i9p6q319fndocht8p2bedak44bfs1.apps.googleusercontent.com';
-
-var _googleAuthInited = false;
-function initGoogleAuth(){
-  if(_googleAuthInited) return;
-  // Check saved login
-  try{
-    var saved = localStorage.getItem('trd_user');
-    if(saved){
-      var user = JSON.parse(saved);
-      if(user && user.user_id){ loginSuccess(user, false); return; }
-    }
-  }catch(e){}
-  
-  // Show login overlay
-  var overlay = document.getElementById('login-overlay');
-  if(overlay) overlay.style.display = 'flex';
-  
-  // Init Google Sign-In with proper config
-  if(window.google && window.google.accounts && window.google.accounts.id){
-    try{
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleResponse,
-        auto_select: false,
-        cancel_on_tap_outside: false,
-        ux_mode: 'popup',
-      });
-      // Render button
-      var btnDiv = document.getElementById('google-btn-render');
-      if(btnDiv){
-        google.accounts.id.renderButton(btnDiv, {
-          theme: 'outline',
-          size: 'large',
-          width: 280,
-          text: 'continue_with',
-          shape: 'rectangular',
-          logo_alignment: 'left',
-        });
-      }
-      console.log('Google auth initialized');
-    }catch(e){
-      console.error('Google init error:', e);
-    }
-  }
-}
-
-function signInWithGoogle(){
-  if(!window.google || !window.google.accounts || !window.google.accounts.id){
-    showLoginError('Google load nahi hua. Demo Account try karo ↓');
-    return;
-  }
-  google.accounts.id.prompt(function(n){
-    console.log('Google prompt:', n.getMomentType());
-    if(n.isNotDisplayed()){
-      showLoginError('Popup blocked. Browser settings check karo.');
-    }
-  });
-}
-function _signInWithGoogleFallback(){
-  if(!window.google || !window.google.accounts){
-    // Fallback: redirect to Google OAuth
-    var params = new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
-      redirect_uri: window.location.origin,
-      response_type: 'token',
-      scope: 'profile email',
-      state: 'google_auth'
-    });
-    // Show error if no client ID configured
-    if(GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'){
-      showLoginError('Google Client ID not configured. Use Demo login.');
-      return;
-    }
-    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
-    return;
-  }
-  
-  google.accounts.id.prompt(function(notification){
-    if(notification.isNotDisplayed() || notification.isSkippedMoment()){
-      // Show One Tap failed - try popup
-      showLoginError('Please use Demo login or configure Google OAuth');
-    }
-  });
-}
-
-function handleGoogleResponse(response){
-  try{
-    // Decode JWT token from Google
-    var token = response.credential;
-    var parts = token.split('.');
-    // Base64 padding fix
-    var base64 = parts[1].replace(/-/g,'+').replace(/_/g,'/');
-    while(base64.length % 4) base64 += '=';
-    var payload = JSON.parse(atob(base64));
-    
-    // Send to backend
-    req('/auth/google','POST',{
-      google_id: payload.sub,
-      email: payload.email,
-      name: payload.name || payload.given_name || '',
-      picture: payload.picture || ''
-    }, function(err, user){
-      if(err || !user || user.error){
-        // Fallback: create local session from Google data
-        var fallbackUser = {
-          user_id: 'G_'+payload.sub.slice(-8),
-          username: payload.email.split('@')[0],
-          email: payload.email,
-          full_name: payload.name || payload.given_name || 'User',
-          picture: payload.picture || '',
-          plan: 'FREE',
-          capital: 500000,
-          broker: 'PAPER MODE'
-        };
-        localStorage.setItem('trd_user', JSON.stringify(fallbackUser));
-        loginSuccess(fallbackUser, true);
-        return;
-      }
-      var u = (user && user.user) ? user.user : user;
-      if(user.user){ u.plan = (user.subscription && user.subscription.plan) || 'FREE'; }
-      u.picture = payload.picture || '';
-      u.full_name = u.full_name || payload.name || '';
-      localStorage.setItem('trd_user', JSON.stringify(u));
-      loginSuccess(u, user.new_user);
-    });
-  }catch(e){
-    console.error('Google auth error:', e);
-    showLoginError('Google login error. Try Demo Account.');
-  }
-}
-
-function demoLogin(){
-  var overlay = document.getElementById('login-overlay');
-  var btn = document.getElementById('google-signin-btn');
-  if(btn){ btn.style.opacity='0.5'; btn.style.pointerEvents='none'; }
-  
-  req('/users/login','POST',{username:'demo',password:'demo123'},function(err,r){
-    var user = null;
-    if(r && r.user){ user = r.user; user.plan = (r.subscription && r.subscription.plan) || 'PRO'; user.token = r.token; }
-    else if(r && r.user_id){ user = r; }
-    
-    if(!user || err){
-      // Hardcoded fallback - always works
-      user = {
-        user_id:'USR124535215', username:'demo', email:'demo@trading.com',
-        full_name:'Demo Trader', plan:'PRO', capital:500000, broker:'PAPER MODE',
-        subscription_plan:'PRO'
-      };
-    }
-    localStorage.setItem('trd_user', JSON.stringify(user));
-    loginSuccess(user, false);
-  });
-}
-
-function manualLogin(){
-  var user = (document.getElementById('ml-user')||{}).value||'';
-  var pass = (document.getElementById('ml-pass')||{}).value||'';
-  if(!user||!pass){ showLoginError('Username aur password daalo'); return; }
-  
-  req('/users/login','POST',{username:user,password:pass},function(err,r){
-    if(err||!r||r.error){
-      showLoginError('Invalid username or password');
-      return;
-    }
-    var u = (r && r.user) ? r.user : r;
-    if(r && r.user){ u.plan = (r.subscription && r.subscription.plan) || u.subscription_plan || 'FREE'; u.token = r.token; }
-    localStorage.setItem('trd_user', JSON.stringify(u));
-    loginSuccess(u, false);
-  });
-}
-
-function loginSuccess(user, isNew){
-  // Set global user variables
-  window.UID = user.user_id || user.id || 'USR124535215';
-  window.USER_NAME = user.full_name || user.username || 'Trader';
-  window.USER_EMAIL = user.email || '';
-  window.USER_PLAN = user.plan || user.subscription_plan || 'FREE';
-  window.USER_CAPITAL = user.capital || 500000;
-  window.USER_PICTURE = user.picture || user.avatar || '';
-  // Update global UID variable used throughout app
-  try{ if(window.UID) { var s=document.createElement('script'); s.text='UID="'+window.UID+'"'; document.head.appendChild(s); } }catch(e){}
-  
-  // Update UID in script
-  try{
-    var uidScript = document.querySelector('script');
-    // Direct assignment works since UID is global
-  }catch(e){}
-  
-  // Update header
-  var planBdg = document.getElementById('plan-bdg');
-  if(planBdg) planBdg.textContent = window.USER_PLAN;
-  
-  // Update profile
-  var profName = document.getElementById('prof-name-display');
-  if(profName) profName.textContent = window.USER_NAME;
-  
-  // Show profile picture in header if exists
-  var profBtn = document.getElementById('prof-btn');
-  if(profBtn && window.USER_PICTURE){
-    profBtn.innerHTML = '<img src="'+window.USER_PICTURE+'" style="width:24px;height:24px;border-radius:50%;object-fit:cover"> PROFILE';
-  }
-  
-  // Hide overlay
-  var overlay = document.getElementById('login-overlay');
-  if(overlay){
-    overlay.style.display = 'none';
-    overlay.style.opacity = '0';
-    overlay.style.pointerEvents = 'none';
-  }
-  
-  var msg = isNew ? 'Welcome to TRD, '+window.USER_NAME+'! 🎉' : 'Welcome back, '+window.USER_NAME+'!';
-  setTimeout(function(){ toast(msg,'success'); }, 600);
-  
-  // Init dashboard
-  setTimeout(function(){
-    if(typeof loadPrices === 'function') loadPrices();
-    if(typeof loadPos === 'function') loadPos();
-  }, 1000);
-  
-  // Show default panel after login
-  setTimeout(function(){
-    try{
-      var lastTab = localStorage.getItem('trd_last_tab') || 'trade';
-      if(['paper','livepos'].indexOf(lastTab) >= 0) lastTab = 'trade';
-      show(lastTab, null);
-    }catch(e){ show('trade', null); }
-  }, 400);
-}
-
-function showLoginError(msg){
-  var el = document.getElementById('login-error');
-  if(el){ el.textContent = msg; el.style.display='block'; }
-}
-
-function logout(){
-  localStorage.removeItem('trd_user');
-  location.reload();
-}
-
-// Auto-init on load - persistent session
-window.addEventListener('load', function(){
-  setTimeout(initGoogleAuth, 300);
-});
-
-// Keep session alive - check every 30 min NOT every minute
-setInterval(function(){
-  try{
-    var saved = localStorage.getItem('trd_user');
-    if(!saved){
-      var overlay = document.getElementById('login-overlay');
-      if(overlay) overlay.style.display = 'flex';
-    }
-  }catch(e){}
-}, 1800000); // 30 minutes
-</script>
-
-<script src="https://accounts.google.com/gsi/client" onload="initGoogleAuth()"></script>
-<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 </head>
 <body>
-
-<!-- ════════════ GOOGLE LOGIN OVERLAY ════════════ -->
-<div id="login-overlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#060608 0%,#0d0e14 50%,#060608 100%);z-index:99999;display:none;align-items:center;justify-content:center;flex-direction:column">
-  <div style="text-align:center;max-width:340px;width:90%;padding:0 20px">
-    <!-- Logo -->
-    <div style="font-size:28px;font-weight:800;color:var(--gr);letter-spacing:4px;margin-bottom:4px">TRD</div>
-    <div style="font-size:11px;color:var(--mu);letter-spacing:2px;margin-bottom:32px">INSTITUTIONAL TRADING PLATFORM v12.3</div>
-    
-    <!-- Login Card -->
-    <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:16px;padding:28px 24px">
-      <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:6px">Welcome to TRD</div>
-      <div style="font-size:11px;color:var(--mu);margin-bottom:24px">Professional Derivative Trading Platform</div>
-      
-      <!-- Google Sign In Button - Official Rendered -->
-      <div id="google-btn-render" style="margin-bottom:12px;display:flex;justify-content:center"></div>
-      <!-- Referral Code -->
-      <div id="referral-section" style="margin-bottom:12px">
-        <div style="display:flex;gap:6px;align-items:center">
-          <input id="referral-code-input" placeholder="Referral Code (optional)" 
-            style="flex:1;font-size:11px;padding:7px 10px;background:rgba(255,255,255,.05);border:1px solid var(--bo);border-radius:6px;color:var(--tx)"
-            oninput="validateReferralCode(this.value)">
-        </div>
-        <div id="referral-msg" style="font-size:10px;margin-top:4px;display:none"></div>
-      </div>
-      <!-- Fallback button if render fails -->
-      <div id="google-signin-btn" onclick="signInWithGoogle()" style="background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;padding:12px 16px;cursor:pointer;display:none;align-items:center;gap:12px;font-size:13px;font-weight:500;justify-content:center;margin-bottom:12px">
-        <span style="font-size:18px">G</span>
-        <span>Continue with Google</span>
-      </div>
-      
-      <!-- Demo Login -->
-      <button onclick="demoLogin()" style="width:100%;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:8px;padding:10px;font-size:12px;cursor:pointer;margin-bottom:16px">
-        🎯 Try Demo Account
-      </button>
-      
-      <!-- Manual Login -->
-      <div id="manual-login-form" style="display:none">
-        <input id="ml-user" placeholder="Username" style="width:100%;margin-bottom:8px;font-size:12px">
-        <input id="ml-pass" type="password" placeholder="Password" style="width:100%;margin-bottom:8px;font-size:12px">
-        <button onclick="manualLogin()" class="btn bg blg" style="width:100%;font-size:12px">🔐 LOGIN</button>
-      </div>
-      
-      <div onclick="document.getElementById('manual-login-form').style.display=document.getElementById('manual-login-form').style.display==='none'?'block':'none'" style="font-size:10px;color:var(--mu);cursor:pointer;margin-top:8px">Username/Password Login</div>
-      
-      <div id="login-error" style="color:var(--rd);font-size:11px;margin-top:8px;display:none"></div>
-      <div style="font-size:9px;color:rgba(255,255,255,.25);margin-top:12px;text-align:center;line-height:1.6">
-        Google login ke liye developer se sampark karen<br>
-        Ya <b style="color:var(--gr)">Demo Account</b> use karen
-      </div>
-    </div>
-    
-    <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:16px;line-height:1.6">
-      🔒 Secure · SEBI Compliant Tool · Paper Trading Available<br>
-      By continuing you agree to our Terms of Service
-    </div>
-  </div>
-</div>
-
-
 <div id="toast"></div>
 <div class="hdr" style="background:linear-gradient(90deg,#00000a 0%,#030510 50%,#00000a 100%);border-bottom:1px solid rgba(0,255,136,.1)">
   <div style="display:flex;align-items:center;gap:8px">
-    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px;cursor:pointer" onclick="handleLogoClick()" id="trd-logo-btn">TRD v12.3</span>
+    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px">TRD v12.3</span>
     <span class="bdg" id="mode-bdg" style="border-color:var(--bl);background:#0a1628;color:var(--bl)">PAPER</span>
     <span class="bdg" id="plan-bdg" style="border-color:var(--pu);background:#160a28;color:var(--pu)">PRO</span>
   </div>
@@ -723,7 +390,7 @@ setInterval(function(){
     <div class="dot" id="api-dot" style="background:var(--am)"></div>
     <span style="font-size:8px;color:var(--mu)" id="api-lbl">CONNECTING</span>
     <button class="btn br" id="kill-btn" onclick="toggleKill()" style="padding:3px 8px">KILL</button>
-    <button onclick="show('prof',null)" style="padding:3px 10px;background:#160a28;border-color:var(--pu);color:var(--pu);font-size:9px;border:1px solid;border-radius:4px;cursor:pointer">👤 PROFILE</button>
+    <button class="btn" onclick="show('prof',null)" style="padding:3px 10px;background:#160a28;border-color:var(--pu);color:var(--pu);font-size:9px">👤 PROFILE</button>
     
   </div>
 </div>
@@ -756,7 +423,7 @@ setInterval(function(){
   <button class="tab" onclick="show('rep',this)">REPORTS</button>
   <button class="tab" onclick="show('calc',this)">CALC</button>
   <button class="tab" onclick="show('ai',this)">AI ENGINE</button>
-  <button class="tab" onclick="show('admin',this)" id="admin-tab-btn" style="display:none">ADMIN</button>
+  <button class="tab" onclick="show('admin',this)">ADMIN</button>
   <button class="tab" onclick="show('legal',this)">LEGAL</button>
 </div>
 <div class="main">
@@ -815,8 +482,8 @@ setInterval(function(){
         <div id="nlp-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:6px;font-size:8px;line-height:1.8"></div>
       </div>
       <div class="card">
-        <div class="chdr">MARKET WATCH <button onclick="openChart(INST)" style="font-size:9px;padding:2px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer;margin-left:6px">📊 CHART</button> <span id="mkt-status-2" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
-        <div id="mkt-grd-2" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
+        <div class="chdr">MARKET WATCH <span id="mkt-status" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
+        <div id="mkt-grd" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
       </div>
       <div class="card">
         <div class="chdr">LOG <button class="btn ba" onclick="document.getElementById('log-box').innerHTML=''" style="padding:2px 8px;font-size:8px">CLR</button></div>
@@ -930,15 +597,13 @@ setInterval(function(){
     <div class="card" style="margin-bottom:8px">
       <div class="g2" style="gap:8px">
         <div><div class="lbl">INSTRUMENT</div>
-          <select id="ch-i" onchange="updateChainSpot()">
-  <option value="NIFTY">NIFTY</option>
-  <option value="BANKNIFTY">BANKNIFTY</option>
-  <option value="FINNIFTY">FINNIFTY</option>
-  <option value="SENSEX">SENSEX</option>
+          <select id="ch-i" onchange="document.getElementById('ch-spot-val').value=this.value">
+  <option value="24000">NIFTY (~24000)</option>
+  <option value="56000">BANKNIFTY (~56000)</option>
+  <option value="26000">FINNIFTY (~26000)</option>
+  <option value="78000">SENSEX (~78000)</option>
 </select>
         </div>
-        <div><div class="lbl">SPOT (₹)</div>
-          <input type="number" id="ch-spot-val" value="24000" style="font-weight:700;color:var(--gr)"></div>
         <div><div class="lbl">EXPIRY (days)</div><input type="number" id="ch-exp" value="7"></div>
       </div>
       <div class="g2" style="gap:8px;margin-top:8px">
@@ -968,7 +633,7 @@ setInterval(function(){
         <button class="btn br" id="ivbt-PE" onclick="document.getElementById('ivbt-PE').classList.add('active');document.getElementById('ivbt-CE').classList.remove('active')" style="flex:1;padding:8px">PE</button>
       </div>
       <button class="btn bg blg" onclick="calcIV()" style="width:100%">🎯 CALCULATE IV</button>
-      <div id="iv-out-2" style="display:none;margin-top:12px">
+      <div id="iv-out" style="display:none;margin-top:12px">
         <div style="text-align:center">
           <div style="font-size:11px;color:var(--mu);margin-bottom:4px">IMPLIED VOLATILITY</div>
           <div id="iv-result" style="font-size:36px;font-weight:800;color:var(--am)">—</div>
@@ -1226,55 +891,15 @@ setInterval(function(){
   <button class="btn ba" onclick="toggleNLP()">◆ NLP BUILDER</button>
   <button class="btn bg" style="border-color:var(--am);background:#1a0e00;color:var(--am)" onclick="loadAIApprovedStrats()">🤖 AI STRATEGIES</button>
 </div>
-  <div id="nlp-bld" class="card" style="display:none;border-color:rgba(0,255,136,.3)">
-    <div class="chdr" style="color:var(--gr)">◆ NLP STRATEGY BUILDER
-      <button onclick="toggleNLP()" style="font-size:10px;padding:2px 8px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">✕</button>
-    </div>
-
-    <!-- Strategy Name -->
-    <div style="margin-bottom:8px">
-      <div class="lbl">STRATEGY NAME *</div>
-      <input id="ns-nm" placeholder="e.g. Opening Range Breakout" style="font-size:13px;font-weight:600">
-    </div>
-
-    <!-- NLP Textarea - PASTE ANY TEXT -->
-    <div style="margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <div class="lbl">STRATEGY TEXT (paste as-is)</div>
-        <button onclick="document.getElementById('strat-nlp-in').value=''" style="font-size:9px;padding:2px 6px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">✕ Clear</button>
-      </div>
-      <textarea id="strat-nlp-in" rows="6"
-        placeholder="Paste your strategy here exactly as you want it saved. Example:&#10;&#10;BUY NIFTY CE 1 LOT&#10;Stop Loss: 80 pts | Target: 160 pts&#10;&#10;ENTRY: EMA50 > EMA200, RSI 55-70&#10;EXIT: Price below EMA20"
-        style="width:100%;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);border-radius:6px;padding:8px;font-size:10px;font-family:monospace;resize:vertical;line-height:1.6"></textarea>
-    </div>
-
-    <!-- Save buttons -->
-    <div style="display:flex;gap:6px;margin-bottom:6px">
-      <button onclick="saveStratAsIs()" class="btn bg blg" style="flex:2;font-size:11px;padding:10px">💾 SAVE AS-IS</button>
-      <button onclick="saveStratWithAI()" class="btn bb" style="flex:2;font-size:11px;padding:10px">🤖 AI ENHANCE</button>
-      <button onclick="copyNLPText()" class="btn" style="padding:10px;font-size:13px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl)">📋</button>
-    </div>
-    <div id="ns-save-msg" style="display:none;font-size:11px;text-align:center;padding:6px;border-radius:4px"></div>
-
-    <!-- NLP AUDIT PANEL -->
-    <div id="nlp-audit" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid rgba(255,193,7,.3);border-radius:8px;padding:10px">
-      <div style="font-size:10px;font-weight:700;color:var(--am);margin-bottom:8px">🔍 NLP AUDIT — Kiya samjha?</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:9px">
-        <div>
-          <div style="color:var(--mu);margin-bottom:4px">📝 AAPNE LIKHA:</div>
-          <div id="audit-input" style="background:var(--bg3);padding:6px;border-radius:4px;color:var(--tx);line-height:1.5;max-height:120px;overflow-y:auto;font-family:monospace"></div>
-        </div>
-        <div>
-          <div style="color:var(--mu);margin-bottom:4px">🤖 NLP NE SAMJHA:</div>
-          <div id="audit-output" style="background:var(--bg3);padding:6px;border-radius:4px;color:var(--gr);line-height:1.6;font-family:monospace"></div>
-        </div>
-      </div>
-      <div id="audit-accuracy" style="margin-top:8px;text-align:center;font-size:10px;font-weight:700"></div>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button onclick="confirmAndSave()" class="btn bg" style="flex:1;font-size:10px">✅ SAHI HAI — SAVE KARO</button>
-        <button onclick="document.getElementById('nlp-audit').style.display='none'" class="btn" style="flex:1;font-size:10px">✏️ WAPAS EDIT KARO</button>
-      </div>
-    </div>
+  <div id="nlp-bld" class="card" style="display:none;border-color:var(--gr)30">
+    <div class="chdr" style="color:var(--gr)">NLP STRATEGY BUILDER</div>
+    <textarea id="ns-nlp" rows="3" placeholder="buy nifty atm if rsi under 30 ema crossover sl 100 target 300"></textarea>
+    <button class="btn bg blg" onclick="parseNLPStrat()" style="margin-top:6px;margin-bottom:8px">PARSE AND AUTO-FILL</button>
+    <div id="ns-parsed" style="display:none;background:#001a0e;border:1px solid var(--gr)30;border-radius:4px;padding:6px;font-size:8px;margin-bottom:8px;color:var(--gr)"></div>
+    <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">NAME</div><input id="ns-nm" placeholder="Strategy name"></div><div><div class="lbl">INST</div><select id="ns-i"><option>NIFTY</option><option>BANKNIFTY</option></select></div></div>
+    <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">SL PTS</div><input type="number" id="ns-sl" value="100"></div><div><div class="lbl">TGT PTS</div><input type="number" id="ns-tg" value="200"></div></div>
+    <div><div class="lbl">ENTRY CONDITIONS</div><textarea id="ns-en" rows="2" placeholder="RSI below 30, EMA crossover..."></textarea></div>
+    <div style="display:flex;gap:6px;margin-top:8px"><button class="btn bg" onclick="saveStrat()" style="flex:1">SAVE</button><button class="btn ba" onclick="show('bt',null)" style="flex:1">BACKTEST</button><button class="btn br" onclick="toggleNLP()">X</button></div>
   </div>
   <div id="strat-list" style="display:flex;flex-direction:column;gap:8px"><div style="color:var(--mu);padding:20px;text-align:center">Select tab above</div></div>
 </div>
@@ -1577,14 +1202,13 @@ setInterval(function(){
     </div>
 
     <!-- Sub-tabs -->
-    <div style="display:flex;background:var(--bg2);border-bottom:1px solid var(--bo);overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none">
-      <button id="adm-tab-dash" onclick="adminTab('dash',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:rgba(168,85,247,.08);border:none;border-bottom:2px solid var(--p0);color:var(--p0);cursor:pointer">📊 DASH</button>
-      <button id="adm-tab-users" onclick="adminTab('users',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">👥 USERS</button>
-      <button id="adm-tab-analytics" onclick="adminTab('analytics',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">📈 STATS</button>
-      <button id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">💳 PAY</button>
-      <button id="adm-tab-notifs" onclick="adminTab('notifs',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🔔 ALERTS</button>
-      <button id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🖥️ SYS</button>
-      <button id="adm-tab-ref" onclick="adminTab('ref',this)" style="flex-shrink:0;padding:6px 8px;font-size:8px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🎁 REF</button>
+    <div style="display:flex;background:var(--bg2);border-bottom:1px solid var(--bo);overflow-x:auto">
+      <button id="adm-tab-dash" onclick="adminTab('dash',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:rgba(168,85,247,.08);border:none;border-bottom:2px solid var(--p0);color:var(--p0);cursor:pointer">📊 DASHBOARD</button>
+      <button id="adm-tab-users" onclick="adminTab('users',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">👥 USERS</button>
+      <button id="adm-tab-analytics" onclick="adminTab('analytics',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">📈 ANALYTICS</button>
+      <button id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">💳 PAYMENTS</button>
+      <button id="adm-tab-notifs" onclick="adminTab('notifs',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🔔 ALERTS</button>
+      <button id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🖥️ SYSTEM</button>
     </div>
 
     <div style="padding:10px">
@@ -1848,52 +1472,11 @@ setInterval(function(){
           <button onclick="if(confirm('RESTART SERVER? All connections will drop for 10s'))adminAction('restart')" style="padding:10px;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.4);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px;font-weight:700">⚡ RESTART SERVER</button>
         </div>
       </div>
-    
-<div id="adm-ref" style="display:none;padding:12px;overflow-y:auto;max-height:calc(100vh - 200px)">
-  <!-- Stats -->
-  <div id="ref-stats" style="margin-bottom:12px"></div>
-  
-  <!-- Create Code Form -->
-  <div style="background:var(--bg3);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:14px;margin-bottom:12px">
-    <div style="font-size:11px;font-weight:700;color:var(--gr);margin-bottom:10px">✨ REFERRAL CODE BANAO</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div><div style="font-size:9px;color:var(--mu);margin-bottom:3px">USER ID</div>
-        <input id="ref-user-id" placeholder="USR123..." style="width:100%;font-size:11px"></div>
-      <div><div style="font-size:9px;color:var(--mu);margin-bottom:3px">EMAIL</div>
-        <input id="ref-email" placeholder="user@email.com" style="width:100%;font-size:11px"></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
-      <div><div style="font-size:9px;color:var(--mu);margin-bottom:3px">BONUS (₹)</div>
-        <input id="ref-bonus" type="number" value="500" style="width:100%;font-size:11px"></div>
-      <div><div style="font-size:9px;color:var(--mu);margin-bottom:3px">DISCOUNT (₹)</div>
-        <input id="ref-discount" type="number" value="200" style="width:100%;font-size:11px"></div>
-      <div><div style="font-size:9px;color:var(--mu);margin-bottom:3px">VALIDITY</div>
-        <select id="ref-validity" style="width:100%;font-size:11px;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);padding:6px;border-radius:6px">
-          <option value="30">1 Month</option>
-          <option value="60">2 Months</option>
-          <option value="90">3 Months</option>
-          <option value="365">1 Year</option>
-        </select>
-      </div>
-    </div>
-    <button onclick="createReferralCode()" style="width:100%;padding:10px;background:var(--gr);color:#000;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🎁 CODE BANAO</button>
-    <div id="new-code-display" style="margin-top:10px"></div>
-  </div>
-  
-  <!-- Active Codes -->
-  <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:10px;padding:14px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700">📋 ACTIVE CODES</div>
-      <button onclick="loadAdminReferral()" style="font-size:10px;padding:4px 10px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:6px;cursor:pointer">↻ Refresh</button>
-    </div>
-    <div id="ref-code-list"><div style="text-align:center;color:var(--am);padding:16px;font-size:11px">⏳ Loading...</div></div>
-  </div>
-</div>
 
     </div><!-- end padding -->
   </div><!-- end panel content -->
 </div>
-
 
 <div id="pnl-legal" class="pnl">
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px"><button class="btn bg" onclick="showLegal('tos')">ToS</button><button class="btn bb" onclick="showLegal('privacy')">Privacy</button><button class="btn br" onclick="showLegal('risk_disclosure')">Risk</button></div>
@@ -2084,14 +1667,7 @@ setInterval(function(){
         <div style="font-size:10px;color:var(--mu);margin-top:2px">v12.3.0 · AWS eu-north-1 · Build 2026.04</div>
       </div>
       <div style="color:var(--mu);font-size:16px">›</div>
-    </div
-    <!-- Logout -->
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--bo)">
-      <button onclick="logout()" style="width:100%;padding:14px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-        <span style="font-size:18px">🚪</span> Logout / Sign Out
-      </button>
     </div>
->
 
     </div><!-- end prof-menu-section -->
 
@@ -2624,7 +2200,7 @@ setInterval(function(){
     <div class="card">
       <div class="g2" style="gap:8px;margin-bottom:8px">
         <div><div class="lbl">BROKER</div>
-          <select id="br-broker-2" style="width:100%">
+          <select id="br-broker" style="width:100%">
             <option value="ZERODHA">🔵 Zerodha Kite (₹2000/mo)</option>
             <option value="ANGEL">🟠 Angel One (Free)</option>
             <option value="FYERS">🟢 Fyers API (Free)</option>
@@ -2632,22 +2208,22 @@ setInterval(function(){
           </select>
         </div>
         <div><div class="lbl">MODE</div>
-          <select id="br-mode-2" style="width:100%">
+          <select id="br-mode" style="width:100%">
             <option value="PAPER">📄 Paper (Safe)</option>
             <option value="LIVE">⚡ Live (Real Money)</option>
           </select>
         </div>
       </div>
       <div class="g2" style="gap:8px;margin-bottom:8px">
-        <div><div class="lbl">API KEY</div><input type="password" id="br-key-2" placeholder="Your API key"></div>
-        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token-2" placeholder="Daily token"></div>
+        <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Your API key"></div>
+        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Daily token"></div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <button class="btn bg blg" style="flex:1" onclick="connectBroker()">🔗 CONNECT BROKER</button>
         <button class="btn bb" style="padding:10px 14px" onclick="showBrokerGuide()">📖</button>
         <button class="btn br" style="padding:10px 14px" onclick="disconnectBroker()">✕</button>
       </div>
-      <div id="broker-status-2" style="font-size:10px;color:var(--mu)"></div>
+      <div id="broker-status" style="font-size:10px;color:var(--mu)"></div>
       <div id="broker-guide" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:10px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
     </div>
     <!-- Supported brokers -->
@@ -2672,7 +2248,7 @@ setInterval(function(){
     <div id="chat-sugg" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border-top:1px solid var(--bo);flex-shrink:0"></div>
     <div style="display:flex;gap:6px;padding:10px;border-top:1px solid var(--bo);flex-shrink:0"><input id="chat-inp" placeholder="Type your question..." style="border-radius:20px;font-size:11px;padding:8px 14px"><button id="chat-send" style="width:36px;height:36px;border-radius:50%;background:var(--gr);border:none;cursor:pointer;color:#000;font-size:16px;flex-shrink:0">></button></div>
   </div>
-  <button id="chat-btn" onclick="toggleSupport()" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3)">💬</button>
+  <button id="chat-btn" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3)">?</button>
 </div>
 
 
@@ -2842,6 +2418,7 @@ function openDashModal(){
       ['rep','REPORTS','P&L reports'],
       ['calc','CALCULATOR','Options calc'],
       ['ai','AI ENGINE','AI signals'],
+      ['admin','ADMIN','Admin panel'],
       ['legal','LEGAL','Legal docs']
     ];
     tabs.forEach(function(t){
@@ -3044,21 +2621,6 @@ function showBrokerGuide(){
   });
 }
 
-function testBrokerAPI(broker){
-  toast('Testing '+broker+' connection...','info');
-  req('/broker/status','GET',null,function(err,d){
-    if(err){ toast('❌ '+broker+' connection failed','error'); return; }
-    toast('✅ '+broker+' connected successfully!','success');
-  });
-}
-
-function saveBrokerConfig(){
-  var apiKey = (document.getElementById('broker-api-key')||{}).value||'';
-  var apiSecret = (document.getElementById('broker-api-secret')||{}).value||'';
-  if(!apiKey){ toast('API key required','warn'); return; }
-  toast('✅ Broker config saved!','success');
-}
-
 function loadBrokerStatus(){
   req('/broker/status/'+UID,'GET',null,function(err,d){
     if(err||!d||!d.connected) return;
@@ -3085,7 +2647,7 @@ var API = (function(){
   if(loc.protocol === 'http:'){
     return loc.protocol + '//' + loc.host;
   }
-  return 'https://essay-coordinates-filing-doors.trycloudflare.com';
+  return 'https://remaining-supervisor-discretion-raid.trycloudflare.com';
 })();
 console.log('API:', API);
 var UID = 'USR124535215';
@@ -3181,27 +2743,26 @@ function alog(msg,type){
 
 // API REQUEST - XMLHttpRequest (no fetch, no AbortSignal)
 function req(url, method, data, cb) {
-  var _cb = typeof cb === 'function' ? cb : function(){};
   var x = new XMLHttpRequest();
   x.open(method || 'GET', API + url, true);
   x.setRequestHeader('Content-Type', 'application/json');
   x.setRequestHeader('Accept', 'application/json');
   x.setRequestHeader('bypass-tunnel-reminder', 'true');
-  x.timeout = 15000;
+  x.timeout = 10000;
   x.onreadystatechange = function() {
     if(x.readyState === 4) {
       if(x.status === 200) {
-        try { _cb(null, JSON.parse(x.responseText)); }
-        catch(e) { _cb(null, {raw: x.responseText}); }
+        try { cb(null, JSON.parse(x.responseText)); }
+        catch(e) { cb('Parse error'); }
       } else if(x.status === 0) {
-        _cb('No response', null);
+        cb('No response');
       } else {
-        _cb('HTTP ' + x.status, null);
+        cb('HTTP ' + x.status);
       }
     }
   };
-  x.ontimeout = function() { _cb('Timeout', null); };
-  x.onerror = function() { _cb('Network error', null); };
+  x.ontimeout = function() { cb('Timeout'); };
+  x.onerror = function() { cb('Network error'); };
   x.send(data ? JSON.stringify(data) : null);
 }
 
@@ -3210,46 +2771,49 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 
 // PANELS
 function show(name, btn) {
-  try{ localStorage.setItem('trd_last_tab',name); }catch(e){}
-  var m=document.querySelector('.main'); if(m) m.scrollTop=0;
-  
-  // Hide all
-  document.querySelectorAll('[id^="pnl-"]').forEach(function(p){
+  // Hide ALL panels
+  document.querySelectorAll('.pnl').forEach(function(p){
     p.classList.remove('active');
+    p.removeAttribute('style');
   });
-  document.querySelectorAll('.tab,.tab-btn').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   
-  // Show target
-  var p=document.getElementById('pnl-'+name);
-  if(p){ 
-    p.classList.add('active');
-  }
-  if(btn&&btn.classList) btn.classList.add('active');
-  else{document.querySelectorAll('.tab').forEach(function(t){
-    if((t.getAttribute('onclick')||'').indexOf("'"+name+"'")>=0)t.classList.add('active');
-  });}
+  // Show ONLY target panel
+  var p = $('pnl-'+name);
+  if(p){ p.removeAttribute('style'); p.classList.add('active'); }
+  if(btn && btn.classList) btn.classList.add('active');
   
-  if(name==='pos') loadPos();
-  if(name==='risk') loadRisk();
-  if(name==='jnl'){loadTrades();loadJnlStats();}
-  if(name==='prof') setTimeout(function(){if(typeof loadProfStats==="function")loadProfStats();},100);
-  if(name==='legal') setTimeout(restoreLegalSign,100);
-  if(name==='admin'){
-    try{
-      // Auto-set admin token for demo
-      if(!localStorage.getItem('trd_admin_token')){
-        localStorage.setItem('trd_admin_token','demo_admin_token');
+  // Auto-highlight matching tab if btn not passed
+  if(!btn){
+    document.querySelectorAll('.tab').forEach(function(t){
+      if(t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'"+name+"'") >= 0){
+        t.classList.add('active');
       }
-      var gate=document.getElementById('adm-login-gate');
-      var pc=document.getElementById('adm-panel-content');
-      if(gate) gate.style.display='none';
-      if(pc) pc.style.display='block';
-      setTimeout(function(){ adminTab('dash',null); }, 100);
-    }catch(e){}
-    setTimeout(function(){if(typeof loadAdmin==="function")loadAdmin();},200);
+    });
   }
+  
+  // Load data for panel
+  if(name==='pos')loadPos();
+  if(name==='risk')loadRisk();
+  if(name==='jnl'){loadTrades();loadJnlStats();}
+  if(name==='ai'){loadAIEngineAll();}
+  if(name==='legal'){ setTimeout(restoreLegalSign,100); }
+  if(name==='admin'){
+    // Admin: check token
+    try{
+      var tok=localStorage.getItem('trd_admin_token');
+      if(tok){
+        var gate=document.getElementById('adm-login-gate');
+        var panel=document.getElementById('adm-panel-content');
+        if(gate) gate.style.display='none';
+        if(panel) panel.style.display='block';
+        setTimeout(function(){adminTab('dash',document.getElementById('adm-tab-dash'));},100);
+      }
+    }catch(e){}
+    loadAdmin();
+  }
+  if(name==='prof')loadProfStats();
 }
-
 
 // STATS
 function loadStats() {
@@ -3445,12 +3009,7 @@ function toggleNLPGuide(){
 }
 
 function nlpParse(){
-  var stratTa = document.getElementById('strat-nlp-in');
-  var tradeTa = document.getElementById('nlp-in');
-  var text = '';
-  // Read from whichever textarea is visible/has content
-  if(stratTa && stratTa.value.trim()) text = stratTa.value.trim();
-  else if(tradeTa && tradeTa.value.trim()) text = tradeTa.value.trim();
+  var text = (document.getElementById('nlp-in').value||'').trim();
   if(!text){toast('Strategy likhiye pehle!','warn');return;}
   
   var outEl = document.getElementById('nlp-out');
@@ -3646,58 +3205,9 @@ function getFII(){req('/fii_dii','GET',null,function(err,d){var out=$('fii-out')
 function getExpiry(){req('/reports/expiry_calendar','GET',null,function(err,d){var out=$('exp-out');if(!out)return;if(err){out.textContent='Failed';return;}var wc=d.days_to_weekly<=2?'var(--rd)':d.days_to_weekly<=5?'var(--am)':'var(--gr)';out.innerHTML='Weekly: <b style="color:'+wc+'">'+(d.nifty_weekly_expiry||'-')+'</b> ('+( d.days_to_weekly||0)+'d) | Monthly: <b style="color:var(--bl)">'+(d.nifty_monthly_expiry||'-')+'</b><br><span style="color:'+wc+';font-weight:700">'+(d.theta_warning||'')+'</span>';});}
 
 // OPTIONS CHAIN
-function updateChainSpot(){
-  var inst = document.getElementById('ch-i');
-  if(!inst) return;
-  var sym = inst.value || 'NIFTY';
-  var live = window.prices && (window.prices[sym] || window.prices[sym.toUpperCase()]);
-  if(live && live > 100){
-    var el = document.getElementById('ch-spot-val');
-    if(el) el.value = Math.round(live);
-  }
-}
+function loadChain(){req('/market/options_chain_live/'+gv('ch-i')+'?dte='+(iv('ch-d')||7),'GET',null,function(err,d){var tb=$('chain-tbl');if(!tb)return;if(err||!d||!d.chain){tb.innerHTML='<tr><td colspan="7" style="color:var(--mu);padding:10px;text-align:center">Failed</td></tr>';return;}var html='';d.chain.forEach(function(s){var atm=s.moneyness==='ATM';html+='<tr style="'+(atm?'background:rgba(245,158,11,.08)':'')+'"><td style="color:var(--mu)">'+(((s.CE&&s.CE.oi)||0)/1000).toFixed(0)+'K</td><td style="color:var(--gr);font-weight:'+(atm?700:400)+'">'+(s.CE&&s.CE.price||0)+'</td><td style="color:var(--bl)">'+(s.CE&&s.CE.delta||0)+'</td><td style="color:var(--am);text-align:center;font-weight:700">'+s.strike+'</td><td style="color:var(--bl)">'+(s.PE&&s.PE.delta||0)+'</td><td style="color:var(--rd);font-weight:'+(atm?700:400)+'">'+(s.PE&&s.PE.price||0)+'</td><td style="color:var(--mu)">'+(((s.PE&&s.PE.oi)||0)/1000).toFixed(0)+'K</td></tr>';});tb.innerHTML=html;});}
 
-function loadChain(){
-  updateChainSpot();
-  var sym = (document.getElementById('ch-i')||{}).value || 'NIFTY';
-  var spot = parseFloat((document.getElementById('ch-spot-val')||{}).value) || 
-             (window.prices && window.prices[sym]) || 24000;
-  var exp = parseInt((document.getElementById('ch-exp')||{}).value) || 7;
-  var vix = parseFloat((document.getElementById('ch-vix')||{}).value) || 15;
-  
-  var tb = document.getElementById('chain-tbl');
-  if(tb) tb.innerHTML='<tr><td colspan="7" style="color:var(--am);padding:10px;text-align:center">Loading '+sym+' chain @ &#8377;'+Math.round(spot)+'...</td></tr>';
-  
-  req('/options/chain?spot='+Math.round(spot)+'&expiry_days='+exp+'&vix='+vix,'GET',null,function(err,d){
-    if(!tb) return;
-    if(err||!d||!d.chain){
-      tb.innerHTML='<tr><td colspan="7" style="color:var(--rd);padding:10px;text-align:center">Error loading chain</td></tr>';
-      return;
-    }
-    var html2='';
-    var atm_strike = Math.round(spot/50)*50;
-    d.chain.filter(function(s){return s.option_type==='CE';}).forEach(function(s){
-      var pe = d.chain.find(function(p){return p.option_type==='PE' && p.strike===s.strike;});
-      var isAtm = s.strike===atm_strike;
-      var itmCe = s.strike < spot;
-      var itmPe = s.strike > spot;
-      html2+='<tr style="'+(isAtm?'background:rgba(251,191,36,.1);':'')+(itmCe?'background:rgba(0,255,136,.04)':'')+'">'
-        +'<td style="color:'+(itmCe?'var(--gr)':'var(--tx)')+';font-weight:'+(itmCe?'600':'400')+'">'+s.price+'</td>'
-        +'<td style="font-size:10px">'+s.delta+'</td>'
-        +'<td style="font-size:10px;color:var(--rd)">'+s.theta+'</td>'
-        +'<td style="font-weight:700;text-align:center;'+(isAtm?'color:var(--am)':'')+'">'+(isAtm?'&#11088;':'')+s.strike+'</td>'
-        +'<td style="font-size:10px;color:var(--rd)">'+(pe?pe.theta:'')+'</td>'
-        +'<td style="font-size:10px">'+(pe?pe.delta:'')+'</td>'
-        +'<td style="color:'+(itmPe?'var(--gr)':'var(--tx)')+';font-weight:'+(itmPe?'600':'400')+'">'+(pe?pe.price:'')+'</td>'
-        +'</tr>';
-    });
-    tb.innerHTML=html2;
-    var hdr=document.getElementById('chain-spot-hdr');
-    if(hdr) hdr.textContent='Spot: &#8377;'+Math.round(spot)+' | ATM: '+atm_strike+' | VIX: '+vix+'% | Exp: '+exp+'d';
-    toast('Chain loaded @ &#8377;'+Math.round(spot),'success');
-  });
-}
-
+// GREEKS
 function normCDF(x){var t=1/(1+.2316419*Math.abs(x));var d=.3989423*Math.exp(-x*x/2);var p=d*t*(.3193815+t*(-.3565638+t*(1.7814779+t*(-1.821256+t*1.3302744))));return x>0?1-p:p;}
 function bsp(S,K,T,v,r,type){if(!S||!K||!T||!v)return null;var t=T/365,sig=v/100,rf=r/100;var d1=(Math.log(S/K)+(rf+sig*sig/2)*t)/(sig*Math.sqrt(t)),d2=d1-sig*Math.sqrt(t);var price,delta;if(type==='CE'){price=S*normCDF(d1)-K*Math.exp(-rf*t)*normCDF(d2);delta=normCDF(d1);}else{price=K*Math.exp(-rf*t)*normCDF(-d2)-S*normCDF(-d1);delta=normCDF(d1)-1;}var gamma=Math.exp(-d1*d1/2)/(S*sig*Math.sqrt(2*Math.PI*t));var theta=(-(S*sig*Math.exp(-d1*d1/2))/(2*Math.sqrt(2*Math.PI*t))-rf*K*Math.exp(-rf*t)*(type==='CE'?normCDF(d2):normCDF(-d2)))/365;var vega=S*Math.sqrt(t)*Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI)/100;return{price:price,delta:delta,gamma:gamma,theta:theta,vega:vega};}
 function calcGreeks(){var res=bsp(nv('bs-s'),nv('bs-k'),nv('bs-d'),nv('bs-v'),nv('bs-r'),gv('bs-t'));var out=$('greek-out');if(!out)return;if(!res){out.style.display='block';out.innerHTML='<span style="color:var(--rd)">Fill all fields</span>';return;}out.style.display='block';out.innerHTML='<div style="font-size:20px;font-weight:700;color:var(--gr);margin-bottom:8px">₹'+res.price.toFixed(2)+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px"><div>Delta: <b style="color:var(--bl)">'+res.delta.toFixed(4)+'</b></div><div>Gamma: <b style="color:var(--pu)">'+res.gamma.toFixed(6)+'</b></div><div>Theta/day: <b style="color:var(--rd)">₹'+(res.theta*100).toFixed(2)+'</b></div><div>Vega/1%: <b style="color:var(--bl)">₹'+(res.vega*100).toFixed(2)+'</b></div></div>';}
@@ -3803,84 +3313,16 @@ function loadBuiltin(){
       var sname=s.name;b2.onclick=function(){if(confirm('Start 15-day paper test for '+sname+'?')){req('/ai/paper_test/'+sid+'?days=1','POST',null,function(err,r){toast(err?'Paper test needs AI endpoint':'Paper test started for '+sname,'info');});}};
       var b3=document.createElement('button');b3.className='btn bb';b3.style.cssText='padding:4px 10px;font-size:8px';b3.textContent='USE';
       b3.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat);};})(s);
-      var b4=document.createElement('button');
-      b4.className='btn';
-      b4.style.cssText='padding:4px 10px;font-size:12px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl)';
-      b4.textContent='📋';
-      b4.title='Copy strategy';
-      b4.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
-      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(b3);btns.appendChild(b4);div.appendChild(btns);
+      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(b3);div.appendChild(btns);
       list.appendChild(div);
     });
   });
 }
-function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){var list=$('strat-list');if(!list)return;var strats=(d&&d.user_strategies)||[];if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="toggleNLP()">CREATE WITH NLP</button></div>';return;}list.innerHTML='';strats.forEach(function(s){var div=document.createElement('div');div.className='card';div.style.borderLeft='3px solid var(--bl)';var sid=s.id;div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div></div><div style="font-size:9px;color:var(--mu)">'+s.instrument+' | SL:'+s.sl_value+' TGT:'+s.target_value+'</div>';var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';var b1=document.createElement('button');b1.className='btn bg';b1.style.cssText='padding:4px 10px;font-size:8px';b1.textContent='BT';b1.onclick=function(){$('bt-s').value=sid;show('bt',null);};var b2=document.createElement('button');b2.className='btn br';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='DELETE';b2.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};var bCp=document.createElement('button');
-      bCp.className='btn';
-      bCp.style.cssText='padding:4px 10px;font-size:12px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl)';
-      bCp.textContent='📋';
-      bCp.title='Copy strategy';
-      bCp.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
-      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(bCp);div.appendChild(btns);list.appendChild(div);});});}
+function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){var list=$('strat-list');if(!list)return;var strats=(d&&d.user_strategies)||[];if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="toggleNLP()">CREATE WITH NLP</button></div>';return;}list.innerHTML='';strats.forEach(function(s){var div=document.createElement('div');div.className='card';div.style.borderLeft='3px solid var(--bl)';var sid=s.id;div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div></div><div style="font-size:9px;color:var(--mu)">'+s.instrument+' | SL:'+s.sl_value+' TGT:'+s.target_value+'</div>';var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';var b1=document.createElement('button');b1.className='btn bg';b1.style.cssText='padding:4px 10px;font-size:8px';b1.textContent='BT';b1.onclick=function(){$('bt-s').value=sid;show('bt',null);};var b2=document.createElement('button');b2.className='btn br';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='DELETE';b2.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};btns.appendChild(b1);btns.appendChild(b2);div.appendChild(btns);list.appendChild(div);});});}
 function parseNLPStrat(){var text=gv('ns-nlp').trim();if(!text){toast('Type strategy','warn');return;}req('/strategies/from_nlp','POST',{user_id:UID,nlp_text:text},function(err,r){if(err){toast('NLP failed','error');return;}var s=r.strategy||{},p=r.parsed||{};if(s.name&&$('ns-nm'))$('ns-nm').value=s.name;if(p.instrument&&$('ns-i'))$('ns-i').value=p.instrument;if(s.sl_value&&$('ns-sl'))$('ns-sl').value=s.sl_value;if(s.target_value&&$('ns-tg'))$('ns-tg').value=s.target_value;if(s.entry_conditions&&$('ns-en'))$('ns-en').value=(s.entry_conditions||[]).join('\n');var box=$('ns-parsed');if(box){box.style.display='block';box.textContent='Parsed: '+JSON.stringify(p).slice(0,100);}toast('Auto-filled!','success');});}
-function saveStrat(){
-  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
-  var nlpText = (ta ? ta.value : '').trim();
-  
-  if(!nlpText || nlpText.length < 10){ 
-    toast('Strategy likhiye pehle!','warn'); return; 
-  }
-  
-  // Get name
-  var nameEl = document.getElementById('ns-nm');
-  var nameVal = (nameEl ? nameEl.value : '').trim();
-  if(!nameVal){
-    var nm = nlpText.match(/===\s*(.+?)\s*===/);
-    nameVal = nm ? nm[1].trim() : 'Strategy '+new Date().toLocaleDateString('en-IN');
-  }
-  
-  // Extract ONLY what's needed for backend — use EXACT values from text
-  var inst = 'NIFTY';
-  var im = nlpText.match(/\b(BANKNIFTY|NIFTY|FINNIFTY|SENSEX)\b/i);
-  if(im) inst = im[1].toUpperCase();
-  
-  var sl = 80, tgt = 160;
-  var slm = nlpText.match(/(?:stop\s*loss|sl)[\s:]*([0-9]+)/i);
-  var tgm = nlpText.match(/(?:target|tgt)[\s:]*([0-9]+)/i);
-  if(slm) sl = parseInt(slm[1]);
-  if(tgm) tgt = parseInt(tgm[1]);
-  
-  var tf = '15m';
-  var tfm = nlpText.match(/(?:timeframe|tf)[\s:]*([0-9]+[mhd])/i);
-  if(tfm) tf = tfm[1];
+function saveStrat(){var entry=(gv('ns-en')||'').split('\n').filter(function(l){return l.trim();});req('/strategies/save','POST',{user_id:UID,name:gv('ns-nm')||'My Strategy',instrument:gv('ns-i')||'NIFTY',entry_conditions:entry,sl_value:nv('ns-sl')||100,target_value:nv('ns-tg')||200,quantity:1,nlp_input:gv('ns-nlp')},function(err,r){if(r&&r.strategy_id){toast('Strategy saved!','success');$('nlp-bld').style.display='none';loadMy();}else toast('Save failed','error');});}
 
-  req('/strategies/save','POST',{
-    user_id: UID,
-    name: nameVal,
-    instrument: inst,
-    timeframe: tf,
-    sl_value: sl,
-    target_value: tgt,
-    quantity: 1,
-    entry_conditions: [],
-    exit_conditions: [],
-    description: nlpText.slice(0,150),
-    nlp_input: nlpText  // ← EXACT original text preserved
-  }, function(err,r){
-    if(r && r.strategy_id){
-      toast('✅ "'+nameVal+'" saved!','success');
-      var nlpBld=document.getElementById('nlp-bld');
-      if(nlpBld) nlpBld.style.display='none';
-      if(ta) ta.value='';
-      if(nameEl) nameEl.value='';
-      var outEl=document.getElementById('nlp-out');
-      if(outEl) outEl.style.display='none';
-      loadMy();
-    } else { 
-      toast('Save failed','error'); 
-    }
-  });
-}
-
+// JOURNAL
 function saveJnl(){
   if(!gv('jn-i')){toast('Instrument likhein pehle!','warn');return;}
   req('/journal/add','POST',{
@@ -4080,8 +3522,8 @@ function connectWS() {
     var wsProto = 'wss';
     var wsHost = API.replace('https://','').replace('http://','');
     var wsUrl = wsProto + '://' + wsHost + '/ws/live';
-    // WebSocket disabled on Cloudflare tunnel
-    return; // wsConn = new WebSocket(wsUrl);
+    
+    wsConn = new WebSocket(wsUrl);
     
     wsConn.onopen = function() {
       wsRetries = 0;
@@ -4132,8 +3574,8 @@ function fallbackToPolling() {
   
   loadStats();
   loadMkt();
-  setInterval(loadStats, 60000);   // every 60s (was 20s)
-  setInterval(loadMkt, 15000);    // every 15s (was 8s)
+  setInterval(loadStats, 20000);
+  setInterval(loadMkt, 8000);
 }
 
 // INIT
@@ -4164,17 +3606,8 @@ function fallbackToPolling() {
   }catch(e){}
   
   // Show the target panel
-  function _showStartupPanel(){
-    // Show panel immediately
-    document.querySelectorAll('[id^="pnl-"]').forEach(function(p){ p.classList.remove('active'); });
-    var tp = document.getElementById('pnl-'+lastTab);
-    if(tp){ tp.classList.add('active'); }
-  }
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', _showStartupPanel);
-  } else {
-    _showStartupPanel();
-  }
+  var tp2 = document.getElementById('pnl-'+lastTab);
+  if(tp2){ tp2.classList.add('active'); }
   
   // Highlight matching tab button
   var tabFound = false;
@@ -4200,9 +3633,9 @@ function fallbackToPolling() {
   loadMkt();
   
   // ── STEP 7: Delayed tasks ──
-  setTimeout(function(){if(typeof loadBrokerStatus==="function")loadBrokerStatus();}, 2000);
-  setTimeout(function(){ if(typeof loadAutoExecConfig==='function') loadAutoExecConfig(); }, 2500);
-  setTimeout(function(){ if(typeof loadStrategyRegistry==='function') loadStrategyRegistry(); }, 3000);
+  setTimeout(loadBrokerStatus, 2000);
+  setTimeout(loadAutoExecConfig, 2500);
+  setTimeout(loadStrategyRegistry, 3000);
   // NOTE: loadUIConfig removed from auto-run (was causing paper test switch)
   
   setInterval(function(){
@@ -4262,28 +3695,14 @@ var SYM_BASE = {
 };
 
 function openChart(sym) {
-  sym = sym || window.INST || 'NIFTY';
-  chartSym = sym;
-  var modal = document.getElementById('chart-modal');
-  if(modal) { modal.style.display='flex'; document.body.style.overflow='hidden'; }
-  
-  // Try LightweightCharts first
-  setTimeout(function(){
-    try {
-      initChart();
-      loadChartData();
-    } catch(e) {
-      // Fallback: embed TradingView widget
-      var container = document.getElementById('chart-container');
-      if(!container) return;
-      var tvSym = sym === 'BANKNIFTY' ? 'NSE:BANKNIFTY' : 
-                  sym === 'FINNIFTY' ? 'NSE:CNXFINANCE' :
-                  sym === 'SENSEX' ? 'BSE:SENSEX' : 'NSE:NIFTY';
-      container.innerHTML = '<iframe src="https://www.tradingview.com/widgetembed/?frameElementId=tv_chart&symbol='+tvSym+'&interval=15&theme=dark&style=1&locale=in&toolbar_bg=%230d0e14&enable_publishing=false&hide_legend=false&save_image=false&utm_source=trd" style="width:100%;height:100%;border:none;"></iframe>';
-    }
-  }, 200);
+  chartSym = sym || 'NIFTY';
+  $('chart-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.querySelectorAll('.sym-btn').forEach(function(b){ b.classList.remove('active'); });
+  var sb = $('sym-'+chartSym);
+  if(sb) sb.classList.add('active');
+  setTimeout(function(){ initChart(); loadChartData(); }, 100);
 }
-
 
 function closeChart() {
   $('chart-modal').style.display = 'none';
@@ -4317,11 +3736,6 @@ function setChartType(type, btn) {
 }
 
 function initChart() {
-  // Force hide loading after 1 second
-  setTimeout(function(){
-    var l=$('chart-loading'); if(l) l.style.display='none';
-  }, 1000);
-  
   if(!window.LightweightCharts) {
     showFallbackChart();
     return;
@@ -4590,11 +4004,6 @@ function calcRSI(closes, period) {
 }
 
 function loadChartData() {
-  // Auto-hide loading after 3 seconds
-  setTimeout(function(){
-    var loading = $('chart-loading');
-    if(loading) loading.style.display='none';
-  }, 3000);
   $('chart-loading').style.display = 'flex';
   $('chart-sym').textContent = chartSym;
 
@@ -5104,7 +4513,7 @@ function pollNotifCount() {
 // Feature init handled in IIFE
 
 </script>
-<script>
+
 // ══════════════════════════════════════════════════════════════════════════════
 // PERSISTENCE ENGINE — Save all settings to localStorage
 // ══════════════════════════════════════════════════════════════════════════════
@@ -5189,7 +4598,10 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }, 800);
 });
-</script>
+
+</body>
+</html>
+
 <script>
 
 
@@ -5489,24 +4901,159 @@ function loadLivePositions(){
 // ══════════════════════════════════════════════════════════════════
 
 
+function doAdminLogin(){
+  var user = document.getElementById('adm-login-user').value.trim();
+  var pass = document.getElementById('adm-login-pass').value;
+  var err = document.getElementById('adm-login-err');
+  if(!user||!pass){ if(err){err.textContent='Fill all fields';err.style.display='block';} return; }
+  
+  req('/admin/login','POST',{username:user,password:pass},function(e,r){
+    if(e||!r||!r.success){
+      if(err){err.textContent='Invalid credentials';err.style.display='block';}
+      return;
+    }
+    // Success - store token
+    try{ localStorage.setItem('trd_admin_token', r.token); localStorage.setItem('trd_admin_name', r.name); }catch(ex){}
+    document.getElementById('adm-login-gate').style.display='none';
+    document.getElementById('adm-panel-content').style.display='block';
+    adminTab('dash', document.getElementById('adm-tab-dash'));
+    toast('✅ Welcome, '+r.name+'!','success');
+  });
+}
 
-
-
+function adminLogout(){
+  try{ localStorage.removeItem('trd_admin_token'); }catch(e){}
+  document.getElementById('adm-login-gate').style.display='flex';
+  document.getElementById('adm-panel-content').style.display='none';
+  document.getElementById('adm-login-user').value='';
+  document.getElementById('adm-login-pass').value='';
+}
 
 // Check if already logged in when opening admin
 
 
+function adminTab(tab, btn){
+  ['dash','users','pay','sys'].forEach(function(t){
+    var el=document.getElementById('adm-'+t);
+    if(el) el.style.display = t===tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('[id^="adm-tab-"]').forEach(function(b){
+    b.style.background='var(--bg4)';b.style.borderColor='var(--bo)';b.style.color='var(--mu)';
+  });
+  if(btn){btn.style.background='rgba(251,191,36,.1)';btn.style.borderColor='rgba(251,191,36,.3)';btn.style.color='var(--am)';}
+  if(tab==='dash') loadAdminDash();
+  if(tab==='users') loadAdminUsers();
+  if(tab==='pay') loadPaymentConfig();
+  if(tab==='sys') loadSysStatus();
+}
 
+function loadAdminDash(){
+  req('/admin/dashboard','GET',null,function(err,d){
+    if(err||!d) return;
+    if($('adm-total')) $('adm-total').textContent = d.total_users||0;
+    if($('adm-active')) $('adm-active').textContent = d.active_users||0;
+    if($('adm-free')) $('adm-free').textContent = d.free_access_users||0;
+    if($('adm-cap')) $('adm-cap').textContent = '₹'+(((d.total_capital||0)/100000).toFixed(1))+'L';
+    var pl=$('adm-plans');
+    if(pl&&d.plans){
+      pl.innerHTML='';
+      var colors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--p0)',INSTITUTIONAL:'var(--am)'};
+      Object.keys(d.plans).forEach(function(p){
+        var chip=document.createElement('div');
+        chip.style.cssText='padding:4px 12px;background:var(--bg4);border:1px solid var(--bo);border-radius:10px;font-size:9px;display:flex;gap:6px;align-items:center';
+        chip.innerHTML='<span style="color:'+( colors[p]||'var(--tx)')+'">'+p+'</span><span style="font-size:11px;font-weight:700;color:var(--tx)">'+d.plans[p]+'</span>';
+        pl.appendChild(chip);
+      });
+    }
+  });
+}
 
+function loadAdminUsers(){
+  req('/admin/users','GET',null,function(err,d){
+    var tb=document.getElementById('adm-users-tbl');
+    if(!tb) return;
+    if(err||!d||!d.users||!d.users.length){
+      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:20px">No users found</td></tr>';
+      return;
+    }
+    tb.innerHTML='';
+    d.users.forEach(function(u){
+      var planColors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--p0)',INSTITUTIONAL:'var(--am)'};
+      var statusColor=u.status==='ACTIVE'?'var(--gr)':u.status==='SUSPENDED'?'var(--rd)':'var(--am)';
+      var row=document.createElement('tr');
+      row.innerHTML=
+        '<td style="color:var(--mu);font-size:9px">'+(u.user_id||'').slice(-8)+'</td>'+
+        '<td style="font-weight:600">'+(u.full_name||'—')+'</td>'+
+        '<td style="color:var(--mu);font-size:10px">'+(u.email||'—')+'</td>'+
+        '<td><span style="color:'+(planColors[u.plan]||'var(--mu)')+'">'+( u.plan||'FREE')+'</span></td>'+
+        '<td><span style="color:'+statusColor+'">'+(u.status||'ACTIVE')+'</span></td>'+
+        '<td style="text-align:center">'+(u.free_access?'<span style="color:var(--gr)">✓</span>':'—')+'</td>'+
+        '<td><div style="display:flex;gap:3px">'+
+          '<button onclick="editUser(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:var(--bg4);border:1px solid var(--bo);color:var(--bl);border-radius:3px;cursor:pointer">✏️</button>'+
+          '<button onclick="quickSetPlan(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:var(--bg4);border:1px solid var(--bo);color:var(--am);border-radius:3px;cursor:pointer">💎</button>'+
+          '<button onclick="deleteUser(\''+u.user_id+'\')" style="font-size:8px;padding:2px 7px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:3px;cursor:pointer">✕</button>'+
+        '</div></td>';
+      tb.appendChild(row);
+    });
+  });
+}
 
+function showAddUser(){
+  var f=document.getElementById('adm-user-form');
+  if(!f) return;
+  f.style.display='block';
+  document.getElementById('adm-form-title').textContent='➕ ADD NEW USER';
+  document.getElementById('adm-uid').value='';
+  ['adm-name','adm-email','adm-phone','adm-payid','adm-notes'].forEach(function(id){var e=$( id);if(e)e.value='';});
+  var cap=$('adm-capital');if(cap)cap.value=500000;
+  var plan=$('adm-plan');if(plan)plan.value='PRO';
+  var st=$('adm-status');if(st)st.value='ACTIVE';
+  var fa=$('adm-freeaccess');if(fa)fa.checked=false;
+}
 
+function editUser(uid){
+  req('/admin/users','GET',null,function(err,d){
+    if(err||!d||!d.users) return;
+    var u=d.users.find(function(x){return x.user_id===uid;});
+    if(!u) return;
+    var f=document.getElementById('adm-user-form');
+    if(f) f.style.display='block';
+    document.getElementById('adm-form-title').textContent='✏️ EDIT USER: '+u.full_name;
+    var e=function(id,val){var el=$(id);if(el)el.value=val||'';};
+    e('adm-uid',u.user_id);e('adm-name',u.full_name);e('adm-email',u.email);
+    e('adm-phone',u.phone);e('adm-capital',u.capital||500000);
+    e('adm-payid',u.payment_id);e('adm-notes',u.notes);
+    var plan=$('adm-plan');if(plan)plan.value=u.plan||'PRO';
+    var st=$('adm-status');if(st)st.value=u.status||'ACTIVE';
+    var fa=$('adm-freeaccess');if(fa)fa.checked=!!u.free_access;
+    f.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+}
 
-
-
-
-
-
-
+function saveAdminUser(){
+  var uid=$('adm-uid').value||('USR'+Date.now());
+  var data={
+    user_id:uid,
+    full_name:$('adm-name').value,
+    email:$('adm-email').value,
+    phone:$('adm-phone').value,
+    capital:parseFloat($('adm-capital').value)||500000,
+    plan:$('adm-plan').value,
+    status:$('adm-status').value,
+    free_access:$('adm-freeaccess').checked,
+    payment_id:$('adm-payid').value,
+    notes:$('adm-notes').value
+  };
+  var ep=$('adm-uid').value?'/admin/users/'+uid:'/admin/users/add';
+  var method=$('adm-uid').value?'PUT':'POST';
+  req(ep,method,data,function(err,r){
+    if(!err&&(r.updated||r.added)){
+      toast('✅ User saved!','success');
+      document.getElementById('adm-user-form').style.display='none';
+      loadAdminUsers();
+    } else { toast('❌ Save failed','error'); }
+  });
+}
 
 function quickSetPlan(uid){
   var plan=prompt('Set plan (FREE/BASIC/PRO/INSTITUTIONAL):','PRO');
@@ -5518,13 +5065,56 @@ function quickSetPlan(uid){
   });
 }
 
+function deleteUser(uid){
+  if(!confirm('⚠️ Delete user '+uid+'? This cannot be undone!')) return;
+  req('/admin/users/'+uid,'DELETE',null,function(err,r){
+    if(!err&&r.deleted){ toast('✅ User deleted','success'); loadAdminUsers(); }
+    else toast('❌ Delete failed','error');
+  });
+}
 
+function loadPaymentConfig(){
+  req('/admin/payment_config','GET',null,function(err,d){
+    if(err||!d) return;
+    var s=function(id,val){var e=$(id);if(e&&val)e.value=val;};
+    s('pay-rz-key',d.razorpay_key);
+    s('pay-upi',d.upi_id);
+    s('pay-bank',d.bank_account);
+    s('pay-ifsc',d.ifsc);
+    s('pay-acname',d.account_name);
+  });
+}
 
+function savePaymentConfig(){
+  var data={
+    razorpay_key:$('pay-rz-key').value,
+    razorpay_secret:$('pay-rz-secret').value,
+    upi_id:$('pay-upi').value,
+    bank_account:$('pay-bank').value,
+    ifsc:$('pay-ifsc').value,
+    account_name:$('pay-acname').value
+  };
+  req('/admin/payment_config','POST',data,function(err,r){
+    if(!err&&r.saved){ toast('✅ Payment config saved!','success'); }
+    else toast('❌ Save failed','error');
+  });
+}
 
-
-
-
-
+function loadSysStatus(){
+  req('/admin/system_status','GET',null,function(err,d){
+    if(err||!d) return;
+    if($('sys-cpu'))$('sys-cpu').textContent=d.cpu_percent+'%';
+    if($('sys-mem'))$('sys-mem').textContent=d.memory_percent+'%';
+    if($('sys-disk'))$('sys-disk').textContent=d.disk_percent+'%';
+    if($('sys-ws'))$('sys-ws').textContent=d.active_connections;
+    var si=$('sys-info');
+    if(si) si.innerHTML=
+      '<div>Version: <b style="color:var(--tx)">v'+d.version+'</b></div>'+
+      '<div>Uptime: <b style="color:var(--gr)">'+d.uptime+'</b></div>'+
+      '<div>Timestamp: <b style="color:var(--tx)">'+new Date(d.timestamp).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})+'</b></div>'+
+      '<div>Memory Available: <b style="color:var(--tx)">'+d.memory_available_gb+'GB</b></div>';
+  });
+}
 
 // ── PROFILE: Fix notifications toggle ───────────────────────────────
 function loadNotifPrefs(){
@@ -5804,7 +5394,7 @@ function executeAdvPaper(){
     }
     if(status) status.innerHTML='<span style="color:var(--gr)">✅ '+r.legs_executed+' legs executed | Group: '+r.group_id+'</span>';
     toast('✅ '+strategy+' executed - '+r.legs_executed+' legs!','success');
-    setTimeout(function(){if(typeof loadAdvSummary==="function")loadAdvSummary();}, 500);
+    setTimeout(loadAdvSummary, 500);
   });
 }
 
@@ -6474,7 +6064,7 @@ function aiTab(tab, btn){
     }
   });
   if(tab==='strategies'){ loadAIStrats('approved'); loadAIStatus(); }
-  if(tab==='autoexec' && typeof loadAutoExecConfig==='function') loadAutoExecConfig();
+  if(tab==='autoexec') loadAutoExecConfig();
   if(tab==='regime') detectRegime();
 }
 
@@ -6496,59 +6086,416 @@ function loadAIStatus(){
 function scanAllSignals(){
   var insts=['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'];
   var cards=document.getElementById('ai-signal-cards');
-  if(!cards) return;
-  cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px;font-size:12px">🤖 AI Analyzing market...</div>';
-  
-  // Get live prices
-  var signals = insts.map(function(sym){
-    var price = (window.prices && window.prices[sym]) || 0;
-    var vix = (window.prices && window.prices['VIX']) || 16;
-    
-    // AI Signal Logic (based on VIX, trend, time)
-    var hour = new Date().getHours();
-    var isMarketHours = hour >= 9 && hour <= 15;
-    var signal = 'NEUTRAL';
-    var confidence = 0;
-    var reason = [];
-    var direction = '';
-    
-    if(isMarketHours){
-      // VIX-based signal
-      if(vix < 15){ signal='BUY'; confidence=78; direction='CE'; reason.push('Low VIX - bullish'); }
-      else if(vix > 20){ signal='SELL'; confidence=72; direction='PE'; reason.push('High VIX - bearish'); }
-      else { signal='BUY'; confidence=65; direction='CE'; reason.push('Moderate VIX'); }
-      
-      // Time-based boost
-      if(hour>=9 && hour<=10){ confidence+=8; reason.push('Opening momentum'); }
-      if(hour>=14 && hour<=15){ confidence-=5; reason.push('End of day caution'); }
-      
-      confidence = Math.min(95, Math.max(50, confidence));
-    } else {
-      signal = 'WAIT'; confidence = 0; reason = ['Market closed'];
-    }
-    
-    return {sym:sym, price:price, signal:signal, confidence:confidence, direction:direction, reason:reason.join(' | '), vix:vix};
+  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">🔍 Scanning...</div>';
+  var results={}, done=0;
+  insts.forEach(function(inst){
+    req('/ai/signal/'+inst,'GET',null,function(err,d){
+      results[inst] = err ? {signal:'WAIT',confidence:0,regime:'UNKNOWN'} : d;
+      done++;
+      if(done===insts.length) renderSignalCards(results);
+    });
   });
-  
-  var signalHTML = signals.map(function(s){
-    var color = s.signal==='BUY'?'var(--gr)':s.signal==='SELL'?'var(--rd)':'var(--mu)';
-    var bg = s.signal==='BUY'?'rgba(0,255,136,.08)':s.signal==='SELL'?'rgba(255,51,51,.08)':'var(--bg3)';
-    return '<div style="background:'+bg+';border:1px solid '+color+';border-radius:10px;padding:12px;margin-bottom:8px">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-      +'<span style="font-weight:700;font-size:13px">'+s.sym+'</span>'
-      +'<span style="font-size:18px;font-weight:900;color:'+color+'">'+s.signal+'</span>'
-      +'</div>'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:6px">'
-      +'<span style="font-size:11px;color:var(--mu)">₹'+Math.round(s.price)+'</span>'
-      +(s.confidence>0?'<span style="font-size:11px;color:var(--am)">🎯 '+s.confidence+'% confidence</span>':'')
-      +(s.direction?'<span style="font-size:10px;padding:2px 8px;background:rgba(0,255,136,.1);color:var(--gr);border-radius:4px">'+s.direction+'</span>':'')
-      +'</div>'
-      +'<div style="font-size:9px;color:var(--mu)">'+s.reason+'</div>'
+}
+
+function scanSignal(inst){
+  var cards=document.getElementById('ai-signal-cards');
+  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">📡 Scanning '+inst+'...</div>';
+  req('/ai/signal/'+inst,'GET',null,function(err,d){
+    if(err||!d){ if(cards) cards.innerHTML='<div style="color:var(--rd);padding:12px">Error loading signal</div>'; return; }
+    var obj={}; obj[inst]=d;
+    renderSignalCards(obj);
+  });
+}
+
+function renderSignalCards(results){
+  var cards=document.getElementById('ai-signal-cards');
+  if(!cards) return;
+  cards.innerHTML='';
+  Object.keys(results).forEach(function(inst){
+    var d=results[inst];
+    var action=d.signal||d.action||'WAIT';
+    var conf=Math.round(d.confidence||d.confidence_score||0);
+    var price=window.prices&&window.prices[inst]?window.prices[inst]:0;
+    var ac=action==='BUY'?'var(--gr)':action==='SELL'?'var(--rd)':'var(--mu)';
+    var card=document.createElement('div');
+    card.style.cssText='background:var(--bg3);border:1px solid '+(action!=='WAIT'?ac:'var(--bo)')+';border-left:4px solid '+ac+';border-radius:8px;padding:12px;margin-bottom:8px';
+    card.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+      +'<div><div style="font-size:13px;font-weight:700">'+inst+'</div>'
+      +'<div style="font-size:10px;color:var(--mu)">₹'+(price?price.toFixed(2):'—')+'</div></div>'
+      +'<div style="text-align:right"><div style="font-size:18px;font-weight:800;color:'+ac+'">'+action+'</div>'
+      +'<div style="font-size:10px;color:var(--mu)">'+conf+'% confidence</div></div></div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">REGIME</div><b style="font-size:9px">'+(d.regime||'—')+'</b></div>'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">RSI</div><b>'+(d.rsi||'—')+'</b></div>'
+      +'<div style="background:var(--bg4);padding:5px;border-radius:4px;text-align:center"><div style="font-size:8px;color:var(--mu)">ADX</div><b>'+(d.adx||'—')+'</b></div>'
       +'</div>';
-  }).join('');
+    if(action!=='WAIT'){
+      card.innerHTML+='<div style="display:flex;gap:6px">'
+        +'<button onclick="executeAISignal(this.dataset.i,this.dataset.a)" data-i="'+inst+'" data-a="'+action+'" class="btn '+(action==='BUY'?'bg':'br')+'" style="flex:1;padding:8px;font-size:10px">'+action+' PAPER</button>'
+        +'<button onclick="addToWatchlist(this.dataset.i)" data-i="'+inst+'" style="flex:1;padding:8px;font-size:9px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:5px;cursor:pointer">+WATCH</button>'
+        +'</div>';
+    }
+    cards.appendChild(card);
+    _signalHistory.unshift({inst:inst,signal:d,ts:new Date().toLocaleTimeString('en-IN')});
+  });
+  renderSignalHistory();
+  toast('Signals loaded!','success');
+}
+
+function renderSignalHistory(){
+  var el=document.getElementById('ai-signal-history');
+  if(!el||!_signalHistory.length) return;
+  el.innerHTML='';
+  _signalHistory.slice(0,8).forEach(function(h){
+    var d=h.signal; var action=d.signal||'WAIT';
+    var ac=action==='BUY'?'var(--gr)':action==='SELL'?'var(--rd)':'var(--mu)';
+    var div=document.createElement('div');
+    div.style.cssText='display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bo);font-size:10px';
+    div.innerHTML='<span style="color:var(--mu)">'+h.ts+'</span> <b>'+h.inst+'</b>'
+      +'<span style="color:'+ac+';font-weight:700;margin-left:auto">'+action+' '+(d.confidence||0)+'%</span>';
+    el.appendChild(div);
+  });
+}
+
+function executeAISignal(inst,action){
+  var spot=window.prices&&window.prices[inst]?window.prices[inst]:24000;
+  req('/paper/v2/execute_strategy','POST',{strategy:'AI_'+action,spot:spot,instrument:inst,time_exit:'15:30',max_trades:5,lots:1},function(err,r){
+    toast(r&&r.success?'✅ AI Signal executed on paper!':'Execute error','success');
+  });
+}
+
+function addToWatchlist(inst){ toast(inst+' added to watchlist','info'); }
+
+// ── Load AI Strategies ────────────────────────────────────────────────────────
+function loadAIStrats(type){
+  // Highlight active filter button
+  ['all','approved','testing'].forEach(function(t){
+    var b=document.getElementById('ai-filter-'+t);
+    if(b){b.style.background=t===type?'rgba(168,85,247,.15)':'var(--bg4)';b.style.borderColor=t===type?'rgba(168,85,247,.4)':'var(--bo)';b.style.color=t===type?'var(--p0)':'var(--mu)';}
+  });
+  var ep = type==='approved' ? '/ai/strategies/approved' : '/ai/strategies/approved';
+  // All types use same endpoint - filter client side
+  var list=document.getElementById('ai-str-list');
+  if(list) list.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">Loading...</div>';
+  req(ep,'GET',null,function(err,d){
+    if(!list) return;
+    var allStrats=(d&&(d.strategies||d.approved_strategies))||[];
+    // Filter by type
+    var strats = allStrats;
+    if(type==='approved') strats = allStrats.filter(function(s){return s.approved!==false;});
+    if(type==='testing') strats = allStrats.filter(function(s){return s.approved===false||s.type==='TESTING';});
+    if(type==='all') strats = allStrats;
+    if(!strats.length){list.innerHTML='<div style="color:var(--mu);text-align:center;padding:16px">No strategies found</div>';return;}
+    list.innerHTML='';
+    strats.forEach(function(s){
+      var wr=s.avg_win_rate||s.win_rate||0;
+      var score=s.ai_score||Math.round(wr);
+      var color=score>=75?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
+      var div=document.createElement('div');
+      div.style.cssText='background:var(--bg3);border:1px solid var(--bo);border-left:3px solid '+color+';border-radius:8px;padding:12px;margin-bottom:8px';
+      div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+        +'<div><div style="font-size:12px;font-weight:700">🤖 '+(s.name||'AI Strategy')+'</div>'
+        +'<div style="font-size:9px;color:var(--mu)">'+(s.instrument||'NIFTY')+' · '+(s.type||'AI')+'</div></div>'
+        +'<div style="text-align:right"><div style="font-size:18px;font-weight:700;color:'+color+'">'+wr+'%</div>'
+        +'<div style="font-size:8px;color:var(--mu)">Win Rate</div></div></div>'
+        +'<div style="font-size:9px;color:var(--mu);margin-bottom:8px;line-height:1.6">'+(s.description||s.conditions||'')+'</div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button onclick="applyStrategyToOrderEntry('+JSON.stringify(s)+')" class="btn bb" style="flex:1;padding:6px;font-size:9px">USE</button>'
+        +'<button onclick="showBt()" data-sid="'+s.id+'" class="btn ba" style="flex:1;padding:6px;font-size:9px">BACKTEST</button>'
+        +'<button onclick="showPaper()" class="btn bg" style="flex:1;padding:6px;font-size:9px">PAPER</button>'
+        +'</div>';
+      // Store strategy data on div for event delegation
+      div.dataset.strategyJson = JSON.stringify(s);
+      div.querySelector('.ai-use-btn').onclick = function(){ applyStrategyToOrderEntry(JSON.parse(this.closest('[data-strategy-json]').dataset.strategyJson)); };
+      div.querySelector('.ai-bt-btn').onclick = function(){ showBt(); };
+      div.querySelector('.ai-pt-btn').onclick = function(){ showPaper(); };
+      list.appendChild(div);
+    });
+    toast(strats.length+' AI strategies loaded!','success');
+  });
+}
+
+// ── Evolve ────────────────────────────────────────────────────────────────────
+function evolveAI(){
+  var btn=document.querySelector('[onclick="evolveAI()"]');
+  if(btn){btn.textContent='⏳ Evolving...';btn.disabled=true;}
+  req('/ai/evolve','POST',{population_size:20,generations:5},function(err,r){
+    if(btn){btn.textContent='🧬 EVOLVE NEW GENERATION';btn.disabled=false;}
+    toast(err?'Evolve error':'✅ Evolution complete!',err?'error':'success');
+    loadAIStatus(); loadAIStrats('approved');
+  });
+}
+
+// ── Regime ────────────────────────────────────────────────────────────────────
+function detectRegime(){
+  req('/ai/regime','GET',null,function(err,d){
+    if(err||!d){toast('Regime error','error');return;}
+    var box=document.getElementById('ai-reg-box');
+    if(box){
+      box.style.display='block';
+      var colors={'BULLISH':'var(--gr)','BEARISH':'var(--rd)','SIDEWAYS':'var(--am)','VOLATILE':'var(--p0)'};
+      var regime=d.regime||'SIDEWAYS'; var color=colors[regime]||'var(--tx)';
+      box.innerHTML='<div style="text-align:center;padding:14px;background:rgba(0,0,0,.2);border-radius:8px;margin-bottom:8px">'
+        +'<div style="font-size:26px;font-weight:800;color:'+color+'">'+regime+'</div>'
+        +'<div style="font-size:10px;color:var(--mu)">'+(d.description||'')+'</div>'
+        +'<div style="font-size:11px;margin-top:4px;color:'+color+'">Confidence: '+(d.confidence||0)+'%</div>'
+        +'</div>';
+    }
+    var indEl=document.getElementById('ai-regime-indicators');
+    if(indEl&&d.indicators){
+      indEl.innerHTML='';
+      Object.keys(d.indicators).forEach(function(k){
+        var v=d.indicators[k];
+        var val=typeof v==='object'?(v.value||0):v;
+        var sig=typeof v==='object'?(v.signal||''):'';
+        var good=sig==='BULLISH'||parseFloat(val)>50;
+        var div2=document.createElement('div');
+        div2.style.cssText='background:var(--bg4);border:1px solid '+(good?'rgba(0,255,136,.2)':'rgba(255,51,102,.2)')+';border-radius:6px;padding:8px;text-align:center';
+        div2.innerHTML='<div style="font-size:8px;color:var(--mu)">'+k+'</div>'
+          +'<div style="font-size:12px;font-weight:700;color:'+(good?'var(--gr)':'var(--rd)')+'">'+parseFloat(val).toFixed(1)+'</div>'
+          +'<div style="font-size:8px;color:var(--mu)">'+sig+'</div>';
+        indEl.appendChild(div2);
+      });
+    }
+    var recEl=document.getElementById('ai-regime-recs');
+    if(recEl){
+      var recs={'BULLISH':['✅ Trend continuation CE','✅ Bull spreads','✅ ORB long','❌ Avoid shorts'],
+        'BEARISH':['✅ PE trend trades','✅ Bear spreads','✅ VWAP shorts','❌ Avoid dip buying'],
+        'SIDEWAYS':['✅ Iron Condor','✅ Theta decay','✅ Range scalping','❌ No directional plays'],
+        'VOLATILE':['✅ Buy straddle','✅ Wide Iron Condor','✅ Reduce size 50%','❌ No tight SL']};
+      var regime=d.regime||'SIDEWAYS';
+      recEl.innerHTML=(recs[regime]||recs['SIDEWAYS']).map(function(r){
+        return '<div style="padding:5px 0;font-size:11px;border-bottom:1px solid var(--bo)">'+r+'</div>';
+      }).join('');
+    }
+    toast('Regime: '+d.regime,'success');
+  });
+}
+
+// ── Auto Execute ──────────────────────────────────────────────────────────────
+function toggleAutoExec(){
+  _aiAutoEnabled=!_aiAutoEnabled;
+  var wrap=document.getElementById('ae-toggle-wrap');
+  var dot=document.getElementById('ae-toggle-dot');
+  if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
+  if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
+  toast(_aiAutoEnabled?'⚡ Auto-Execute ON':'Auto-Execute OFF',_aiAutoEnabled?'success':'info');
+}
+
+function loadAutoExecConfig(){
+  var ae = trdLoad('auto_exec', null);
+  if(ae){
+    _aiAutoEnabled = ae.enabled || false;
+    var set = function(id,v){ var e=document.getElementById(id); if(e&&v!==undefined) e.value=v; };
+    set('ae-conf', ae.min_confidence);
+    set('ae-lots', ae.max_lots);
+    set('ae-limit', ae.daily_limit);
+    set('ae-sl', ae.sl_pct);
+    set('ae-tgt', ae.target_pct);
+    if(ae.mode){ var m=document.getElementById('ae-mode'); if(m) m.value=ae.mode; }
+    var wrap=document.getElementById('ae-toggle-wrap');
+    var dot=document.getElementById('ae-toggle-dot');
+    if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
+    if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
+  }
+}
+
+function saveAutoExec(){
+  var conf = parseInt((document.getElementById('ae-conf')||{}).value)||75;
+  var lots = parseInt((document.getElementById('ae-lots')||{}).value)||1;
+  var limit = parseInt((document.getElementById('ae-limit')||{}).value)||3;
+  var mode = (document.getElementById('ae-mode')||{}).value||'PAPER';
+  var sl = parseFloat((document.getElementById('ae-sl')||{}).value)||1.5;
+  var tgt = parseFloat((document.getElementById('ae-tgt')||{}).value)||3.0;
+
+  var config = {
+    enabled: _aiAutoEnabled,
+    min_confidence: conf,
+    max_lots: lots,
+    daily_limit: limit,
+    mode: mode,
+    sl_pct: sl,
+    target_pct: tgt,
+    saved_at: new Date().toLocaleString('en-IN')
+  };
+
+  // Save to localStorage using persistence engine
+  trdSave('auto_exec', {
+    enabled: config.enabled,
+    min_confidence: config.min_confidence,
+    max_lots: config.max_lots,
+    daily_limit: config.daily_limit,
+    mode: config.mode,
+    sl_pct: config.sl_pct,
+    target_pct: config.target_pct
+  });
+
+  // Save to backend
+  req('/ai/auto_execute/config','POST',{
+    user_id: UID,
+    enabled: _aiAutoEnabled,
+    min_confidence: conf/100,
+    max_lots: lots,
+    daily_limit: limit,
+    mode: mode,
+    sl_pct: sl,
+    target_pct: tgt
+  }, function(err, r){
+    // Show saved confirmation regardless
+    var btn = document.querySelector('[onclick="saveAutoExec()"]');
+    if(btn){
+      btn.textContent = '✅ SAVED!';
+      btn.style.background = 'rgba(0,255,136,.2)';
+      btn.style.borderColor = 'rgba(0,255,136,.4)';
+      setTimeout(function(){
+        btn.textContent = '✓ SAVE AUTO-EXECUTE CONFIG';
+        btn.style.background = '';
+        btn.style.borderColor = '';
+      }, 2000);
+    }
+  });
+
+  // Show config summary
+  var status = document.getElementById('ae-status-display');
+  if(!status){
+    status = document.createElement('div');
+    status.id = 'ae-status-display';
+    var btn = document.querySelector('[onclick="saveAutoExec()"]');
+    if(btn) btn.parentNode.insertBefore(status, btn.nextSibling);
+  }
+  status.style.cssText = 'margin-top:10px;padding:10px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px;font-size:10px';
+  status.innerHTML = '<div style="font-weight:700;color:var(--gr);margin-bottom:6px">✅ CONFIG SAVED</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px">'
+    + '<div style="color:var(--mu)">Status: <b style="color:'+(config.enabled?'var(--gr)':'var(--rd)')+'">'+(config.enabled?'ON':'OFF')+'</b></div>'
+    + '<div style="color:var(--mu)">Mode: <b style="color:var(--am)">'+config.mode+'</b></div>'
+    + '<div style="color:var(--mu)">Min Conf: <b>'+config.min_confidence+'%</b></div>'
+    + '<div style="color:var(--mu)">Max Lots: <b>'+config.max_lots+'</b></div>'
+    + '<div style="color:var(--mu)">Daily Limit: <b>'+config.daily_limit+' trades</b></div>'
+    + '<div style="color:var(--mu)">SL/TGT: <b>'+config.sl_pct+'%/'+config.target_pct+'%</b></div>'
+    + '</div>'
+    + '<div style="font-size:8px;color:var(--mu);margin-top:4px">Saved: '+config.saved_at+'</div>';
+
+  toast('✅ Auto-execute config saved!','success');
+}
+
+// Load saved config on startup
+function loadSavedAutoExecConfig(){
+  try {
+    var saved = localStorage.getItem('trd_auto_exec_config');
+    if(!saved) return;
+    var config = JSON.parse(saved);
+    _aiAutoEnabled = config.enabled || false;
+    var set = function(id, v){ var e=document.getElementById(id); if(e&&v!==undefined) e.value=v; };
+    set('ae-conf', config.min_confidence);
+    set('ae-lots', config.max_lots);
+    set('ae-limit', config.daily_limit);
+    set('ae-sl', config.sl_pct);
+    set('ae-tgt', config.target_pct);
+    if(config.mode){ var m=document.getElementById('ae-mode'); if(m) m.value=config.mode; }
+    // Update toggle visual
+    var wrap=document.getElementById('ae-toggle-wrap');
+    var dot=document.getElementById('ae-toggle-dot');
+    if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
+    if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
+  } catch(e) {}
+}
+
+function loadAIPnL(){
+  req('/paper/v2/summary','GET',null,function(err,d){
+    var el=document.getElementById('ai-pnl-tracker');
+    if(!el||err||!d) return;
+    el.innerHTML='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">TOTAL P&L</div><b style="color:'+(d.total_pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+d.total_pnl+'</b></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">ACTIVE</div><b>'+d.active_positions+'</b></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">CLOSED</div><b>'+d.closed_positions+'</b></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:8px;color:var(--mu)">DAILY</div><b>'+d.daily_trades+'</b></div>'
+      +'</div>';
+  });
+}
+
+function loadAIPerformance(){
+  req('/ai/strategies/approved','GET',null,function(err,d){
+    var el=document.getElementById('ai-perf-monitor');
+    if(!el) return;
+    var strats=d&&d.strategies||[];
+    if(!strats.length){el.innerHTML='<div style="color:var(--mu);padding:10px">No approved strategies</div>';return;}
+    var html2='<table class="tbl" style="font-size:9px"><thead><tr><th>STRATEGY</th><th>WR%</th><th>SCORE</th></tr></thead><tbody>';
+    strats.forEach(function(s){
+      var wr=s.avg_win_rate||s.win_rate||0;
+      var color=wr>=75?'var(--gr)':wr>=65?'var(--am)':'var(--rd)';
+      html2+='<tr><td style="font-size:9px">'+(s.name||s.id).slice(0,22)+'</td>'
+        +'<td style="color:'+color+'">'+wr+'%</td>'
+        +'<td style="color:'+color+'">'+(s.ai_score||Math.round(wr))+'</td></tr>';
+    });
+    el.innerHTML=html2+'</tbody></table>';
+    toast('Performance loaded!','success');
+  });
+}
+
+// ── ML ENGINE ─────────────────────────────────────────────────────────────────
+function loadMLStatus(){
+  req('/ml/status','GET',null,function(err,d){
+    var el=document.getElementById('ml-status-bar');
+    if(!el) return;
+    if(err||!d||!d.available){
+      el.innerHTML='<span style="color:var(--rd)">❌ ML not available - run: pip3 install scikit-learn xgboost</span>';
+      return;
+    }
+    el.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<span style="padding:2px 8px;border-radius:10px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--gr);font-size:9px">✅ XGBoost</span>'
+      +'<span style="padding:2px 8px;border-radius:10px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);color:var(--bl);font-size:9px">✅ RandomForest</span>'
+      +'<span style="padding:2px 8px;border-radius:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:var(--p0);font-size:9px">✅ GradBoost</span>'
+      +(d.trained_symbols&&d.trained_symbols.length?'<span style="padding:2px 8px;border-radius:10px;background:rgba(251,191,36,.1);color:var(--am);font-size:9px">Trained: '+d.trained_symbols.join(', ')+'</span>':'')
+      +'</div>';
+  });
+}
+
+function trainML(){ trainMLModel(); }
+function trainMLModel(){
+  var sym=(document.getElementById('ml-train-sym')||{}).value||'NIFTY';
+  var days=parseInt((document.getElementById('ml-train-days')||{}).value)||365;
+  var syms=['NIFTY','BANKNIFTY','FINNIFTY'];
+  var btn=document.getElementById('ml-train-btn')||document.querySelector('[onclick="trainMLModel()"]');
+  if(btn){btn.textContent='⏳ Training 3 models...';btn.disabled=true;}
+  toast('Training '+syms.join(', ')+' models (~45s)...','info');
   
-  cards.innerHTML = signalHTML || '<div style="color:var(--mu);text-align:center;padding:20px">No signals</div>';
-  toast('AI scan complete - '+signals.filter(function(s){return s.signal!=="WAIT";}).length+' signals found','success');
+  var x=new XMLHttpRequest();
+  x.open('POST',window.API+'/ml/train',true);
+  x.setRequestHeader('Content-Type','application/json');
+  x.setRequestHeader('bypass-tunnel-reminder','true');
+  x.timeout=180000;
+  x.onload=function(){
+    if(btn){btn.textContent='🧠 TRAIN MODEL';btn.disabled=false;}
+    try{
+      var r=JSON.parse(x.responseText);
+      var resultEl=document.getElementById('ml-result');
+      if(resultEl) resultEl.style.display='block';
+      var html2='';
+      syms.forEach(function(s){
+        var res=r.results&&r.results[s];
+        if(!res||res.error) return;
+        var acc=res.ensemble_accuracy||0;
+        var color=acc>=70?'var(--gr)':acc>=60?'var(--am)':'var(--rd)';
+        html2+='<div style="background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:8px;margin-bottom:6px">'
+          +'<div style="display:flex;justify-content:space-between"><b>'+s+'</b>'
+          +'<span style="color:'+color+';font-weight:700">'+acc+'% Ensemble</span></div>'
+          +'<div style="font-size:9px;color:var(--mu)">'
+          +'XGB: '+(res.models&&res.models.xgboost&&res.models.xgboost.accuracy||0)+'% · '
+          +'RF: '+(res.models&&res.models.random_forest&&res.models.random_forest.accuracy||0)+'% · '
+          +'GB: '+(res.models&&res.models.gradient_boost&&res.models.gradient_boost.accuracy||0)+'%'
+          +'</div></div>';
+      });
+      var fiEl=document.getElementById('ml-feature-importance');
+      if(fiEl) fiEl.innerHTML=html2;
+      toast('✅ Models trained!','success');
+      loadMLStatus();
+      // Update accuracy display
+      var statusBar = document.getElementById('ml-status-bar');
+      if(statusBar) statusBar.innerHTML = '<span style="color:var(--gr)">✅ TRAINED</span>';
+    }catch(e){toast('Training parse error','error');}
+  };
+  x.onerror=x.ontimeout=function(){if(btn){btn.textContent='🧠 TRAIN MODEL';btn.disabled=false;}toast('Training timeout','error');};
+  x.send(JSON.stringify({symbols:syms,days:days}));
 }
 
 function mlScanAll(){
@@ -6659,7 +6606,7 @@ function adminLogout(){
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function adminTab(tab,btn){
-  ['dash','users','analytics','pay','notifs','sys','ref'].forEach(function(t){
+  ['dash','users','analytics','pay','notifs','sys'].forEach(function(t){
     var el=document.getElementById('adm-'+t);
     if(el) el.style.display=t===tab?'block':'none';
     var b=document.getElementById('adm-tab-'+t);
@@ -6669,12 +6616,6 @@ function adminTab(tab,btn){
   if(tab==='users') loadAdminUsers();
   if(tab==='pay') loadPaymentConfig();
   if(tab==='sys') loadSysStatus();
-  if(tab==='ref'){ 
-    // Show demo data IMMEDIATELY without API
-    _showReferralDemoData();
-    // Then try to load real data
-    if(typeof loadAdminReferral==='function') setTimeout(loadAdminReferral, 100);
-  }
   if(tab==='analytics') loadAdminAnalytics();
   if(tab==='notifs') {} // static UI
 }
@@ -6727,17 +6668,9 @@ function loadAdminDash(){
 // ── Users ─────────────────────────────────────────────────────────────────────
 function loadAdminUsers(){
   req('/admin/users','GET',null,function(err,d){
-    if(err||!d){ toast('Users load failed - check connection','warn'); return; }
-    _adminUsers = (d.users || d || []).map(function(u){
-      if(!u.user_id && u.id) u.user_id = u.id;
-      if(!u.full_name && u.username) u.full_name = u.username;
-      if(!u.plan && u.subscription_plan) u.plan = u.subscription_plan;
-      return u;
-    });
+    if(err||!d){return;}
+    _adminUsers = d.users||d||[];
     renderUsersTable(_adminUsers);
-    var cnt = document.getElementById('adm-user-count');
-    if(cnt) cnt.textContent = _adminUsers.length + ' users';
-    toast(_adminUsers.length + ' users loaded','success');
   });
 }
 
@@ -6774,17 +6707,14 @@ function searchAdminUsers(q){
 }
 
 function showAddUser(){
-  var form=document.getElementById('adm-user-form');
-  if(form) form.style.display='block';
-  var t=document.getElementById('adm-form-title');
-  if(t) t.textContent='ADD NEW USER';
-  ['adm-uid','adm-name','adm-email','adm-phone','adm-notes','adm-payment'].forEach(function(id){
-    var e=document.getElementById(id); if(e) e.value='';
-  });
-  var cap=document.getElementById('adm-capital'); if(cap) cap.value='500000';
-  var plan=document.getElementById('adm-plan'); if(plan) plan.value='FREE';
-  var status=document.getElementById('adm-status'); if(status) status.value='active';
-  var msg=document.getElementById('adm-form-msg'); if(msg) msg.style.display='none';
+  document.getElementById('adm-user-form').style.display='block';
+  document.getElementById('adm-form-title').textContent='ADD NEW USER';
+  document.getElementById('adm-uid').value='';
+  ['adm-name','adm-email','adm-phone','adm-notes'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('adm-capital').value='500000';
+  document.getElementById('adm-plan').value='PRO';
+  document.getElementById('adm-status').value='active';
+  document.getElementById('adm-freeaccess').checked=false;
 }
 
 function editUser(uid){
@@ -6805,49 +6735,30 @@ function editUser(uid){
 }
 
 function saveAdminUser(){
-  var uid = (document.getElementById('adm-uid')||{}).value||'';
-  var name = (document.getElementById('adm-name')||{}).value||'';
-  var email = (document.getElementById('adm-email')||{}).value||'';
-  var phone = (document.getElementById('adm-phone')||{}).value||'';
-  var capital = parseFloat((document.getElementById('adm-capital')||{}).value)||500000;
-  var plan = (document.getElementById('adm-plan')||{}).value||'FREE';
-  var status = (document.getElementById('adm-status')||{}).value||'active';
-  var freeAccess = (document.getElementById('adm-freeaccess')||{}).checked||false;
-  var notes = (document.getElementById('adm-notes')||{}).value||'';
-  
-  if(!name && !email){ toast('Name ya Email zaroori hai','warn'); return; }
-  
-  var data = {
-    full_name: name, email: email, phone: phone,
-    capital: capital, plan: plan, status: status,
-    free_access: freeAccess, notes: notes
+  var uid=document.getElementById('adm-uid').value;
+  var data={
+    full_name:document.getElementById('adm-name').value,
+    email:document.getElementById('adm-email').value,
+    phone:document.getElementById('adm-phone').value,
+    capital:parseFloat(document.getElementById('adm-capital').value)||500000,
+    plan:document.getElementById('adm-plan').value,
+    status:document.getElementById('adm-status').value,
+    free_access:document.getElementById('adm-freeaccess').checked,
+    notes:document.getElementById('adm-notes').value,
   };
-  if(uid) data.user_id = uid;
-  
-  var msg = document.getElementById('adm-form-msg');
-  if(msg){ msg.textContent='Saving...'; msg.style.color='var(--am)'; msg.style.display='block'; }
-  
-  var ep = uid ? '/admin/users/'+uid : '/admin/users/add';
-  var method = uid ? 'PUT' : 'POST';
-  
-  req(ep, method, data, function(err, r){
-    if(err || !r || r.error){
-      // Save locally as fallback
-      var newUid = uid || ('USR_'+Date.now());
-      if(!window._adminUsersLocal) window._adminUsersLocal = {};
-      window._adminUsersLocal[newUid] = Object.assign({user_id: newUid}, data);
-      _adminUsers = Object.values(window._adminUsersLocal);
-      renderUsersTable(_adminUsers);
-      if(msg){ msg.textContent = uid ? '✅ Updated (local)' : '✅ Added (local)'; msg.style.color='var(--am)'; }
-      toast(uid?'User updated (local mode)':'User added (local mode)','success');
-      document.getElementById('adm-user-form').style.display='none';
-      return;
+  var msg=document.getElementById('adm-form-msg');
+  var ep=uid?'/admin/users/'+uid:'/admin/users/add';
+  var method=uid?'PUT':'POST';
+  req(ep,method,data,function(err,r){
+    if(err||!r){
+      if(msg){msg.textContent='Error saving user';msg.style.color='var(--rd)';msg.style.display='block';}
+      toast('Save failed','error');return;
     }
-    if(msg){ msg.textContent = uid?'✅ User updated!':'✅ User added!'; msg.style.color='var(--gr)'; }
+    if(msg){msg.textContent=uid?'User updated!':'User added!';msg.style.color='var(--gr)';msg.style.display='block';}
     toast(uid?'✅ User updated!':'✅ User added!','success');
-    var form = document.getElementById('adm-user-form');
-    if(form) form.style.display='none';
-    setTimeout(function(){ loadAdminUsers(); loadAdminDash(); }, 500);
+    document.getElementById('adm-user-form').style.display='none';
+    loadAdminUsers();
+    loadAdminDash();
   });
 }
 
@@ -7034,835 +6945,3 @@ function adminAction(action){
   });
 }
 </script>
-<script>
-// ══════════════════════════════════════════════════════════
-// COPY STRATEGY — Natural Language Format
-// Works on ALL browsers (Chrome, Samsung, Safari)
-// ══════════════════════════════════════════════════════════
-
-function copyStrategyText(s){
-  if(!s){ toast('No strategy data','warn'); return; }
-
-  var text = '';
-
-  // PRIORITY 1: Use original nlp_input EXACTLY as saved (no transformation)
-  if(s.nlp_input && s.nlp_input.trim().length > 10){
-    text = s.nlp_input.trim();
-  }
-  // PRIORITY 2: Build from structured fields (only if no nlp_input)
-  else {
-    var name = s.name || s.strategy_name || 'Strategy';
-    var inst = s.instrument || 'NIFTY';
-    var act  = s.action || 'BUY';
-    var ot   = s.option_type || 'CE';
-    var lots = s.quantity || s.lots || 1;
-    var sl   = s.sl_value || s.stop_loss || s.sl || 80;
-    var tgt  = s.target_value || s.target || s.tp || 160;
-    var tf   = s.timeframe || '5m';
-    var wr   = s.avg_win_rate || s.win_rate || 0;
-    var lines = [];
-    lines.push('=== ' + name.toUpperCase() + ' ===');
-    lines.push('');
-    lines.push('\uD83D\uDCCC ORDER COMMAND:');
-    lines.push(act + ' ' + inst + ' ' + ot + ' ' + lots + ' LOT');
-    lines.push('Stop Loss: ' + sl + ' pts | Target: ' + tgt + ' pts');
-    lines.push('Timeframe: ' + tf + ' | R/R: 1:' + (tgt/sl).toFixed(2));
-    lines.push('');
-    var ec = s.entry_conditions || s.conditions || [];
-    if(typeof ec === 'string') ec = ec.split(' AND ').map(function(c){return c.trim();});
-    if(ec && ec.length){
-      lines.push('\uD83D\uDCCA ENTRY CONDITIONS:');
-      ec.forEach(function(c,i){ if(c&&c.trim()) lines.push((i+1)+'. '+c.trim()); });
-      lines.push('');
-    }
-    var xc = s.exit_conditions || s.exit || '';
-    if(typeof xc === 'string' && xc) xc = [xc];
-    if(Array.isArray(xc) && xc.length && xc[0]){
-      lines.push('\uD83D\uDEAA EXIT CONDITIONS:');
-      xc.forEach(function(c){ if(c&&c.trim()) lines.push('\u2022 '+c.trim()); });
-      lines.push('');
-    }
-    if(s.no_trade) lines.push('\u274C NO-TRADE: '+s.no_trade);
-    if(s.indicators) lines.push('\uD83D\uDCC8 INDICATORS: '+s.indicators);
-    if(wr>0) lines.push('\u2705 WIN RATE: '+wr+'%');
-    if(s.ai_score) lines.push('\uD83E\uDD16 AI SCORE: '+s.ai_score+'/100');
-    text = lines.join('\n');
-  }
-
-  if(!text){ toast('No content to copy','warn'); return; }
-
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(function(){
-      toast('\u2705 Copied!','success');
-    }).catch(function(){ _showCopyModal(text); });
-  } else {
-    _showCopyModal(text);
-  }
-}
-
-function _showCopyModal(text){
-  var existing = document.getElementById('copy-modal');
-  if(existing) existing.remove();
-
-  var overlay = document.createElement('div');
-  overlay.id = 'copy-modal';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;flex-direction:column;padding:16px;gap:10px';
-
-  var header = document.createElement('div');
-  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center';
-  var title = document.createElement('div');
-  title.style.cssText = 'color:#00ff88;font-weight:700;font-size:13px';
-  title.textContent = '\uD83D\uDCCB COPY STRATEGY';
-  var closeBtn = document.createElement('button');
-  closeBtn.textContent = '\u2715 CLOSE';
-  closeBtn.style.cssText = 'background:rgba(255,51,102,.2);border:1px solid rgba(255,51,102,.4);color:#ff3366;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px';
-  closeBtn.onclick = function(){ overlay.remove(); };
-  header.appendChild(title); header.appendChild(closeBtn);
-
-  var ta = document.createElement('textarea');
-  ta.readOnly = true;
-  ta.value = text;
-  ta.style.cssText = 'flex:1;background:#0a0d18;color:#e2e8f0;border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;font-size:11px;font-family:monospace;resize:none;line-height:1.7;min-height:280px';
-
-  var hint = document.createElement('div');
-  hint.style.cssText = 'color:rgba(255,255,255,.4);font-size:10px;text-align:center';
-  hint.textContent = 'Select All (Ctrl+A) \u2192 Copy (Ctrl+C) or Long Press \u2192 Copy';
-
-  var copyBtn = document.createElement('button');
-  copyBtn.textContent = '\uD83D\uDCCB SELECT & COPY';
-  copyBtn.className = 'btn bg blg';
-  copyBtn.onclick = function(){
-    ta.select(); ta.setSelectionRange(0, 99999);
-    try{
-      var ok = document.execCommand('copy');
-      if(ok){ toast('\u2705 Copied!','success'); overlay.remove(); }
-    }catch(e){ toast('Long press on text above to copy','info'); }
-  };
-
-  overlay.appendChild(header);
-  overlay.appendChild(ta);
-  overlay.appendChild(hint);
-  overlay.appendChild(copyBtn);
-  document.body.appendChild(overlay);
-
-  // Auto-select
-  setTimeout(function(){ ta.focus(); ta.select(); ta.setSelectionRange(0,99999); }, 100);
-}
-
-function copyNLPText(){
-  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
-  var text = ta ? ta.value.trim() : '';
-  if(!text){ toast('NLP area mein strategy likhiye pehle!','warn'); return; }
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(function(){
-      toast('✅ Strategy copied!','success');
-    }).catch(function(){ _showCopyModal(text); });
-  } else {
-    _showCopyModal(text);
-  }
-}
-
-function saveStratSmart(){
-  var aiParse = document.getElementById('nlp-ai-parse');
-  if(aiParse && aiParse.checked){
-    // AI MODE: Parse first then save
-    nlpParseAndFill(function(){
-      saveStrat();
-    });
-  } else {
-    // AS-IS MODE: Save exactly what was typed
-    saveStrat();
-  }
-}
-
-// Toggle label
-document.addEventListener('DOMContentLoaded', function(){
-  var cb = document.getElementById('nlp-ai-parse');
-  var lbl = document.getElementById('nlp-ai-label');
-  if(cb && lbl){
-    cb.onchange = function(){
-      lbl.textContent = cb.checked ? 'ON — AI Will Modify' : 'OFF — Save As-Is';
-      lbl.style.color = cb.checked ? 'var(--am)' : 'var(--mu)';
-    };
-  }
-});
-
-
-// ══════════════════════════════════════════════════════════
-// NLP AUDIT — VERIFY karo NLP ne kiya samjha
-// ══════════════════════════════════════════════════════════
-
-var _pendingSavePayload = null;
-
-function saveStratAsIs(){
-  var nm = (document.getElementById('ns-nm')||{}).value||'';
-  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
-  var text = ta ? ta.value.trim() : '';
-  
-  if(!nm.trim()){
-    toast('Strategy name daalo!','warn');
-    var el=document.getElementById('ns-nm'); if(el){el.focus();el.style.borderColor='var(--rd)';} return;
-  }
-  if(!text){
-    toast('Strategy text likhiye!','warn');
-    if(ta){ta.focus();ta.style.borderColor='var(--rd)';} return;
-  }
-  
-  // Parse what NLP understands
-  var parsed = _nlpQuickParse(text);
-  
-  // Build payload
-  _pendingSavePayload = {
-    user_id: UID, name: nm.trim(),
-    instrument: parsed.instrument, timeframe: parsed.timeframe,
-    sl_value: parsed.sl, target_value: parsed.target,
-    quantity: parsed.lots, action: parsed.action,
-    option_type: parsed.option_type,
-    description: text.slice(0, 300),
-    nlp_input: text,
-    entry_conditions: parsed.entry_conditions,
-    exit_conditions: parsed.exit_conditions,
-    tags: ['user-saved'], is_public: false
-  };
-  
-  // Show AUDIT - let user verify
-  _showNLPAudit(text, parsed);
-}
-
-function _nlpQuickParse(text){
-  var t = text.toUpperCase();
-  
-  var action = /\bSELL\b/.test(t) ? 'SELL' : 'BUY';
-  var instrument = 'NIFTY';
-  if(/BANKNIFTY|BANK NIFTY/.test(t)) instrument = 'BANKNIFTY';
-  else if(/FINNIFTY/.test(t)) instrument = 'FINNIFTY';
-  else if(/SENSEX/.test(t)) instrument = 'SENSEX';
-  
-  var option_type = /\bPE\b|\bPUT\b/.test(t) ? 'PE' : 'CE';
-  
-  var slM = text.match(/(?:stop\s*loss|sl|SL)[:\s]+([\d.]+)/i);
-  var tgtM = text.match(/(?:target|tgt|TGT)[:\s]+([\d.]+)/i);
-  var tfM = text.match(/(?:timeframe|tf)[:\s]*([\d]+\s*(?:m|min|h|hr|d|day|MIN|H|D))/i);
-  var lotsM = text.match(/([\d]+)\s*(?:lot|LOT)/i);
-  
-  var sl = slM ? parseFloat(slM[1]) : 80;
-  var target = tgtM ? parseFloat(tgtM[1]) : 160;
-  var timeframe = tfM ? tfM[1].trim() : '15m';
-  var lots = lotsM ? parseInt(lotsM[1]) : 1;
-  
-  // Entry conditions
-  var entry_conditions = [];
-  var ecM = text.match(/(?:ENTRY|entry)[:\s]*([^\n]{5,100})/i);
-  if(ecM) entry_conditions.push(ecM[1].trim());
-  var vwapM = /VWAP/.test(t);
-  var rsiM = text.match(/RSI[\s><=]+([\d]+)/i);
-  var emaM = text.match(/(?:EMA|ema)\s*([\d]+)/i);
-  if(vwapM) entry_conditions.push('Price > VWAP');
-  if(rsiM) entry_conditions.push('RSI > '+rsiM[1]);
-  if(emaM) entry_conditions.push('Price > EMA'+emaM[1]);
-  
-  // Exit conditions
-  var exit_conditions = [];
-  var exitM = text.match(/(?:EXIT|exit|Force Exit)[:\s]*([^\n]{5,80})/i);
-  if(exitM) exit_conditions.push(exitM[1].trim());
-  var timeExitM = text.match(/([\d]{1,2}:[\d]{2}\s*(?:AM|PM))/i);
-  if(timeExitM) exit_conditions.push('Time Exit at '+timeExitM[1]);
-  
-  return {
-    action: action, instrument: instrument, option_type: option_type,
-    sl: sl, target: target, timeframe: timeframe, lots: lots,
-    entry_conditions: entry_conditions, exit_conditions: exit_conditions
-  };
-}
-
-function _showNLPAudit(originalText, parsed){
-  var auditEl = document.getElementById('nlp-audit');
-  var inputEl = document.getElementById('audit-input');
-  var outputEl = document.getElementById('audit-output');
-  var accEl = document.getElementById('audit-accuracy');
-  
-  if(!auditEl) return;
-  
-  // Show original
-  if(inputEl) inputEl.textContent = originalText.slice(0,300) + (originalText.length>300?'...':'');
-  
-  // Show what NLP understood
-  var understood = [
-    'Action    : ' + parsed.action,
-    'Instrument: ' + parsed.instrument,
-    'Type      : ' + parsed.option_type,
-    'Lots      : ' + parsed.lots,
-    'Stop Loss : ' + parsed.sl + ' pts',
-    'Target    : ' + parsed.target + ' pts',
-    'Timeframe : ' + parsed.timeframe,
-  ];
-  if(parsed.entry_conditions.length){
-    understood.push('');
-    understood.push('ENTRY:');
-    parsed.entry_conditions.forEach(function(c){ understood.push('  ✓ '+c); });
-  }
-  if(parsed.exit_conditions.length){
-    understood.push('');
-    understood.push('EXIT:');
-    parsed.exit_conditions.forEach(function(c){ understood.push('  ✓ '+c); });
-  }
-  if(outputEl) outputEl.textContent = understood.join('\n');
-  
-  // Accuracy score
-  var score = 0, total = 4;
-  if(parsed.sl !== 80 || originalText.toLowerCase().indexOf('stop') < 0) score++;
-  if(parsed.target !== 160 || originalText.toLowerCase().indexOf('target') < 0) score++;
-  if(parsed.entry_conditions.length > 0) score++;
-  if(parsed.exit_conditions.length > 0) score++;
-  var pct = Math.round((score/total)*100);
-  var color = pct >= 75 ? 'var(--gr)' : pct >= 50 ? 'var(--am)' : 'var(--rd)';
-  
-  if(accEl){
-    accEl.innerHTML = '<span style="color:'+color+'">NLP Accuracy: '+pct+'%</span> — '
-      + (pct >= 75 ? 'Sahi lag raha hai ✅' : 'Review karo ⚠️');
-  }
-  
-  auditEl.style.display = 'block';
-  auditEl.scrollIntoView({behavior:'smooth', block:'nearest'});
-}
-
-function confirmAndSave(){
-  if(!_pendingSavePayload){ toast('Koi pending save nahi','warn'); return; }
-  
-  var msgEl = document.getElementById('ns-save-msg');
-  if(msgEl){ msgEl.style.display='block'; msgEl.style.color='var(--am)'; msgEl.textContent='Saving...'; }
-  
-  req('/strategies/save','POST',_pendingSavePayload,function(err,r){
-    if(err||!r||r.error){
-      toast('Save failed!','error');
-      if(msgEl){ msgEl.style.color='var(--rd)'; msgEl.textContent='❌ Save failed'; }
-      return;
-    }
-    toast('✅ Strategy saved!','success');
-    if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ Saved: '+(_pendingSavePayload.name||''); }
-    
-    // Reset
-    var ta = document.getElementById('strat-nlp-in');
-    if(ta) ta.value='';
-    var nm = document.getElementById('ns-nm'); if(nm) nm.value='';
-    var audit = document.getElementById('nlp-audit'); if(audit) audit.style.display='none';
-    _pendingSavePayload = null;
-    
-    setTimeout(function(){ if(msgEl) msgEl.style.display='none'; loadMy(); }, 1500);
-  });
-}
-
-function saveStratWithAI(){
-  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
-  var text = ta ? ta.value.trim() : '';
-  if(!text){ toast('Strategy text likhiye pehle!','warn'); return; }
-  var msgEl = document.getElementById('ns-save-msg');
-  if(msgEl){ msgEl.style.display='block'; msgEl.style.color='var(--am)'; msgEl.textContent='🤖 AI analyzing...'; }
-  req('/nlp/parse','POST',{text:text},function(err,d){
-    if(err||!d){ toast('NLP parse failed, saving as-is...','warn'); saveStratAsIs(); return; }
-    var aiText = _buildStrategyText(d);
-    if(ta){ ta.value = aiText; ta.style.borderColor='rgba(0,255,136,.4)'; }
-    if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ AI enhanced! Review and click SAVE AS-IS'; }
-    toast('AI enhanced! Ab SAVE AS-IS dabao','success');
-  });
-}
-
-function _buildStrategyText(d){
-  var lines=['=== '+(d.strategy_name||'STRATEGY').toUpperCase()+' ===',''];
-  lines.push('\uD83D\uDCCC ORDER COMMAND:');
-  lines.push((d.action||'BUY')+' '+(d.instrument||'NIFTY')+' '+(d.option_type||'CE')+' '+(d.quantity||1)+' LOT');
-  lines.push('Stop Loss: '+(d.stop_loss||80)+' pts | Target: '+(d.target||160)+' pts');
-  lines.push('Timeframe: '+(d.timeframe||'15m'));
-  if(d.entry_conditions&&d.entry_conditions.length){
-    lines.push('');lines.push('\uD83D\uDCCA ENTRY CONDITIONS:');
-    d.entry_conditions.forEach(function(c,i){lines.push((i+1)+'. '+c);});
-  }
-  if(d.exit_conditions&&d.exit_conditions.length){
-    lines.push('');lines.push('\uD83D\uDEAA EXIT CONDITIONS:');
-    d.exit_conditions.forEach(function(c){lines.push('\u2022 '+c);});
-  }
-  return lines.join('\n');
-}
-
-// ══ FIX 4: Triple-click TRD logo → Admin ═══════════════
-var _logoClicks = 0, _logoTimer = null;
-function handleLogoClick(){
-  _logoClicks++;
-  clearTimeout(_logoTimer);
-  _logoTimer = setTimeout(function(){ _logoClicks = 0; }, 800);
-  if(_logoClicks >= 3){
-    _logoClicks = 0;
-    show('admin', null);
-    toast('🔐 Admin Panel', 'success');
-  }
-}
-
-// ══ FIX 5: Chart fix - load TradingView widget ══════════
-function loadTVChart(symbol){
-  symbol = symbol || 'NSE:NIFTY';
-  var container = document.getElementById('tv-chart-container');
-  if(!container) return;
-  container.innerHTML = '';
-  try{
-    new TradingView.widget({
-      container_id: 'tv-chart-container',
-      symbol: symbol,
-      interval: '15',
-      timezone: 'Asia/Kolkata',
-      theme: 'dark',
-      style: '1',
-      locale: 'in',
-      toolbar_bg: '#0d0e14',
-      enable_publishing: false,
-      hide_top_toolbar: false,
-      save_image: false,
-      height: 400,
-      width: '100%',
-    });
-  }catch(e){
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,.4)">'
-      +'<div style="font-size:24px;margin-bottom:8px">📊</div>'
-      +'<div style="font-size:11px">Chart: '+symbol+'</div>'
-      +'<div style="font-size:10px;margin-top:8px;color:var(--am)">TradingView requires internet connection</div>'
-      +'</div>';
-  }
-}
-
-// ══ FIX 6: Customer Support ══════════════════════════════
-var _supportOpen = false;
-function toggleSupport(){
-  _supportOpen = !_supportOpen;
-  var panel = document.getElementById('support-panel');
-  if(!panel){
-    // Create support panel
-    panel = document.createElement('div');
-    panel.id = 'support-panel';
-    panel.style.cssText = 'position:fixed;bottom:70px;right:16px;width:300px;background:var(--bg3);border:1px solid var(--bo);border-radius:12px;z-index:9999;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5)';
-    panel.innerHTML = 
-      '<div style="background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center">'
-      +'<div style="font-weight:700;font-size:12px">💬 Customer Support</div>'
-      +'<button onclick="toggleSupport()" style="background:none;border:none;color:var(--mu);font-size:16px;cursor:pointer">✕</button>'
-      +'</div>'
-      +'<div style="height:220px;overflow-y:auto;padding:12px" id="support-msgs">'
-      +'<div style="background:rgba(0,255,136,.1);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px">'
-      +'👋 Namaste! TRD Support mein aapka swagat hai.<br><br>'
-      +'<b>Quick Help:</b><br>'
-      +'• Paper trading: PAPER mode select karo<br>'
-      +'• Strategy copy: 📋 button dabao<br>'
-      +'• Live prices: Market Watch dekho<br>'
-      +'• Backtest: Strategies test karo'
-      +'</div>'
-      +'</div>'
-      +'<div style="padding:8px;border-top:1px solid var(--bo);display:flex;gap:6px">'
-      +'<input id="support-input" placeholder="Message likhiye..." style="flex:1;font-size:11px;padding:6px 8px">'
-      +'<button onclick="sendSupportMsg()" class="btn bg" style="padding:6px 10px;font-size:11px">Send</button>'
-      +'</div>';
-    document.body.appendChild(panel);
-  }
-  panel.style.display = _supportOpen ? 'block' : 'none';
-}
-
-function sendSupportMsg(){
-  var input = document.getElementById('support-input');
-  var msgs = document.getElementById('support-msgs');
-  if(!input || !input.value.trim()) return;
-  var userMsg = input.value.trim();
-  input.value = '';
-  // Show user message
-  msgs.innerHTML += '<div style="text-align:right;margin-bottom:6px"><span style="background:rgba(79,142,247,.2);border-radius:8px;padding:6px 10px;font-size:11px;display:inline-block">'+userMsg+'</span></div>';
-  // Auto reply
-  setTimeout(function(){
-    var replies = {
-      'login': 'Demo login: username=demo, password=demo123',
-      'paper': 'Paper Test mein virtual money se trade karo. PAPER mode select karo.',
-      'strategy': 'STRATEGIES tab mein Built-in ya apni strategy save karo.',
-      'chart': 'OPTIONS → CHAIN tab mein chart dikhai dega.',
-      'help': 'Kya problem hai? Aur detail mein batayiye.',
-    };
-    var reply = 'Aapka sawaal hamare team ko forward ho gaya hai. 24 ghante mein jawab milega. 🙏';
-    for(var k in replies){ if(userMsg.toLowerCase().indexOf(k)>=0){ reply=replies[k]; break; } }
-    msgs.innerHTML += '<div style="margin-bottom:6px"><span style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:6px 10px;font-size:11px;display:inline-block">🤖 '+reply+'</span></div>';
-    msgs.scrollTop = msgs.scrollHeight;
-  }, 800);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-// ═══════════════════════════════════════════════════════════
-// REFERRAL SYSTEM - Frontend
-// ═══════════════════════════════════════════════════════════
-var _pendingReferralCode = '';
-
-function validateReferralCode(code){
-  var msgEl = document.getElementById('referral-msg');
-  if(!code || code.length < 5){
-    if(msgEl){ msgEl.style.display='none'; }
-    _pendingReferralCode = '';
-    return;
-  }
-  req('/referral/validate/'+code.toUpperCase(),'GET',null,function(err,d){
-    if(!msgEl) return;
-    msgEl.style.display = 'block';
-    if(err || !d || !d.valid){
-      msgEl.style.color = 'var(--rd)';
-      msgEl.textContent = '❌ Invalid referral code';
-      _pendingReferralCode = '';
-    } else {
-      msgEl.style.color = 'var(--gr)';
-      msgEl.textContent = '✅ ' + d.message;
-      _pendingReferralCode = code.toUpperCase();
-    }
-  });
-}
-
-function applyReferralAfterLogin(userId, email){
-  if(!_pendingReferralCode) return;
-  req('/referral/apply','POST',{
-    code: _pendingReferralCode,
-    user_id: userId,
-    email: email
-  }, function(err, d){
-    if(!err && d && d.success){
-      toast('🎁 Referral applied! ₹'+d.discount+' discount credited!','success');
-    }
-    _pendingReferralCode = '';
-  });
-}
-
-// ── Admin Referral Management ─────────────────────────────
-
-function _showReferralDemoData(){
-  var s=document.getElementById('ref-stats');
-  var l=document.getElementById('ref-code-list');
-  if(s) s.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">'
-    +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--bl)">3</div><div style="font-size:8px;color:var(--mu)">CODES</div></div>'
-    +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--gr)">2</div><div style="font-size:8px;color:var(--mu)">ACTIVE</div></div>'
-    +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--am)">9</div><div style="font-size:8px;color:var(--mu)">USES</div></div>'
-    +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--gr)">₹4500</div><div style="font-size:8px;color:var(--mu)">BONUS</div></div>'
-    +'</div>';
-  if(!l) return;
-  var codes=[
-    {code:'TRD3I5AQ6G',owner_email:'mohd.vasil47@gmail.com',is_active:1,uses_count:3,total_bonus_paid:1500,total_discount_given:600,bonus_amount:500,discount_amount:200,expires_at:'2026-06-06'},
-    {code:'TRDABCD123',owner_email:'demo@trading.com',is_active:1,uses_count:1,total_bonus_paid:500,total_discount_given:200,bonus_amount:500,discount_amount:200,expires_at:'2026-07-01'},
-    {code:'TRDXYZ789K',owner_email:'test@user.com',is_active:0,uses_count:5,total_bonus_paid:2500,total_discount_given:1000,bonus_amount:500,discount_amount:200,expires_at:'2026-05-01'}
-  ];
-  l.innerHTML=codes.map(function(c){
-    var on=c.is_active===1;
-    return '<div style="background:var(--bg3);border:1px solid '+(on?'rgba(0,255,136,.3)':'var(--bo)')+';border-radius:10px;padding:12px;margin-bottom:8px">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-      +'<span style="font-family:monospace;font-size:18px;font-weight:900;letter-spacing:3px;color:var(--gr)">'+c.code+'</span>'
-      +'<span style="font-size:9px;padding:3px 10px;border-radius:12px;background:'+(on?'rgba(0,255,136,.1)':'rgba(255,51,51,.1)')+';color:'+(on?'var(--gr)':'var(--rd)')+';">'+(on?'✅ ACTIVE':'❌ OFF')+'</span>'
-      +'</div>'
-      +'<div style="font-size:10px;color:var(--mu);margin-bottom:8px">👤 '+c.owner_email+'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'
-      +'<div style="background:var(--bg4);border-radius:8px;padding:6px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--am)">'+c.uses_count+'</div><div style="font-size:8px;color:var(--mu)">Uses</div></div>'
-      +'<div style="background:var(--bg4);border-radius:8px;padding:6px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--gr)">₹'+c.total_bonus_paid+'</div><div style="font-size:8px;color:var(--mu)">Bonus</div></div>'
-      +'<div style="background:var(--bg4);border-radius:8px;padding:6px;text-align:center"><div style="font-size:16px;font-weight:700;color:var(--bl)">₹'+c.total_discount_given+'</div><div style="font-size:8px;color:var(--mu)">Discount</div></div>'
-      +'</div></div>';
-  }).join('');
-}
-
-function loadAdminReferral(){
-  // Show stats immediately
-  var s=document.getElementById('ref-stats');
-  if(s) s.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:12px"><div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--bl)" id="rs-total">—</div><div style="font-size:8px;color:var(--mu)">CODES</div></div><div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--gr)" id="rs-active">—</div><div style="font-size:8px;color:var(--mu)">ACTIVE</div></div><div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--am)" id="rs-uses">—</div><div style="font-size:8px;color:var(--mu)">USES</div></div><div style="background:var(--bg4);border:1px solid var(--bo);border-radius:8px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--gr)" id="rs-bonus">₹0</div><div style="font-size:8px;color:var(--mu)">BONUS</div></div></div>';
-  
-  // Show list immediately with stored/demo codes
-  var l=document.getElementById('ref-code-list');
-  if(l) l.innerHTML='<div style="text-align:center;color:var(--am);padding:10px;font-size:10px">Loading...</div>';
-  
-  function showCodes(codes){
-    if(!l) return;
-    if(!codes||!codes.length){
-      l.innerHTML='<div style="text-align:center;color:var(--mu);padding:20px"><div style="font-size:28px">🎁</div><div style="margin-top:8px;font-size:11px">Koi code nahi.<br>Upar se banao!</div></div>';
-      return;
-    }
-    if(document.getElementById('rs-total')) document.getElementById('rs-total').textContent=codes.length;
-    var ac=codes.filter(function(c){return c.is_active===1||c.is_active===true;});
-    if(document.getElementById('rs-active')) document.getElementById('rs-active').textContent=ac.length;
-    var tu=codes.reduce(function(s,c){return s+(c.uses_count||0);},0);
-    if(document.getElementById('rs-uses')) document.getElementById('rs-uses').textContent=tu;
-    var tb=codes.reduce(function(s,c){return s+(c.total_bonus_paid||0);},0);
-    if(document.getElementById('rs-bonus')) document.getElementById('rs-bonus').textContent='₹'+tb;
-    
-    l.innerHTML=codes.map(function(c){
-      var on=c.is_active===1||c.is_active===true;
-      return '<div style="background:var(--bg4);border:1px solid '+(on?'rgba(0,255,136,.3)':'var(--bo)')+';border-radius:10px;padding:12px;margin-bottom:8px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        +'<span style="font-family:monospace;font-size:20px;font-weight:900;color:var(--gr);letter-spacing:3px">'+c.code+'</span>'
-        +'<span style="font-size:9px;padding:3px 10px;border-radius:12px;font-weight:700;background:'+(on?'rgba(0,255,136,.15)':'rgba(255,51,51,.15)')+';color:'+(on?'var(--gr)':'var(--rd)')+'">'+( on?'✅ ACTIVE':'❌ OFF')+'</span>'
-        +'</div>'
-        +'<div style="font-size:10px;color:var(--mu);margin-bottom:8px">👤 '+(c.owner_email||c.owner_user_id||'N/A')+'</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">'
-        +'<div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--am)">'+(c.uses_count||0)+'</div><div style="font-size:8px;color:var(--mu)">Uses</div></div>'
-        +'<div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--gr)">₹'+(c.total_bonus_paid||0)+'</div><div style="font-size:8px;color:var(--mu)">Bonus</div></div>'
-        +'<div style="background:var(--bg3);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--bl)">₹'+(c.total_discount_given||0)+'</div><div style="font-size:8px;color:var(--mu)">Discount</div></div>'
-        +'</div>'
-        +'<div style="font-size:9px;color:var(--mu)">Expires: '+c.expires_at+' | Per use: ₹'+c.bonus_amount+' bonus, ₹'+c.discount_amount+' discount</div>'
-        +'</div>';
-    }).join('');
-  }
-  
-  req('/admin/referral/list','GET',null,function(err,d){
-    var codes=(d&&d.codes)||[];
-    if(err||!codes.length){
-      // Demo data for presentation
-      codes=[
-        {code:'TRD3I5AQ6G',owner_email:'mohd.vasil47@gmail.com',is_active:1,uses_count:3,total_bonus_paid:1500,total_discount_given:600,bonus_amount:500,discount_amount:200,expires_at:'2026-06-06'},
-        {code:'TRDABCD123',owner_email:'demo@trading.com',is_active:1,uses_count:1,total_bonus_paid:500,total_discount_given:200,bonus_amount:500,discount_amount:200,expires_at:'2026-07-01'},
-        {code:'TRDXYZ789K',owner_email:'test@user.com',is_active:0,uses_count:5,total_bonus_paid:2500,total_discount_given:1000,bonus_amount:500,discount_amount:200,expires_at:'2026-05-01'}
-      ];
-    }
-    showCodes(codes);
-  });
-}
-
-function createReferralCode(){
-  var userId = (document.getElementById('ref-user-id')||{}).value||'';
-  var email = (document.getElementById('ref-email')||{}).value||'';
-  var bonus = parseFloat((document.getElementById('ref-bonus')||{}).value)||500;
-  var discount = parseFloat((document.getElementById('ref-discount')||{}).value)||200;
-  var validity = parseInt((document.getElementById('ref-validity')||{}).value)||30;
-  
-  if(!userId && !email){ toast('User ID ya Email daalo','warn'); return; }
-  
-  req('/admin/referral/create','POST',{
-    target_user_id: userId, target_email: email,
-    bonus_amount: bonus, discount_amount: discount,
-    validity_days: validity, admin_id: 'admin'
-  }, function(err,d){
-    if(err||!d||!d.success){ toast('Error creating code','error'); return; }
-    toast('✅ Code created: '+d.code,'success');
-    var codeDisplay = document.getElementById('new-code-display');
-    if(codeDisplay){
-      codeDisplay.style.display = 'block';
-      codeDisplay.innerHTML = '<div style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">'
-        +'<div style="font-size:9px;color:var(--mu);margin-bottom:4px">✨ NEW REFERRAL CODE</div>'
-        +'<div style="font-size:24px;font-weight:800;color:var(--gr);letter-spacing:4px;font-family:monospace">'+d.code+'</div>'
-        +'<div style="font-size:10px;color:var(--mu);margin-top:6px">Bonus: ₹'+d.bonus_amount+' | Discount: ₹'+d.discount_amount+' | Expires: '+d.expires_at+'</div>'
-        +'<div style="font-size:9px;color:var(--am);margin-top:4px">Share this code with user: '+(d.owner||'')+'</div>'
-        +'</div>';
-    }
-    setTimeout(function(){if(typeof loadAdminReferral==="function")loadAdminReferral();}, 500);
-  });
-}
-
-function deactivateRefCode(el){
-  var code = typeof el === 'string' ? el : (el.dataset ? el.dataset.code : el);
-  if(!confirm('Deactivate code '+code+'?')) return;
-  req('/admin/referral/deactivate','POST',{code:code},function(err,d){
-    toast(d.success?'Code deactivated':'Error','info');
-    loadAdminReferral();
-  });
-}
-
-// ══ TERMS & CONDITIONS ════════════════════════════════════
-
-
-
-
-// ══════════════════════════════════════════════════════════
-// AI ENGINE FUNCTIONS - Complete Implementation
-// ══════════════════════════════════════════════════════════
-
-function loadAIStrats(type){
-  type = type || 'approved';
-  var list = document.getElementById('ai-strat-list') || document.getElementById('strat-list');
-  if(!list) return;
-  list.innerHTML = '<div style="text-align:center;color:var(--am);padding:16px">Loading AI strategies...</div>';
-  req('/ai/strategies/'+(type==='approved'?'approved':'all'),'GET',null,function(err,d){
-    var strats = (d&&(d.strategies||d.approved_strategies||d))||[];
-    if(!strats.length || err){
-      // Demo AI strategies
-      strats = [
-        {name:'Momentum Breakout AI',instrument:'NIFTY',win_rate:78,avg_monthly_return:12,ai_score:88,type:'MOMENTUM',approved:true,
-         entry_conditions:['RSI > 60','Price > EMA50','Volume surge 2x'],exit_conditions:['RSI < 40 OR Target 4%']},
-        {name:'Mean Reversion ML',instrument:'BANKNIFTY',win_rate:72,avg_monthly_return:9,ai_score:82,type:'MEAN_REVERSION',approved:true,
-         entry_conditions:['Price < -2 SD BB','RSI < 35','VWAP bounce'],exit_conditions:['Price reaches mid BB OR +3%']},
-        {name:'Trend Following Bot',instrument:'NIFTY',win_rate:68,avg_monthly_return:15,ai_score:79,type:'TREND',approved:false,
-         entry_conditions:['EMA9 > EMA21','ADX > 25','Volume confirmation'],exit_conditions:['EMA9 < EMA21 OR -2%']}
-      ];
-    }
-    if(type==='approved') strats=strats.filter(function(s){return s.approved!==false;});
-    if(!strats.length){list.innerHTML='<div style="color:var(--mu);text-align:center;padding:20px">No strategies</div>';return;}
-    
-    list.innerHTML = strats.map(function(s){
-      var wr=s.win_rate||0; var sc=s.ai_score||0;
-      var col=wr>=75?'var(--gr)':wr>=60?'var(--am)':'var(--rd)';
-      return '<div style="background:var(--bg3);border:1px solid var(--bo);border-left:3px solid '+col+';border-radius:8px;padding:12px;margin-bottom:8px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        +'<div><div style="font-size:12px;font-weight:700">🤖 '+s.name+'</div>'
-        +'<div style="font-size:9px;color:var(--mu)">'+(s.instrument||'NIFTY')+' · '+(s.type||'AI')+'</div></div>'
-        +'<div style="text-align:right"><div style="font-size:20px;font-weight:700;color:'+col+'">'+wr+'%</div>'
-        +'<div style="font-size:8px;color:var(--mu)">Win Rate</div></div></div>'
-        +'<div style="display:flex;gap:6px;margin-bottom:8px">'
-        +'<span style="font-size:9px;padding:2px 8px;background:rgba(0,255,136,.1);color:var(--gr);border-radius:4px">Score: '+sc+'</span>'
-        +'<span style="font-size:9px;padding:2px 8px;background:rgba(79,142,247,.1);color:var(--bl);border-radius:4px">+'+( s.avg_monthly_return||0)+'%/mo</span>'
-        +'<span style="font-size:9px;padding:2px 8px;background:'+(s.approved!==false?'rgba(0,255,136,.1)':'rgba(255,193,7,.1)')+';color:'+(s.approved!==false?'var(--gr)':'var(--am)')+';border-radius:4px">'+(s.approved!==false?'✅ APPROVED':'🔬 TESTING')+'</span>'
-        +'</div>'
-        +'<div style="display:flex;gap:4px">'
-        +'<button onclick="applyStrategyToOrderEntry('+JSON.stringify(s).replace(/"/g,"'")+'" class="btn bg" style="flex:1;font-size:9px;padding:5px">USE</button>'
-        +'<button onclick="copyStrategyText('+JSON.stringify(s).replace(/"/g,"'")+'" class="btn" style="padding:5px 8px;font-size:11px">📋</button>'
-        +'</div></div>';
-    }).join('');
-  });
-}
-
-function scanSignal(){
-  scanAllSignals();
-}
-
-function loadSignalHistory(){
-  var el=document.getElementById('signal-history-list')||document.getElementById('ai-signal-cards');
-  if(!el) return;
-  req('/ai/signals/history','GET',null,function(err,d){
-    var signals=(d&&d.signals)||[];
-    if(!signals.length||err){
-      signals=[
-        {instrument:'NIFTY',direction:'BUY',confidence:82,result:'WIN',pnl:2400,time:'10:15',date:'Today'},
-        {instrument:'BANKNIFTY',direction:'SELL',confidence:71,result:'WIN',pnl:1800,time:'11:30',date:'Today'},
-        {instrument:'NIFTY',direction:'BUY',confidence:68,result:'LOSS',pnl:-1200,time:'14:20',date:'Today'}
-      ];
-    }
-    el.innerHTML=signals.map(function(s){
-      var win=s.result==='WIN';
-      return '<div style="background:var(--bg3);border:1px solid '+(win?'rgba(0,255,136,.2)':'rgba(255,51,51,.2)')+';border-radius:8px;padding:8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">'
-        +'<div><div style="font-size:11px;font-weight:700">'+s.instrument+' '+s.direction+'</div>'
-        +'<div style="font-size:9px;color:var(--mu)">'+s.date+' '+s.time+' · Confidence: '+s.confidence+'%</div></div>'
-        +'<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:'+(win?'var(--gr)':'var(--rd)')+'">'+( win?'+':'')+s.pnl+'</div>'
-        +'<div style="font-size:9px;color:'+(win?'var(--gr)':'var(--rd)')+'">'+s.result+'</div></div>'
-        +'</div>';
-    }).join('');
-  });
-}
-
-function trainMLModel(){
-  toast('🤖 ML Model training started...','info');
-  req('/ai/ml/train','POST',{user_id:UID,epochs:100}||{user_id:'USR124535215'},null,function(err,d){
-    if(err){ toast('Training queued - will complete in background','info'); return; }
-    toast('✅ Model training complete! Accuracy improved.','success');
-  });
-  // Simulate training progress
-  var progress=0;
-  var interval=setInterval(function(){
-    progress+=10;
-    var el=document.getElementById('ml-train-progress');
-    if(el) el.style.width=progress+'%';
-    if(progress>=100){ clearInterval(interval); toast('✅ ML Model trained!','success'); }
-  },300);
-}
-
-function evolveAI(){
-  toast('🧬 AI Strategy Evolution started...','info');
-  req('/ai/evolve','POST',{user_id:UID||'USR124535215',generations:10},function(err,d){
-    if(err){ 
-      toast('Evolution running in background...','info');
-      setTimeout(function(){ loadAIStrats('all'); },2000);
-      return; 
-    }
-    toast('✅ AI evolved! '+(d.new_strategies||3)+' new strategies created.','success');
-    loadAIStrats('all');
-  });
-}
-
-function detectRegime(){
-  var el=document.getElementById('regime-output')||document.getElementById('ai-signal-cards');
-  if(!el) return;
-  var vix=(window.prices&&window.prices['VIX'])||16;
-  var regime=vix<13?'BULL TRENDING':vix<18?'SIDEWAYS/CHOPPY':vix<25?'VOLATILE':'BEAR TRENDING';
-  var color=vix<13?'var(--gr)':vix<18?'var(--am)':vix<25?'var(--rd)':'#ff0055';
-  var strategy=vix<13?'Trend Following - BUY CE on dips':vix<18?'Range Trading - Sell straddles/strangles':vix<25?'Hedged positions - Debit spreads':'Defensive - Buy PE/puts for protection';
-  el.innerHTML='<div style="background:var(--bg3);border:1px solid '+color+';border-radius:10px;padding:16px;text-align:center">'
-    +'<div style="font-size:24px;margin-bottom:8px">🌡️</div>'
-    +'<div style="font-size:16px;font-weight:700;color:'+color+'">'+regime+'</div>'
-    +'<div style="font-size:11px;color:var(--mu);margin:8px 0">VIX: '+vix+'%</div>'
-    +'<div style="font-size:11px;color:var(--tx);background:var(--bg4);padding:8px;border-radius:6px;margin-top:8px">💡 '+strategy+'</div>'
-    +'</div>';
-  toast('Market regime: '+regime,'info');
-}
-
-function toggleAutoExec(){
-  _aiAutoEnabled = !_aiAutoEnabled;
-  var wrap=document.getElementById('ae-toggle-wrap');
-  var dot=document.getElementById('ae-toggle-dot');
-  if(wrap) wrap.style.background=_aiAutoEnabled?'var(--gr)':'var(--bg4)';
-  if(dot) dot.style.left=_aiAutoEnabled?'22px':'2px';
-  toast(_aiAutoEnabled?'✅ Auto Execute ON':'Auto Execute OFF',_aiAutoEnabled?'success':'info');
-}
-
-// ══════════════════════════════════════════════════════════
-// AI ENGINE - Missing Functions
-// ══════════════════════════════════════════════════════════
-function saveAutoExec(){
-  var cfg={
-    enabled: _aiAutoEnabled||false,
-    mode: (document.getElementById('ae-mode')||{}).value||'PAPER',
-    sl_pct: parseFloat((document.getElementById('ae-sl')||{}).value)||1.5,
-    target_pct: parseFloat((document.getElementById('ae-tgt')||{}).value)||3.0,
-    max_trades: parseInt((document.getElementById('ae-max')||{}).value)||3
-  };
-  trdSave('auto_exec', cfg);
-  toast('✅ Auto Execute settings saved!','success');
-}
-
-function loadAIPnL(){
-  var el = document.getElementById('ai-pnl-chart') || document.getElementById('ai-signal-cards');
-  if(!el) return;
-  req('/ai/performance/pnl','GET',null,function(err,d){
-    var pnl = (d&&d.data)||[];
-    if(!pnl.length||err){
-      pnl=[
-        {date:'2026-05-01',pnl:2400,trades:3,win_rate:67},
-        {date:'2026-05-02',pnl:-800,trades:2,win_rate:50},
-        {date:'2026-05-05',pnl:3200,trades:4,win_rate:75},
-        {date:'2026-05-06',pnl:1800,trades:3,win_rate:67},
-        {date:'2026-05-07',pnl:4100,trades:5,win_rate:80}
-      ];
-    }
-    var total = pnl.reduce(function(s,d){return s+d.pnl;},0);
-    var wins = pnl.filter(function(d){return d.pnl>0;}).length;
-    el.innerHTML='<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:8px">'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'
-      +'<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:'+(total>=0?'var(--gr)':'var(--rd)')+'">₹'+total+'</div><div style="font-size:9px;color:var(--mu)">Total P&L</div></div>'
-      +'<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--am)">'+pnl.length+'</div><div style="font-size:9px;color:var(--mu)">Days</div></div>'
-      +'<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--gr)">'+Math.round(wins/pnl.length*100)+'%</div><div style="font-size:9px;color:var(--mu)">Win Days</div></div>'
-      +'</div>'
-      +pnl.map(function(d){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bo)">'
-        +'<span style="font-size:10px;color:var(--mu)">'+d.date+'</span>'
-        +'<span style="font-size:10px;font-weight:700;color:'+(d.pnl>=0?'var(--gr)':'var(--rd)')+'">'+( d.pnl>=0?'+':'')+d.pnl+'</span>'
-        +'</div>';}).join('')
-      +'</div>';
-  });
-}
-
-function loadAIPerformance(){
-  loadAIPnL();
-  req('/ai/performance','GET',null,function(err,d){
-    var el=document.getElementById('ai-perf-stats');
-    if(!el) return;
-    var data=(d&&d.performance)||{win_rate:74,total_signals:145,profitable:107,avg_return:2.8};
-    el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-      +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--gr)">'+(data.win_rate||74)+'%</div><div style="font-size:9px;color:var(--mu)">Win Rate</div></div>'
-      +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--am)">'+(data.total_signals||145)+'</div><div style="font-size:9px;color:var(--mu)">Total Signals</div></div>'
-      +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--gr)">'+(data.profitable||107)+'</div><div style="font-size:9px;color:var(--mu)">Profitable</div></div>'
-      +'<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--bl)">+'+(data.avg_return||2.8)+'%</div><div style="font-size:9px;color:var(--mu)">Avg Return</div></div>'
-      +'</div>';
-  });
-}
-
-// AI Tabs - approved/testing
-function aiTab(tab,btn){
-  ['signals','approved','testing','autoexec','performance'].forEach(function(t){
-    var el=document.getElementById('ai-'+t);
-    if(el) el.style.display=t===tab?'block':'none';
-    var b=document.getElementById('ai-tab-'+t);
-    if(b){b.style.borderBottomColor=t===tab?'var(--gr)':'transparent';b.style.color=t===tab?'var(--gr)':'var(--mu)';}
-  });
-  if(tab==='signals') scanAllSignals();
-  if(tab==='approved') loadAIStrats('approved');
-  if(tab==='testing') loadAIStrats('testing');
-  if(tab==='performance') loadAIPerformance();
-  if(tab==='autoexec') { if(typeof loadAutoExecConfig==='function') loadAutoExecConfig(); }
-}
-</script>
-</body>
-</html>
