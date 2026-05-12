@@ -377,7 +377,7 @@ input:focus, select:focus {
 <div id="toast"></div>
 <div class="hdr" style="background:linear-gradient(90deg,#00000a 0%,#030510 50%,#00000a 100%);border-bottom:1px solid rgba(0,255,136,.1)">
   <div style="display:flex;align-items:center;gap:8px">
-    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px;cursor:pointer" onclick="handleLogoClick()" id="trd-logo-btn">TRD v12.3</span>
+    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px;cursor:pointer" onclick="handleLogoClick()" id="trd-logo-btn-1">TRD v12.3</span>
     <span class="bdg" id="mode-bdg" style="border-color:var(--bl);background:#0a1628;color:var(--bl)">PAPER</span>
     <span class="bdg" id="plan-bdg" style="border-color:var(--pu);background:#160a28;color:var(--pu)">PRO</span>
   </div>
@@ -482,8 +482,8 @@ input:focus, select:focus {
         <div id="nlp-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:6px;font-size:8px;line-height:1.8"></div>
       </div>
       <div class="card">
-        <div class="chdr">MARKET WATCH <span id="mkt-status" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
-        <div id="mkt-grd" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
+        <div class="chdr">MARKET WATCH <span id="mkt-status-1" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
+        <div id="mkt-grd-1" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
       </div>
       <div class="card">
         <div class="chdr">LOG <button class="btn ba" onclick="document.getElementById('log-box').innerHTML=''" style="padding:2px 8px;font-size:8px">CLR</button></div>
@@ -633,7 +633,7 @@ input:focus, select:focus {
         <button class="btn br" id="ivbt-PE" onclick="document.getElementById('ivbt-PE').classList.add('active');document.getElementById('ivbt-CE').classList.remove('active')" style="flex:1;padding:8px">PE</button>
       </div>
       <button class="btn bg blg" onclick="calcIV()" style="width:100%">🎯 CALCULATE IV</button>
-      <div id="iv-out" style="display:none;margin-top:12px">
+      <div id="iv-out-1" style="display:none;margin-top:12px">
         <div style="text-align:center">
           <div style="font-size:11px;color:var(--mu);margin-bottom:4px">IMPLIED VOLATILITY</div>
           <div id="iv-result" style="font-size:36px;font-weight:800;color:var(--am)">—</div>
@@ -2262,7 +2262,7 @@ input:focus, select:focus {
     <div class="card">
       <div class="g2" style="gap:8px;margin-bottom:8px">
         <div><div class="lbl">BROKER</div>
-          <select id="br-broker" style="width:100%">
+          <select id="br-broker-1" style="width:100%">
             <option value="ZERODHA">🔵 Zerodha Kite (₹2000/mo)</option>
             <option value="ANGEL">🟠 Angel One (Free)</option>
             <option value="FYERS">🟢 Fyers API (Free)</option>
@@ -2270,23 +2270,23 @@ input:focus, select:focus {
           </select>
         </div>
         <div><div class="lbl">MODE</div>
-          <select id="br-mode" style="width:100%">
+          <select id="br-mode-1" style="width:100%">
             <option value="PAPER">📄 Paper (Safe)</option>
             <option value="LIVE">⚡ Live (Real Money)</option>
           </select>
         </div>
       </div>
       <div class="g2" style="gap:8px;margin-bottom:8px">
-        <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Your API key"></div>
-        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Daily token"></div>
+        <div><div class="lbl">API KEY</div><input type="password" id="br-key-1" placeholder="Your API key"></div>
+        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token-1" placeholder="Daily token"></div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <button class="btn bg blg" style="flex:1" onclick="connectBroker()">🔗 CONNECT BROKER</button>
         <button class="btn bb" style="padding:10px 14px" onclick="showBrokerGuide()">📖</button>
         <button class="btn br" style="padding:10px 14px" onclick="disconnectBroker()">✕</button>
       </div>
-      <div id="broker-status" style="font-size:10px;color:var(--mu)"></div>
-      <div id="broker-guide" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:10px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
+      <div id="broker-status-1" style="font-size:10px;color:var(--mu)"></div>
+      <div id="broker-guide-1" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:10px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
     </div>
     <!-- Supported brokers -->
     <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
@@ -3703,9 +3703,9 @@ function fallbackToPolling() {
   loadMkt();
   
   // ── STEP 7: Delayed tasks ──
-  setTimeout(loadBrokerStatus, 2000);
-  setTimeout(loadAutoExecConfig, 2500);
-  setTimeout(loadStrategyRegistry, 3000);
+  setTimeout(function(){ if(typeof loadBrokerStatus==='function') loadBrokerStatus(); }, 2000);
+  setTimeout(function(){ if(typeof loadAutoExecConfig==='function') loadAutoExecConfig(); }, 2500);
+  setTimeout(function(){ if(typeof loadStrategyRegistry==='function') loadStrategyRegistry(); }, 3000);
   // NOTE: loadUIConfig removed from auto-run (was causing paper test switch)
   
   setInterval(function(){
@@ -5010,106 +5010,8 @@ function loadLivePositions(){
 // ══════════════════════════════════════════════════════════════════
 
 
-function doAdminLogin(){
-  var user = document.getElementById('adm-login-user').value.trim();
-  var pass = document.getElementById('adm-login-pass').value;
-  var err = document.getElementById('adm-login-err');
-  if(!user||!pass){ if(err){err.textContent='Fill all fields';err.style.display='block';} return; }
-  
-  req('/admin/login','POST',{username:user,password:pass},function(e,r){
-    if(e||!r||!r.success){
-      if(err){err.textContent='Invalid credentials';err.style.display='block';}
-      return;
-    }
-    // Success - store token
-    try{ localStorage.setItem('trd_admin_token', r.token); localStorage.setItem('trd_admin_name', r.name); }catch(ex){}
-    document.getElementById('adm-login-gate').style.display='none';
-    document.getElementById('adm-panel-content').style.display='block';
-    adminTab('dash', document.getElementById('adm-tab-dash'));
-    toast('✅ Welcome, '+r.name+'!','success');
-  });
-}
-
-function adminLogout(){
-  try{ localStorage.removeItem('trd_admin_token'); }catch(e){}
-  document.getElementById('adm-login-gate').style.display='flex';
-  document.getElementById('adm-panel-content').style.display='none';
-  document.getElementById('adm-login-user').value='';
-  document.getElementById('adm-login-pass').value='';
-}
-
 // Check if already logged in when opening admin
 
-
-function adminTab(tab, btn){
-  ['dash','users','analytics','pay','notifs','sys','referral'].forEach(function(t){
-    var el=document.getElementById('adm-'+t);
-    if(el) el.style.display = t===tab ? 'block' : 'none';
-  });
-  document.querySelectorAll('[id^="adm-tab-"]').forEach(function(b){
-    b.style.background='var(--bg4)';b.style.borderColor='var(--bo)';b.style.color='var(--mu)';
-  });
-  if(btn){btn.style.background='rgba(251,191,36,.1)';btn.style.borderColor='rgba(251,191,36,.3)';btn.style.color='var(--am)';}
-  if(tab==='dash') loadAdminDash();
-  if(tab==='users') loadAdminUsers();
-  if(tab==='pay') loadPaymentConfig();
-  if(tab==='sys') loadSysStatus();
-  if(tab==='referral') loadAdminReferral();
-}
-
-function loadAdminDash(){
-  req('/admin/dashboard','GET',null,function(err,d){
-    if(err||!d) return;
-    if($('adm-total')) $('adm-total').textContent = d.total_users||0;
-    if($('adm-active')) $('adm-active').textContent = d.active_users||0;
-    if($('adm-free')) $('adm-free').textContent = d.free_access_users||0;
-    if($('adm-cap')) $('adm-cap').textContent = '₹'+(((d.total_capital||0)/100000).toFixed(1))+'L';
-    var pl=$('adm-plans');
-    if(pl&&d.plans){
-      pl.innerHTML='';
-      var colors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--p0)',INSTITUTIONAL:'var(--am)'};
-      Object.keys(d.plans).forEach(function(p){
-        var chip=document.createElement('div');
-        chip.style.cssText='padding:4px 12px;background:var(--bg4);border:1px solid var(--bo);border-radius:10px;font-size:9px;display:flex;gap:6px;align-items:center';
-        chip.innerHTML='<span style="color:'+( colors[p]||'var(--tx)')+'">'+p+'</span><span style="font-size:11px;font-weight:700;color:var(--tx)">'+d.plans[p]+'</span>';
-        pl.appendChild(chip);
-      });
-    }
-  });
-}
-
-function loadAdminUsers(){
-  var tb = document.getElementById('adm-users-tbl');
-  if(tb) tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--am);padding:16px">Loading...</td></tr>';
-  
-  req('/admin/users','GET',null,function(err,d){
-    if(!tb) tb = document.getElementById('adm-users-tbl');
-    if(!tb) return;
-    if(err||!d||!d.users){
-      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--rd);padding:16px">Error loading users</td></tr>';
-      return;
-    }
-    if(!d.users.length){
-      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:16px">No users found</td></tr>';
-      return;
-    }
-    tb.innerHTML = d.users.map(function(u){
-      var isActive = u.is_active===1||u.is_active===true||u.is_active==='true';
-      return '<tr>'+
-        '<td style="font-size:10px;color:var(--mu)">'+u.user_id+'</td>'+
-        '<td style="font-weight:600">'+(u.full_name||u.username||'—')+'</td>'+
-        '<td style="font-size:10px">'+(u.email||'—')+'</td>'+
-        '<td><span style="background:'+(u.plan==='PRO'?'rgba(168,85,247,.15)':'rgba(79,142,247,.1)')+';border-radius:4px;padding:2px 6px;font-size:9px">'+(u.plan||u.subscription_plan||'FREE')+'</span></td>'+
-        '<td style="color:var(--gr)">₹'+(u.capital||500000).toLocaleString('en-IN')+'</td>'+
-        '<td><span style="color:'+(isActive?'var(--gr)':'var(--rd)')+'">●</span> '+(isActive?'Active':'Inactive')+'</td>'+
-        '<td style="display:flex;gap:4px;flex-wrap:wrap">'+
-          '<button class="btn adm-edit-btn" data-uid="'+u.user_id+'" style="padding:3px 8px;font-size:9px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl)">✏️ EDIT</button>'+
-          '<button class="btn adm-del-btn" data-uid="'+u.user_id+'" data-name="'+encodeURIComponent(u.full_name||u.username||'User')+'" style="padding:3px 8px;font-size:9px;background:rgba(255,51,102,.08);border-color:rgba(255,51,102,.3);color:var(--rd)">🗑️</button>'+
-        '</td>'+
-      '</tr>';
-    }).join('');
-  });
-}
 
 function deleteUserConfirm(uid, name){
   var dname = decodeURIComponent(name);
@@ -5121,38 +5023,6 @@ function deleteUserConfirm(uid, name){
   });
 }
 
-function showAddUser(){
-  var modal = document.getElementById('add-user-modal');
-  if(!modal){
-    modal = document.createElement('div');
-    modal.id = 'add-user-modal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
-    document.body.appendChild(modal);
-  }
-  modal.style.display = 'flex';
-  modal.innerHTML = '<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:12px;width:100%;max-width:360px;overflow:hidden">'+
-    '<div style="background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between">'+
-      '<div style="font-weight:700;font-size:13px">➕ Add New User</div>'+
-      '<button class="modal-close-btn" data-modal="add-user-modal" style="background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer">✕</button>'+
-    '</div>'+
-    '<div style="padding:16px">'+
-      '<div class="lbl" style="margin-bottom:2px">Full Name *</div>'+
-      '<input id="au-name" placeholder="Full Name" style="width:100%;margin-bottom:8px">'+
-      '<div class="lbl" style="margin-bottom:2px">Email *</div>'+
-      '<input id="au-email" placeholder="email@example.com" style="width:100%;margin-bottom:8px">'+
-      '<div class="lbl" style="margin-bottom:2px">Password</div>'+
-      '<input id="au-pass" type="password" placeholder="Auto-generated if empty" style="width:100%;margin-bottom:8px">'+
-      '<div class="lbl" style="margin-bottom:2px">Plan</div>'+
-      '<select id="au-plan" style="width:100%;margin-bottom:8px">'+
-        '<option value="FREE">FREE</option><option value="PRO">PRO</option><option value="ENTERPRISE">ENTERPRISE</option>'+
-      '</select>'+
-      '<div class="lbl" style="margin-bottom:2px">Capital (₹)</div>'+
-      '<input id="au-capital" type="number" value="500000" style="width:100%;margin-bottom:12px">'+
-      '<button onclick="addNewUser()" class="btn bg blg" style="width:100%;padding:10px;font-size:12px">➕ ADD USER</button>'+
-      '<div id="au-result" style="margin-top:8px;display:none;font-size:11px"></div>'+
-    '</div>'+
-  '</div>';
-}
 
 function addNewUser(){
   var name = (document.getElementById('au-name')||{}).value||'';
@@ -5183,80 +5053,6 @@ function addNewUser(){
   });
 }
 
-function editUser(uid){
-  req('/users/'+uid,'GET',null,function(err,d){
-    var u = (d && d.user) ? d.user : (d||{});
-    if(!u.user_id && !u.id){ u = {user_id:uid}; }
-    
-    // Show edit modal or fill form
-    var modal = document.getElementById('edit-user-modal');
-    if(!modal){
-      // Create modal
-      modal = document.createElement('div');
-      modal.id = 'edit-user-modal';
-      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
-      document.body.appendChild(modal);
-    }
-    modal.style.display = 'flex';
-    modal.innerHTML = '<div style="background:var(--bg3);border:1px solid var(--bo);border-radius:12px;width:100%;max-width:360px;overflow:hidden">'+
-      '<div style="background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between">'+
-        '<div style="font-weight:700;font-size:13px">✏️ Edit User</div>'+
-        '<button class="modal-close-btn" data-modal="edit-user-modal" style="background:none;border:none;color:var(--mu);font-size:18px;cursor:pointer">✕</button>'+
-      '</div>'+
-      '<div style="padding:16px">'+
-        '<input type="hidden" id="eu-id" value="'+(u.user_id||u.id||uid)+'">'+
-        '<div class="lbl" style="margin-bottom:2px">Full Name</div>'+
-        '<input id="eu-name" value="'+(u.full_name||'')+'" placeholder="Full Name" style="width:100%;margin-bottom:8px">'+
-        '<div class="lbl" style="margin-bottom:2px">Email</div>'+
-        '<input id="eu-email" value="'+(u.email||'')+'" placeholder="Email" style="width:100%;margin-bottom:8px">'+
-        '<div class="lbl" style="margin-bottom:2px">Phone</div>'+
-        '<input id="eu-phone" value="'+(u.phone||'')+'" placeholder="Phone" style="width:100%;margin-bottom:8px">'+
-        '<div class="lbl" style="margin-bottom:2px">Plan</div>'+
-        '<select id="eu-plan" style="width:100%;margin-bottom:8px">'+
-          '<option value="FREE" '+(( u.plan||u.subscription_plan)==='FREE'?'selected':'')+'>FREE</option>'+
-          '<option value="PRO" '+((u.plan||u.subscription_plan)==='PRO'?'selected':'')+'>PRO</option>'+
-          '<option value="ENTERPRISE" '+((u.plan||u.subscription_plan)==='ENTERPRISE'?'selected':'')+'>ENTERPRISE</option>'+
-        '</select>'+
-        '<div class="lbl" style="margin-bottom:2px">Capital (₹)</div>'+
-        '<input id="eu-capital" type="number" value="'+(u.capital||500000)+'" style="width:100%;margin-bottom:8px">'+
-        '<label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer">'+
-          '<input type="checkbox" id="eu-active" '+(u.is_active!==0&&u.is_active!==false?'checked':'')+' style="width:16px;height:16px">'+
-          '<span style="font-size:11px">Active Account</span>'+
-        '</label>'+
-        '<button id="eu-save-btn" onclick="saveAdminUser()" class="btn bg blg" style="width:100%;padding:10px;font-size:12px">💾 SAVE</button>'+
-      '</div>'+
-    '</div>';
-  });
-}
-
-function saveAdminUser(){
-  var uid = (document.getElementById('eu-id')||{}).value||'';
-  var name = (document.getElementById('eu-name')||{}).value||'';
-  var email = (document.getElementById('eu-email')||{}).value||'';
-  var plan = (document.getElementById('eu-plan')||{}).value||'FREE';
-  var capital = parseFloat((document.getElementById('eu-capital')||{}).value)||500000;
-  var phone = (document.getElementById('eu-phone')||{}).value||'';
-  var active = (document.getElementById('eu-active')||{}).checked !== false;
-
-  if(!uid){ toast('User ID required','warn'); return; }
-  
-  var payload = {full_name:name, email:email, plan:plan, capital:capital, phone:phone, is_active:active?1:0};
-  
-  var btn = document.getElementById('eu-save-btn');
-  if(btn){ btn.textContent='Saving...'; btn.disabled=true; }
-  
-  req('/admin/users/'+uid,'PUT',payload,function(err,r){
-    if(btn){ btn.textContent='SAVE'; btn.disabled=false; }
-    if(err||!r||r.error){
-      toast('Save failed: '+(r&&r.error||err||'Error'),'error');
-      return;
-    }
-    toast('✅ User saved!','success');
-    var modal = document.getElementById('edit-user-modal');
-    if(modal) modal.style.display='none';
-    loadAdminUsers();
-  });
-}
 
 function quickSetPlan(uid){
   var plan=prompt('Set plan (FREE/BASIC/PRO/INSTITUTIONAL):','PRO');
@@ -5268,56 +5064,6 @@ function quickSetPlan(uid){
   });
 }
 
-function deleteUser(uid){
-  if(!confirm('⚠️ Delete user '+uid+'? This cannot be undone!')) return;
-  req('/admin/users/'+uid,'DELETE',null,function(err,r){
-    if(!err&&r.deleted){ toast('✅ User deleted','success'); loadAdminUsers(); }
-    else toast('❌ Delete failed','error');
-  });
-}
-
-function loadPaymentConfig(){
-  req('/admin/payment_config','GET',null,function(err,d){
-    if(err||!d) return;
-    var s=function(id,val){var e=$(id);if(e&&val)e.value=val;};
-    s('pay-rz-key',d.razorpay_key);
-    s('pay-upi',d.upi_id);
-    s('pay-bank',d.bank_account);
-    s('pay-ifsc',d.ifsc);
-    s('pay-acname',d.account_name);
-  });
-}
-
-function savePaymentConfig(){
-  var data={
-    razorpay_key:$('pay-rz-key').value,
-    razorpay_secret:$('pay-rz-secret').value,
-    upi_id:$('pay-upi').value,
-    bank_account:$('pay-bank').value,
-    ifsc:$('pay-ifsc').value,
-    account_name:$('pay-acname').value
-  };
-  req('/admin/payment_config','POST',data,function(err,r){
-    if(!err&&r.saved){ toast('✅ Payment config saved!','success'); }
-    else toast('❌ Save failed','error');
-  });
-}
-
-function loadSysStatus(){
-  req('/admin/system_status','GET',null,function(err,d){
-    if(err||!d) return;
-    if($('sys-cpu'))$('sys-cpu').textContent=d.cpu_percent+'%';
-    if($('sys-mem'))$('sys-mem').textContent=d.memory_percent+'%';
-    if($('sys-disk'))$('sys-disk').textContent=d.disk_percent+'%';
-    if($('sys-ws'))$('sys-ws').textContent=d.active_connections;
-    var si=$('sys-info');
-    if(si) si.innerHTML=
-      '<div>Version: <b style="color:var(--tx)">v'+d.version+'</b></div>'+
-      '<div>Uptime: <b style="color:var(--gr)">'+d.uptime+'</b></div>'+
-      '<div>Timestamp: <b style="color:var(--tx)">'+new Date(d.timestamp).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})+'</b></div>'+
-      '<div>Memory Available: <b style="color:var(--tx)">'+d.memory_available_gb+'GB</b></div>';
-  });
-}
 
 // ── PROFILE: Fix notifications toggle ───────────────────────────────
 function loadNotifPrefs(){
