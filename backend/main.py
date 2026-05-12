@@ -3659,6 +3659,140 @@ def apply_referral(payload: dict):
             "bonus_credited": row["bonus_amount"], "owner_id": row["owner_user_id"]}
 
 
+@app.get("/referral/my/{user_id}")
+def get_my_referral(user_id: str):
+    """Get user's own referral code and stats"""
+    try:
+        with _ref_conn() as c:
+            row = c.execute(
+                "SELECT * FROM referral_codes WHERE owner_user_id=? OR owner_email=? ORDER BY created_at DESC LIMIT 1",
+                (user_id, user_id)
+            ).fetchone()
+        if not row:
+            return {"error": "No referral code assigned", "code": None}
+        return dict(row)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ══════════════════════════════════════════════════════════
+# CRITICAL AUTH + NLP ENDPOINTS
+# ══════════════════════════════════════════════════════════
+
+@app.post("/users/login")
+def user_login(payload: dict):
+    """User login with username/password"""
+    username = payload.get("username","")
+    password = payload.get("password","")
+    if not username or not password:
+        return {"error": "Username and password required"}
+    if not USER_SYSTEM:
+        # Demo fallback
+        if username=="demo" and password=="demo123":
+            return {"user_id":"USR124535215","username":"demo","email":"demo@trading.com",
+                    "full_name":"Demo Trader","plan":"PRO","capital":500000,"token":"demo_token"}
+        return {"error": "Invalid credentials"}
+    try:
+        result = user_db.login(username, password)
+        if not result:
+            return {"error": "Invalid username or password"}
+        result.pop("password_hash", None)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/users/register")  
+def user_register(payload: dict):
+    """Register new user"""
+    username = payload.get("username","")
+    email = payload.get("email","")
+    password = payload.get("password","")
+    full_name = payload.get("full_name","")
+    capital = float(payload.get("capital", 500000))
+    if not username or not password:
+        return {"error": "Username and password required"}
+    if not USER_SYSTEM:
+        return {"error": "User system not available"}
+    try:
+        result = user_db.create_user(username, email, password, full_name, capital)
+        result.pop("password_hash", None)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/auth/google")
+def google_auth(payload: dict):
+    """Google OAuth login/register"""
+    import hashlib, random, string
+    google_id = payload.get("google_id","")
+    email = payload.get("email","")
+    name = payload.get("name","")
+    picture = payload.get("picture","")
+    if not email:
+        return {"error": "Email required"}
+    if not USER_SYSTEM:
+        return {"user_id":"G_"+google_id[-8:],"username":email.split("@")[0],
+                "email":email,"full_name":name,"picture":picture,"plan":"FREE","capital":500000}
+    try:
+        existing = user_db.get_user_by_email(email)
+        if existing:
+            try: user_db.update_user(existing["id"], {"picture":picture})
+            except: pass
+            existing.pop("password_hash", None)
+            existing["picture"] = picture
+            existing["new_user"] = False
+            return existing
+        uname = email.split("@")[0]+"_"+"".join(random.choices(string.digits,k=4))
+        pwd = "".join(random.choices(string.ascii_letters+string.digits,k=16))
+        result = user_db.create_user(uname, email, pwd, name, 500000)
+        result["picture"] = picture
+        result["new_user"] = True
+        result.pop("password_hash", None)
+        return result
+    except Exception as e:
+        return {"user_id":"G_"+google_id[-8:],"email":email,"full_name":name,
+                "picture":picture,"plan":"FREE","capital":500000,"new_user":True}
+
+@app.post("/nlp/parse")
+def nlp_parse(payload: dict):
+    """Parse strategy text using NLP"""
+    text = payload.get("text","")
+    if not text: return {"error": "No text provided"}
+    import re as _re
+    tu = text.upper()
+    
+    action = "SELL" if _re.search(r"\bSELL\b|\bSHORT\b",tu) else "BUY"
+    inst = "BANKNIFTY" if _re.search(r"BANKNIFTY",tu) else "FINNIFTY" if _re.search(r"FINNIFTY",tu) else "SENSEX" if "SENSEX" in tu else "NIFTY"
+    otype = "PE" if _re.search(r"\bPE\b|\bPUT\b",tu) else "CE"
+    
+    m = _re.search(r"(\d+)\s*(?:lot|LOT)",text)
+    lots = int(m.group(1)) if m else 1
+    
+    sl_m = _re.search(r"(?:stop.?loss|\bsl\b)[:\s]+(\d+\.?\d*)",text,_re.I)
+    tgt_m = _re.search(r"(?:target|\btgt\b)[:\s]+(\d+\.?\d*)",text,_re.I)
+    tf_m = _re.search(r"(?:timeframe|\btf\b)[:\s]*(\d+\s*(?:m|min|h|hr))",text,_re.I)
+    
+    sl = float(sl_m.group(1)) if sl_m else 80
+    tgt = float(tgt_m.group(1)) if tgt_m else 160
+    tf = tf_m.group(1).strip() if tf_m else "15m"
+    
+    entry_conds = []
+    for p in [r"(RSI\s*[><=]+\s*[\d-]+)",r"(EMA\s*\d+[^,\n]{0,20})",r"(VWAP[^,\n]{0,15})",r"(Price\s*[><=][^,\n]{0,20})"]:
+        mm = _re.search(p,text,_re.I)
+        if mm: entry_conds.append(mm.group(1).strip())
+    
+    exit_conds = []
+    ex = _re.search(r"(?:\d{1,2}:\d{2}\s*(?:AM|PM))",text,_re.I)
+    if sl: exit_conds.append(f"Stop Loss: {sl} pts")
+    if tgt: exit_conds.append(f"Target: {tgt} pts")
+    if ex: exit_conds.append(f"Time Exit at {ex.group()}")
+    
+    return {"action":action,"instrument":inst,"option_type":otype,"quantity":lots,
+            "stop_loss":sl,"target":tgt,"timeframe":tf,
+            "entry_conditions":entry_conds,"exit_conditions":exit_conds,
+            "original_text":text,"confidence":min(100,50+len(entry_conds)*10)}
+
+
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
     """Scan all instruments with ML models - auto-trains if needed"""

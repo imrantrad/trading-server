@@ -403,9 +403,6 @@ var INST = 'NIFTY', ACT = 'BUY', TYP = 'CE', TRADE_MODE = 'PAPER', SELPLAN = 'PR
 
 // DOM helpers
 function $(id){ return document.getElementById(id); }
-function gv(id){ var e=$(id); return e?e.value:''; }
-function iv(id){ return parseInt(gv(id))||0; }
-function nv(id){ return parseFloat(gv(id))||0; }
 
 // Google Client ID
 var GOOGLE_CLIENT_ID = '102590026134-nn0i9p6q319fndocht8p2bedak44bfs1.apps.googleusercontent.com';
@@ -643,9 +640,17 @@ function showLoginError(msg){
 }
 
 function logout(){
-  localStorage.removeItem('trd_user');
-  location.reload();
+  try{ 
+    localStorage.removeItem('trd_user');
+    localStorage.removeItem('trd_tnc_accepted');
+    localStorage.removeItem('trd_last_tab');
+  }catch(e){}
+  window.UID = null;
+  window.USER_NAME = null;
+  // Force full reload to login page
+  window.location.href = window.location.href.split('?')[0] + '?logout=1';
 }
+
 
 // Auto-init on load - persistent session
 window.addEventListener('load', function(){
@@ -821,8 +826,8 @@ setInterval(function(){
         <div id="nlp-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:6px;font-size:8px;line-height:1.8"></div>
       </div>
       <div class="card">
-        <div class="chdr">MARKET WATCH <span id="mkt-status" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
-        <div id="mkt-grd" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
+        <div class="chdr">MARKET WATCH <span id="mkt-status-1" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
+        <div id="mkt-grd-1" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
       </div>
       <div class="card">
         <div class="chdr">LOG <button class="btn ba" onclick="document.getElementById('log-box').innerHTML=''" style="padding:2px 8px;font-size:8px">CLR</button></div>
@@ -974,7 +979,7 @@ setInterval(function(){
         <button class="btn br" id="ivbt-PE" onclick="document.getElementById('ivbt-PE').classList.add('active');document.getElementById('ivbt-CE').classList.remove('active')" style="flex:1;padding:8px">PE</button>
       </div>
       <button class="btn bg blg" onclick="calcIV()" style="width:100%">🎯 CALCULATE IV</button>
-      <div id="iv-out" style="display:none;margin-top:12px">
+      <div id="iv-out-1" style="display:none;margin-top:12px">
         <div style="text-align:center">
           <div style="font-size:11px;color:var(--mu);margin-bottom:4px">IMPLIED VOLATILITY</div>
           <div id="iv-result" style="font-size:36px;font-weight:800;color:var(--am)">—</div>
@@ -1831,6 +1836,62 @@ setInterval(function(){
         <div class="stat"><div class="sl">DISK</div><div class="sv" id="sys-disk" style="color:var(--bl)">—</div></div>
         <div class="stat"><div class="sl">UPTIME</div><div class="sv" id="sys-uptime" style="color:var(--gr)">—</div></div>
       </div>
+      <!-- REFERRAL MANAGEMENT PANEL -->
+      <div id="adm-referral" style="display:none;padding:8px">
+        <div class="card" style="margin-bottom:8px">
+          <div class="chdr" style="color:var(--gr)">🎁 CREATE REFERRAL CODE</div>
+          <div style="margin-bottom:8px">
+            <div class="lbl">USER EMAIL OR ID</div>
+            <input id="ref-owner-id" placeholder="user@email.com or USR123..." style="width:100%">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div><div class="lbl">BONUS (₹) for Referrer</div>
+              <input id="ref-bonus" type="number" value="500" style="width:100%"></div>
+            <div><div class="lbl">DISCOUNT (₹) for New User</div>
+              <input id="ref-discount" type="number" value="200" style="width:100%"></div>
+          </div>
+          <div style="margin-bottom:12px">
+            <div class="lbl">VALIDITY</div>
+            <select id="ref-validity" style="width:100%">
+              <option value="1">1 Month</option>
+              <option value="2">2 Months</option>
+              <option value="3">3 Months</option>
+              <option value="6">6 Months</option>
+            </select>
+          </div>
+          <button onclick="createReferralCode()" class="btn bg blg" style="width:100%;padding:10px;font-size:12px">➕ GENERATE CODE</button>
+          <div id="ref-created-result" style="display:none;margin-top:8px;padding:10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:8px;font-family:monospace;font-size:12px"></div>
+        </div>
+        
+        <div class="card" style="margin-bottom:8px">
+          <div class="chdr">📋 ACTIVE CODES
+            <button onclick="loadAdminReferral()" style="font-size:9px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">↻ REFRESH</button>
+          </div>
+          <div id="ref-codes-list"><div style="color:var(--mu);padding:12px;text-align:center">Loading...</div></div>
+        </div>
+        
+        <div class="card">
+          <div class="chdr">📊 ANALYTICS</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:var(--bg4);padding:10px;border-radius:8px;text-align:center">
+              <div id="ref-total-codes" style="font-size:22px;font-weight:700;color:var(--gr)">0</div>
+              <div style="font-size:9px;color:var(--mu)">TOTAL CODES</div>
+            </div>
+            <div style="background:var(--bg4);padding:10px;border-radius:8px;text-align:center">
+              <div id="ref-total-uses" style="font-size:22px;font-weight:700;color:var(--bl)">0</div>
+              <div style="font-size:9px;color:var(--mu)">TOTAL USES</div>
+            </div>
+            <div style="background:var(--bg4);padding:10px;border-radius:8px;text-align:center">
+              <div id="ref-total-bonus" style="font-size:22px;font-weight:700;color:var(--am)">₹0</div>
+              <div style="font-size:9px;color:var(--mu)">BONUS PAID</div>
+            </div>
+            <div style="background:var(--bg4);padding:10px;border-radius:8px;text-align:center">
+              <div id="ref-total-disc" style="font-size:22px;font-weight:700;color:var(--gr)">₹0</div>
+              <div style="font-size:9px;color:var(--mu)">DISCOUNT GIVEN</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="card" style="margin-bottom:10px">
         <div class="chdr">🖥️ SERVER INFO <button onclick="loadSysStatus()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button></div>
@@ -2119,7 +2180,8 @@ setInterval(function(){
       <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">FULL NAME</div><input id="pf-n" placeholder="Your name" value="Demo Trader"></div><div><div class="lbl">PHONE</div><input id="pf-ph" placeholder="+91 9876543210"></div></div>
       <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">CAPITAL ₹</div><input type="number" id="pf-c" value="500000"></div><div><div class="lbl">RISK % PER TRADE</div><input type="number" id="pf-r" value="1"></div></div>
       <div class="g2" style="gap:6px;margin-bottom:8px"><div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="pf-ml" value="3"></div><div><div class="lbl">DEFAULT BROKER</div><select id="pf-b"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option><option>UPSTOX</option></select></div></div>
-      <button class="btn bg blg" onclick="saveProf()">✓ SAVE SETTINGS</button>
+      <button class="btn bg blg" onclick="saveProf()" style="width:100%;margin-bottom:8px">✓ SAVE SETTINGS</button>
+      <button onclick="logout()" style="width:100%;padding:10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">🚪 LOGOUT</button>
     </div>
 
     <div id="ps-sub" class="prof-panel" style="display:none">
@@ -2622,7 +2684,7 @@ setInterval(function(){
     <div class="card">
       <div class="g2" style="gap:8px;margin-bottom:8px">
         <div><div class="lbl">BROKER</div>
-          <select id="br-broker" style="width:100%">
+          <select id="br-broker-1" style="width:100%">
             <option value="ZERODHA">🔵 Zerodha Kite (₹2000/mo)</option>
             <option value="ANGEL">🟠 Angel One (Free)</option>
             <option value="FYERS">🟢 Fyers API (Free)</option>
@@ -2630,23 +2692,23 @@ setInterval(function(){
           </select>
         </div>
         <div><div class="lbl">MODE</div>
-          <select id="br-mode" style="width:100%">
+          <select id="br-mode-1" style="width:100%">
             <option value="PAPER">📄 Paper (Safe)</option>
             <option value="LIVE">⚡ Live (Real Money)</option>
           </select>
         </div>
       </div>
       <div class="g2" style="gap:8px;margin-bottom:8px">
-        <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Your API key"></div>
-        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Daily token"></div>
+        <div><div class="lbl">API KEY</div><input type="password" id="br-key-1" placeholder="Your API key"></div>
+        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token-1" placeholder="Daily token"></div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <button class="btn bg blg" style="flex:1" onclick="connectBroker()">🔗 CONNECT BROKER</button>
         <button class="btn bb" style="padding:10px 14px" onclick="showBrokerGuide()">📖</button>
         <button class="btn br" style="padding:10px 14px" onclick="disconnectBroker()">✕</button>
       </div>
-      <div id="broker-status" style="font-size:10px;color:var(--mu)"></div>
-      <div id="broker-guide" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:10px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
+      <div id="broker-status-1" style="font-size:10px;color:var(--mu)"></div>
+      <div id="broker-guide-1" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:10px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
     </div>
     <!-- Supported brokers -->
     <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
@@ -3016,14 +3078,6 @@ function connectBroker(){
   });
 }
 
-function disconnectBroker(){
-  req('/broker/disconnect/'+UID,'POST',null,function(err,r){
-    var st = $('broker-status');
-    if(st) st.innerHTML = '<span style="color:var(--mu)">Disconnected. Using paper mode.</span>';
-    toast('Broker disconnected. Paper mode active.','info');
-    try{ localStorage.removeItem('trd_broker_'+UID); }catch(e){}
-  });
-}
 
 function showBrokerGuide(){
   var guide = $('broker-guide');
@@ -3225,6 +3279,11 @@ function show(name, btn) {
   var p = $('pnl-'+name);
   if(p){ p.removeAttribute('style'); p.classList.add('active'); }
   if(btn && btn.classList) btn.classList.add('active');
+  // Auto-load panel data
+  if(name==='ref') { setTimeout(function(){ if(typeof loadRefPanel==='function') loadRefPanel(); },100); }
+  if(name==='ai') { setTimeout(function(){ if(typeof loadAIStrats==='function') loadAIStrats('all'); },100); }
+  if(name==='strats') { setTimeout(function(){ if(typeof loadBuiltin==='function') loadBuiltin(); },100); }
+  if(name==='prof') { setTimeout(function(){ if(typeof loadProfile==='function') loadProfile(); },100); }
   
   // Auto-highlight matching tab if btn not passed
   if(!btn){
@@ -7349,65 +7408,6 @@ function adminAction(action){
 // Works on ALL browsers (Chrome, Samsung, Safari)
 // ══════════════════════════════════════════════════════════
 
-function copyStrategyText(s){
-  if(!s){ toast('No strategy data','warn'); return; }
-
-  var text = '';
-
-  // PRIORITY 1: Use original nlp_input EXACTLY as saved (no transformation)
-  if(s.nlp_input && s.nlp_input.trim().length > 10){
-    text = s.nlp_input.trim();
-  }
-  // PRIORITY 2: Build from structured fields (only if no nlp_input)
-  else {
-    var name = s.name || s.strategy_name || 'Strategy';
-    var inst = s.instrument || 'NIFTY';
-    var act  = s.action || 'BUY';
-    var ot   = s.option_type || 'CE';
-    var lots = s.quantity || s.lots || 1;
-    var sl   = s.sl_value || s.stop_loss || s.sl || 80;
-    var tgt  = s.target_value || s.target || s.tp || 160;
-    var tf   = s.timeframe || '5m';
-    var wr   = s.avg_win_rate || s.win_rate || 0;
-    var lines = [];
-    lines.push('=== ' + name.toUpperCase() + ' ===');
-    lines.push('');
-    lines.push('\uD83D\uDCCC ORDER COMMAND:');
-    lines.push(act + ' ' + inst + ' ' + ot + ' ' + lots + ' LOT');
-    lines.push('Stop Loss: ' + sl + ' pts | Target: ' + tgt + ' pts');
-    lines.push('Timeframe: ' + tf + ' | R/R: 1:' + (tgt/sl).toFixed(2));
-    lines.push('');
-    var ec = s.entry_conditions || s.conditions || [];
-    if(typeof ec === 'string') ec = ec.split(' AND ').map(function(c){return c.trim();});
-    if(ec && ec.length){
-      lines.push('\uD83D\uDCCA ENTRY CONDITIONS:');
-      ec.forEach(function(c,i){ if(c&&c.trim()) lines.push((i+1)+'. '+c.trim()); });
-      lines.push('');
-    }
-    var xc = s.exit_conditions || s.exit || '';
-    if(typeof xc === 'string' && xc) xc = [xc];
-    if(Array.isArray(xc) && xc.length && xc[0]){
-      lines.push('\uD83D\uDEAA EXIT CONDITIONS:');
-      xc.forEach(function(c){ if(c&&c.trim()) lines.push('\u2022 '+c.trim()); });
-      lines.push('');
-    }
-    if(s.no_trade) lines.push('\u274C NO-TRADE: '+s.no_trade);
-    if(s.indicators) lines.push('\uD83D\uDCC8 INDICATORS: '+s.indicators);
-    if(wr>0) lines.push('\u2705 WIN RATE: '+wr+'%');
-    if(s.ai_score) lines.push('\uD83E\uDD16 AI SCORE: '+s.ai_score+'/100');
-    text = lines.join('\n');
-  }
-
-  if(!text){ toast('No content to copy','warn'); return; }
-
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(function(){
-      toast('\u2705 Copied!','success');
-    }).catch(function(){ _showCopyModal(text); });
-  } else {
-    _showCopyModal(text);
-  }
-}
 
 function _showCopyModal(text){
   var existing = document.getElementById('copy-modal');
@@ -7503,40 +7503,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
 var _pendingSavePayload = null;
 
-function saveStratAsIs(){
-  var nm = (document.getElementById('ns-nm')||{}).value||'';
-  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
-  var text = ta ? ta.value.trim() : '';
-  
-  if(!nm.trim()){
-    toast('Strategy name daalo!','warn');
-    var el=document.getElementById('ns-nm'); if(el){el.focus();el.style.borderColor='var(--rd)';} return;
-  }
-  if(!text){
-    toast('Strategy text likhiye!','warn');
-    if(ta){ta.focus();ta.style.borderColor='var(--rd)';} return;
-  }
-  
-  // Parse what NLP understands
-  var parsed = _nlpQuickParse(text);
-  
-  // Build payload
-  _pendingSavePayload = {
-    user_id: UID, name: nm.trim(),
-    instrument: parsed.instrument, timeframe: parsed.timeframe,
-    sl_value: parsed.sl, target_value: parsed.target,
-    quantity: parsed.lots, action: parsed.action,
-    option_type: parsed.option_type,
-    description: text.slice(0, 300),
-    nlp_input: text,
-    entry_conditions: parsed.entry_conditions,
-    exit_conditions: parsed.exit_conditions,
-    tags: ['user-saved'], is_public: false
-  };
-  
-  // Show AUDIT - let user verify
-  _showNLPAudit(text, parsed);
-}
 
 function _nlpQuickParse(text){
   var t = text.toUpperCase();
@@ -7921,7 +7887,7 @@ function openBrokerSetup(broker){
     '</div>'+
     '</div>'+
     '<div style="padding:8px 16px 14px;border-top:1px solid var(--bo);display:flex;justify-content:space-between;align-items:center">'+
-    '<button onclick="document.getElementById('broker-setup-modal').remove()" style="background:none;border:none;color:var(--mu);font-size:11px;cursor:pointer">Cancel</button>'+
+    '<button onclick="var m=document.getElementById(\'broker-setup-modal\');if(m)m.remove()"  style="background:none;border:none;color:var(--mu);font-size:11px;cursor:pointer">Cancel</button>'+
     (isConnected?'<button onclick="disconnectBroker(\"'+broker+'\")" style="background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:6px;padding:6px 12px;font-size:10px;cursor:pointer">Disconnect</button>':'')+
     '</div></div>';
   
@@ -8057,6 +8023,131 @@ function _quickParse(text){
   };
 }
 
+
+// ══════════════════════════════════════════════════════════
+// REFERRAL SYSTEM — Complete implementation
+// ══════════════════════════════════════════════════════════
+
+// Load user's own referral panel (pnl-ref)
+function loadRefPanel(){
+  var codeEl = document.getElementById('my-ref-code');
+  var statsEl = document.getElementById('my-ref-stats');
+  if(codeEl) codeEl.textContent = 'Loading...';
+  
+  req('/referral/my/'+window.UID,'GET',null,function(err,d){
+    if(err||!d||d.error){
+      if(codeEl) codeEl.textContent = 'Not assigned';
+      if(statsEl) statsEl.innerHTML = '<div style="color:var(--mu);font-size:10px">Referral code not assigned. Contact admin.</div>';
+      return;
+    }
+    if(codeEl) codeEl.textContent = d.code || 'Not assigned';
+    if(statsEl) statsEl.innerHTML = 
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--gr)">'+(d.uses_count||0)+'</div><div style="font-size:9px;color:var(--mu)">TOTAL USES</div></div>'
+      +'<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--am)">\u20b9'+(d.total_bonus_paid||0)+'</div><div style="font-size:9px;color:var(--mu)">BONUS EARNED</div></div>'
+      +'</div>';
+  });
+}
+
+function applyRefCode(){
+  var code = (document.getElementById('apply-ref-input')||{}).value||'';
+  var msg = document.getElementById('apply-ref-msg');
+  if(!code){ toast('Code daalo','warn'); return; }
+  req('/referral/validate/'+code,'GET',null,function(err,d){
+    if(err||!d||!d.valid){
+      if(msg){ msg.style.display='block'; msg.style.color='var(--rd)'; msg.textContent='Invalid code: '+(d&&d.message||'Check code'); }
+      return;
+    }
+    req('/referral/apply','POST',{code:code,new_user_id:window.UID,new_user_email:window.USER_EMAIL},function(e2,r){
+      if(e2||!r||r.error){
+        if(msg){ msg.style.display='block'; msg.style.color='var(--rd)'; msg.textContent='Apply failed: '+(r&&r.error||'Error'); }
+        return;
+      }
+      if(msg){ msg.style.display='block'; msg.style.color='var(--gr)'; msg.textContent='Applied! Discount: \u20b9'+r.discount_applied; }
+      toast('Referral applied! \u20b9'+r.discount_applied+' discount','success');
+    });
+  });
+}
+
+function shareRefCode(){
+  var code = (document.getElementById('my-ref-code')||{}).textContent||'';
+  if(!code||code==='Not assigned'){ toast('No code to share','warn'); return; }
+  var text = 'TRD v12.3 pe join karo!\nReferral code: '+code+'\nhttps://'+window.location.host;
+  if(navigator.share){ navigator.share({title:'TRD Referral',text:text}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(text).then(function(){ toast('Share text copied!','success'); }); }
+}
+
+// Admin Referral functions
+function createReferralCode(){
+  var ownerId = (document.getElementById('ref-owner-id')||{}).value||'';
+  var bonus   = parseFloat((document.getElementById('ref-bonus')||{}).value)||500;
+  var disc    = parseFloat((document.getElementById('ref-discount')||{}).value)||200;
+  var months  = parseInt((document.getElementById('ref-validity')||{}).value)||1;
+  if(!ownerId){ toast('User ID ya email required','warn'); return; }
+  req('/admin/referral/create','POST',{
+    owner_user_id: ownerId.indexOf('@')>=0?'':ownerId,
+    owner_email:   ownerId.indexOf('@')>=0?ownerId:'',
+    bonus_amount:bonus, discount_amount:disc, validity_months:months
+  },function(err,d){
+    if(err||!d||d.error){ toast('Error: '+(d&&d.error||'Failed'),'error'); return; }
+    var resEl = document.getElementById('ref-created-result');
+    if(resEl){
+      resEl.style.display='block';
+      resEl.innerHTML = 'CODE GENERATED: <b style="color:var(--gr);font-size:16px">'+d.code+'</b><br>'
+        +'<span style="font-size:10px">Bonus: \u20b9'+bonus+' | Discount: \u20b9'+disc+' | '+months+' month(s)</span>';
+    }
+    toast('Code: '+d.code,'success');
+    loadAdminReferral();
+  });
+}
+
+function loadAdminReferral(){
+  var list = document.getElementById('ref-codes-list');
+  if(list) list.innerHTML='<div style="color:var(--am);padding:12px;text-align:center">Loading...</div>';
+  
+  req('/admin/referral/analytics','GET',null,function(err,d){
+    var setEl=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+    if(!err&&d&&d.summary){
+      var s=d.summary;
+      setEl('ref-total-codes',s.total_codes||0);
+      setEl('ref-total-uses',s.total_uses||0);
+      setEl('ref-total-bonus','\u20b9'+(s.total_bonus||0));
+      setEl('ref-total-disc','\u20b9'+(s.total_discount||0));
+    }
+    if(!list) return;
+    if(err||!d){ list.innerHTML='<div style="color:var(--rd);padding:12px">Server error</div>'; return; }
+    var codes=d.codes||[];
+    if(!codes.length){ list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center">No codes yet</div>'; return; }
+    list.innerHTML=codes.map(function(c){
+      var active=c.is_active===1||c.is_active===true;
+      return '<div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:8px;border-left:3px solid '+(active?'var(--gr)':'var(--rd)')+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<b style="font-family:monospace;color:'+(active?'var(--gr)':'var(--mu)')+'">'+c.code+'</b>'+
+        '<span style="font-size:9px;padding:2px 8px;border-radius:10px;background:'+(active?'rgba(0,255,136,.1)':'rgba(255,51,102,.1)')+';color:'+(active?'var(--gr)':'var(--rd)')+'">'+
+        (active?'ACTIVE':'INACTIVE')+'</span></div>'+
+        '<div style="font-size:10px;color:var(--mu);margin-top:4px;line-height:1.8">'+
+        'Owner: <b>'+(c.owner_email||c.owner_user_id||'—')+'</b><br>'+
+        'Uses: <b>'+c.uses_count+'</b> | Bonus: <b>\u20b9'+c.total_bonus_paid+'</b> | Disc: <b>\u20b9'+c.total_discount_given+'</b><br>'+
+        'Per use: +\u20b9'+c.bonus_amount+' / -\u20b9'+c.discount_amount+' | Exp: '+(c.expires_at||'').slice(0,10)+
+        '</div>'+
+        (active?'<button class="ref-deact-btn" data-code="'+c.code+'" style="margin-top:6px;font-size:9px;padding:3px 10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer">DEACTIVATE</button>':'')+
+        '</div>';
+    }).join('');
+    toast(codes.length+' codes loaded','success');
+  });
+}
+
+document.addEventListener('click',function(e){
+  if(e.target&&e.target.classList.contains('ref-deact-btn')){
+    var code=e.target.dataset.code;
+    if(code&&confirm('Deactivate '+code+'?')){
+      req('/admin/referral/deactivate','POST',{code:code},function(err,d){
+        toast(d&&d.deactivated?'Deactivated':'Error','success');
+        loadAdminReferral();
+      });
+    }
+  }
+});
 </script>
 </body>
 </html>
