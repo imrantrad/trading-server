@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>TRD v12.3</title>
+<title onclick="handleLogoClick()" id="trd-logo-btn" style="cursor:pointer">TRD v12.3</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#060608;--bg2:#0d0e14;--bg3:#12131c;--bg4:#181924;--bo:#1e2030;--gr:#00ff88;--rd:#ff3355;--bl:#4f8ef7;--am:#f59e0b;--pu:#a855f7;--tx:#e2e8f0;--mu:#64748b}
@@ -423,7 +423,7 @@ input:focus, select:focus {
   <button class="tab" onclick="show('rep',this)">REPORTS</button>
   <button class="tab" onclick="show('calc',this)">CALC</button>
   <button class="tab" onclick="show('ai',this)">AI ENGINE</button>
-  <button class="tab" onclick="show('admin',this)">ADMIN</button>
+  <button class="tab" onclick="show('admin',this)" id="admin-tab-btn" style="display:none">ADMIN</button>
   <button class="tab" onclick="show('legal',this)">LEGAL</button>
 </div>
 <div class="main">
@@ -1209,6 +1209,7 @@ input:focus, select:focus {
       <button id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">💳 PAYMENTS</button>
       <button id="adm-tab-notifs" onclick="adminTab('notifs',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🔔 ALERTS</button>
       <button id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🖥️ SYSTEM</button>
+      <button id="adm-tab-referral" onclick="adminTab('referral',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:none;border:none;border-bottom:2px solid transparent;color:rgba(255,255,255,.5);cursor:pointer">🎁 REFERRAL</button>
     </div>
 
     <div style="padding:10px">
@@ -1449,6 +1450,61 @@ input:focus, select:focus {
         <div class="stat"><div class="sl">MEMORY</div><div class="sv" id="sys-mem" style="color:var(--am)">—</div></div>
         <div class="stat"><div class="sl">DISK</div><div class="sv" id="sys-disk" style="color:var(--bl)">—</div></div>
         <div class="stat"><div class="sl">UPTIME</div><div class="sv" id="sys-uptime" style="color:var(--gr)">—</div></div>
+
+      <!-- REFERRAL PANEL -->
+      <div id="adm-referral" style="display:none">
+        <!-- Create Code -->
+        <div class="card" style="margin-bottom:8px">
+          <div class="chdr">🎁 CREATE REFERRAL CODE</div>
+          <div class="g2" style="gap:8px;margin-bottom:8px">
+            <div><div class="lbl">USER EMAIL/ID</div>
+              <input id="ref-owner-id" placeholder="user@email.com or USR123"></div>
+            <div><div class="lbl">BONUS (₹) for Owner</div>
+              <input id="ref-bonus" type="number" value="500" placeholder="500"></div>
+          </div>
+          <div class="g2" style="gap:8px;margin-bottom:8px">
+            <div><div class="lbl">DISCOUNT (₹) for New User</div>
+              <input id="ref-discount" type="number" value="200" placeholder="200"></div>
+            <div><div class="lbl">VALIDITY (months)</div>
+              <select id="ref-validity">
+                <option value="1">1 Month</option>
+                <option value="2">2 Months</option>
+                <option value="3">3 Months</option>
+                <option value="6">6 Months</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="createReferralCode()" class="btn bg blg" style="width:100%;font-size:12px">➕ GENERATE CODE</button>
+          <div id="ref-created-result" style="margin-top:8px;display:none;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:6px;padding:8px;font-family:monospace;font-size:12px"></div>
+        </div>
+        <!-- Active Codes List -->
+        <div class="card" style="margin-bottom:8px">
+          <div class="chdr">📋 ACTIVE CODES <button onclick="loadAdminReferral()" class="btn" style="font-size:9px;padding:2px 8px">🔄</button></div>
+          <div id="ref-codes-list" style="max-height:300px;overflow-y:auto"></div>
+        </div>
+        <!-- Analytics -->
+        <div class="card">
+          <div class="chdr">📊 REFERRAL ANALYTICS</div>
+          <div id="ref-analytics" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
+              <div id="ref-total-codes" style="font-size:20px;font-weight:700;color:var(--gr)">—</div>
+              <div style="font-size:9px;color:var(--mu)">TOTAL CODES</div>
+            </div>
+            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
+              <div id="ref-total-uses" style="font-size:20px;font-weight:700;color:var(--bl)">—</div>
+              <div style="font-size:9px;color:var(--mu)">TOTAL USES</div>
+            </div>
+            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
+              <div id="ref-total-bonus" style="font-size:20px;font-weight:700;color:var(--am)">—</div>
+              <div style="font-size:9px;color:var(--mu)">BONUS PAID</div>
+            </div>
+            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
+              <div id="ref-total-disc" style="font-size:20px;font-weight:700;color:var(--gr)">—</div>
+              <div style="font-size:9px;color:var(--mu)">DISCOUNT GIVEN</div>
+            </div>
+          </div>
+        </div>
+      </div>
       </div>
 
       <div class="card" style="margin-bottom:10px">
@@ -1698,6 +1754,7 @@ input:focus, select:focus {
       <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">CAPITAL ₹</div><input type="number" id="pf-c" value="500000"></div><div><div class="lbl">RISK % PER TRADE</div><input type="number" id="pf-r" value="1"></div></div>
       <div class="g2" style="gap:6px;margin-bottom:8px"><div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="pf-ml" value="3"></div><div><div class="lbl">DEFAULT BROKER</div><select id="pf-b"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option><option>UPSTOX</option></select></div></div>
       <button class="btn bg blg" onclick="saveProf()">✓ SAVE SETTINGS</button>
+<button onclick="logout()" style="width:100%;margin-top:8px;padding:10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:8px;cursor:pointer;font-size:12px">🚪 LOGOUT</button>
     </div>
 
     <div id="ps-sub" class="prof-panel" style="display:none">
@@ -2248,7 +2305,7 @@ input:focus, select:focus {
     <div id="chat-sugg" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border-top:1px solid var(--bo);flex-shrink:0"></div>
     <div style="display:flex;gap:6px;padding:10px;border-top:1px solid var(--bo);flex-shrink:0"><input id="chat-inp" placeholder="Type your question..." style="border-radius:20px;font-size:11px;padding:8px 14px"><button id="chat-send" style="width:36px;height:36px;border-radius:50%;background:var(--gr);border:none;cursor:pointer;color:#000;font-size:16px;flex-shrink:0">></button></div>
   </div>
-  <button id="chat-btn" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3)">?</button>
+  <button id="chat-btn" onclick="toggleSupport()" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3)">?</button>
 </div>
 
 
@@ -2748,6 +2805,7 @@ function req(url, method, data, cb) {
   x.setRequestHeader('Content-Type', 'application/json');
   x.setRequestHeader('Accept', 'application/json');
   x.setRequestHeader('bypass-tunnel-reminder', 'true');
+  if(window.UID) x.setRequestHeader('X-User-ID', window.UID);
   x.timeout = 10000;
   x.onreadystatechange = function() {
     if(x.readyState === 4) {
@@ -4599,6 +4657,34 @@ document.addEventListener('DOMContentLoaded', function(){
   }, 800);
 });
 
+<!-- ════════ TERMS & CONDITIONS OVERLAY ════════ -->
+<div id="tnc-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:99998;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px">
+  <div style="max-width:400px;width:100%;background:var(--bg3);border:1px solid rgba(79,142,247,.3);border-radius:16px;overflow:hidden">
+    <div style="background:linear-gradient(135deg,rgba(0,255,136,.1),rgba(79,142,247,.1));padding:20px 24px;border-bottom:1px solid var(--bo)">
+      <div style="font-size:16px;font-weight:700;color:var(--tx);margin-bottom:4px">📋 Terms & Conditions</div>
+      <div style="font-size:10px;color:var(--mu)">Please read and accept before continuing</div>
+    </div>
+    <div style="padding:16px 20px;max-height:300px;overflow-y:auto;font-size:11px;color:var(--mu);line-height:1.7">
+      <b style="color:var(--tx)">TRD v12.3 — Usage Terms</b><br><br>
+      1. <b>Paper Trading:</b> TRD provides simulated paper trading. Virtual profits/losses have no real monetary value.<br><br>
+      2. <b>Risk Disclaimer:</b> Options/Derivatives trading involves substantial risk. Past performance does not guarantee future results.<br><br>
+      3. <b>Not Financial Advice:</b> All signals, strategies, and AI recommendations are for educational purposes only. Consult a SEBI-registered advisor before investing.<br><br>
+      4. <b>Data Privacy:</b> Your trading data is stored securely. We do not share personal information with third parties.<br><br>
+      5. <b>Live Trading:</b> When using LIVE mode with broker API, you are solely responsible for all executed trades.<br><br>
+      6. <b>Platform Use:</b> TRD is for personal use only. Commercial redistribution is prohibited.<br><br>
+      7. <b>Account Security:</b> Keep your credentials safe. TRD is not liable for unauthorized access due to password compromise.<br><br>
+      <b style="color:var(--am)">⚠️ By accepting, you confirm you are 18+ and understand the risks of derivative trading.</b>
+    </div>
+    <div style="padding:16px 20px;border-top:1px solid var(--bo)">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:12px">
+        <input type="checkbox" id="tnc-check" style="margin-top:2px;width:16px;height:16px;accent-color:var(--gr)">
+        <span style="font-size:11px;color:var(--tx)">I have read and agree to the Terms & Conditions and Risk Disclaimer</span>
+      </label>
+      <button onclick="acceptTnC()" class="btn bg blg" style="width:100%;padding:12px;font-size:12px">✅ ACCEPT & CONTINUE</button>
+      <button onclick="logout()" style="width:100%;margin-top:8px;padding:8px;background:none;border:none;color:var(--mu);font-size:10px;cursor:pointer">Decline & Logout</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
 
@@ -4945,6 +5031,7 @@ function adminTab(tab, btn){
   if(tab==='users') loadAdminUsers();
   if(tab==='pay') loadPaymentConfig();
   if(tab==='sys') loadSysStatus();
+  if(tab==='referral') loadAdminReferral();
 }
 
 function loadAdminDash(){
@@ -5031,27 +5118,31 @@ function editUser(uid){
 }
 
 function saveAdminUser(){
-  var uid=$('adm-uid').value||('USR'+Date.now());
-  var data={
-    user_id:uid,
-    full_name:$('adm-name').value,
-    email:$('adm-email').value,
-    phone:$('adm-phone').value,
-    capital:parseFloat($('adm-capital').value)||500000,
-    plan:$('adm-plan').value,
-    status:$('adm-status').value,
-    free_access:$('adm-freeaccess').checked,
-    payment_id:$('adm-payid').value,
-    notes:$('adm-notes').value
-  };
-  var ep=$('adm-uid').value?'/admin/users/'+uid:'/admin/users/add';
-  var method=$('adm-uid').value?'PUT':'POST';
-  req(ep,method,data,function(err,r){
-    if(!err&&(r.updated||r.added)){
-      toast('✅ User saved!','success');
-      document.getElementById('adm-user-form').style.display='none';
-      loadAdminUsers();
-    } else { toast('❌ Save failed','error'); }
+  var uid = (document.getElementById('eu-id')||{}).value||'';
+  var name = (document.getElementById('eu-name')||{}).value||'';
+  var email = (document.getElementById('eu-email')||{}).value||'';
+  var plan = (document.getElementById('eu-plan')||{}).value||'FREE';
+  var capital = parseFloat((document.getElementById('eu-capital')||{}).value)||500000;
+  var phone = (document.getElementById('eu-phone')||{}).value||'';
+  var active = (document.getElementById('eu-active')||{}).checked !== false;
+
+  if(!uid){ toast('User ID required','warn'); return; }
+  
+  var payload = {full_name:name, email:email, plan:plan, capital:capital, phone:phone, is_active:active?1:0};
+  
+  var btn = document.getElementById('eu-save-btn');
+  if(btn){ btn.textContent='Saving...'; btn.disabled=true; }
+  
+  req('/admin/users/'+uid,'PUT',payload,function(err,r){
+    if(btn){ btn.textContent='SAVE'; btn.disabled=false; }
+    if(err||!r||r.error){
+      toast('Save failed: '+(r&&r.error||err||'Error'),'error');
+      return;
+    }
+    toast('✅ User saved!','success');
+    var modal = document.getElementById('edit-user-modal');
+    if(modal) modal.style.display='none';
+    loadAdminUsers();
   });
 }
 
@@ -7048,58 +7139,93 @@ function applyReferralOnLogin(userId, email){
     }
   );
 }
+
+// ══════════════════════════════════════════════════════════
+// SUPPORT + TNC + LOGO TRIPLE CLICK + LOGOUT
+// ══════════════════════════════════════════════════════════
+
+// TnC - show after login
+function showTnC(){
+  try{ if(localStorage.getItem('trd_tnc_accepted')) return; }catch(e){}
+  var overlay = document.getElementById('tnc-overlay');
+  if(overlay){ overlay.style.display='flex'; }
+}
+
+function acceptTnC(){
+  var chk = document.getElementById('tnc-check');
+  if(!chk || !chk.checked){ toast('Please check the checkbox to agree','warn'); return; }
+  try{ localStorage.setItem('trd_tnc_accepted','1'); }catch(e){}
+  var overlay = document.getElementById('tnc-overlay');
+  if(overlay){ overlay.style.opacity='0'; overlay.style.transition='opacity .4s'; setTimeout(function(){ overlay.style.display='none'; },400); }
+  toast('Welcome to TRD! ✅','success');
+}
+
+function logout(){
+  try{ localStorage.removeItem('trd_user'); localStorage.removeItem('trd_tnc_accepted'); }catch(e){}
+  window.UID = null;
+  location.reload();
+}
+
+// Triple click logo → admin
+var _lc=0,_lt=null;
+function handleLogoClick(){
+  _lc++;
+  clearTimeout(_lt);
+  _lt=setTimeout(function(){_lc=0;},700);
+  if(_lc>=3){ _lc=0; show('admin',null); toast('🔐 Admin Panel','success'); }
+}
+
+// Support chat
+var _spOpen=false;
+function toggleSupport(){
+  _spOpen=!_spOpen;
+  var p=document.getElementById('support-panel');
+  if(!p){
+    p=document.createElement('div');
+    p.id='support-panel';
+    p.style.cssText='position:fixed;bottom:78px;right:16px;width:300px;max-height:420px;background:var(--bg3);border:1px solid var(--bo);border-radius:12px;z-index:9999;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.6);display:flex;flex-direction:column';
+    p.innerHTML='<div style="background:var(--bg2);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">'
+      +'<div style="font-weight:700;font-size:12px;color:var(--gr)">💬 Customer Support</div>'
+      +'<button onclick="toggleSupport()" style="background:none;border:none;color:var(--mu);font-size:16px;cursor:pointer">✕</button>'
+      +'</div>'
+      +'<div id="sp-msgs" style="flex:1;overflow-y:auto;padding:10px">'
+      +'<div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:10px;font-size:11px;line-height:1.7">'
+      +'👋 <b>Namaste!</b> TRD Support mein swagat hai.<br><br>'
+      +'<b>Quick Help:</b><br>'
+      +'• Paper trading: PAPER mode select karo<br>'
+      +'• Strategy copy: 📋 button dabao<br>'
+      +'• Options chain: OPTIONS tab<br>'
+      +'• Backtest: BACKTEST tab'
+      +'</div></div>'
+      +'<div style="padding:8px;border-top:1px solid var(--bo);display:flex;gap:6px;flex-shrink:0">'
+      +'<input id="sp-input" placeholder="Message likhiye..." style="flex:1;font-size:11px;padding:6px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);border-radius:6px" onkeydown="if(event.key==='Enter')sendSupport()">'
+      +'<button onclick="sendSupport()" class="btn bg" style="padding:6px 10px;font-size:11px">Send</button>'
+      +'</div>';
+    document.body.appendChild(p);
+  }
+  p.style.display=_spOpen?'flex':'none';
+}
+
+function sendSupport(){
+  var input=document.getElementById('sp-input');
+  var msgs=document.getElementById('sp-msgs');
+  if(!input||!input.value.trim())return;
+  var txt=input.value.trim(); input.value='';
+  msgs.innerHTML+='<div style="text-align:right;margin:6px 0"><span style="background:rgba(79,142,247,.2);border-radius:8px;padding:5px 10px;font-size:11px;display:inline-block">'+txt+'</span></div>';
+  msgs.scrollTop=msgs.scrollHeight;
+  setTimeout(function(){
+    var rmap={'paper':'PAPER mode select karo aur EXECUTE PAPER button dabao.',
+      'login':'Google ya Demo Account se login karo.',
+      'strategy':'STRATEGIES tab mein Built-in ya apni strategy dekho.',
+      'chart':'OPTIONS → CHAIN tab mein chart option hai.',
+      'backtest':'BACKTEST tab mein strategy select karo aur RUN karo.',
+      'referral':'PROFILE → ya admin se referral code banao.',
+      'help':'Kya problem hai? Thoda aur detail mein batayiye.'};
+    var r='Aapka sawaal receive hua. Hum jald jawab denge. 🙏';
+    var tl=txt.toLowerCase();
+    for(var k in rmap){ if(tl.indexOf(k)>=0){r=rmap[k];break;} }
+    msgs.innerHTML+='<div style="margin:6px 0"><span style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:5px 10px;font-size:11px;display:inline-block">🤖 '+r+'</span></div>';
+    msgs.scrollTop=msgs.scrollHeight;
+  },800);
+}
 </script>
-      <!-- REFERRAL PANEL -->
-      <div id="adm-referral" style="display:none">
-        <!-- Create Code -->
-        <div class="card" style="margin-bottom:8px">
-          <div class="chdr">🎁 CREATE REFERRAL CODE</div>
-          <div class="g2" style="gap:8px;margin-bottom:8px">
-            <div><div class="lbl">USER EMAIL/ID</div>
-              <input id="ref-owner-id" placeholder="user@email.com or USR123"></div>
-            <div><div class="lbl">BONUS (₹) for Owner</div>
-              <input id="ref-bonus" type="number" value="500" placeholder="500"></div>
-          </div>
-          <div class="g2" style="gap:8px;margin-bottom:8px">
-            <div><div class="lbl">DISCOUNT (₹) for New User</div>
-              <input id="ref-discount" type="number" value="200" placeholder="200"></div>
-            <div><div class="lbl">VALIDITY (months)</div>
-              <select id="ref-validity">
-                <option value="1">1 Month</option>
-                <option value="2">2 Months</option>
-                <option value="3">3 Months</option>
-                <option value="6">6 Months</option>
-              </select>
-            </div>
-          </div>
-          <button onclick="createReferralCode()" class="btn bg blg" style="width:100%;font-size:12px">➕ GENERATE CODE</button>
-          <div id="ref-created-result" style="margin-top:8px;display:none;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:6px;padding:8px;font-family:monospace;font-size:12px"></div>
-        </div>
-        <!-- Active Codes List -->
-        <div class="card" style="margin-bottom:8px">
-          <div class="chdr">📋 ACTIVE CODES <button onclick="loadAdminReferral()" class="btn" style="font-size:9px;padding:2px 8px">🔄</button></div>
-          <div id="ref-codes-list" style="max-height:300px;overflow-y:auto"></div>
-        </div>
-        <!-- Analytics -->
-        <div class="card">
-          <div class="chdr">📊 REFERRAL ANALYTICS</div>
-          <div id="ref-analytics" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
-              <div id="ref-total-codes" style="font-size:20px;font-weight:700;color:var(--gr)">—</div>
-              <div style="font-size:9px;color:var(--mu)">TOTAL CODES</div>
-            </div>
-            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
-              <div id="ref-total-uses" style="font-size:20px;font-weight:700;color:var(--bl)">—</div>
-              <div style="font-size:9px;color:var(--mu)">TOTAL USES</div>
-            </div>
-            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
-              <div id="ref-total-bonus" style="font-size:20px;font-weight:700;color:var(--am)">—</div>
-              <div style="font-size:9px;color:var(--mu)">BONUS PAID</div>
-            </div>
-            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
-              <div id="ref-total-disc" style="font-size:20px;font-weight:700;color:var(--gr)">—</div>
-              <div style="font-size:9px;color:var(--mu)">DISCOUNT GIVEN</div>
-            </div>
-          </div>
-        </div>
-      </div>

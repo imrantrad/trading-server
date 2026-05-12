@@ -154,6 +154,24 @@ class UserDB:
         # Seed demo user if not exists
         self._seed_demo()
 
+    def update_user(self, user_id, updates: dict):
+        allowed = ['full_name','email','phone','capital','subscription_plan','is_active','password_hash']
+        with self.conn() as c:
+            for k,v in updates.items():
+                if k in allowed:
+                    c.execute(f"UPDATE users SET {k}=? WHERE id=?", (v, user_id))
+        return {"updated": True}
+
+    def get_user_by_email(self, email):
+        with self.conn() as c:
+            row = c.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+            return dict(row) if row else None
+
+    def get_user(self, user_id):
+        with self.conn() as c:
+            row = c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+            return dict(row) if row else None
+
     def _seed_demo(self):
         """Create demo and admin users on first run"""
         import hashlib
