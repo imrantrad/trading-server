@@ -2566,7 +2566,21 @@ def admin_dashboard():
 
 @app.get("/admin/users")
 def admin_get_users():
-    return {"users": list(_all_users.values()), "count": len(_all_users)}
+    try:
+        if not USER_SYSTEM:
+            return {"users": list(_all_users.values()), "total": len(_all_users)}
+        with user_db.conn() as c:
+            rows = c.execute("""SELECT id,username,email,full_name,capital,
+                subscription_plan,is_active,created_at,phone 
+                FROM users ORDER BY created_at DESC""").fetchall()
+        users = [{"user_id":r["id"],"username":r["username"],"email":r["email"],
+                  "full_name":r["full_name"],"capital":r["capital"],
+                  "plan":r["subscription_plan"],"is_active":r["is_active"],
+                  "created_at":str(r["created_at"]),"phone":r["phone"] or ""}
+                 for r in rows]
+        return {"users": users, "total": len(users)}
+    except Exception as e:
+        return {"users": list(_all_users.values()), "error": str(e)}
 
 @app.post("/admin/users/add")
 def admin_add_user(user: UserUpdate):
