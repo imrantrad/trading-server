@@ -377,7 +377,7 @@ input:focus, select:focus {
 <div id="toast"></div>
 <div class="hdr" style="background:linear-gradient(90deg,#00000a 0%,#030510 50%,#00000a 100%);border-bottom:1px solid rgba(0,255,136,.1)">
   <div style="display:flex;align-items:center;gap:8px">
-    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px">TRD v12.3</span>
+    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px;cursor:pointer" onclick="handleLogoClick()" id="trd-logo-btn">TRD v12.3</span>
     <span class="bdg" id="mode-bdg" style="border-color:var(--bl);background:#0a1628;color:var(--bl)">PAPER</span>
     <span class="bdg" id="plan-bdg" style="border-color:var(--pu);background:#160a28;color:var(--pu)">PRO</span>
   </div>
@@ -2475,7 +2475,6 @@ function openDashModal(){
       ['rep','REPORTS','P&L reports'],
       ['calc','CALCULATOR','Options calc'],
       ['ai','AI ENGINE','AI signals'],
-      ['admin','ADMIN','Admin panel'],
       ['legal','LEGAL','Legal docs']
     ];
     tabs.forEach(function(t){
@@ -4571,7 +4570,7 @@ function pollNotifCount() {
 // Feature init handled in IIFE
 
 </script>
-
+<script>
 // ══════════════════════════════════════════════════════════════════════════════
 // PERSISTENCE ENGINE — Save all settings to localStorage
 // ══════════════════════════════════════════════════════════════════════════════
@@ -4656,6 +4655,7 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }, 800);
 });
+</script>
 
 <!-- ════════ TERMS & CONDITIONS OVERLAY ════════ -->
 <div id="tnc-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:99998;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px">
@@ -5019,7 +5019,7 @@ function adminLogout(){
 
 
 function adminTab(tab, btn){
-  ['dash','users','pay','sys'].forEach(function(t){
+  ['dash','users','analytics','pay','notifs','sys','referral'].forEach(function(t){
     var el=document.getElementById('adm-'+t);
     if(el) el.style.display = t===tab ? 'block' : 'none';
   });
@@ -6264,7 +6264,7 @@ function loadAIStrats(type){
     var b=document.getElementById('ai-filter-'+t);
     if(b){b.style.background=t===type?'rgba(168,85,247,.15)':'var(--bg4)';b.style.borderColor=t===type?'rgba(168,85,247,.4)':'var(--bo)';b.style.color=t===type?'var(--p0)':'var(--mu)';}
   });
-  var ep = type==='approved' ? '/ai/strategies/approved' : '/ai/strategies/approved';
+  var ep = type==='testing' ? '/ai/strategies/all' : type==='all' ? '/ai/strategies/all' : '/ai/strategies/approved';
   // All types use same endpoint - filter client side
   var list=document.getElementById('ai-str-list');
   if(list) list.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">Loading...</div>';
@@ -6273,9 +6273,10 @@ function loadAIStrats(type){
     var allStrats=(d&&(d.strategies||d.approved_strategies))||[];
     // Filter by type
     var strats = allStrats;
-    if(type==='approved') strats = allStrats.filter(function(s){return s.approved!==false;});
-    if(type==='testing') strats = allStrats.filter(function(s){return s.approved===false||s.type==='TESTING';});
+    if(type==='approved') strats = allStrats.filter(function(s){return s.approved===true||s.approved===1||(s.performance&&s.performance.win_rate>=65);});
+    if(type==='testing') strats = allStrats.filter(function(s){return s.approved===false||s.approved===0||s.type==='TESTING'||s.type==='GEN5';});
     if(type==='all') strats = allStrats;
+    if(!strats.length && allStrats.length) strats = allStrats; // fallback show all
     if(!strats.length){list.innerHTML='<div style="color:var(--mu);text-align:center;padding:16px">No strategies found</div>';return;}
     list.innerHTML='';
     strats.forEach(function(s){
@@ -7233,4 +7234,81 @@ function sendSupport(){
 document.addEventListener('keydown',function(e){
   if(e.key==='Enter' && document.activeElement && document.activeElement.id==='sp-input') sendSupport();
 });
+
+// ══════════════════════════════════════════════════════════
+// PROFILE SYSTEM
+// ══════════════════════════════════════════════════════════
+function loadProfile(){
+  if(!window.UID) return;
+  req('/users/'+window.UID+'/profile','GET',null,function(err,d){
+    if(err||!d||d.error){
+      // Use local data
+      _updateProfileUI({
+        full_name: window.USER_NAME||'Trader',
+        email: window.USER_EMAIL||'',
+        plan: window.USER_PLAN||'FREE',
+        capital: window.USER_CAPITAL||500000,
+        user_id: window.UID
+      });
+      return;
+    }
+    var u = d.user || d;
+    window.USER_NAME = u.full_name || u.username || window.USER_NAME;
+    window.USER_PLAN = u.subscription_plan || u.plan || window.USER_PLAN;
+    window.USER_CAPITAL = u.capital || window.USER_CAPITAL;
+    _updateProfileUI(u);
+  });
+}
+
+function _updateProfileUI(u){
+  var set = function(id,v){ var e=document.getElementById(id); if(e&&v) e.textContent=v; };
+  set('prof-name-display', u.full_name||u.username||'Trader');
+  set('prof-email-display', u.email||'');
+  set('prof-plan-display', u.subscription_plan||u.plan||'FREE');
+  set('prof-capital-display', '₹'+(u.capital||500000).toLocaleString('en-IN'));
+  set('prof-uid-display', u.user_id||u.id||window.UID||'');
+  // Update header plan badge
+  var pb = document.getElementById('plan-bdg');
+  if(pb) pb.textContent = u.subscription_plan||u.plan||'FREE';
+  // Profile picture
+  if(u.picture||window.USER_PICTURE){
+    var av = document.getElementById('prof-avatar');
+    if(av){ av.src=u.picture||window.USER_PICTURE; av.style.display='block'; }
+  }
+}
+
+function saveProfileInfo(){
+  var name = (document.getElementById('prof-edit-name')||{}).value||'';
+  var phone = (document.getElementById('prof-edit-phone')||{}).value||'';
+  if(!name){ toast('Name required','warn'); return; }
+  req('/users/'+window.UID,'PUT',{full_name:name, phone:phone},function(err,r){
+    if(err||!r||r.error){ toast('Save failed','error'); return; }
+    window.USER_NAME = name;
+    toast('✅ Profile saved!','success');
+    loadProfile();
+  });
+}
+
+// Broker API functions
+function testBrokerConnection(broker){
+  var apiKey = (document.getElementById('broker-key-'+broker)||{}).value||'';
+  if(!apiKey){ toast('API key required','warn'); return; }
+  toast('Testing '+broker+' connection...','info');
+  req('/broker/connect/'+broker+'?api_key='+encodeURIComponent(apiKey),'GET',null,function(err,d){
+    if(err||!d||d.error){ toast('❌ Connection failed: '+(d&&d.error||'Check API key'),'error'); return; }
+    toast('✅ '+broker+' connected!','success');
+  });
+}
+
+function saveBrokerConfig(broker){
+  var key = (document.getElementById('broker-key-'+broker)||{}).value||'';
+  var secret = (document.getElementById('broker-secret-'+broker)||{}).value||'';
+  if(!key){ toast('API Key required','warn'); return; }
+  try{
+    var config = JSON.parse(localStorage.getItem('trd_broker_config')||'{}');
+    config[broker] = {api_key: key, api_secret: secret, saved_at: new Date().toISOString()};
+    localStorage.setItem('trd_broker_config', JSON.stringify(config));
+    toast('✅ '+broker+' config saved!','success');
+  }catch(e){ toast('Save failed','error'); }
+}
 </script>
