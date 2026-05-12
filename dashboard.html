@@ -7006,7 +7006,7 @@ function loadAdminReferral(){
   });
 }
 
-function deactivateReferral(code){
+function deactivateReferral(btnOrCode){ var code = typeof btnOrCode==='string' ? btnOrCode : btnOrCode.dataset.code;
   if(!confirm('Deactivate code '+code+'?')) return;
   req('/admin/referral/deactivate','POST',{code:code},function(err,d){
     toast(d&&d.deactivated ? '✅ Deactivated' : '❌ Error','success');
