@@ -2683,39 +2683,42 @@ function showBrokerGuide(){
 }
 
 function loadBrokerStatus(){
-  req('/broker/status/'+UID,'GET',null,function(err,d){
-    if(err||!d||!d.connected) return;
-    var st = $('broker-status');
-    var br = $('br-broker');
-    var md = $('br-mode');
-    if(st) st.innerHTML = '<span style="color:var(--gr)">● ' + d.broker + ' connected | ' + d.mode + ' mode</span>';
-    if(br && d.broker) br.value = d.broker;
-    if(md && d.mode) md.value = d.mode;
-    alog('Broker: ' + d.broker + ' | ' + d.status, 'ok');
+  var el = document.getElementById('broker-status');
+  var guide = document.getElementById('broker-guide');
+  req('/broker/status','GET',null,function(err,d){
+    if(err||!d){
+      if(el){ el.textContent='DISCONNECTED'; el.style.color='var(--rd)'; }
+      return;
+    }
+    var ok = d.connected||d.status||false;
+    var name = d.broker||d.name||'';
+    if(el){ el.textContent=(ok?('CONNECTED - '+name):'DISCONNECTED'); el.style.color=ok?'var(--gr)':'var(--rd)'; }
+    if(guide&&ok){ guide.textContent='Connected to '+name+'. LIVE mode use kar sakte ho.'; guide.style.color='var(--gr)'; }
   });
 }
-</script>
-<script>
 
-// Dynamic API URL - always same origin as dashboard
-var API = (function(){
-  var loc = window.location;
-  // If page loaded via tunnel (HTTPS), use tunnel URL as API
-  if(loc.protocol === 'https:' && loc.hostname !== 'localhost'){
-    return loc.protocol + '//' + loc.host;
-  }
-  // If loaded via HTTP direct IP, use same
-  if(loc.protocol === 'http:'){
-    return loc.protocol + '//' + loc.host;
-  }
-  return 'https://remaining-supervisor-discretion-raid.trycloudflare.com';
-})();
-console.log('API:', API);
-var UID = 'USR124535215';
-var INST = 'NIFTY', ACT = 'BUY', TYP = 'CE', MODE = 'PAPER', KILL = false, SELPLAN = 'PRO';
-// ── UNIFIED TRADE MODE ──
-var TRADE_MODE = 'PAPER'; // 'PAPER' | 'LIVE'
-// Switch trade mode - same screen, different execution path
+function connectBroker(brokerName){
+  var keyEl = document.getElementById('br-key');
+  var apiKey = keyEl ? keyEl.value.trim() : '';
+  if(!apiKey){ toast('API key required','warn'); return; }
+  toast('Connecting to '+brokerName+'...','info');
+  req('/broker/connect/'+brokerName,'GET',null,function(err,d){
+    if(err||!d||d.error){ toast('Connection failed: '+(d&&d.error||'Check key'),'error'); return; }
+    try{
+      var cfg={broker:brokerName,api_key:apiKey,connected:true,time:Date.now()};
+      localStorage.setItem('trd_broker',JSON.stringify(cfg));
+    }catch(e){}
+    toast(brokerName+' connected!','success');
+    loadBrokerStatus();
+  });
+}
+
+function testBrokerAPI(broker){
+  toast('Testing '+broker+'...','info');
+  req('/broker/status','GET',null,function(err,d){
+    toast(!err&&d&&d.connected ? broker+' OK' : 'Connection failed','error');
+  });
+}
 
 function switchToMode(mode){
   TRADE_MODE = mode;
@@ -4272,18 +4275,17 @@ function startLiveTicks(cdata) {
   }, 800); // Fast live tick
 }
 
-function showFallbackChart() {
-  var container = $('chart-container');
+function showFallbackChart(){
+  var container = document.getElementById('chart-container');
+  var loading = document.getElementById('chart-loading');
+  if(loading) loading.style.display='none';
   if(!container) return;
-  var sym = chartSym || 'NIFTY';
-  var tvSym = sym === 'NIFTY' ? 'NSE:NIFTY' : sym === 'BANKNIFTY' ? 'NSE:BANKNIFTY' : sym === 'SENSEX' ? 'BSE:SENSEX' : 'NSE:'+sym;
-  var loading = $('chart-loading');
-  if(loading) loading.style.display = 'none';
-  
-  // TradingView widget iframe - works without library
-  container.innerHTML = '<iframe src="https://s.tradingview.com/widgetembed/?symbol='+tvSym+'&interval=15&theme=dark&style=1&locale=in&toolbar_bg=%230d0e14&enable_publishing=0&hide_top_toolbar=0&save_image=0&hide_legend=0" '+
-    'style="width:100%;height:100%;min-height:350px;border:none;border-radius:6px" '+
-    'allowtransparency="true" frameborder="0"></iframe>';
+  var sym = window.chartSym || 'NIFTY';
+  var tvMap = {'NIFTY':'NSE:NIFTY','BANKNIFTY':'NSE:BANKNIFTY','FINNIFTY':'NSE:CNXFINANCE','SENSEX':'BSE:SENSEX'};
+  var tvSym = tvMap[sym] || ('NSE:'+sym);
+  container.innerHTML = '<iframe src="https://s.tradingview.com/widgetembed/?symbol='+tvSym+'&interval=15&theme=dark&style=1&locale=in&toolbar_bg=%23131722&enable_publishing=0&hide_top_toolbar=0&save_image=0&allow_symbol_change=1&watchlist=NSE%3ANIFTY%2CNSE%3ABANKNIFTY" '
+    +'style="width:100%;height:100%;min-height:400px;border:none;border-radius:8px" '
+    +'allowtransparency="true" scrolling="no" frameborder="0" allowfullscreen></iframe>';
 }
 
 function loadTVChart(sym){
@@ -6924,35 +6926,48 @@ function createReferralCode(){
 }
 
 function loadAdminReferral(){
+  var list = document.getElementById('ref-codes-list');
+  if(!list) return;
+  list.innerHTML='<div style="color:var(--am);padding:12px;text-align:center">Loading...</div>';
+  
   req('/admin/referral/analytics','GET',null,function(err,d){
-    if(err||!d) return;
-    // Update analytics
-    var s = d.summary || {};
-    var set = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
-    set('ref-total-codes', s.total_codes||0);
-    set('ref-total-uses', s.total_uses||0);
-    set('ref-total-bonus', '₹'+(s.total_bonus||0));
-    set('ref-total-disc', '₹'+(s.total_discount||0));
-    
-    // Show codes list
-    var list = document.getElementById('ref-codes-list');
-    if(!list || !d.codes) return;
-    if(!d.codes.length){
-      list.innerHTML='<div style="color:var(--mu);padding:12px;text-align:center">No referral codes yet</div>';
+    if(err||!d){
+      list.innerHTML='<div style="color:var(--rd);padding:12px;text-align:center">Error - check server connection</div>';
       return;
     }
-    list.innerHTML = d.codes.map(function(c){
-      return '<div style="background:var(--bg4);padding:8px;border-radius:6px;margin-bottom:6px;border-left:3px solid '+(c.is_active?'var(--gr)':'var(--rd)')+'">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<span style="font-weight:700;font-size:12px;color:'+(c.is_active?'var(--gr)':'var(--mu)')+'">'+c.code+'</span>'+
-        '<span style="font-size:9px;background:'+(c.is_active?'rgba(0,255,136,.1)':'rgba(255,51,102,.1)')+';border-radius:4px;padding:2px 6px;color:'+(c.is_active?'var(--gr)':'var(--rd)')+'">'+
-        (c.is_active?'ACTIVE':'INACTIVE')+'</span></div>'+
-        '<div style="font-size:10px;color:var(--mu);margin-top:4px">'+
-        'Owner: '+c.owner_email+' | Uses: <b>'+c.uses_count+'</b> | Bonus paid: <b>₹'+c.total_bonus_paid+'</b></div>'+
-        '<div style="font-size:10px;color:var(--mu)">Bonus: ₹'+c.bonus_amount+' | Discount: ₹'+c.discount_amount+' | Expires: '+c.expires_at.slice(0,10)+'</div>'+
-        (c.is_active?'<button class="ref-deact-btn" style="margin-top:4px;font-size:9px;padding:2px 8px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer" data-code="'+c.code+'">DEACTIVATE</button>':'')+
-        '</div>';
+    
+    // Stats
+    var s = d.summary || {};
+    var setEl = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v||'0'; };
+    setEl('ref-total-codes', s.total_codes||0);
+    setEl('ref-total-uses', s.total_uses||0);
+    setEl('ref-total-bonus', String.fromCharCode(8377)+(s.total_bonus||0));
+    setEl('ref-total-disc', String.fromCharCode(8377)+(s.total_discount||0));
+    
+    var codes = d.codes || [];
+    if(!codes.length){
+      list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center">No referral codes yet.<br><small>Create one above.</small></div>';
+      return;
+    }
+    
+    var rows = codes.map(function(c){
+      var active = c.is_active === 1 || c.is_active === true;
+      return '<div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:8px;'
+        +'border-left:3px solid '+(active?'var(--gr)':'var(--rd)')+'">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+        +'<span style="font-weight:700;font-size:13px;font-family:monospace;color:'+(active?'var(--gr)':'var(--mu)')+'">'+c.code+'</span>'
+        +'<span style="font-size:9px;padding:2px 8px;border-radius:10px;background:'+(active?'rgba(0,255,136,.1)':'rgba(255,51,102,.1)')+';color:'+(active?'var(--gr)':'var(--rd)')+'">'+
+        (active?'ACTIVE':'INACTIVE')+'</span></div>'
+        +'<div style="font-size:10px;color:var(--mu);line-height:1.9">'
+        +'Owner: <b>'+(c.owner_email||c.owner_user_id||'—')+'</b><br>'
+        +'Uses: <b>'+c.uses_count+'</b> | Bonus Paid: <b>'+String.fromCharCode(8377)+c.total_bonus_paid+'</b> | Discount: <b>'+String.fromCharCode(8377)+c.total_discount_given+'</b><br>'
+        +'Per use: +'+String.fromCharCode(8377)+c.bonus_amount+' bonus / -'+String.fromCharCode(8377)+c.discount_amount+' discount | Expires: '+(c.expires_at||'—').slice(0,10)
+        +'</div>'
+        +(active?'<button class="ref-deact-btn" data-code="'+c.code+'" style="margin-top:6px;font-size:9px;padding:3px 10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer">DEACTIVATE</button>':'')
+        +'</div>';
     }).join('');
+    list.innerHTML = rows;
+    toast(codes.length+' referral codes loaded','success');
   });
 }
 
