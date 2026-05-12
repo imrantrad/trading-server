@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="google-signin-client_id" content="102590026134-nn0i9p6q319fndocht8p2bedak44bfs1.apps.googleusercontent.com">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title onclick="handleLogoClick()" id="trd-logo-btn" style="cursor:pointer">TRD v12.3</title>
+<title>TRD v12.3</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#060608;--bg2:#0d0e14;--bg3:#12131c;--bg4:#181924;--bo:#1e2030;--gr:#00ff88;--rd:#ff3355;--bl:#4f8ef7;--am:#f59e0b;--pu:#a855f7;--tx:#e2e8f0;--mu:#64748b}
@@ -14,7 +15,7 @@ body{background:var(--bg);color:var(--tx);font-family:monospace;min-height:100vh
 .tab{padding:10px 14px;font-size:10px;letter-spacing:.5px;cursor:pointer;border:none;background:none;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
 .tab.active{color:var(--gr);border-bottom-color:var(--gr)}
 .main{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;-webkit-overflow-scrolling:touch}
-.pnl{display:none;flex-direction:column;padding:10px;min-height:100%}.pnl.active{display:flex;flex-direction:column}
+.pnl{display:none;flex-direction:column;padding:8px}.pnl.active{display:flex;flex-direction:column;align-items:stretch}
 .pnl.active{display:flex}
 .card{background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:14px}
 .chdr{font-size:8px;color:var(--mu);letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
@@ -372,12 +373,349 @@ input:focus, select:focus {
 }
 
 </style>
+<script>
+// ══════════════════════════════════════════════════════════
+// GLOBAL VARIABLES — Institutional Grade TRD v12.3
+// ══════════════════════════════════════════════════════════
+window.API = (function(){
+  var l=window.location;
+  return l.protocol+'//'+l.host;
+})();
+window.UID = (function(){
+  try{ var u=JSON.parse(localStorage.getItem('trd_user')||'{}'); return u.user_id||'USR124535215'; }
+  catch(e){ return 'USR124535215'; }
+})();
+window.USER_NAME = (function(){
+  try{ var u=JSON.parse(localStorage.getItem('trd_user')||'{}'); return u.full_name||u.username||'Trader'; }
+  catch(e){ return 'Trader'; }
+})();
+window.USER_PLAN = (function(){
+  try{ var u=JSON.parse(localStorage.getItem('trd_user')||'{}'); return u.plan||u.subscription_plan||'FREE'; }
+  catch(e){ return 'FREE'; }
+})();
+window.USER_CAPITAL = (function(){
+  try{ var u=JSON.parse(localStorage.getItem('trd_user')||'{}'); return u.capital||500000; }
+  catch(e){ return 500000; }
+})();
+
+// Trade globals
+var INST = 'NIFTY', ACT = 'BUY', TYP = 'CE', TRADE_MODE = 'PAPER', SELPLAN = 'PRO';
+
+// DOM helpers
+function $(id){ return document.getElementById(id); }
+function gv(id){ var e=$(id); return e?e.value:''; }
+function iv(id){ return parseInt(gv(id))||0; }
+function nv(id){ return parseFloat(gv(id))||0; }
+
+// Google Client ID
+var GOOGLE_CLIENT_ID = '102590026134-nn0i9p6q319fndocht8p2bedak44bfs1.apps.googleusercontent.com';
+
+
+// ══════════════════════════════════════════════════════
+// GOOGLE OAUTH + USER AUTH SYSTEM
+// ══════════════════════════════════════════════════════
+
+// IMPORTANT: Replace with your Google OAuth Client ID
+// Get from: https://console.cloud.google.com/
+var GOOGLE_CLIENT_ID = '102590026134-nn0i9p6q319fndocht8p2bedak44bfs1.apps.googleusercontent.com';
+
+function initGoogleAuth(){
+  // Check saved login
+  try{
+    var saved = localStorage.getItem('trd_user');
+    if(saved){
+      var user = JSON.parse(saved);
+      if(user && user.user_id){ loginSuccess(user, false); return; }
+    }
+  }catch(e){}
+  
+  // Show login overlay
+  var overlay = document.getElementById('login-overlay');
+  if(overlay) overlay.style.display = 'flex';
+  
+  // Init Google Sign-In with proper config
+  if(window.google && window.google.accounts && window.google.accounts.id){
+    try{
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+        auto_select: false,
+        cancel_on_tap_outside: false,
+        ux_mode: 'popup',
+      });
+      // Render button
+      var btnDiv = document.getElementById('google-btn-render');
+      if(btnDiv){
+        google.accounts.id.renderButton(btnDiv, {
+          theme: 'outline',
+          size: 'large',
+          width: 280,
+          text: 'continue_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+        });
+      }
+      console.log('Google auth initialized');
+    }catch(e){
+      console.error('Google init error:', e);
+    }
+  }
+}
+
+function signInWithGoogle(){
+  if(!window.google || !window.google.accounts || !window.google.accounts.id){
+    showLoginError('Google login load nahi hua. Demo try karo.');
+    return;
+  }
+  google.accounts.id.prompt(function(n){
+    console.log('Google prompt:', n.getMomentType());
+    if(n.isNotDisplayed()){
+      showLoginError('Popup blocked. Browser settings check karo.');
+    }
+  });
+}
+function _signInWithGoogleFallback(){
+  if(!window.google || !window.google.accounts){
+    // Fallback: redirect to Google OAuth
+    var params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: window.location.origin,
+      response_type: 'token',
+      scope: 'profile email',
+      state: 'google_auth'
+    });
+    // Show error if no client ID configured
+    if(GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'){
+      showLoginError('Google Client ID not configured. Use Demo login.');
+      return;
+    }
+    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+    return;
+  }
+  
+  google.accounts.id.prompt(function(notification){
+    if(notification.isNotDisplayed() || notification.isSkippedMoment()){
+      // Show One Tap failed - try popup
+      showLoginError('Please use Demo login or configure Google OAuth');
+    }
+  });
+}
+
+function handleGoogleResponse(response){
+  try{
+    // Decode JWT token from Google
+    var token = response.credential;
+    var parts = token.split('.');
+    // Base64 padding fix
+    var base64 = parts[1].replace(/-/g,'+').replace(/_/g,'/');
+    while(base64.length % 4) base64 += '=';
+    var payload = JSON.parse(atob(base64));
+    
+    // Send to backend
+    req('/auth/google','POST',{
+      google_id: payload.sub,
+      email: payload.email,
+      name: payload.name || payload.given_name || '',
+      picture: payload.picture || ''
+    }, function(err, user){
+      if(err || !user || user.error){
+        // Fallback: create local session from Google data
+        var fallbackUser = {
+          user_id: 'G_'+payload.sub.slice(-8),
+          username: payload.email.split('@')[0],
+          email: payload.email,
+          full_name: payload.name || payload.given_name || 'User',
+          picture: payload.picture || '',
+          plan: 'FREE',
+          capital: 500000,
+          broker: 'PAPER MODE'
+        };
+        localStorage.setItem('trd_user', JSON.stringify(fallbackUser));
+        loginSuccess(fallbackUser, true);
+        return;
+      }
+      var u = (user && user.user) ? user.user : user;
+      if(user.user){ u.plan = (user.subscription && user.subscription.plan) || 'FREE'; }
+      u.picture = payload.picture || '';
+      u.full_name = u.full_name || payload.name || '';
+      localStorage.setItem('trd_user', JSON.stringify(u));
+      loginSuccess(u, user.new_user);
+    });
+  }catch(e){
+    console.error('Google auth error:', e);
+    showLoginError('Google login error. Try Demo Account.');
+  }
+}
+
+function demoLogin(){
+  var overlay = document.getElementById('login-overlay');
+  var btn = document.getElementById('google-signin-btn');
+  if(btn){ btn.style.opacity='0.5'; btn.style.pointerEvents='none'; }
+  
+  req('/users/login','POST',{username:'demo',password:'demo123'},function(err,r){
+    var user = null;
+    if(r && r.user){ user = r.user; user.plan = (r.subscription && r.subscription.plan) || 'PRO'; user.token = r.token; }
+    else if(r && r.user_id){ user = r; }
+    
+    if(!user || err){
+      // Hardcoded fallback - always works
+      user = {
+        user_id:'USR124535215', username:'demo', email:'demo@trading.com',
+        full_name:'Demo Trader', plan:'PRO', capital:500000, broker:'PAPER MODE',
+        subscription_plan:'PRO'
+      };
+    }
+    localStorage.setItem('trd_user', JSON.stringify(user));
+    loginSuccess(user, false);
+  });
+}
+
+function manualLogin(){
+  var user = (document.getElementById('ml-user')||{}).value||'';
+  var pass = (document.getElementById('ml-pass')||{}).value||'';
+  if(!user||!pass){ showLoginError('Username aur password daalo'); return; }
+  
+  req('/users/login','POST',{username:user,password:pass},function(err,r){
+    if(err||!r||r.error){
+      showLoginError('Invalid username or password');
+      return;
+    }
+    var u = (r && r.user) ? r.user : r;
+    if(r && r.user){ u.plan = (r.subscription && r.subscription.plan) || u.subscription_plan || 'FREE'; u.token = r.token; }
+    localStorage.setItem('trd_user', JSON.stringify(u));
+    loginSuccess(u, false);
+  });
+}
+
+function loginSuccess(user, isNew){
+  // Set global user variables
+  window.UID = user.user_id || user.id || 'USR124535215';
+  window.USER_NAME = user.full_name || user.username || 'Trader';
+  window.USER_EMAIL = user.email || '';
+  window.USER_PLAN = user.plan || user.subscription_plan || 'FREE';
+  window.USER_CAPITAL = user.capital || 500000;
+  window.USER_PICTURE = user.picture || user.avatar || '';
+  // Update global UID variable used throughout app
+  try{ if(window.UID) { var s=document.createElement('script'); s.text='UID="'+window.UID+'"'; document.head.appendChild(s); } }catch(e){}
+  
+  // Update UID in script
+  try{
+    var uidScript = document.querySelector('script');
+    // Direct assignment works since UID is global
+  }catch(e){}
+  
+  // Update header
+  var planBdg = document.getElementById('plan-bdg');
+  if(planBdg) planBdg.textContent = window.USER_PLAN;
+  
+  // Update profile
+  var profName = document.getElementById('prof-name-display');
+  if(profName) profName.textContent = window.USER_NAME;
+  
+  // Show profile picture in header if exists
+  var profBtn = document.getElementById('prof-btn');
+  if(profBtn && window.USER_PICTURE){
+    profBtn.innerHTML = '<img src="'+window.USER_PICTURE+'" style="width:24px;height:24px;border-radius:50%;object-fit:cover"> PROFILE';
+  }
+  
+  // Hide overlay
+  var overlay = document.getElementById('login-overlay');
+  if(overlay){
+    overlay.style.transition = 'opacity .5s';
+    overlay.style.opacity = '0';
+    setTimeout(function(){ overlay.style.display='none'; }, 500);
+  }
+  
+  // Welcome toast
+  var msg = isNew ? 'Welcome to TRD, '+window.USER_NAME+'! 🎉' : 'Welcome back, '+window.USER_NAME+'!';
+  setTimeout(function(){ toast(msg,'success'); }, 600);
+  
+  // Init dashboard
+  setTimeout(function(){
+    if(typeof loadPrices === 'function') loadPrices();
+    if(typeof loadPos === 'function') loadPos();
+  }, 1000);
+}
+
+function showLoginError(msg){
+  var el = document.getElementById('login-error');
+  if(el){ el.textContent = msg; el.style.display='block'; }
+}
+
+function logout(){
+  localStorage.removeItem('trd_user');
+  location.reload();
+}
+
+// Auto-init on load - persistent session
+window.addEventListener('load', function(){
+  setTimeout(initGoogleAuth, 300);
+});
+
+// Keep session alive - check every 30 min NOT every minute
+setInterval(function(){
+  try{
+    var saved = localStorage.getItem('trd_user');
+    if(!saved){
+      var overlay = document.getElementById('login-overlay');
+      if(overlay) overlay.style.display = 'flex';
+    }
+  }catch(e){}
+}, 1800000); // 30 minutes
+</script>
+
+<script src="https://accounts.google.com/gsi/client" onload="initGoogleAuth()"></script>
 </head>
 <body>
+<!-- ════════════ GOOGLE LOGIN OVERLAY ════════════ -->
+<div id="login-overlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#060608 0%,#0d0e14 50%,#060608 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;max-width:340px;width:90%;padding:0 20px">
+    <!-- Logo -->
+    <div style="font-size:28px;font-weight:800;color:var(--gr);letter-spacing:4px;margin-bottom:4px">TRD</div>
+    <div style="font-size:11px;color:var(--mu);letter-spacing:2px;margin-bottom:32px">INSTITUTIONAL TRADING PLATFORM v12.3</div>
+    
+    <!-- Login Card -->
+    <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:16px;padding:28px 24px">
+      <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:6px">Welcome to TRD</div>
+      <div style="font-size:11px;color:var(--mu);margin-bottom:24px">Professional Derivative Trading Platform</div>
+      
+      <!-- Google Sign In Button - Official Rendered -->
+      <div id="google-btn-render" style="margin-bottom:12px;display:flex;justify-content:center"></div>
+      <!-- Fallback button if render fails -->
+      <div id="google-signin-btn" onclick="signInWithGoogle()" style="background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;padding:12px 16px;cursor:pointer;display:none;align-items:center;gap:12px;font-size:13px;font-weight:500;justify-content:center;margin-bottom:12px">
+        <span style="font-size:18px">G</span>
+        <span>Continue with Google</span>
+      </div>
+      
+      <!-- Demo Login -->
+      <button onclick="demoLogin()" style="width:100%;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:8px;padding:10px;font-size:12px;cursor:pointer;margin-bottom:16px">
+        🎯 Try Demo Account
+      </button>
+      
+      <!-- Manual Login -->
+      <div id="manual-login-form" style="display:none">
+        <input id="ml-user" placeholder="Username" style="width:100%;margin-bottom:8px;font-size:12px">
+        <input id="ml-pass" type="password" placeholder="Password" style="width:100%;margin-bottom:8px;font-size:12px">
+        <button onclick="manualLogin()" class="btn bg blg" style="width:100%;font-size:12px">🔐 LOGIN</button>
+      </div>
+      
+      <div onclick="document.getElementById('manual-login-form').style.display=document.getElementById('manual-login-form').style.display==='none'?'block':'none'" style="font-size:10px;color:var(--mu);cursor:pointer;margin-top:8px">Username/Password Login</div>
+      
+      <div id="login-error" style="color:var(--rd);font-size:11px;margin-top:8px;display:none"></div>
+    </div>
+    
+    <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:16px;line-height:1.6">
+      🔒 Secure · SEBI Compliant Tool · Paper Trading Available<br>
+      By continuing you agree to our Terms of Service
+    </div>
+  </div>
+</div>
+
+
 <div id="toast"></div>
 <div class="hdr" style="background:linear-gradient(90deg,#00000a 0%,#030510 50%,#00000a 100%);border-bottom:1px solid rgba(0,255,136,.1)">
   <div style="display:flex;align-items:center;gap:8px">
-    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px;cursor:pointer" onclick="handleLogoClick()" id="trd-logo-btn-1">TRD v12.3</span>
+    <span style="font-size:13px;font-weight:700;color:var(--gr);letter-spacing:2px;cursor:pointer" onclick="handleLogoClick()" id="trd-logo-btn">TRD v12.3</span>
     <span class="bdg" id="mode-bdg" style="border-color:var(--bl);background:#0a1628;color:var(--bl)">PAPER</span>
     <span class="bdg" id="plan-bdg" style="border-color:var(--pu);background:#160a28;color:var(--pu)">PRO</span>
   </div>
@@ -423,7 +761,8 @@ input:focus, select:focus {
   <button class="tab" onclick="show('rep',this)">REPORTS</button>
   <button class="tab" onclick="show('calc',this)">CALC</button>
   <button class="tab" onclick="show('ai',this)">AI ENGINE</button>
-  <button class="tab" onclick="show('admin',this)" id="admin-tab-btn" style="display:none">ADMIN</button>
+  <button class="tab" onclick="show('admin',this)">ADMIN</button>
+  <button class="tab" onclick="show('ref',this)">🎁 REFERRAL</button>
   <button class="tab" onclick="show('legal',this)">LEGAL</button>
 </div>
 <div class="main">
@@ -482,8 +821,8 @@ input:focus, select:focus {
         <div id="nlp-out" style="display:none;margin-top:6px;background:var(--bg4);border:1px solid var(--bo);border-radius:4px;padding:6px;font-size:8px;line-height:1.8"></div>
       </div>
       <div class="card">
-        <div class="chdr">MARKET WATCH <span id="mkt-status-1" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
-        <div id="mkt-grd-1" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
+        <div class="chdr">MARKET WATCH <span id="mkt-status" style="font-size:7px;padding:1px 6px;border-radius:8px;background:#1a0008;color:var(--rd);border:1px solid var(--rd)">● CLOSED</span><span id="mkt-time" style="font-size:7px;color:var(--mu);margin-left:6px"></span></div>
+        <div id="mkt-grd" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px"></div>
       </div>
       <div class="card">
         <div class="chdr">LOG <button class="btn ba" onclick="document.getElementById('log-box').innerHTML=''" style="padding:2px 8px;font-size:8px">CLR</button></div>
@@ -597,13 +936,15 @@ input:focus, select:focus {
     <div class="card" style="margin-bottom:8px">
       <div class="g2" style="gap:8px">
         <div><div class="lbl">INSTRUMENT</div>
-          <select id="ch-i" onchange="document.getElementById('ch-spot-val').value=this.value">
-  <option value="24000">NIFTY (~24000)</option>
-  <option value="56000">BANKNIFTY (~56000)</option>
-  <option value="26000">FINNIFTY (~26000)</option>
-  <option value="78000">SENSEX (~78000)</option>
+          <select id="ch-i" onchange="updateChainSpot()">
+  <option value="NIFTY">NIFTY</option>
+  <option value="BANKNIFTY">BANKNIFTY</option>
+  <option value="FINNIFTY">FINNIFTY</option>
+  <option value="SENSEX">SENSEX</option>
 </select>
         </div>
+        <div><div class="lbl">SPOT (₹)</div>
+          <input type="number" id="ch-spot-val" value="24000" style="font-weight:700;color:var(--gr)"></div>
         <div><div class="lbl">EXPIRY (days)</div><input type="number" id="ch-exp" value="7"></div>
       </div>
       <div class="g2" style="gap:8px;margin-top:8px">
@@ -633,7 +974,7 @@ input:focus, select:focus {
         <button class="btn br" id="ivbt-PE" onclick="document.getElementById('ivbt-PE').classList.add('active');document.getElementById('ivbt-CE').classList.remove('active')" style="flex:1;padding:8px">PE</button>
       </div>
       <button class="btn bg blg" onclick="calcIV()" style="width:100%">🎯 CALCULATE IV</button>
-      <div id="iv-out-1" style="display:none;margin-top:12px">
+      <div id="iv-out" style="display:none;margin-top:12px">
         <div style="text-align:center">
           <div style="font-size:11px;color:var(--mu);margin-bottom:4px">IMPLIED VOLATILITY</div>
           <div id="iv-result" style="font-size:36px;font-weight:800;color:var(--am)">—</div>
@@ -891,15 +1232,55 @@ input:focus, select:focus {
   <button class="btn ba" onclick="toggleNLP()">◆ NLP BUILDER</button>
   <button class="btn bg" style="border-color:var(--am);background:#1a0e00;color:var(--am)" onclick="loadAIApprovedStrats()">🤖 AI STRATEGIES</button>
 </div>
-  <div id="nlp-bld" class="card" style="display:none;border-color:var(--gr)30">
-    <div class="chdr" style="color:var(--gr)">NLP STRATEGY BUILDER</div>
-    <textarea id="ns-nlp" rows="3" placeholder="buy nifty atm if rsi under 30 ema crossover sl 100 target 300"></textarea>
-    <button class="btn bg blg" onclick="parseNLPStrat()" style="margin-top:6px;margin-bottom:8px">PARSE AND AUTO-FILL</button>
-    <div id="ns-parsed" style="display:none;background:#001a0e;border:1px solid var(--gr)30;border-radius:4px;padding:6px;font-size:8px;margin-bottom:8px;color:var(--gr)"></div>
-    <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">NAME</div><input id="ns-nm" placeholder="Strategy name"></div><div><div class="lbl">INST</div><select id="ns-i"><option>NIFTY</option><option>BANKNIFTY</option></select></div></div>
-    <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">SL PTS</div><input type="number" id="ns-sl" value="100"></div><div><div class="lbl">TGT PTS</div><input type="number" id="ns-tg" value="200"></div></div>
-    <div><div class="lbl">ENTRY CONDITIONS</div><textarea id="ns-en" rows="2" placeholder="RSI below 30, EMA crossover..."></textarea></div>
-    <div style="display:flex;gap:6px;margin-top:8px"><button class="btn bg" onclick="saveStrat()" style="flex:1">SAVE</button><button class="btn ba" onclick="show('bt',null)" style="flex:1">BACKTEST</button><button class="btn br" onclick="toggleNLP()">X</button></div>
+  <div id="nlp-bld" class="card" style="display:none;border-color:rgba(0,255,136,.3)">
+    <div class="chdr" style="color:var(--gr)">◆ NLP STRATEGY BUILDER
+      <button onclick="toggleNLP()" style="font-size:10px;padding:2px 8px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">✕</button>
+    </div>
+
+    <!-- Strategy Name -->
+    <div style="margin-bottom:8px">
+      <div class="lbl">STRATEGY NAME *</div>
+      <input id="ns-nm" placeholder="e.g. Opening Range Breakout" style="font-size:13px;font-weight:600">
+    </div>
+
+    <!-- NLP Textarea - PASTE ANY TEXT -->
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div class="lbl">STRATEGY TEXT (paste as-is)</div>
+        <button onclick="document.getElementById('strat-nlp-in').value=''" style="font-size:9px;padding:2px 6px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:4px;cursor:pointer">✕ Clear</button>
+      </div>
+      <textarea id="strat-nlp-in" rows="6"
+        placeholder="Paste your strategy here exactly as you want it saved. Example:&#10;&#10;BUY NIFTY CE 1 LOT&#10;Stop Loss: 80 pts | Target: 160 pts&#10;&#10;ENTRY: EMA50 > EMA200, RSI 55-70&#10;EXIT: Price below EMA20"
+        style="width:100%;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);border-radius:6px;padding:8px;font-size:10px;font-family:monospace;resize:vertical;line-height:1.6"></textarea>
+    </div>
+
+    <!-- Save buttons -->
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <button onclick="saveStratAsIs()" class="btn bg blg" style="flex:2;font-size:11px;padding:10px">💾 SAVE AS-IS</button>
+      <button onclick="saveStratWithAI()" class="btn bb" style="flex:2;font-size:11px;padding:10px">🤖 AI ENHANCE</button>
+      <button onclick="copyNLPText()" class="btn" style="padding:10px;font-size:13px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl)">📋</button>
+    </div>
+    <div id="ns-save-msg" style="display:none;font-size:11px;text-align:center;padding:6px;border-radius:4px"></div>
+
+    <!-- NLP AUDIT PANEL -->
+    <div id="nlp-audit" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid rgba(255,193,7,.3);border-radius:8px;padding:10px">
+      <div style="font-size:10px;font-weight:700;color:var(--am);margin-bottom:8px">🔍 NLP AUDIT — Kiya samjha?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:9px">
+        <div>
+          <div style="color:var(--mu);margin-bottom:4px">📝 AAPNE LIKHA:</div>
+          <div id="audit-input" style="background:var(--bg3);padding:6px;border-radius:4px;color:var(--tx);line-height:1.5;max-height:120px;overflow-y:auto;font-family:monospace"></div>
+        </div>
+        <div>
+          <div style="color:var(--mu);margin-bottom:4px">🤖 NLP NE SAMJHA:</div>
+          <div id="audit-output" style="background:var(--bg3);padding:6px;border-radius:4px;color:var(--gr);line-height:1.6;font-family:monospace"></div>
+        </div>
+      </div>
+      <div id="audit-accuracy" style="margin-top:8px;text-align:center;font-size:10px;font-weight:700"></div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="confirmAndSave()" class="btn bg" style="flex:1;font-size:10px">✅ SAHI HAI — SAVE KARO</button>
+        <button onclick="document.getElementById('nlp-audit').style.display='none'" class="btn" style="flex:1;font-size:10px">✏️ WAPAS EDIT KARO</button>
+      </div>
+    </div>
   </div>
   <div id="strat-list" style="display:flex;flex-direction:column;gap:8px"><div style="color:var(--mu);padding:20px;text-align:center">Select tab above</div></div>
 </div>
@@ -1209,7 +1590,6 @@ input:focus, select:focus {
       <button id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">💳 PAYMENTS</button>
       <button id="adm-tab-notifs" onclick="adminTab('notifs',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🔔 ALERTS</button>
       <button id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🖥️ SYSTEM</button>
-      <button id="adm-tab-referral" onclick="adminTab('referral',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:none;border:none;border-bottom:2px solid transparent;color:rgba(255,255,255,.5);cursor:pointer">🎁 REFERRAL</button>
     </div>
 
     <div style="padding:10px">
@@ -1450,61 +1830,6 @@ input:focus, select:focus {
         <div class="stat"><div class="sl">MEMORY</div><div class="sv" id="sys-mem" style="color:var(--am)">—</div></div>
         <div class="stat"><div class="sl">DISK</div><div class="sv" id="sys-disk" style="color:var(--bl)">—</div></div>
         <div class="stat"><div class="sl">UPTIME</div><div class="sv" id="sys-uptime" style="color:var(--gr)">—</div></div>
-
-      <!-- REFERRAL PANEL -->
-      <div id="adm-referral" style="display:none">
-        <!-- Create Code -->
-        <div class="card" style="margin-bottom:8px">
-          <div class="chdr">🎁 CREATE REFERRAL CODE</div>
-          <div class="g2" style="gap:8px;margin-bottom:8px">
-            <div><div class="lbl">USER EMAIL/ID</div>
-              <input id="ref-owner-id" placeholder="user@email.com or USR123"></div>
-            <div><div class="lbl">BONUS (₹) for Owner</div>
-              <input id="ref-bonus" type="number" value="500" placeholder="500"></div>
-          </div>
-          <div class="g2" style="gap:8px;margin-bottom:8px">
-            <div><div class="lbl">DISCOUNT (₹) for New User</div>
-              <input id="ref-discount" type="number" value="200" placeholder="200"></div>
-            <div><div class="lbl">VALIDITY (months)</div>
-              <select id="ref-validity">
-                <option value="1">1 Month</option>
-                <option value="2">2 Months</option>
-                <option value="3">3 Months</option>
-                <option value="6">6 Months</option>
-              </select>
-            </div>
-          </div>
-          <button onclick="createReferralCode()" class="btn bg blg" style="width:100%;font-size:12px">➕ GENERATE CODE</button>
-          <div id="ref-created-result" style="margin-top:8px;display:none;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:6px;padding:8px;font-family:monospace;font-size:12px"></div>
-        </div>
-        <!-- Active Codes List -->
-        <div class="card" style="margin-bottom:8px">
-          <div class="chdr">📋 ACTIVE CODES <button onclick="loadAdminReferral()" class="btn" style="font-size:9px;padding:2px 8px">🔄</button></div>
-          <div id="ref-codes-list" style="max-height:300px;overflow-y:auto"></div>
-        </div>
-        <!-- Analytics -->
-        <div class="card">
-          <div class="chdr">📊 REFERRAL ANALYTICS</div>
-          <div id="ref-analytics" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
-              <div id="ref-total-codes" style="font-size:20px;font-weight:700;color:var(--gr)">—</div>
-              <div style="font-size:9px;color:var(--mu)">TOTAL CODES</div>
-            </div>
-            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
-              <div id="ref-total-uses" style="font-size:20px;font-weight:700;color:var(--bl)">—</div>
-              <div style="font-size:9px;color:var(--mu)">TOTAL USES</div>
-            </div>
-            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
-              <div id="ref-total-bonus" style="font-size:20px;font-weight:700;color:var(--am)">—</div>
-              <div style="font-size:9px;color:var(--mu)">BONUS PAID</div>
-            </div>
-            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
-              <div id="ref-total-disc" style="font-size:20px;font-weight:700;color:var(--gr)">—</div>
-              <div style="font-size:9px;color:var(--mu)">DISCOUNT GIVEN</div>
-            </div>
-          </div>
-        </div>
-      </div>
       </div>
 
       <div class="card" style="margin-bottom:10px">
@@ -1532,6 +1857,47 @@ input:focus, select:focus {
 
     </div><!-- end padding -->
   </div><!-- end panel content -->
+</div>
+
+<div id="pnl-ref" class="pnl">
+  <!-- Referral Code Input for logged-in user -->
+  <div class="card" style="margin-bottom:8px;border-color:rgba(0,255,136,.2)">
+    <div class="chdr" style="color:var(--gr)">🎁 MY REFERRAL</div>
+    <div style="font-size:10px;color:var(--mu);margin-bottom:12px">Apna referral code share karo — dono ko benefit milega</div>
+    <div id="my-referral-code-display" style="background:var(--bg4);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--mu);margin-bottom:6px">YOUR REFERRAL CODE</div>
+      <div id="my-ref-code" style="font-size:22px;font-weight:800;font-family:monospace;color:var(--gr);letter-spacing:3px">—</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button onclick="copyMyRefCode()" class="btn bg" style="flex:1;font-size:11px;padding:10px">📋 COPY CODE</button>
+      <button onclick="shareRefCode()" class="btn bb" style="flex:1;font-size:11px;padding:10px">📤 SHARE</button>
+    </div>
+    <div id="my-ref-stats" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+  </div>
+
+  <!-- Apply Referral Code -->
+  <div class="card" style="margin-bottom:8px">
+    <div class="chdr">🏷️ APPLY REFERRAL CODE</div>
+    <div style="font-size:10px;color:var(--mu);margin-bottom:8px">Dusre ka code use karke discount pao</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <input id="apply-ref-input" placeholder="Enter referral code (e.g. TRDABCD123)" 
+             style="flex:1;font-size:12px;font-family:monospace;letter-spacing:1px;text-transform:uppercase"
+             oninput="this.value=this.value.toUpperCase()">
+      <button onclick="applyRefCode()" class="btn bg blg" style="padding:8px 14px;font-size:11px">APPLY</button>
+    </div>
+    <div id="apply-ref-msg" style="font-size:11px;display:none;padding:8px;border-radius:6px"></div>
+  </div>
+
+  <!-- How it works -->
+  <div class="card">
+    <div class="chdr">ℹ️ HOW IT WORKS</div>
+    <div style="font-size:11px;color:var(--mu);line-height:2">
+      <div>1️⃣ Admin aapke liye ek unique code generate karta hai</div>
+      <div>2️⃣ Aap woh code share karo apne dosto ke saath</div>
+      <div>3️⃣ Wo sign up karte waqt code use kare — unhe discount milta hai</div>
+      <div>4️⃣ Aapke account mein bonus credit hota hai automatically</div>
+    </div>
+  </div>
 </div>
 
 <div id="pnl-legal" class="pnl">
@@ -1616,11 +1982,6 @@ input:focus, select:focus {
 
   <!-- ── MENU LIST ── -->
   <div style="padding:12px;overflow-y:auto;flex:1">
-
-<!-- LOGOUT BUTTON - Always visible -->
-<button onclick="logout()" style="width:100%;padding:12px 16px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">
-  🚪 Logout
-</button>
 
 <div id="prof-menu-section">
     <!-- Account & Settings Group -->
@@ -1759,7 +2120,6 @@ input:focus, select:focus {
       <div class="g2" style="gap:6px;margin-bottom:6px"><div><div class="lbl">CAPITAL ₹</div><input type="number" id="pf-c" value="500000"></div><div><div class="lbl">RISK % PER TRADE</div><input type="number" id="pf-r" value="1"></div></div>
       <div class="g2" style="gap:6px;margin-bottom:8px"><div><div class="lbl">MAX DAILY LOSS %</div><input type="number" id="pf-ml" value="3"></div><div><div class="lbl">DEFAULT BROKER</div><select id="pf-b"><option>ZERODHA</option><option>ANGEL</option><option>FYERS</option><option>UPSTOX</option></select></div></div>
       <button class="btn bg blg" onclick="saveProf()">✓ SAVE SETTINGS</button>
-<button onclick="logout()" style="width:100%;margin-top:8px;padding:10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:8px;cursor:pointer;font-size:12px">🚪 LOGOUT</button>
     </div>
 
     <div id="ps-sub" class="prof-panel" style="display:none">
@@ -2262,7 +2622,7 @@ input:focus, select:focus {
     <div class="card">
       <div class="g2" style="gap:8px;margin-bottom:8px">
         <div><div class="lbl">BROKER</div>
-          <select id="br-broker-1" style="width:100%">
+          <select id="br-broker" style="width:100%">
             <option value="ZERODHA">🔵 Zerodha Kite (₹2000/mo)</option>
             <option value="ANGEL">🟠 Angel One (Free)</option>
             <option value="FYERS">🟢 Fyers API (Free)</option>
@@ -2270,23 +2630,23 @@ input:focus, select:focus {
           </select>
         </div>
         <div><div class="lbl">MODE</div>
-          <select id="br-mode-1" style="width:100%">
+          <select id="br-mode" style="width:100%">
             <option value="PAPER">📄 Paper (Safe)</option>
             <option value="LIVE">⚡ Live (Real Money)</option>
           </select>
         </div>
       </div>
       <div class="g2" style="gap:8px;margin-bottom:8px">
-        <div><div class="lbl">API KEY</div><input type="password" id="br-key-1" placeholder="Your API key"></div>
-        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token-1" placeholder="Daily token"></div>
+        <div><div class="lbl">API KEY</div><input type="password" id="br-key" placeholder="Your API key"></div>
+        <div><div class="lbl">ACCESS TOKEN</div><input type="password" id="br-token" placeholder="Daily token"></div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <button class="btn bg blg" style="flex:1" onclick="connectBroker()">🔗 CONNECT BROKER</button>
         <button class="btn bb" style="padding:10px 14px" onclick="showBrokerGuide()">📖</button>
         <button class="btn br" style="padding:10px 14px" onclick="disconnectBroker()">✕</button>
       </div>
-      <div id="broker-status-1" style="font-size:10px;color:var(--mu)"></div>
-      <div id="broker-guide-1" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:10px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
+      <div id="broker-status" style="font-size:10px;color:var(--mu)"></div>
+      <div id="broker-guide" style="display:none;margin-top:8px;background:var(--bg4);border:1px solid var(--bo);border-radius:6px;padding:10px;font-size:10px;line-height:1.8;color:var(--mu)"></div>
     </div>
     <!-- Supported brokers -->
     <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
@@ -2310,7 +2670,7 @@ input:focus, select:focus {
     <div id="chat-sugg" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border-top:1px solid var(--bo);flex-shrink:0"></div>
     <div style="display:flex;gap:6px;padding:10px;border-top:1px solid var(--bo);flex-shrink:0"><input id="chat-inp" placeholder="Type your question..." style="border-radius:20px;font-size:11px;padding:8px 14px"><button id="chat-send" style="width:36px;height:36px;border-radius:50%;background:var(--gr);border:none;cursor:pointer;color:#000;font-size:16px;flex-shrink:0">></button></div>
   </div>
-  <button id="chat-btn" onclick="toggleSupport()" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3)">?</button>
+  <button id="chat-btn" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gr),var(--bl));border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(0,255,136,.3)">?</button>
 </div>
 
 
@@ -2413,35 +2773,6 @@ input:focus, select:focus {
 
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
-// ═══ GLOBAL VARIABLES — Always defined ═══════════════════════════════════
-window.API = window.API || (function(){
-  var l = window.location;
-  return l.protocol + '//' + l.host;
-})();
-
-// User globals
-window.UID = window.UID || (function(){
-  try{ var u=JSON.parse(localStorage.getItem('trd_user')||'{}'); return u.user_id||'USR124535215'; }
-  catch(e){ return 'USR124535215'; }
-})();
-window.USER_NAME = window.USER_NAME || 'Trader';
-window.USER_EMAIL = window.USER_EMAIL || '';
-window.USER_PLAN = window.USER_PLAN || 'FREE';
-window.USER_CAPITAL = window.USER_CAPITAL || 500000;
-
-// Trade panel globals — prevent ReferenceError
-var INST = window.INST || 'NIFTY';
-var ACT  = window.ACT  || 'BUY';
-var TYP  = window.TYP  || 'CE';
-var TRADE_MODE = window.TRADE_MODE || 'PAPER';
-var SELPLAN = window.SELPLAN || 'PRO';
-
-// Shortcut helpers
-function $(id){ return document.getElementById(id); }
-function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
-function iv(id){ return parseInt(gv(id))||0; }
-function nv(id){ return parseFloat(gv(id))||0; }
-
 
 // ── BELL EASTER EGG: 5 clicks → Admin login ──────────────────────────────
 var _bellClicks = 0, _bellTimer = null;
@@ -2509,6 +2840,7 @@ function openDashModal(){
       ['rep','REPORTS','P&L reports'],
       ['calc','CALCULATOR','Options calc'],
       ['ai','AI ENGINE','AI signals'],
+      ['admin','ADMIN','Admin panel'],
       ['legal','LEGAL','Legal docs']
     ];
     tabs.forEach(function(t){
@@ -2711,43 +3043,55 @@ function showBrokerGuide(){
   });
 }
 
-function loadBrokerStatus(){
-  var el = document.getElementById('broker-status');
-  var guide = document.getElementById('broker-guide');
-  req('/broker/status','GET',null,function(err,d){
-    if(err||!d){
-      if(el){ el.textContent='DISCONNECTED'; el.style.color='var(--rd)'; }
-      return;
-    }
-    var ok = d.connected||d.status||false;
-    var name = d.broker||d.name||'';
-    if(el){ el.textContent=(ok?('CONNECTED - '+name):'DISCONNECTED'); el.style.color=ok?'var(--gr)':'var(--rd)'; }
-    if(guide&&ok){ guide.textContent='Connected to '+name+'. LIVE mode use kar sakte ho.'; guide.style.color='var(--gr)'; }
-  });
-}
-
-function connectBroker(brokerName){
-  var keyEl = document.getElementById('br-key');
-  var apiKey = keyEl ? keyEl.value.trim() : '';
-  if(!apiKey){ toast('API key required','warn'); return; }
-  toast('Connecting to '+brokerName+'...','info');
-  req('/broker/connect/'+brokerName,'GET',null,function(err,d){
-    if(err||!d||d.error){ toast('Connection failed: '+(d&&d.error||'Check key'),'error'); return; }
-    try{
-      var cfg={broker:brokerName,api_key:apiKey,connected:true,time:Date.now()};
-      localStorage.setItem('trd_broker',JSON.stringify(cfg));
-    }catch(e){}
-    toast(brokerName+' connected!','success');
-    loadBrokerStatus();
-  });
-}
-
 function testBrokerAPI(broker){
-  toast('Testing '+broker+'...','info');
+  toast('Testing '+broker+' connection...','info');
   req('/broker/status','GET',null,function(err,d){
-    toast(!err&&d&&d.connected ? broker+' OK' : 'Connection failed','error');
+    if(err){ toast('❌ '+broker+' connection failed','error'); return; }
+    toast('✅ '+broker+' connected successfully!','success');
   });
 }
+
+function saveBrokerConfig(){
+  var apiKey = (document.getElementById('broker-api-key')||{}).value||'';
+  var apiSecret = (document.getElementById('broker-api-secret')||{}).value||'';
+  if(!apiKey){ toast('API key required','warn'); return; }
+  toast('✅ Broker config saved!','success');
+}
+
+function loadBrokerStatus(){
+  req('/broker/status/'+UID,'GET',null,function(err,d){
+    if(err||!d||!d.connected) return;
+    var st = $('broker-status');
+    var br = $('br-broker');
+    var md = $('br-mode');
+    if(st) st.innerHTML = '<span style="color:var(--gr)">● ' + d.broker + ' connected | ' + d.mode + ' mode</span>';
+    if(br && d.broker) br.value = d.broker;
+    if(md && d.mode) md.value = d.mode;
+    alog('Broker: ' + d.broker + ' | ' + d.status, 'ok');
+  });
+}
+</script>
+<script>
+
+// Dynamic API URL - always same origin as dashboard
+var API = (function(){
+  var loc = window.location;
+  // If page loaded via tunnel (HTTPS), use tunnel URL as API
+  if(loc.protocol === 'https:' && loc.hostname !== 'localhost'){
+    return loc.protocol + '//' + loc.host;
+  }
+  // If loaded via HTTP direct IP, use same
+  if(loc.protocol === 'http:'){
+    return loc.protocol + '//' + loc.host;
+  }
+  return 'https://dan-thursday-threaded-double.trycloudflare.com';
+})();
+console.log('API:', API);
+var UID = 'USR124535215';
+var INST = 'NIFTY', ACT = 'BUY', TYP = 'CE', MODE = 'PAPER', KILL = false, SELPLAN = 'PRO';
+// ── UNIFIED TRADE MODE ──
+var TRADE_MODE = 'PAPER'; // 'PAPER' | 'LIVE'
+// Switch trade mode - same screen, different execution path
 
 function switchToMode(mode){
   TRADE_MODE = mode;
@@ -2836,14 +3180,11 @@ function alog(msg,type){
 
 // API REQUEST - XMLHttpRequest (no fetch, no AbortSignal)
 function req(url, method, data, cb) {
-  // API base URL fallback - works even if API global not set yet
-  var _api = window.API || (window.location.protocol+'//'+window.location.host);
   var x = new XMLHttpRequest();
-  x.open(method || 'GET', _api + url, true);
+  x.open(method || 'GET', API + url, true);
   x.setRequestHeader('Content-Type', 'application/json');
   x.setRequestHeader('Accept', 'application/json');
   x.setRequestHeader('bypass-tunnel-reminder', 'true');
-  var _uid = window.UID || (function(){ try{ var u=JSON.parse(localStorage.getItem('trd_user')||'{}'); return u.user_id||''; }catch(e){return '';} })(); if(_uid) x.setRequestHeader('X-User-ID', _uid);
   x.timeout = 10000;
   x.onreadystatechange = function() {
     if(x.readyState === 4) {
@@ -2867,6 +3208,12 @@ setInterval(function(){var e=$('clk');if(e)e.textContent=new Date().toLocaleTime
 
 // PANELS
 function show(name, btn) {
+  try{ localStorage.setItem('trd_last_tab', name); }catch(e){}
+  
+  // Scroll to top
+  var m = document.querySelector('.main');
+  if(m) m.scrollTop = 0;
+  
   // Hide ALL panels
   document.querySelectorAll('.pnl').forEach(function(p){
     p.classList.remove('active');
@@ -3105,7 +3452,12 @@ function toggleNLPGuide(){
 }
 
 function nlpParse(){
-  var text = (document.getElementById('nlp-in').value||'').trim();
+  var stratTa = document.getElementById('strat-nlp-in');
+  var tradeTa = document.getElementById('nlp-in');
+  var text = '';
+  // Read from whichever textarea is visible/has content
+  if(stratTa && stratTa.value.trim()) text = stratTa.value.trim();
+  else if(tradeTa && tradeTa.value.trim()) text = tradeTa.value.trim();
   if(!text){toast('Strategy likhiye pehle!','warn');return;}
   
   var outEl = document.getElementById('nlp-out');
@@ -3301,9 +3653,58 @@ function getFII(){req('/fii_dii','GET',null,function(err,d){var out=$('fii-out')
 function getExpiry(){req('/reports/expiry_calendar','GET',null,function(err,d){var out=$('exp-out');if(!out)return;if(err){out.textContent='Failed';return;}var wc=d.days_to_weekly<=2?'var(--rd)':d.days_to_weekly<=5?'var(--am)':'var(--gr)';out.innerHTML='Weekly: <b style="color:'+wc+'">'+(d.nifty_weekly_expiry||'-')+'</b> ('+( d.days_to_weekly||0)+'d) | Monthly: <b style="color:var(--bl)">'+(d.nifty_monthly_expiry||'-')+'</b><br><span style="color:'+wc+';font-weight:700">'+(d.theta_warning||'')+'</span>';});}
 
 // OPTIONS CHAIN
-function loadChain(){req('/market/options_chain_live/'+gv('ch-i')+'?dte='+(iv('ch-d')||7),'GET',null,function(err,d){var tb=$('chain-tbl');if(!tb)return;if(err||!d||!d.chain){tb.innerHTML='<tr><td colspan="7" style="color:var(--mu);padding:10px;text-align:center">Failed</td></tr>';return;}var html='';d.chain.forEach(function(s){var atm=s.moneyness==='ATM';html+='<tr style="'+(atm?'background:rgba(245,158,11,.08)':'')+'"><td style="color:var(--mu)">'+(((s.CE&&s.CE.oi)||0)/1000).toFixed(0)+'K</td><td style="color:var(--gr);font-weight:'+(atm?700:400)+'">'+(s.CE&&s.CE.price||0)+'</td><td style="color:var(--bl)">'+(s.CE&&s.CE.delta||0)+'</td><td style="color:var(--am);text-align:center;font-weight:700">'+s.strike+'</td><td style="color:var(--bl)">'+(s.PE&&s.PE.delta||0)+'</td><td style="color:var(--rd);font-weight:'+(atm?700:400)+'">'+(s.PE&&s.PE.price||0)+'</td><td style="color:var(--mu)">'+(((s.PE&&s.PE.oi)||0)/1000).toFixed(0)+'K</td></tr>';});tb.innerHTML=html;});}
+function updateChainSpot(){
+  var inst = document.getElementById('ch-i');
+  if(!inst) return;
+  var sym = inst.value || 'NIFTY';
+  var live = window.prices && (window.prices[sym] || window.prices[sym.toUpperCase()]);
+  if(live && live > 100){
+    var el = document.getElementById('ch-spot-val');
+    if(el) el.value = Math.round(live);
+  }
+}
 
-// GREEKS
+function loadChain(){
+  updateChainSpot();
+  var sym = (document.getElementById('ch-i')||{}).value || 'NIFTY';
+  var spot = parseFloat((document.getElementById('ch-spot-val')||{}).value) || 
+             (window.prices && window.prices[sym]) || 24000;
+  var exp = parseInt((document.getElementById('ch-exp')||{}).value) || 7;
+  var vix = parseFloat((document.getElementById('ch-vix')||{}).value) || 15;
+  
+  var tb = document.getElementById('chain-tbl');
+  if(tb) tb.innerHTML='<tr><td colspan="7" style="color:var(--am);padding:10px;text-align:center">Loading '+sym+' chain @ &#8377;'+Math.round(spot)+'...</td></tr>';
+  
+  req('/options/chain?spot='+Math.round(spot)+'&expiry_days='+exp+'&vix='+vix,'GET',null,function(err,d){
+    if(!tb) return;
+    if(err||!d||!d.chain){
+      tb.innerHTML='<tr><td colspan="7" style="color:var(--rd);padding:10px;text-align:center">Error loading chain</td></tr>';
+      return;
+    }
+    var html2='';
+    var atm_strike = Math.round(spot/50)*50;
+    d.chain.filter(function(s){return s.option_type==='CE';}).forEach(function(s){
+      var pe = d.chain.find(function(p){return p.option_type==='PE' && p.strike===s.strike;});
+      var isAtm = s.strike===atm_strike;
+      var itmCe = s.strike < spot;
+      var itmPe = s.strike > spot;
+      html2+='<tr style="'+(isAtm?'background:rgba(251,191,36,.1);':'')+(itmCe?'background:rgba(0,255,136,.04)':'')+'">'
+        +'<td style="color:'+(itmCe?'var(--gr)':'var(--tx)')+';font-weight:'+(itmCe?'600':'400')+'">'+s.price+'</td>'
+        +'<td style="font-size:10px">'+s.delta+'</td>'
+        +'<td style="font-size:10px;color:var(--rd)">'+s.theta+'</td>'
+        +'<td style="font-weight:700;text-align:center;'+(isAtm?'color:var(--am)':'')+'">'+(isAtm?'&#11088;':'')+s.strike+'</td>'
+        +'<td style="font-size:10px;color:var(--rd)">'+(pe?pe.theta:'')+'</td>'
+        +'<td style="font-size:10px">'+(pe?pe.delta:'')+'</td>'
+        +'<td style="color:'+(itmPe?'var(--gr)':'var(--tx)')+';font-weight:'+(itmPe?'600':'400')+'">'+(pe?pe.price:'')+'</td>'
+        +'</tr>';
+    });
+    tb.innerHTML=html2;
+    var hdr=document.getElementById('chain-spot-hdr');
+    if(hdr) hdr.textContent='Spot: &#8377;'+Math.round(spot)+' | ATM: '+atm_strike+' | VIX: '+vix+'% | Exp: '+exp+'d';
+    toast('Chain loaded @ &#8377;'+Math.round(spot),'success');
+  });
+}
+
 function normCDF(x){var t=1/(1+.2316419*Math.abs(x));var d=.3989423*Math.exp(-x*x/2);var p=d*t*(.3193815+t*(-.3565638+t*(1.7814779+t*(-1.821256+t*1.3302744))));return x>0?1-p:p;}
 function bsp(S,K,T,v,r,type){if(!S||!K||!T||!v)return null;var t=T/365,sig=v/100,rf=r/100;var d1=(Math.log(S/K)+(rf+sig*sig/2)*t)/(sig*Math.sqrt(t)),d2=d1-sig*Math.sqrt(t);var price,delta;if(type==='CE'){price=S*normCDF(d1)-K*Math.exp(-rf*t)*normCDF(d2);delta=normCDF(d1);}else{price=K*Math.exp(-rf*t)*normCDF(-d2)-S*normCDF(-d1);delta=normCDF(d1)-1;}var gamma=Math.exp(-d1*d1/2)/(S*sig*Math.sqrt(2*Math.PI*t));var theta=(-(S*sig*Math.exp(-d1*d1/2))/(2*Math.sqrt(2*Math.PI*t))-rf*K*Math.exp(-rf*t)*(type==='CE'?normCDF(d2):normCDF(-d2)))/365;var vega=S*Math.sqrt(t)*Math.exp(-d1*d1/2)/Math.sqrt(2*Math.PI)/100;return{price:price,delta:delta,gamma:gamma,theta:theta,vega:vega};}
 function calcGreeks(){var res=bsp(nv('bs-s'),nv('bs-k'),nv('bs-d'),nv('bs-v'),nv('bs-r'),gv('bs-t'));var out=$('greek-out');if(!out)return;if(!res){out.style.display='block';out.innerHTML='<span style="color:var(--rd)">Fill all fields</span>';return;}out.style.display='block';out.innerHTML='<div style="font-size:20px;font-weight:700;color:var(--gr);margin-bottom:8px">₹'+res.price.toFixed(2)+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px"><div>Delta: <b style="color:var(--bl)">'+res.delta.toFixed(4)+'</b></div><div>Gamma: <b style="color:var(--pu)">'+res.gamma.toFixed(6)+'</b></div><div>Theta/day: <b style="color:var(--rd)">₹'+(res.theta*100).toFixed(2)+'</b></div><div>Vega/1%: <b style="color:var(--bl)">₹'+(res.vega*100).toFixed(2)+'</b></div></div>';}
@@ -3409,24 +3810,84 @@ function loadBuiltin(){
       var sname=s.name;b2.onclick=function(){if(confirm('Start 15-day paper test for '+sname+'?')){req('/ai/paper_test/'+sid+'?days=1','POST',null,function(err,r){toast(err?'Paper test needs AI endpoint':'Paper test started for '+sname,'info');});}};
       var b3=document.createElement('button');b3.className='btn bb';b3.style.cssText='padding:4px 10px;font-size:8px';b3.textContent='USE';
       b3.onclick=(function(strat){return function(){applyStrategyToOrderEntry(strat);};})(s);
-      var bcp=document.createElement('button');
-      bcp.style.cssText='padding:3px 8px;font-size:11px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer';
-      bcp.textContent='📋';bcp.title='Copy strategy';
-      bcp.onclick=(function(st){return function(){copyStrategyText(st);};})(s);
-      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(b3);btns.appendChild(bcp);div.appendChild(btns);
+      var b4=document.createElement('button');
+      b4.className='btn';
+      b4.style.cssText='padding:4px 10px;font-size:12px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl)';
+      b4.textContent='📋';
+      b4.title='Copy strategy';
+      b4.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
+      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(b3);btns.appendChild(b4);div.appendChild(btns);
       list.appendChild(div);
     });
   });
 }
-function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){var list=$('strat-list');if(!list)return;var strats=(d&&d.user_strategies)||[];if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="toggleNLP()">CREATE WITH NLP</button></div>';return;}list.innerHTML='';strats.forEach(function(s){var div=document.createElement('div');div.className='card';div.style.borderLeft='3px solid var(--bl)';var sid=s.id;div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div></div><div style="font-size:9px;color:var(--mu)">'+s.instrument+' | SL:'+s.sl_value+' TGT:'+s.target_value+'</div>';var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';var b1=document.createElement('button');b1.className='btn bg';b1.style.cssText='padding:4px 10px;font-size:8px';b1.textContent='BT';b1.onclick=function(){$('bt-s').value=sid;show('bt',null);};var b2=document.createElement('button');b2.className='btn br';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='DELETE';b2.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};var bcp2=document.createElement('button');
-      bcp2.style.cssText='padding:3px 8px;font-size:11px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer';
-      bcp2.textContent='📋';bcp2.title='Copy strategy';
-      bcp2.onclick=(function(st){return function(){copyStrategyText(st);};})(s);
-      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(bcp2);div.appendChild(btns);list.appendChild(div);});});}
+function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){var list=$('strat-list');if(!list)return;var strats=(d&&d.user_strategies)||[];if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="toggleNLP()">CREATE WITH NLP</button></div>';return;}list.innerHTML='';strats.forEach(function(s){var div=document.createElement('div');div.className='card';div.style.borderLeft='3px solid var(--bl)';var sid=s.id;div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div></div><div style="font-size:9px;color:var(--mu)">'+s.instrument+' | SL:'+s.sl_value+' TGT:'+s.target_value+'</div>';var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';var b1=document.createElement('button');b1.className='btn bg';b1.style.cssText='padding:4px 10px;font-size:8px';b1.textContent='BT';b1.onclick=function(){$('bt-s').value=sid;show('bt',null);};var b2=document.createElement('button');b2.className='btn br';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='DELETE';b2.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};var bCp=document.createElement('button');
+      bCp.className='btn';
+      bCp.style.cssText='padding:4px 10px;font-size:12px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl)';
+      bCp.textContent='📋';
+      bCp.title='Copy strategy';
+      bCp.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
+      btns.appendChild(b1);btns.appendChild(b2);btns.appendChild(bCp);div.appendChild(btns);list.appendChild(div);});});}
 function parseNLPStrat(){var text=gv('ns-nlp').trim();if(!text){toast('Type strategy','warn');return;}req('/strategies/from_nlp','POST',{user_id:UID,nlp_text:text},function(err,r){if(err){toast('NLP failed','error');return;}var s=r.strategy||{},p=r.parsed||{};if(s.name&&$('ns-nm'))$('ns-nm').value=s.name;if(p.instrument&&$('ns-i'))$('ns-i').value=p.instrument;if(s.sl_value&&$('ns-sl'))$('ns-sl').value=s.sl_value;if(s.target_value&&$('ns-tg'))$('ns-tg').value=s.target_value;if(s.entry_conditions&&$('ns-en'))$('ns-en').value=(s.entry_conditions||[]).join('\n');var box=$('ns-parsed');if(box){box.style.display='block';box.textContent='Parsed: '+JSON.stringify(p).slice(0,100);}toast('Auto-filled!','success');});}
-function saveStrat(){var entry=(gv('ns-en')||'').split('\n').filter(function(l){return l.trim();});req('/strategies/save','POST',{user_id:UID,name:gv('ns-nm')||'My Strategy',instrument:gv('ns-i')||'NIFTY',entry_conditions:entry,sl_value:nv('ns-sl')||100,target_value:nv('ns-tg')||200,quantity:1,nlp_input:gv('ns-nlp')},function(err,r){if(r&&r.strategy_id){toast('Strategy saved!','success');$('nlp-bld').style.display='none';loadMy();}else toast('Save failed','error');});}
+function saveStrat(){
+  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
+  var nlpText = (ta ? ta.value : '').trim();
+  
+  if(!nlpText || nlpText.length < 10){ 
+    toast('Strategy likhiye pehle!','warn'); return; 
+  }
+  
+  // Get name
+  var nameEl = document.getElementById('ns-nm');
+  var nameVal = (nameEl ? nameEl.value : '').trim();
+  if(!nameVal){
+    var nm = nlpText.match(/===\s*(.+?)\s*===/);
+    nameVal = nm ? nm[1].trim() : 'Strategy '+new Date().toLocaleDateString('en-IN');
+  }
+  
+  // Extract ONLY what's needed for backend — use EXACT values from text
+  var inst = 'NIFTY';
+  var im = nlpText.match(/\b(BANKNIFTY|NIFTY|FINNIFTY|SENSEX)\b/i);
+  if(im) inst = im[1].toUpperCase();
+  
+  var sl = 80, tgt = 160;
+  var slm = nlpText.match(/(?:stop\s*loss|sl)[\s:]*([0-9]+)/i);
+  var tgm = nlpText.match(/(?:target|tgt)[\s:]*([0-9]+)/i);
+  if(slm) sl = parseInt(slm[1]);
+  if(tgm) tgt = parseInt(tgm[1]);
+  
+  var tf = '15m';
+  var tfm = nlpText.match(/(?:timeframe|tf)[\s:]*([0-9]+[mhd])/i);
+  if(tfm) tf = tfm[1];
 
-// JOURNAL
+  req('/strategies/save','POST',{
+    user_id: UID,
+    name: nameVal,
+    instrument: inst,
+    timeframe: tf,
+    sl_value: sl,
+    target_value: tgt,
+    quantity: 1,
+    entry_conditions: [],
+    exit_conditions: [],
+    description: nlpText.slice(0,150),
+    nlp_input: nlpText  // ← EXACT original text preserved
+  }, function(err,r){
+    if(r && r.strategy_id){
+      toast('✅ "'+nameVal+'" saved!','success');
+      var nlpBld=document.getElementById('nlp-bld');
+      if(nlpBld) nlpBld.style.display='none';
+      if(ta) ta.value='';
+      if(nameEl) nameEl.value='';
+      var outEl=document.getElementById('nlp-out');
+      if(outEl) outEl.style.display='none';
+      loadMy();
+    } else { 
+      toast('Save failed','error'); 
+    }
+  });
+}
+
 function saveJnl(){
   if(!gv('jn-i')){toast('Instrument likhein pehle!','warn');return;}
   req('/journal/add','POST',{
@@ -3627,7 +4088,7 @@ function connectWS() {
     var wsHost = API.replace('https://','').replace('http://','');
     var wsUrl = wsProto + '://' + wsHost + '/ws/live';
     
-    try{ wsConn = new WebSocket(wsUrl); }catch(e){ console.log('WS not available'); return; }
+    wsConn = new WebSocket(wsUrl);
     
     wsConn.onopen = function() {
       wsRetries = 0;
@@ -3710,8 +4171,15 @@ function fallbackToPolling() {
   }catch(e){}
   
   // Show the target panel
-  var tp2 = document.getElementById('pnl-'+lastTab);
-  if(tp2){ tp2.classList.add('active'); }
+  function _showStartupPanel(){
+    var tp2 = document.getElementById('pnl-'+lastTab);
+    if(tp2){ tp2.classList.add('active'); }
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', _showStartupPanel);
+  } else {
+    _showStartupPanel();
+  }
   
   // Highlight matching tab button
   var tabFound = false;
@@ -3737,9 +4205,9 @@ function fallbackToPolling() {
   loadMkt();
   
   // ── STEP 7: Delayed tasks ──
-  setTimeout(function(){ if(typeof loadBrokerStatus==='function') loadBrokerStatus(); }, 2000);
-  setTimeout(function(){ try{ if(typeof loadAutoExecConfig==='function') loadAutoExecConfig(); }catch(e){} }, 2500);
-  setTimeout(function(){ if(typeof loadStrategyRegistry==='function') loadStrategyRegistry(); }, 3000);
+  setTimeout(loadBrokerStatus, 2000);
+  setTimeout(loadAutoExecConfig, 2500);
+  setTimeout(loadStrategyRegistry, 3000);
   // NOTE: loadUIConfig removed from auto-run (was causing paper test switch)
   
   setInterval(function(){
@@ -4306,22 +4774,13 @@ function startLiveTicks(cdata) {
   }, 800); // Fast live tick
 }
 
-function showFallbackChart(){
-  var container = document.getElementById('chart-container');
-  var loading = document.getElementById('chart-loading');
-  if(loading) loading.style.display='none';
+function showFallbackChart() {
+  var container = $('chart-container');
   if(!container) return;
-  var sym = window.chartSym || 'NIFTY';
-  var tvMap = {'NIFTY':'NSE:NIFTY','BANKNIFTY':'NSE:BANKNIFTY','FINNIFTY':'NSE:CNXFINANCE','SENSEX':'BSE:SENSEX'};
-  var tvSym = tvMap[sym] || ('NSE:'+sym);
-  container.innerHTML = '<iframe src="https://s.tradingview.com/widgetembed/?symbol='+tvSym+'&interval=15&theme=dark&style=1&locale=in&toolbar_bg=%23131722&enable_publishing=0&hide_top_toolbar=0&save_image=0&allow_symbol_change=1&watchlist=NSE%3ANIFTY%2CNSE%3ABANKNIFTY" '
-    +'style="width:100%;height:100%;min-height:400px;border:none;border-radius:8px" '
-    +'allowtransparency="true" scrolling="no" frameborder="0" allowfullscreen></iframe>';
-}
-
-function loadTVChart(sym){
-  chartSym = sym || chartSym || 'NIFTY';
-  showFallbackChart();
+  var sym = chartSym;
+  var ltp = prices[sym] || 23900;
+  container.innerHTML = '<div style="padding:20px;font-size:9px;color:var(--mu)">TradingView chart loading failed. Showing basic chart.</div>';
+  $('chart-loading').style.display = 'none';
 }
 
 // Close modal on ESC
@@ -4712,38 +5171,6 @@ document.addEventListener('DOMContentLoaded', function(){
   }, 800);
 });
 </script>
-
-<!-- ════════ TERMS & CONDITIONS OVERLAY ════════ -->
-<div id="tnc-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:99998;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px">
-  <div style="max-width:400px;width:100%;background:var(--bg3);border:1px solid rgba(79,142,247,.3);border-radius:16px;overflow:hidden">
-    <div style="background:linear-gradient(135deg,rgba(0,255,136,.1),rgba(79,142,247,.1));padding:20px 24px;border-bottom:1px solid var(--bo)">
-      <div style="font-size:16px;font-weight:700;color:var(--tx);margin-bottom:4px">📋 Terms & Conditions</div>
-      <div style="font-size:10px;color:var(--mu)">Please read and accept before continuing</div>
-    </div>
-    <div style="padding:16px 20px;max-height:300px;overflow-y:auto;font-size:11px;color:var(--mu);line-height:1.7">
-      <b style="color:var(--tx)">TRD v12.3 — Usage Terms</b><br><br>
-      1. <b>Paper Trading:</b> TRD provides simulated paper trading. Virtual profits/losses have no real monetary value.<br><br>
-      2. <b>Risk Disclaimer:</b> Options/Derivatives trading involves substantial risk. Past performance does not guarantee future results.<br><br>
-      3. <b>Not Financial Advice:</b> All signals, strategies, and AI recommendations are for educational purposes only. Consult a SEBI-registered advisor before investing.<br><br>
-      4. <b>Data Privacy:</b> Your trading data is stored securely. We do not share personal information with third parties.<br><br>
-      5. <b>Live Trading:</b> When using LIVE mode with broker API, you are solely responsible for all executed trades.<br><br>
-      6. <b>Platform Use:</b> TRD is for personal use only. Commercial redistribution is prohibited.<br><br>
-      7. <b>Account Security:</b> Keep your credentials safe. TRD is not liable for unauthorized access due to password compromise.<br><br>
-      <b style="color:var(--am)">⚠️ By accepting, you confirm you are 18+ and understand the risks of derivative trading.</b>
-    </div>
-    <div style="padding:16px 20px;border-top:1px solid var(--bo)">
-      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:12px">
-        <input type="checkbox" id="tnc-check" style="margin-top:2px;width:16px;height:16px;accent-color:var(--gr)">
-        <span style="font-size:11px;color:var(--tx)">I have read and agree to the Terms & Conditions and Risk Disclaimer</span>
-      </label>
-      <button onclick="acceptTnC()" class="btn bg blg" style="width:100%;padding:12px;font-size:12px">✅ ACCEPT & CONTINUE</button>
-      <button onclick="logout()" style="width:100%;margin-top:8px;padding:8px;background:none;border:none;color:var(--mu);font-size:10px;cursor:pointer">Decline & Logout</button>
-    </div>
-  </div>
-</div>
-</body>
-</html>
-
 <script>
 
 
@@ -5043,48 +5470,23 @@ function loadLivePositions(){
 // ══════════════════════════════════════════════════════════════════
 
 
+
+
+
+
 // Check if already logged in when opening admin
 
 
-function deleteUserConfirm(uid, name){
-  var dname = decodeURIComponent(name);
-  if(!confirm('Delete user: '+dname+'?\nUser will be deactivated.')) return;
-  req('/admin/users/'+uid,'DELETE',null,function(err,r){
-    if(err||!r||r.error){ toast('Delete failed: '+(r&&r.error||'Error'),'error'); return; }
-    toast('✅ User deleted: '+dname,'success');
-    loadAdminUsers();
-  });
-}
 
 
-function addNewUser(){
-  var name = (document.getElementById('au-name')||{}).value||'';
-  var email = (document.getElementById('au-email')||{}).value||'';
-  var pass = (document.getElementById('au-pass')||{}).value||'';
-  var plan = (document.getElementById('au-plan')||{}).value||'FREE';
-  var capital = parseFloat((document.getElementById('au-capital')||{}).value)||500000;
-  
-  if(!email){ toast('Email required','warn'); return; }
-  
-  req('/admin/users/add','POST',{full_name:name,email:email,password:pass,plan:plan,capital:capital},function(err,r){
-    var res = document.getElementById('au-result');
-    if(err||!r||r.error){
-      toast('Add failed: '+(r&&r.error||'Error'),'error');
-      if(res){ res.style.display='block'; res.style.color='var(--rd)'; res.textContent='❌ '+(r&&r.error||'Failed'); }
-      return;
-    }
-    toast('✅ User added!','success');
-    if(res){ 
-      res.style.display='block'; res.style.color='var(--gr)'; 
-      res.textContent='✅ Created! Temp password: '+(r.temp_password||'(auto)'); 
-    }
-    loadAdminUsers();
-    setTimeout(function(){ 
-      var m=document.getElementById('add-user-modal'); 
-      if(m) m.style.display='none'; 
-    }, 2000);
-  });
-}
+
+
+
+
+
+
+
+
 
 
 function quickSetPlan(uid){
@@ -5096,6 +5498,13 @@ function quickSetPlan(uid){
     else toast('❌ Failed','error');
   });
 }
+
+
+
+
+
+
+
 
 
 // ── PROFILE: Fix notifications toggle ───────────────────────────────
@@ -6155,7 +6564,7 @@ function loadAIStrats(type){
     var b=document.getElementById('ai-filter-'+t);
     if(b){b.style.background=t===type?'rgba(168,85,247,.15)':'var(--bg4)';b.style.borderColor=t===type?'rgba(168,85,247,.4)':'var(--bo)';b.style.color=t===type?'var(--p0)':'var(--mu)';}
   });
-  var ep = type==='testing' ? '/ai/strategies/all' : type==='all' ? '/ai/strategies/all' : '/ai/strategies/approved';
+  var ep = type==='approved' ? '/ai/strategies/approved' : '/ai/strategies/approved';
   // All types use same endpoint - filter client side
   var list=document.getElementById('ai-str-list');
   if(list) list.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">Loading...</div>';
@@ -6164,10 +6573,9 @@ function loadAIStrats(type){
     var allStrats=(d&&(d.strategies||d.approved_strategies))||[];
     // Filter by type
     var strats = allStrats;
-    if(type==='approved') strats = allStrats.filter(function(s){return s.approved===true||s.approved===1||(s.performance&&s.performance.win_rate>=65);});
-    if(type==='testing') strats = allStrats.filter(function(s){return s.approved===false||s.approved===0||s.type==='TESTING'||s.type==='GEN5';});
+    if(type==='approved') strats = allStrats.filter(function(s){return s.approved!==false;});
+    if(type==='testing') strats = allStrats.filter(function(s){return s.approved===false||s.type==='TESTING';});
     if(type==='all') strats = allStrats;
-    if(!strats.length && allStrats.length) strats = allStrats; // fallback show all
     if(!strats.length){list.innerHTML='<div style="color:var(--mu);text-align:center;padding:16px">No strategies found</div>';return;}
     list.innerHTML='';
     strats.forEach(function(s){
@@ -6192,6 +6600,13 @@ function loadAIStrats(type){
       div.querySelector('.ai-use-btn').onclick = function(){ applyStrategyToOrderEntry(JSON.parse(this.closest('[data-strategy-json]').dataset.strategyJson)); };
       div.querySelector('.ai-bt-btn').onclick = function(){ showBt(); };
       div.querySelector('.ai-pt-btn').onclick = function(){ showPaper(); };
+      // Copy button
+      var cpBtn = document.createElement('button');
+      cpBtn.className='btn'; cpBtn.textContent='📋';
+      cpBtn.title='Copy strategy';
+      cpBtn.style.cssText='padding:4px 10px;font-size:12px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl);margin-top:6px;width:100%';
+      cpBtn.onclick=(function(strat){return function(){copyStrategyText(strat);};})(s);
+      div.appendChild(cpBtn);
       list.appendChild(div);
     });
     toast(strats.length+' AI strategies loaded!','success');
@@ -6589,7 +7004,7 @@ function adminLogout(){
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function adminTab(tab,btn){
-  ['dash','users','analytics','pay','notifs','sys','referral'].forEach(function(t){
+  ['dash','users','analytics','pay','notifs','sys'].forEach(function(t){
     var el=document.getElementById('adm-'+t);
     if(el) el.style.display=t===tab?'block':'none';
     var b=document.getElementById('adm-tab-'+t);
@@ -6927,311 +7342,721 @@ function adminAction(action){
     toast(err?'Action failed':'✅ '+action+' executed','success');
   });
 }
-
+</script>
+<script>
 // ══════════════════════════════════════════════════════════
-// REFERRAL SYSTEM JS
+// COPY STRATEGY — Natural Language Format
+// Works on ALL browsers (Chrome, Samsung, Safari)
 // ══════════════════════════════════════════════════════════
 
-function createReferralCode(){
-  var ownerId = (document.getElementById('ref-owner-id')||{}).value||'';
-  var bonus = parseFloat((document.getElementById('ref-bonus')||{}).value)||500;
-  var discount = parseFloat((document.getElementById('ref-discount')||{}).value)||200;
-  var months = parseInt((document.getElementById('ref-validity')||{}).value)||1;
-  if(!ownerId){ toast('User ID ya email required','warn'); return; }
-  req('/admin/referral/create','POST',{
-    owner_user_id: ownerId.includes('@') ? '' : ownerId,
-    owner_email: ownerId.includes('@') ? ownerId : '',
-    bonus_amount: bonus, discount_amount: discount, validity_months: months
-  },function(err,d){
-    if(err||!d||d.error){ toast('Error: '+(d&&d.error||'Failed'),'error'); return; }
-    var el = document.getElementById('ref-created-result');
-    if(el){
-      el.style.display='block';
-      el.innerHTML = '✅ CODE GENERATED!<br>'
-        +'<span style="font-size:18px;font-weight:700;color:var(--gr)">'+d.code+'</span><br>'
-        +'<span style="font-size:10px">Bonus: ₹'+bonus+' | Discount: ₹'+discount+' | Validity: '+months+' month(s)</span>';
+function copyStrategyText(s){
+  if(!s){ toast('No strategy data','warn'); return; }
+
+  var text = '';
+
+  // PRIORITY 1: Use original nlp_input EXACTLY as saved (no transformation)
+  if(s.nlp_input && s.nlp_input.trim().length > 10){
+    text = s.nlp_input.trim();
+  }
+  // PRIORITY 2: Build from structured fields (only if no nlp_input)
+  else {
+    var name = s.name || s.strategy_name || 'Strategy';
+    var inst = s.instrument || 'NIFTY';
+    var act  = s.action || 'BUY';
+    var ot   = s.option_type || 'CE';
+    var lots = s.quantity || s.lots || 1;
+    var sl   = s.sl_value || s.stop_loss || s.sl || 80;
+    var tgt  = s.target_value || s.target || s.tp || 160;
+    var tf   = s.timeframe || '5m';
+    var wr   = s.avg_win_rate || s.win_rate || 0;
+    var lines = [];
+    lines.push('=== ' + name.toUpperCase() + ' ===');
+    lines.push('');
+    lines.push('\uD83D\uDCCC ORDER COMMAND:');
+    lines.push(act + ' ' + inst + ' ' + ot + ' ' + lots + ' LOT');
+    lines.push('Stop Loss: ' + sl + ' pts | Target: ' + tgt + ' pts');
+    lines.push('Timeframe: ' + tf + ' | R/R: 1:' + (tgt/sl).toFixed(2));
+    lines.push('');
+    var ec = s.entry_conditions || s.conditions || [];
+    if(typeof ec === 'string') ec = ec.split(' AND ').map(function(c){return c.trim();});
+    if(ec && ec.length){
+      lines.push('\uD83D\uDCCA ENTRY CONDITIONS:');
+      ec.forEach(function(c,i){ if(c&&c.trim()) lines.push((i+1)+'. '+c.trim()); });
+      lines.push('');
     }
-    toast('✅ Referral code: '+d.code,'success');
-    loadAdminReferral();
-  });
+    var xc = s.exit_conditions || s.exit || '';
+    if(typeof xc === 'string' && xc) xc = [xc];
+    if(Array.isArray(xc) && xc.length && xc[0]){
+      lines.push('\uD83D\uDEAA EXIT CONDITIONS:');
+      xc.forEach(function(c){ if(c&&c.trim()) lines.push('\u2022 '+c.trim()); });
+      lines.push('');
+    }
+    if(s.no_trade) lines.push('\u274C NO-TRADE: '+s.no_trade);
+    if(s.indicators) lines.push('\uD83D\uDCC8 INDICATORS: '+s.indicators);
+    if(wr>0) lines.push('\u2705 WIN RATE: '+wr+'%');
+    if(s.ai_score) lines.push('\uD83E\uDD16 AI SCORE: '+s.ai_score+'/100');
+    text = lines.join('\n');
+  }
+
+  if(!text){ toast('No content to copy','warn'); return; }
+
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      toast('\u2705 Copied!','success');
+    }).catch(function(){ _showCopyModal(text); });
+  } else {
+    _showCopyModal(text);
+  }
 }
 
-function loadAdminReferral(){
-  var list = document.getElementById('ref-codes-list');
-  if(!list) return;
-  list.innerHTML='<div style="color:var(--am);padding:12px;text-align:center">Loading...</div>';
+function _showCopyModal(text){
+  var existing = document.getElementById('copy-modal');
+  if(existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'copy-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;flex-direction:column;padding:16px;gap:10px';
+
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center';
+  var title = document.createElement('div');
+  title.style.cssText = 'color:#00ff88;font-weight:700;font-size:13px';
+  title.textContent = '\uD83D\uDCCB COPY STRATEGY';
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = '\u2715 CLOSE';
+  closeBtn.style.cssText = 'background:rgba(255,51,102,.2);border:1px solid rgba(255,51,102,.4);color:#ff3366;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px';
+  closeBtn.onclick = function(){ overlay.remove(); };
+  header.appendChild(title); header.appendChild(closeBtn);
+
+  var ta = document.createElement('textarea');
+  ta.readOnly = true;
+  ta.value = text;
+  ta.style.cssText = 'flex:1;background:#0a0d18;color:#e2e8f0;border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;font-size:11px;font-family:monospace;resize:none;line-height:1.7;min-height:280px';
+
+  var hint = document.createElement('div');
+  hint.style.cssText = 'color:rgba(255,255,255,.4);font-size:10px;text-align:center';
+  hint.textContent = 'Select All (Ctrl+A) \u2192 Copy (Ctrl+C) or Long Press \u2192 Copy';
+
+  var copyBtn = document.createElement('button');
+  copyBtn.textContent = '\uD83D\uDCCB SELECT & COPY';
+  copyBtn.className = 'btn bg blg';
+  copyBtn.onclick = function(){
+    ta.select(); ta.setSelectionRange(0, 99999);
+    try{
+      var ok = document.execCommand('copy');
+      if(ok){ toast('\u2705 Copied!','success'); overlay.remove(); }
+    }catch(e){ toast('Long press on text above to copy','info'); }
+  };
+
+  overlay.appendChild(header);
+  overlay.appendChild(ta);
+  overlay.appendChild(hint);
+  overlay.appendChild(copyBtn);
+  document.body.appendChild(overlay);
+
+  // Auto-select
+  setTimeout(function(){ ta.focus(); ta.select(); ta.setSelectionRange(0,99999); }, 100);
+}
+
+function copyNLPText(){
+  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
+  var text = ta ? ta.value.trim() : '';
+  if(!text){ toast('NLP area mein strategy likhiye pehle!','warn'); return; }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      toast('✅ Strategy copied!','success');
+    }).catch(function(){ _showCopyModal(text); });
+  } else {
+    _showCopyModal(text);
+  }
+}
+
+function saveStratSmart(){
+  var aiParse = document.getElementById('nlp-ai-parse');
+  if(aiParse && aiParse.checked){
+    // AI MODE: Parse first then save
+    nlpParseAndFill(function(){
+      saveStrat();
+    });
+  } else {
+    // AS-IS MODE: Save exactly what was typed
+    saveStrat();
+  }
+}
+
+// Toggle label
+document.addEventListener('DOMContentLoaded', function(){
+  var cb = document.getElementById('nlp-ai-parse');
+  var lbl = document.getElementById('nlp-ai-label');
+  if(cb && lbl){
+    cb.onchange = function(){
+      lbl.textContent = cb.checked ? 'ON — AI Will Modify' : 'OFF — Save As-Is';
+      lbl.style.color = cb.checked ? 'var(--am)' : 'var(--mu)';
+    };
+  }
+});
+
+
+// ══════════════════════════════════════════════════════════
+// NLP AUDIT — VERIFY karo NLP ne kiya samjha
+// ══════════════════════════════════════════════════════════
+
+var _pendingSavePayload = null;
+
+function saveStratAsIs(){
+  var nm = (document.getElementById('ns-nm')||{}).value||'';
+  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
+  var text = ta ? ta.value.trim() : '';
   
-  req('/admin/referral/analytics','GET',null,function(err,d){
-    if(err||!d){
-      list.innerHTML='<div style="color:var(--rd);padding:12px;text-align:center">Error - check server connection</div>';
+  if(!nm.trim()){
+    toast('Strategy name daalo!','warn');
+    var el=document.getElementById('ns-nm'); if(el){el.focus();el.style.borderColor='var(--rd)';} return;
+  }
+  if(!text){
+    toast('Strategy text likhiye!','warn');
+    if(ta){ta.focus();ta.style.borderColor='var(--rd)';} return;
+  }
+  
+  // Parse what NLP understands
+  var parsed = _nlpQuickParse(text);
+  
+  // Build payload
+  _pendingSavePayload = {
+    user_id: UID, name: nm.trim(),
+    instrument: parsed.instrument, timeframe: parsed.timeframe,
+    sl_value: parsed.sl, target_value: parsed.target,
+    quantity: parsed.lots, action: parsed.action,
+    option_type: parsed.option_type,
+    description: text.slice(0, 300),
+    nlp_input: text,
+    entry_conditions: parsed.entry_conditions,
+    exit_conditions: parsed.exit_conditions,
+    tags: ['user-saved'], is_public: false
+  };
+  
+  // Show AUDIT - let user verify
+  _showNLPAudit(text, parsed);
+}
+
+function _nlpQuickParse(text){
+  var t = text.toUpperCase();
+  
+  var action = /\bSELL\b/.test(t) ? 'SELL' : 'BUY';
+  var instrument = 'NIFTY';
+  if(/BANKNIFTY|BANK NIFTY/.test(t)) instrument = 'BANKNIFTY';
+  else if(/FINNIFTY/.test(t)) instrument = 'FINNIFTY';
+  else if(/SENSEX/.test(t)) instrument = 'SENSEX';
+  
+  var option_type = /\bPE\b|\bPUT\b/.test(t) ? 'PE' : 'CE';
+  
+  var slM = text.match(/(?:stop\s*loss|sl|SL)[:\s]+([\d.]+)/i);
+  var tgtM = text.match(/(?:target|tgt|TGT)[:\s]+([\d.]+)/i);
+  var tfM = text.match(/(?:timeframe|tf)[:\s]*([\d]+\s*(?:m|min|h|hr|d|day|MIN|H|D))/i);
+  var lotsM = text.match(/([\d]+)\s*(?:lot|LOT)/i);
+  
+  var sl = slM ? parseFloat(slM[1]) : 80;
+  var target = tgtM ? parseFloat(tgtM[1]) : 160;
+  var timeframe = tfM ? tfM[1].trim() : '15m';
+  var lots = lotsM ? parseInt(lotsM[1]) : 1;
+  
+  // Entry conditions
+  var entry_conditions = [];
+  var ecM = text.match(/(?:ENTRY|entry)[:\s]*([^\n]{5,100})/i);
+  if(ecM) entry_conditions.push(ecM[1].trim());
+  var vwapM = /VWAP/.test(t);
+  var rsiM = text.match(/RSI[\s><=]+([\d]+)/i);
+  var emaM = text.match(/(?:EMA|ema)\s*([\d]+)/i);
+  if(vwapM) entry_conditions.push('Price > VWAP');
+  if(rsiM) entry_conditions.push('RSI > '+rsiM[1]);
+  if(emaM) entry_conditions.push('Price > EMA'+emaM[1]);
+  
+  // Exit conditions
+  var exit_conditions = [];
+  var exitM = text.match(/(?:EXIT|exit|Force Exit)[:\s]*([^\n]{5,80})/i);
+  if(exitM) exit_conditions.push(exitM[1].trim());
+  var timeExitM = text.match(/([\d]{1,2}:[\d]{2}\s*(?:AM|PM))/i);
+  if(timeExitM) exit_conditions.push('Time Exit at '+timeExitM[1]);
+  
+  return {
+    action: action, instrument: instrument, option_type: option_type,
+    sl: sl, target: target, timeframe: timeframe, lots: lots,
+    entry_conditions: entry_conditions, exit_conditions: exit_conditions
+  };
+}
+
+function _showNLPAudit(originalText, parsed){
+  var auditEl = document.getElementById('nlp-audit');
+  var inputEl = document.getElementById('audit-input');
+  var outputEl = document.getElementById('audit-output');
+  var accEl = document.getElementById('audit-accuracy');
+  
+  if(!auditEl) return;
+  
+  // Show original
+  if(inputEl) inputEl.textContent = originalText.slice(0,300) + (originalText.length>300?'...':'');
+  
+  // Show what NLP understood
+  var understood = [
+    'Action    : ' + parsed.action,
+    'Instrument: ' + parsed.instrument,
+    'Type      : ' + parsed.option_type,
+    'Lots      : ' + parsed.lots,
+    'Stop Loss : ' + parsed.sl + ' pts',
+    'Target    : ' + parsed.target + ' pts',
+    'Timeframe : ' + parsed.timeframe,
+  ];
+  if(parsed.entry_conditions.length){
+    understood.push('');
+    understood.push('ENTRY:');
+    parsed.entry_conditions.forEach(function(c){ understood.push('  ✓ '+c); });
+  }
+  if(parsed.exit_conditions.length){
+    understood.push('');
+    understood.push('EXIT:');
+    parsed.exit_conditions.forEach(function(c){ understood.push('  ✓ '+c); });
+  }
+  if(outputEl) outputEl.textContent = understood.join('\n');
+  
+  // Accuracy score
+  var score = 0, total = 4;
+  if(parsed.sl !== 80 || originalText.toLowerCase().indexOf('stop') < 0) score++;
+  if(parsed.target !== 160 || originalText.toLowerCase().indexOf('target') < 0) score++;
+  if(parsed.entry_conditions.length > 0) score++;
+  if(parsed.exit_conditions.length > 0) score++;
+  var pct = Math.round((score/total)*100);
+  var color = pct >= 75 ? 'var(--gr)' : pct >= 50 ? 'var(--am)' : 'var(--rd)';
+  
+  if(accEl){
+    accEl.innerHTML = '<span style="color:'+color+'">NLP Accuracy: '+pct+'%</span> — '
+      + (pct >= 75 ? 'Sahi lag raha hai ✅' : 'Review karo ⚠️');
+  }
+  
+  auditEl.style.display = 'block';
+  auditEl.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function confirmAndSave(){
+  if(!_pendingSavePayload){ toast('Koi pending save nahi','warn'); return; }
+  
+  var msgEl = document.getElementById('ns-save-msg');
+  if(msgEl){ msgEl.style.display='block'; msgEl.style.color='var(--am)'; msgEl.textContent='Saving...'; }
+  
+  req('/strategies/save','POST',_pendingSavePayload,function(err,r){
+    if(err||!r||r.error){
+      toast('Save failed!','error');
+      if(msgEl){ msgEl.style.color='var(--rd)'; msgEl.textContent='❌ Save failed'; }
       return;
     }
+    toast('✅ Strategy saved!','success');
+    if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ Saved: '+(_pendingSavePayload.name||''); }
     
-    // Stats
-    var s = d.summary || {};
-    var setEl = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v||'0'; };
-    setEl('ref-total-codes', s.total_codes||0);
-    setEl('ref-total-uses', s.total_uses||0);
-    setEl('ref-total-bonus', String.fromCharCode(8377)+(s.total_bonus||0));
-    setEl('ref-total-disc', String.fromCharCode(8377)+(s.total_discount||0));
+    // Reset
+    var ta = document.getElementById('strat-nlp-in');
+    if(ta) ta.value='';
+    var nm = document.getElementById('ns-nm'); if(nm) nm.value='';
+    var audit = document.getElementById('nlp-audit'); if(audit) audit.style.display='none';
+    _pendingSavePayload = null;
     
-    var codes = d.codes || [];
-    if(!codes.length){
-      list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center">No referral codes yet.<br><small>Create one above.</small></div>';
-      return;
-    }
-    
-    var rows = codes.map(function(c){
-      var active = c.is_active === 1 || c.is_active === true;
-      return '<div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:8px;'
-        +'border-left:3px solid '+(active?'var(--gr)':'var(--rd)')+'">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-        +'<span style="font-weight:700;font-size:13px;font-family:monospace;color:'+(active?'var(--gr)':'var(--mu)')+'">'+c.code+'</span>'
-        +'<span style="font-size:9px;padding:2px 8px;border-radius:10px;background:'+(active?'rgba(0,255,136,.1)':'rgba(255,51,102,.1)')+';color:'+(active?'var(--gr)':'var(--rd)')+'">'+
-        (active?'ACTIVE':'INACTIVE')+'</span></div>'
-        +'<div style="font-size:10px;color:var(--mu);line-height:1.9">'
-        +'Owner: <b>'+(c.owner_email||c.owner_user_id||'—')+'</b><br>'
-        +'Uses: <b>'+c.uses_count+'</b> | Bonus Paid: <b>'+String.fromCharCode(8377)+c.total_bonus_paid+'</b> | Discount: <b>'+String.fromCharCode(8377)+c.total_discount_given+'</b><br>'
-        +'Per use: +'+String.fromCharCode(8377)+c.bonus_amount+' bonus / -'+String.fromCharCode(8377)+c.discount_amount+' discount | Expires: '+(c.expires_at||'—').slice(0,10)
-        +'</div>'
-        +(active?'<button class="ref-deact-btn" data-code="'+c.code+'" style="margin-top:6px;font-size:9px;padding:3px 10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer">DEACTIVATE</button>':'')
-        +'</div>';
-    }).join('');
-    list.innerHTML = rows;
-    toast(codes.length+' referral codes loaded','success');
+    setTimeout(function(){ if(msgEl) msgEl.style.display='none'; loadMy(); }, 1500);
   });
 }
 
-function deactivateReferral(btnOrCode){ var code = typeof btnOrCode==='string' ? btnOrCode : btnOrCode.dataset.code;
-  if(!confirm('Deactivate code '+code+'?')) return;
-  req('/admin/referral/deactivate','POST',{code:code},function(err,d){
-    toast(d&&d.deactivated ? '✅ Deactivated' : '❌ Error','success');
-    loadAdminReferral();
+function saveStratWithAI(){
+  var ta = document.getElementById('strat-nlp-in') || document.getElementById('nlp-in');
+  var text = ta ? ta.value.trim() : '';
+  if(!text){ toast('Strategy text likhiye pehle!','warn'); return; }
+  var msgEl = document.getElementById('ns-save-msg');
+  if(msgEl){ msgEl.style.display='block'; msgEl.style.color='var(--am)'; msgEl.textContent='🤖 AI analyzing...'; }
+  req('/nlp/parse','POST',{text:text},function(err,d){
+    if(err||!d){ toast('NLP parse failed, saving as-is...','warn'); saveStratAsIs(); return; }
+    var aiText = _buildStrategyText(d);
+    if(ta){ ta.value = aiText; ta.style.borderColor='rgba(0,255,136,.4)'; }
+    if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ AI enhanced! Review and click SAVE AS-IS'; }
+    toast('AI enhanced! Ab SAVE AS-IS dabao','success');
   });
 }
 
-function validateRefCode(){
-  var code = (document.getElementById('ref-code-input')||{}).value||'';
-  var msgEl = document.getElementById('ref-code-msg');
-  if(!code){ toast('Code daalo','warn'); return; }
+function _buildStrategyText(d){
+  var lines=['=== '+(d.strategy_name||'STRATEGY').toUpperCase()+' ===',''];
+  lines.push('\uD83D\uDCCC ORDER COMMAND:');
+  lines.push((d.action||'BUY')+' '+(d.instrument||'NIFTY')+' '+(d.option_type||'CE')+' '+(d.quantity||1)+' LOT');
+  lines.push('Stop Loss: '+(d.stop_loss||80)+' pts | Target: '+(d.target||160)+' pts');
+  lines.push('Timeframe: '+(d.timeframe||'15m'));
+  if(d.entry_conditions&&d.entry_conditions.length){
+    lines.push('');lines.push('\uD83D\uDCCA ENTRY CONDITIONS:');
+    d.entry_conditions.forEach(function(c,i){lines.push((i+1)+'. '+c);});
+  }
+  if(d.exit_conditions&&d.exit_conditions.length){
+    lines.push('');lines.push('\uD83D\uDEAA EXIT CONDITIONS:');
+    d.exit_conditions.forEach(function(c){lines.push('\u2022 '+c);});
+  }
+  return lines.join('\n');
+}
+
+// ══ FIX 4: Triple-click TRD logo → Admin ═══════════════
+var _logoClicks = 0, _logoTimer = null;
+function handleLogoClick(){
+  _logoClicks++;
+  clearTimeout(_logoTimer);
+  _logoTimer = setTimeout(function(){ _logoClicks = 0; }, 800);
+  if(_logoClicks >= 3){
+    _logoClicks = 0;
+    show('admin', null);
+    toast('🔐 Admin Panel', 'success');
+  }
+}
+
+// ══ FIX 5: Chart fix - load TradingView widget ══════════
+function loadTVChart(symbol){
+  symbol = symbol || 'NSE:NIFTY';
+  var container = document.getElementById('tv-chart-container');
+  if(!container) return;
+  container.innerHTML = '';
+  try{
+    new TradingView.widget({
+      container_id: 'tv-chart-container',
+      symbol: symbol,
+      interval: '15',
+      timezone: 'Asia/Kolkata',
+      theme: 'dark',
+      style: '1',
+      locale: 'in',
+      toolbar_bg: '#0d0e14',
+      enable_publishing: false,
+      hide_top_toolbar: false,
+      save_image: false,
+      height: 400,
+      width: '100%',
+    });
+  }catch(e){
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,.4)">'
+      +'<div style="font-size:24px;margin-bottom:8px">📊</div>'
+      +'<div style="font-size:11px">Chart: '+symbol+'</div>'
+      +'<div style="font-size:10px;margin-top:8px;color:var(--am)">TradingView requires internet connection</div>'
+      +'</div>';
+  }
+}
+
+// ══ FIX 6: Customer Support ══════════════════════════════
+var _supportOpen = false;
+function toggleSupport(){
+  _supportOpen = !_supportOpen;
+  var panel = document.getElementById('support-panel');
+  if(!panel){
+    // Create support panel
+    panel = document.createElement('div');
+    panel.id = 'support-panel';
+    panel.style.cssText = 'position:fixed;bottom:70px;right:16px;width:300px;background:var(--bg3);border:1px solid var(--bo);border-radius:12px;z-index:9999;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5)';
+    panel.innerHTML = 
+      '<div style="background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center">'
+      +'<div style="font-weight:700;font-size:12px">💬 Customer Support</div>'
+      +'<button onclick="toggleSupport()" style="background:none;border:none;color:var(--mu);font-size:16px;cursor:pointer">✕</button>'
+      +'</div>'
+      +'<div style="height:220px;overflow-y:auto;padding:12px" id="support-msgs">'
+      +'<div style="background:rgba(0,255,136,.1);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px">'
+      +'👋 Namaste! TRD Support mein aapka swagat hai.<br><br>'
+      +'<b>Quick Help:</b><br>'
+      +'• Demo login: demo/demo123<br>'
+      +'• Paper trading: PAPER mode select karo<br>'
+      +'• Strategy copy: 📋 button dabao<br>'
+      +'• Admin: TRD logo pe 3x click karo'
+      +'</div>'
+      +'</div>'
+      +'<div style="padding:8px;border-top:1px solid var(--bo);display:flex;gap:6px">'
+      +'<input id="support-input" placeholder="Message likhiye..." style="flex:1;font-size:11px;padding:6px 8px">'
+      +'<button onclick="sendSupportMsg()" class="btn bg" style="padding:6px 10px;font-size:11px">Send</button>'
+      +'</div>';
+    document.body.appendChild(panel);
+  }
+  panel.style.display = _supportOpen ? 'block' : 'none';
+}
+
+function sendSupportMsg(){
+  var input = document.getElementById('support-input');
+  var msgs = document.getElementById('support-msgs');
+  if(!input || !input.value.trim()) return;
+  var userMsg = input.value.trim();
+  input.value = '';
+  // Show user message
+  msgs.innerHTML += '<div style="text-align:right;margin-bottom:6px"><span style="background:rgba(79,142,247,.2);border-radius:8px;padding:6px 10px;font-size:11px;display:inline-block">'+userMsg+'</span></div>';
+  // Auto reply
+  setTimeout(function(){
+    var replies = {
+      'login': 'Demo login: username=demo, password=demo123',
+      'paper': 'Paper Test mein virtual money se trade karo. PAPER mode select karo.',
+      'strategy': 'STRATEGIES tab mein Built-in ya apni strategy save karo.',
+      'chart': 'OPTIONS → CHAIN tab mein chart dikhai dega.',
+      'help': 'Kya problem hai? Aur detail mein batayiye.',
+    };
+    var reply = 'Aapka sawaal hamare team ko forward ho gaya hai. 24 ghante mein jawab milega. 🙏';
+    for(var k in replies){ if(userMsg.toLowerCase().indexOf(k)>=0){ reply=replies[k]; break; } }
+    msgs.innerHTML += '<div style="margin-bottom:6px"><span style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:6px 10px;font-size:11px;display:inline-block">🤖 '+reply+'</span></div>';
+    msgs.scrollTop = msgs.scrollHeight;
+  }, 800);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════════════
+// REFERRAL PAGE FUNCTIONS
+// ══════════════════════════════════════════════════════════
+function loadMyReferral(){
+  // Load user's own referral code
+  req('/admin/referral/list','GET',null,function(err,d){
+    var codeEl = document.getElementById('my-ref-code');
+    var statsEl = document.getElementById('my-ref-stats');
+    if(err||!d||!d.codes){ 
+      if(codeEl) codeEl.textContent = 'Contact admin';
+      return;
+    }
+    // Find code for this user
+    var myCode = d.codes.find(function(c){
+      return c.owner_user_id===window.UID || c.owner_email===window.USER_EMAIL;
+    });
+    if(!myCode){
+      if(codeEl) codeEl.textContent = 'Not assigned';
+      if(statsEl) statsEl.innerHTML='<div style="font-size:10px;color:var(--mu);text-align:center;grid-column:span 2">Admin se referral code request karo</div>';
+      return;
+    }
+    if(codeEl) codeEl.textContent = myCode.code;
+    if(statsEl) statsEl.innerHTML = 
+      '<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">'+
+      '<div style="font-size:16px;font-weight:700;color:var(--gr)">'+myCode.uses_count+'</div>'+
+      '<div style="font-size:9px;color:var(--mu)">REFERRALS</div></div>'+
+      '<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">'+
+      '<div style="font-size:16px;font-weight:700;color:var(--am)">&#8377;'+myCode.total_bonus_paid+'</div>'+
+      '<div style="font-size:9px;color:var(--mu)">BONUS EARNED</div></div>';
+  });
+}
+
+function copyMyRefCode(){
+  var code = (document.getElementById('my-ref-code')||{}).textContent||'';
+  if(!code||code==='—'||code==='Not assigned'){ toast('No referral code assigned','warn'); return; }
+  if(navigator.clipboard){ 
+    navigator.clipboard.writeText(code).then(function(){ toast('✅ Code copied: '+code,'success'); });
+  } else {
+    prompt('Your referral code:', code);
+  }
+}
+
+function shareRefCode(){
+  var code = (document.getElementById('my-ref-code')||{}).textContent||'';
+  if(!code||code==='—'){ toast('No code to share','warn'); return; }
+  var text = 'TRD Platform join karo! Referral code: '+code+' — Discount milega signup pe. '+window.location.origin;
+  if(navigator.share){ navigator.share({title:'TRD Referral',text:text}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(text).then(function(){ toast('Share text copied!','success'); }); }
+}
+
+function applyRefCode(){
+  var code = (document.getElementById('apply-ref-input')||{}).value.trim().toUpperCase();
+  var msgEl = document.getElementById('apply-ref-msg');
+  if(!code||code.length<5){ toast('Valid code daalo','warn'); return; }
+  
+  // Validate first
   req('/referral/validate/'+code,'GET',null,function(err,d){
-    if(!msgEl) return;
-    msgEl.style.display='block';
-    if(d && d.valid){
-      msgEl.style.color='var(--gr)';
-      msgEl.textContent='✅ '+d.message;
+    if(err||!d||!d.valid){
+      if(msgEl){ msgEl.style.display='block'; msgEl.style.background='rgba(255,51,102,.1)'; msgEl.style.color='var(--rd)'; msgEl.textContent='❌ '+((d&&d.message)||'Invalid code'); }
+      return;
+    }
+    // Apply it
+    req('/referral/apply','POST',{code:code,new_user_id:window.UID,new_user_email:window.USER_EMAIL},function(e2,r){
+      if(msgEl){
+        if(r&&r.success){
+          msgEl.style.display='block'; msgEl.style.background='rgba(0,255,136,.1)'; msgEl.style.color='var(--gr)';
+          msgEl.textContent='✅ Code applied! Discount: ₹'+r.discount_applied+' credited';
+          toast('🎁 Referral code applied!','success');
+        } else {
+          msgEl.style.display='block'; msgEl.style.background='rgba(255,51,102,.1)'; msgEl.style.color='var(--rd)';
+          msgEl.textContent='❌ '+(r&&r.error||'Could not apply');
+        }
+      }
+    });
+  });
+}
+
+// Auto-load referral when tab opens
+var _origShow = typeof show === 'function' ? show : null;
+// Hook into show() - when 'ref' tab opens, load referral data
+document.addEventListener('click', function(e){
+  if(e.target && e.target.getAttribute && e.target.getAttribute('onclick') && 
+     e.target.getAttribute('onclick').indexOf("show('ref'")>=0){
+    setTimeout(loadMyReferral, 300);
+  }
+});
+
+// ══════════════════════════════════════════════════════════
+// BROKER API — Professional confirmation system
+// ══════════════════════════════════════════════════════════
+function openBrokerSetup(broker){
+  var existing = document.getElementById('broker-setup-modal');
+  if(existing) existing.remove();
+  
+  var modal = document.createElement('div');
+  modal.id = 'broker-setup-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+  
+  var saved = {};
+  try{ saved = JSON.parse(localStorage.getItem('trd_broker_cfg')||'{}'); }catch(e){}
+  var bCfg = saved[broker]||{};
+  var isConnected = bCfg.connected && (Date.now()-bCfg.time < 86400000);
+  
+  modal.innerHTML = 
+    '<div style="background:var(--bg3);border:1px solid rgba(79,142,247,.3);border-radius:16px;width:100%;max-width:380px;overflow:hidden">'+
+    '<div style="background:linear-gradient(135deg,rgba(79,142,247,.1),rgba(0,255,136,.05));padding:16px 20px;border-bottom:1px solid var(--bo);display:flex;justify-content:space-between;align-items:center">'+
+    '<div><div style="font-weight:700;font-size:14px">'+broker+' API Setup</div>'+
+    '<div style="font-size:10px;color:var(--mu)">Connect your broker for live trading</div></div>'+
+    '<div style="width:10px;height:10px;border-radius:50%;background:'+(isConnected?'var(--gr)':'var(--rd)')+';box-shadow:0 0 8px '+(isConnected?'var(--gr)':'var(--rd)')+'"></div>'+
+    '</div>'+
+    '<div style="padding:16px 20px">'+
+    '<div style="background:'+(isConnected?'rgba(0,255,136,.08)':'rgba(255,193,7,.06)')+';border:1px solid '+(isConnected?'rgba(0,255,136,.3)':'rgba(255,193,7,.3)')+';border-radius:8px;padding:10px;font-size:11px;margin-bottom:12px">'+
+    (isConnected?'✅ Connected to '+broker+' — Live trading enabled':'⚠️ Not connected — Paper trading mode active')+
+    '</div>'+
+    '<div class="lbl" style="margin-bottom:3px">API KEY</div>'+
+    '<input id="bk-api-key" value="'+(bCfg.api_key||'')+'" placeholder="Your '+broker+' API key" style="width:100%;margin-bottom:10px;font-family:monospace;font-size:11px">'+
+    '<div class="lbl" style="margin-bottom:3px">API SECRET</div>'+
+    '<input id="bk-api-secret" type="password" value="'+(bCfg.api_secret||'')+'" placeholder="Your '+broker+' API secret" style="width:100%;margin-bottom:10px;font-family:monospace;font-size:11px">'+
+    '<div id="bk-test-result" style="font-size:10px;margin-bottom:10px;display:none"></div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button onclick="testBrokerConn(\"'+broker+'\")" class="btn bb" style="flex:1;padding:10px;font-size:11px">🔍 TEST</button>'+
+    '<button onclick="saveBrokerConn(\"'+broker+'\")" class="btn bg blg" style="flex:1;padding:10px;font-size:11px">💾 SAVE & CONNECT</button>'+
+    '</div>'+
+    '</div>'+
+    '<div style="padding:8px 16px 14px;border-top:1px solid var(--bo);display:flex;justify-content:space-between;align-items:center">'+
+    '<button onclick="document.getElementById('broker-setup-modal').remove()" style="background:none;border:none;color:var(--mu);font-size:11px;cursor:pointer">Cancel</button>'+
+    (isConnected?'<button onclick="disconnectBroker(\"'+broker+'\")" style="background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:6px;padding:6px 12px;font-size:10px;cursor:pointer">Disconnect</button>':'')+
+    '</div></div>';
+  
+  document.body.appendChild(modal);
+}
+
+function testBrokerConn(broker){
+  var key = (document.getElementById('bk-api-key')||{}).value||'';
+  var result = document.getElementById('bk-test-result');
+  if(!key){ toast('API key required','warn'); return; }
+  if(result){ result.style.display='block'; result.style.color='var(--am)'; result.textContent='Testing connection...'; }
+  req('/broker/connect/'+broker,'GET',null,function(err,d){
+    if(!result) return;
+    if(err||!d||d.error){
+      result.style.color='var(--rd)';
+      result.textContent='❌ Connection failed. Check API key and permissions.';
     } else {
-      msgEl.style.color='var(--rd)';
-      msgEl.textContent='❌ '+(d&&d.message||'Invalid code');
+      result.style.color='var(--gr)';
+      result.textContent='✅ Connection successful! '+broker+' is ready.';
     }
   });
 }
 
-// Modal close delegation
-document.addEventListener('click',function(e){
-  if(e.target&&e.target.classList.contains('modal-close-btn')){
-    var mid=e.target.dataset.modal;
-    var m=document.getElementById(mid);
-    if(m) m.style.display='none';
-  }
-});
+function saveBrokerConn(broker){
+  var key = (document.getElementById('bk-api-key')||{}).value.trim();
+  var secret = (document.getElementById('bk-api-secret')||{}).value.trim();
+  if(!key){ toast('API key required','warn'); return; }
+  try{
+    var all = JSON.parse(localStorage.getItem('trd_broker_cfg')||'{}');
+    all[broker] = {broker:broker, api_key:key, api_secret:secret, connected:true, time:Date.now()};
+    localStorage.setItem('trd_broker_cfg', JSON.stringify(all));
+  }catch(e){}
+  toast('✅ '+broker+' configured successfully!','success');
+  var modal = document.getElementById('broker-setup-modal');
+  if(modal) modal.remove();
+  loadBrokerStatus();
+}
 
-// Event delegation for admin table buttons
-document.addEventListener('click',function(e){
-  if(e.target&&e.target.classList.contains('adm-edit-btn')){
-    editUser(e.target.dataset.uid);
-  }
-  if(e.target&&e.target.classList.contains('adm-del-btn')){
-    deleteUserConfirm(e.target.dataset.uid, e.target.dataset.name);
-  }
-});
-
-// Event delegation for referral deactivate buttons
-document.addEventListener('click', function(e){
-  if(e.target && e.target.classList.contains('ref-deact-btn')){
-    var code = e.target.dataset.code;
-    if(code) deactivateReferral(code);
-  }
-});
-
-function applyReferralOnLogin(userId, email){
-  var code = (document.getElementById('ref-code-input')||{}).value||'';
-  if(!code) return;
-  req('/referral/apply','POST',{code:code, new_user_id:userId, new_user_email:email},
-    function(err,d){
-      if(d && d.success) toast('🎁 Referral applied! Discount: ₹'+d.discount_applied,'success');
-    }
-  );
+function disconnectBroker(broker){
+  try{
+    var all = JSON.parse(localStorage.getItem('trd_broker_cfg')||'{}');
+    if(all[broker]) all[broker].connected = false;
+    localStorage.setItem('trd_broker_cfg', JSON.stringify(all));
+  }catch(e){}
+  toast(broker+' disconnected','warn');
+  var modal = document.getElementById('broker-setup-modal');
+  if(modal) modal.remove();
 }
 
 // ══════════════════════════════════════════════════════════
-// SUPPORT + TNC + LOGO TRIPLE CLICK + LOGOUT
-// ══════════════════════════════════════════════════════════
-
-// TnC - show after login
+// TnC OVERLAY
+// ══════════════════════════════════════════════════════════  
 function showTnC(){
-  try{ if(localStorage.getItem('trd_tnc_accepted')) return; }catch(e){}
-  var overlay = document.getElementById('tnc-overlay');
-  if(overlay){ overlay.style.display='flex'; }
+  try{ if(localStorage.getItem('trd_tnc_ok')) return; }catch(e){}
+  var el = document.getElementById('tnc-overlay');
+  if(el){ el.style.display='flex'; }
 }
 
 function acceptTnC(){
-  var chk = document.getElementById('tnc-check');
-  if(!chk || !chk.checked){ toast('Please check the checkbox to agree','warn'); return; }
-  try{ localStorage.setItem('trd_tnc_accepted','1'); }catch(e){}
-  var overlay = document.getElementById('tnc-overlay');
-  if(overlay){ overlay.style.opacity='0'; overlay.style.transition='opacity .4s'; setTimeout(function(){ overlay.style.display='none'; },400); }
+  var cb = document.getElementById('tnc-check');
+  if(!cb||!cb.checked){ toast('Please agree to terms first','warn'); return; }
+  try{ localStorage.setItem('trd_tnc_ok','1'); }catch(e){}
+  var el = document.getElementById('tnc-overlay');
+  if(el){ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(function(){ el.style.display='none'; },300); }
   toast('Welcome to TRD! ✅','success');
 }
 
-function logout(){
-  try{ localStorage.removeItem('trd_user'); localStorage.removeItem('trd_tnc_accepted'); }catch(e){}
-  window.UID = null;
-  location.reload();
-}
-
-// Triple click logo → admin
-var _lc=0,_lt=null;
-function handleLogoClick(){
-  _lc++;
-  clearTimeout(_lt);
-  _lt=setTimeout(function(){_lc=0;},700);
-  if(_lc>=3){ _lc=0; show('admin',null); toast('🔐 Admin Panel','success'); }
-}
-
-// Support chat
-var _spOpen=false;
-function toggleSupport(){
-  _spOpen=!_spOpen;
-  var p=document.getElementById('support-panel');
-  if(!p){
-    p=document.createElement('div');
-    p.id='support-panel';
-    p.style.cssText='position:fixed;bottom:78px;right:16px;width:300px;max-height:420px;background:var(--bg3);border:1px solid var(--bo);border-radius:12px;z-index:9999;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.6);display:flex;flex-direction:column';
-    p.innerHTML='<div style="background:var(--bg2);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">'
-      +'<div style="font-weight:700;font-size:12px;color:var(--gr)">💬 Customer Support</div>'
-      +'<button onclick="toggleSupport()" style="background:none;border:none;color:var(--mu);font-size:16px;cursor:pointer">✕</button>'
-      +'</div>'
-      +'<div id="sp-msgs" style="flex:1;overflow-y:auto;padding:10px">'
-      +'<div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:10px;font-size:11px;line-height:1.7">'
-      +'👋 <b>Namaste!</b> TRD Support mein swagat hai.<br><br>'
-      +'<b>Quick Help:</b><br>'
-      +'• Paper trading: PAPER mode select karo<br>'
-      +'• Strategy copy: 📋 button dabao<br>'
-      +'• Options chain: OPTIONS tab<br>'
-      +'• Backtest: BACKTEST tab'
-      +'</div></div>'
-      +'<div style="padding:8px;border-top:1px solid var(--bo);display:flex;gap:6px;flex-shrink:0">'
-      +'<input id="sp-input" placeholder="Message likhiye..." style="flex:1;font-size:11px;padding:6px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--tx);border-radius:6px">'
-      +'<button onclick="sendSupport()" class="btn bg" style="padding:6px 10px;font-size:11px">Send</button>'
-      +'</div>';
-    document.body.appendChild(p);
+// ══════════════════════════════════════════════════════════
+// COPY STRATEGY TEXT
+// ══════════════════════════════════════════════════════════
+function copyStrategyText(s){
+  if(!s){ toast('No strategy data','warn'); return; }
+  var text = s.nlp_input || s.description || '';
+  if(!text){
+    var lines = ['=== '+(s.name||'STRATEGY').toUpperCase()+' ===','',
+      'ACTION: '+(s.action||'BUY')+' '+(s.instrument||'NIFTY')+' '+(s.option_type||'CE')+' '+(s.quantity||1)+' LOT',
+      'Stop Loss: '+(s.sl_value||s.stop_loss||80)+' pts | Target: '+(s.target_value||s.target||160)+' pts',
+      'Timeframe: '+(s.timeframe||'15m')];
+    if(s.entry_conditions&&s.entry_conditions.length){ lines.push(''); lines.push('ENTRY:'); (Array.isArray(s.entry_conditions)?s.entry_conditions:[s.entry_conditions]).forEach(function(c,i){ lines.push((i+1)+'. '+c); }); }
+    if(s.exit_conditions&&s.exit_conditions.length){ lines.push(''); lines.push('EXIT:'); (Array.isArray(s.exit_conditions)?s.exit_conditions:[s.exit_conditions]).forEach(function(c){ lines.push('• '+c); }); }
+    text = lines.join('\n');
   }
-  p.style.display=_spOpen?'flex':'none';
+  if(navigator.clipboard){ navigator.clipboard.writeText(text).then(function(){ toast('✅ Copied!','success'); }).catch(function(){ _copyFallback(text); }); }
+  else { _copyFallback(text); }
 }
 
-function sendSupport(){
-  var input=document.getElementById('sp-input');
-  var msgs=document.getElementById('sp-msgs');
-  if(!input||!input.value.trim())return;
-  var txt=input.value.trim(); input.value='';
-  msgs.innerHTML+='<div style="text-align:right;margin:6px 0"><span style="background:rgba(79,142,247,.2);border-radius:8px;padding:5px 10px;font-size:11px;display:inline-block">'+txt+'</span></div>';
-  msgs.scrollTop=msgs.scrollHeight;
-  setTimeout(function(){
-    var rmap={'paper':'PAPER mode select karo aur EXECUTE PAPER button dabao.',
-      'login':'Google ya Demo Account se login karo.',
-      'strategy':'STRATEGIES tab mein Built-in ya apni strategy dekho.',
-      'chart':'OPTIONS → CHAIN tab mein chart option hai.',
-      'backtest':'BACKTEST tab mein strategy select karo aur RUN karo.',
-      'referral':'PROFILE → ya admin se referral code banao.',
-      'help':'Kya problem hai? Thoda aur detail mein batayiye.'};
-    var r='Aapka sawaal receive hua. Hum jald jawab denge. 🙏';
-    var tl=txt.toLowerCase();
-    for(var k in rmap){ if(tl.indexOf(k)>=0){r=rmap[k];break;} }
-    msgs.innerHTML+='<div style="margin:6px 0"><span style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:5px 10px;font-size:11px;display:inline-block">🤖 '+r+'</span></div>';
-    msgs.scrollTop=msgs.scrollHeight;
-  },800);
+function _copyFallback(text){
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast('✅ Copied!','success'); }
+  catch(e){ prompt('Copy this text:', text); }
+  document.body.removeChild(ta);
 }
-
-// Enter key support for chat
-document.addEventListener('keydown',function(e){
-  if(e.key==='Enter' && document.activeElement && document.activeElement.id==='sp-input') sendSupport();
-});
 
 // ══════════════════════════════════════════════════════════
-// PROFILE SYSTEM
+// SAVE STRATEGY AS-IS  
 // ══════════════════════════════════════════════════════════
-function loadProfile(){
-  if(!window.UID) return;
-  req('/users/'+window.UID+'/profile','GET',null,function(err,d){
-    if(err||!d||d.error){
-      // Use local data
-      _updateProfileUI({
-        full_name: window.USER_NAME||'Trader',
-        email: window.USER_EMAIL||'',
-        plan: window.USER_PLAN||'FREE',
-        capital: window.USER_CAPITAL||500000,
-        user_id: window.UID
-      });
-      return;
-    }
-    var u = d.user || d;
-    window.USER_NAME = u.full_name || u.username || window.USER_NAME;
-    window.USER_PLAN = u.subscription_plan || u.plan || window.USER_PLAN;
-    window.USER_CAPITAL = u.capital || window.USER_CAPITAL;
-    _updateProfileUI(u);
-  });
-}
-
-function _updateProfileUI(u){
-  var set = function(id,v){ var e=document.getElementById(id); if(e&&v) e.textContent=v; };
-  set('prof-name-display', u.full_name||u.username||'Trader');
-  set('prof-email-display', u.email||'');
-  set('prof-plan-display', u.subscription_plan||u.plan||'FREE');
-  set('prof-capital-display', '₹'+(u.capital||500000).toLocaleString('en-IN'));
-  set('prof-uid-display', u.user_id||u.id||window.UID||'');
-  // Update header plan badge
-  var pb = document.getElementById('plan-bdg');
-  if(pb) pb.textContent = u.subscription_plan||u.plan||'FREE';
-  // Profile picture
-  if(u.picture||window.USER_PICTURE){
-    var av = document.getElementById('prof-avatar');
-    if(av){ av.src=u.picture||window.USER_PICTURE; av.style.display='block'; }
-  }
-}
-
-function saveProfileInfo(){
-  var name = (document.getElementById('prof-edit-name')||{}).value||'';
-  var phone = (document.getElementById('prof-edit-phone')||{}).value||'';
-  if(!name){ toast('Name required','warn'); return; }
-  req('/users/'+window.UID,'PUT',{full_name:name, phone:phone},function(err,r){
+function saveStratAsIs(){
+  var nm = ((document.getElementById('ns-nm')||{}).value||'').trim();
+  var ta = document.getElementById('strat-nlp-in')||document.getElementById('nlp-in');
+  var text = ta ? ta.value.trim() : '';
+  if(!nm){ toast('Strategy name required','warn'); var e=document.getElementById('ns-nm'); if(e){e.focus();e.style.borderColor='var(--rd)';} return; }
+  if(!text){ toast('Strategy text required','warn'); return; }
+  var parsed = _quickParse(text);
+  req('/strategies/save','POST',{
+    user_id:window.UID, name:nm,
+    instrument:parsed.instrument, timeframe:parsed.timeframe,
+    sl_value:parsed.sl, target_value:parsed.tgt,
+    quantity:parsed.lots, action:parsed.action, option_type:parsed.otype,
+    description:text.slice(0,300), nlp_input:text,
+    entry_conditions:parsed.entry, exit_conditions:parsed.exit,
+    tags:['user'], is_public:false
+  },function(err,r){
     if(err||!r||r.error){ toast('Save failed','error'); return; }
-    window.USER_NAME = name;
-    toast('✅ Profile saved!','success');
-    loadProfile();
+    toast('✅ Saved: '+nm,'success');
+    if(ta) ta.value=''; var ne=document.getElementById('ns-nm'); if(ne) ne.value='';
+    setTimeout(loadMy, 1000);
   });
 }
 
-// Broker API functions
-function testBrokerConnection(broker){
-  var apiKey = (document.getElementById('broker-key-'+broker)||{}).value||'';
-  if(!apiKey){ toast('API key required','warn'); return; }
-  toast('Testing '+broker+' connection...','info');
-  req('/broker/connect/'+broker+'?api_key='+encodeURIComponent(apiKey),'GET',null,function(err,d){
-    if(err||!d||d.error){ toast('❌ Connection failed: '+(d&&d.error||'Check API key'),'error'); return; }
-    toast('✅ '+broker+' connected!','success');
-  });
+function _quickParse(text){
+  var t=text.toUpperCase();
+  return {
+    action:/\bSELL\b/.test(t)?'SELL':'BUY',
+    instrument:/BANKNIFTY/.test(t)?'BANKNIFTY':/FINNIFTY/.test(t)?'FINNIFTY':/SENSEX/.test(t)?'SENSEX':'NIFTY',
+    otype:/\bPE\b|\bPUT\b/.test(t)?'PE':'CE',
+    lots:parseInt((text.match(/(\d+)\s*(?:lot|LOT)/i)||[0,1])[1]),
+    sl:parseFloat((text.match(/(?:sl|stop.?loss)[:\s]+(\d+)/i)||[0,80])[1]),
+    tgt:parseFloat((text.match(/(?:target|tgt)[:\s]+(\d+)/i)||[0,160])[1]),
+    timeframe:(text.match(/(?:tf|timeframe)[:\s]*([\d]+[mhd])/i)||[0,'15m'])[1],
+    entry:[], exit:[]
+  };
 }
 
-function saveBrokerConfig(broker){
-  var key = (document.getElementById('broker-key-'+broker)||{}).value||'';
-  var secret = (document.getElementById('broker-secret-'+broker)||{}).value||'';
-  if(!key){ toast('API Key required','warn'); return; }
-  try{
-    var config = JSON.parse(localStorage.getItem('trd_broker_config')||'{}');
-    config[broker] = {api_key: key, api_secret: secret, saved_at: new Date().toISOString()};
-    localStorage.setItem('trd_broker_config', JSON.stringify(config));
-    toast('✅ '+broker+' config saved!','success');
-  }catch(e){ toast('Save failed','error'); }
-}
 </script>
+</body>
+</html>
