@@ -3576,6 +3576,141 @@ def ml_features(symbol: str = "NIFTY"):
         "top_5": dict(sorted(model.feature_importance.items(), key=lambda x:-x[1])[:5])
     }
 
+# ══════════════════════════════════════════════════════════════════════════════
+# REFERRAL SYSTEM — Admin controls, user tracking, bonus/discount
+# ══════════════════════════════════════════════════════════════════════════════
+import sqlite3 as _sq3, os as _os, random as _rnd, string as _str
+
+REFERRAL_DB = _os.path.join(_os.path.dirname(__file__), "../database/referrals.db")
+
+def _ref_conn():
+    c = _sq3.connect(REFERRAL_DB)
+    c.row_factory = _sq3.Row
+    c.execute("""CREATE TABLE IF NOT EXISTS referral_codes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        owner_user_id TEXT NOT NULL,
+        owner_email TEXT DEFAULT '',
+        bonus_amount REAL DEFAULT 0,
+        discount_amount REAL DEFAULT 0,
+        validity_months INTEGER DEFAULT 1,
+        expires_at TEXT,
+        is_active INTEGER DEFAULT 1,
+        uses_count INTEGER DEFAULT 0,
+        total_bonus_paid REAL DEFAULT 0,
+        total_discount_given REAL DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS referral_uses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL,
+        new_user_id TEXT,
+        new_user_email TEXT,
+        bonus_paid REAL DEFAULT 0,
+        discount_given REAL DEFAULT 0,
+        used_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+    c.commit()
+    return c
+
+def _gen_code():
+    return "TRD" + "".join(_rnd.choices(_str.ascii_uppercase + _str.digits, k=8))
+
+# Admin: Create referral code
+@app.post("/admin/referral/create")
+def admin_create_referral(payload: dict):
+    owner_id = payload.get("owner_user_id","")
+    owner_email = payload.get("owner_email","")
+    bonus = float(payload.get("bonus_amount", 500))
+    discount = float(payload.get("discount_amount", 200))
+    months = int(payload.get("validity_months", 1))
+    if not owner_id and not owner_email:
+        return {"error": "owner_user_id ya owner_email required"}
+    code = _gen_code()
+    from datetime import datetime, timedelta
+    expires = (datetime.now() + timedelta(days=30*months)).isoformat()
+    with _ref_conn() as c:
+        c.execute("""INSERT INTO referral_codes 
+            (code,owner_user_id,owner_email,bonus_amount,discount_amount,validity_months,expires_at)
+            VALUES (?,?,?,?,?,?,?)""",
+            (code, owner_id, owner_email, bonus, discount, months, expires))
+    return {"code": code, "owner_user_id": owner_id, "bonus_amount": bonus,
+            "discount_amount": discount, "expires_at": expires, "success": True}
+
+# Admin: List all referral codes
+@app.get("/admin/referral/list")
+def admin_referral_list():
+    with _ref_conn() as c:
+        rows = c.execute("SELECT * FROM referral_codes ORDER BY created_at DESC").fetchall()
+    return {"codes": [dict(r) for r in rows], "total": len(rows)}
+
+# Admin: Analytics
+@app.get("/admin/referral/analytics")
+def admin_referral_analytics():
+    with _ref_conn() as c:
+        codes = c.execute("SELECT * FROM referral_codes ORDER BY uses_count DESC").fetchall()
+        uses = c.execute("SELECT * FROM referral_uses ORDER BY used_at DESC LIMIT 50").fetchall()
+        stats = c.execute("""SELECT 
+            COUNT(*) as total_codes,
+            SUM(uses_count) as total_uses,
+            SUM(total_bonus_paid) as total_bonus,
+            SUM(total_discount_given) as total_discount
+            FROM referral_codes""").fetchone()
+    return {
+        "codes": [dict(r) for r in codes],
+        "recent_uses": [dict(r) for r in uses],
+        "summary": dict(stats) if stats else {}
+    }
+
+# Admin: Deactivate code
+@app.post("/admin/referral/deactivate")
+def admin_deactivate_referral(payload: dict):
+    code = payload.get("code","")
+    with _ref_conn() as c:
+        c.execute("UPDATE referral_codes SET is_active=0 WHERE code=?", (code,))
+    return {"deactivated": True, "code": code}
+
+# User: Validate referral code
+@app.get("/referral/validate/{code}")
+def validate_referral(code: str):
+    from datetime import datetime
+    with _ref_conn() as c:
+        row = c.execute("SELECT * FROM referral_codes WHERE code=? AND is_active=1", (code,)).fetchone()
+    if not row:
+        return {"valid": False, "message": "Invalid or expired code"}
+    row = dict(row)
+    if row["expires_at"] and row["expires_at"] < datetime.now().isoformat():
+        return {"valid": False, "message": "Code expired"}
+    return {"valid": True, "code": code, "discount_amount": row["discount_amount"],
+            "message": f"Valid! You get ₹{row['discount_amount']} discount"}
+
+# User: Apply referral code at signup
+@app.post("/referral/apply")
+def apply_referral(payload: dict):
+    code = payload.get("code","")
+    new_user_id = payload.get("new_user_id","")
+    new_user_email = payload.get("new_user_email","")
+    from datetime import datetime
+    with _ref_conn() as c:
+        row = c.execute("SELECT * FROM referral_codes WHERE code=? AND is_active=1", (code,)).fetchone()
+        if not row:
+            return {"error": "Invalid code"}
+        row = dict(row)
+        if row["expires_at"] and row["expires_at"] < datetime.now().isoformat():
+            return {"error": "Code expired"}
+        # Record use
+        c.execute("""INSERT INTO referral_uses (code,new_user_id,new_user_email,bonus_paid,discount_given)
+            VALUES (?,?,?,?,?)""", (code, new_user_id, new_user_email, row["bonus_amount"], row["discount_amount"]))
+        # Update stats
+        c.execute("""UPDATE referral_codes SET 
+            uses_count=uses_count+1,
+            total_bonus_paid=total_bonus_paid+?,
+            total_discount_given=total_discount_given+?
+            WHERE code=?""", (row["bonus_amount"], row["discount_amount"], code))
+    return {"success": True, "discount_applied": row["discount_amount"],
+            "bonus_credited": row["bonus_amount"], "owner_id": row["owner_user_id"]}
+
+
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
     """Scan all instruments with ML models - auto-trains if needed"""

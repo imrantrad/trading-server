@@ -6944,4 +6944,154 @@ function adminAction(action){
     toast(err?'Action failed':'✅ '+action+' executed','success');
   });
 }
+
+// ══════════════════════════════════════════════════════════
+// REFERRAL SYSTEM JS
+// ══════════════════════════════════════════════════════════
+
+function createReferralCode(){
+  var ownerId = (document.getElementById('ref-owner-id')||{}).value||'';
+  var bonus = parseFloat((document.getElementById('ref-bonus')||{}).value)||500;
+  var discount = parseFloat((document.getElementById('ref-discount')||{}).value)||200;
+  var months = parseInt((document.getElementById('ref-validity')||{}).value)||1;
+  if(!ownerId){ toast('User ID ya email required','warn'); return; }
+  req('/admin/referral/create','POST',{
+    owner_user_id: ownerId.includes('@') ? '' : ownerId,
+    owner_email: ownerId.includes('@') ? ownerId : '',
+    bonus_amount: bonus, discount_amount: discount, validity_months: months
+  },function(err,d){
+    if(err||!d||d.error){ toast('Error: '+(d&&d.error||'Failed'),'error'); return; }
+    var el = document.getElementById('ref-created-result');
+    if(el){
+      el.style.display='block';
+      el.innerHTML = '✅ CODE GENERATED!<br>'
+        +'<span style="font-size:18px;font-weight:700;color:var(--gr)">'+d.code+'</span><br>'
+        +'<span style="font-size:10px">Bonus: ₹'+bonus+' | Discount: ₹'+discount+' | Validity: '+months+' month(s)</span>';
+    }
+    toast('✅ Referral code: '+d.code,'success');
+    loadAdminReferral();
+  });
+}
+
+function loadAdminReferral(){
+  req('/admin/referral/analytics','GET',null,function(err,d){
+    if(err||!d) return;
+    // Update analytics
+    var s = d.summary || {};
+    var set = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+    set('ref-total-codes', s.total_codes||0);
+    set('ref-total-uses', s.total_uses||0);
+    set('ref-total-bonus', '₹'+(s.total_bonus||0));
+    set('ref-total-disc', '₹'+(s.total_discount||0));
+    
+    // Show codes list
+    var list = document.getElementById('ref-codes-list');
+    if(!list || !d.codes) return;
+    if(!d.codes.length){
+      list.innerHTML='<div style="color:var(--mu);padding:12px;text-align:center">No referral codes yet</div>';
+      return;
+    }
+    list.innerHTML = d.codes.map(function(c){
+      return '<div style="background:var(--bg4);padding:8px;border-radius:6px;margin-bottom:6px;border-left:3px solid '+(c.is_active?'var(--gr)':'var(--rd)')+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-weight:700;font-size:12px;color:'+(c.is_active?'var(--gr)':'var(--mu)')+'">'+c.code+'</span>'+
+        '<span style="font-size:9px;background:'+(c.is_active?'rgba(0,255,136,.1)':'rgba(255,51,102,.1)')+';border-radius:4px;padding:2px 6px;color:'+(c.is_active?'var(--gr)':'var(--rd)')+'">'+
+        (c.is_active?'ACTIVE':'INACTIVE')+'</span></div>'+
+        '<div style="font-size:10px;color:var(--mu);margin-top:4px">'+
+        'Owner: '+c.owner_email+' | Uses: <b>'+c.uses_count+'</b> | Bonus paid: <b>₹'+c.total_bonus_paid+'</b></div>'+
+        '<div style="font-size:10px;color:var(--mu)">Bonus: ₹'+c.bonus_amount+' | Discount: ₹'+c.discount_amount+' | Expires: '+c.expires_at.slice(0,10)+'</div>'+
+        (c.is_active?'<button onclick="deactivateReferral(''+c.code+'')" style="margin-top:4px;font-size:9px;padding:2px 8px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer">DEACTIVATE</button>':'')+
+        '</div>';
+    }).join('');
+  });
+}
+
+function deactivateReferral(code){
+  if(!confirm('Deactivate code '+code+'?')) return;
+  req('/admin/referral/deactivate','POST',{code:code},function(err,d){
+    toast(d&&d.deactivated ? '✅ Deactivated' : '❌ Error','success');
+    loadAdminReferral();
+  });
+}
+
+function validateRefCode(){
+  var code = (document.getElementById('ref-code-input')||{}).value||'';
+  var msgEl = document.getElementById('ref-code-msg');
+  if(!code){ toast('Code daalo','warn'); return; }
+  req('/referral/validate/'+code,'GET',null,function(err,d){
+    if(!msgEl) return;
+    msgEl.style.display='block';
+    if(d && d.valid){
+      msgEl.style.color='var(--gr)';
+      msgEl.textContent='✅ '+d.message;
+    } else {
+      msgEl.style.color='var(--rd)';
+      msgEl.textContent='❌ '+(d&&d.message||'Invalid code');
+    }
+  });
+}
+
+function applyReferralOnLogin(userId, email){
+  var code = (document.getElementById('ref-code-input')||{}).value||'';
+  if(!code) return;
+  req('/referral/apply','POST',{code:code, new_user_id:userId, new_user_email:email},
+    function(err,d){
+      if(d && d.success) toast('🎁 Referral applied! Discount: ₹'+d.discount_applied,'success');
+    }
+  );
+}
 </script>
+      <!-- REFERRAL PANEL -->
+      <div id="adm-referral" style="display:none">
+        <!-- Create Code -->
+        <div class="card" style="margin-bottom:8px">
+          <div class="chdr">🎁 CREATE REFERRAL CODE</div>
+          <div class="g2" style="gap:8px;margin-bottom:8px">
+            <div><div class="lbl">USER EMAIL/ID</div>
+              <input id="ref-owner-id" placeholder="user@email.com or USR123"></div>
+            <div><div class="lbl">BONUS (₹) for Owner</div>
+              <input id="ref-bonus" type="number" value="500" placeholder="500"></div>
+          </div>
+          <div class="g2" style="gap:8px;margin-bottom:8px">
+            <div><div class="lbl">DISCOUNT (₹) for New User</div>
+              <input id="ref-discount" type="number" value="200" placeholder="200"></div>
+            <div><div class="lbl">VALIDITY (months)</div>
+              <select id="ref-validity">
+                <option value="1">1 Month</option>
+                <option value="2">2 Months</option>
+                <option value="3">3 Months</option>
+                <option value="6">6 Months</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="createReferralCode()" class="btn bg blg" style="width:100%;font-size:12px">➕ GENERATE CODE</button>
+          <div id="ref-created-result" style="margin-top:8px;display:none;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:6px;padding:8px;font-family:monospace;font-size:12px"></div>
+        </div>
+        <!-- Active Codes List -->
+        <div class="card" style="margin-bottom:8px">
+          <div class="chdr">📋 ACTIVE CODES <button onclick="loadAdminReferral()" class="btn" style="font-size:9px;padding:2px 8px">🔄</button></div>
+          <div id="ref-codes-list" style="max-height:300px;overflow-y:auto"></div>
+        </div>
+        <!-- Analytics -->
+        <div class="card">
+          <div class="chdr">📊 REFERRAL ANALYTICS</div>
+          <div id="ref-analytics" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
+              <div id="ref-total-codes" style="font-size:20px;font-weight:700;color:var(--gr)">—</div>
+              <div style="font-size:9px;color:var(--mu)">TOTAL CODES</div>
+            </div>
+            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
+              <div id="ref-total-uses" style="font-size:20px;font-weight:700;color:var(--bl)">—</div>
+              <div style="font-size:9px;color:var(--mu)">TOTAL USES</div>
+            </div>
+            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
+              <div id="ref-total-bonus" style="font-size:20px;font-weight:700;color:var(--am)">—</div>
+              <div style="font-size:9px;color:var(--mu)">BONUS PAID</div>
+            </div>
+            <div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">
+              <div id="ref-total-disc" style="font-size:20px;font-weight:700;color:var(--gr)">—</div>
+              <div style="font-size:9px;color:var(--mu)">DISCOUNT GIVEN</div>
+            </div>
+          </div>
+        </div>
+      </div>
