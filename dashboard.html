@@ -8539,7 +8539,7 @@ function loadAdminReferral(){
         +'Uses: <b>'+c.uses_count+'</b> | Bonus: <b>₹'+c.total_bonus_paid+'</b> | Disc: <b>₹'+c.total_discount_given+'</b><br>'
         +'Per use: +₹'+c.bonus_amount+' / -₹'+c.discount_amount+' | Expires: '+(c.expires_at||'').slice(0,10)
         +'</div>'
-        +(active?'<button onclick="deactivateRefCode(''+c.code+'')" style="margin-top:8px;font-size:9px;padding:4px 10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer">DEACTIVATE</button>':'')
+        +(active?'<button data-code="'+c.code+'" onclick="deactivateRefCode(this.getAttribute('data-code'))" style="margin-top:8px;font-size:9px;padding:4px 10px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer">DEACTIVATE</button>':'')
         +'</div>';
     }).join('');
     toast(codes.length+' codes loaded','success');
