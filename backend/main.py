@@ -2087,8 +2087,30 @@ def advance_paper_test(strategy_id: str, days: int = 1):
 # ── LEGAL ────────────────────────────────────────────────
 @app.get("/legal/{doc_type}")
 def get_legal_doc(doc_type: str):
-    if not ENTERPRISE: return {}
-    return legal.get_doc(doc_type)
+    """Return legal document content"""
+    docs = {
+        "tos": {
+            "title": "Terms of Service",
+            "content": "TRD v12.3 Terms of Service\n\n1. ACCEPTANCE\nBy using TRD, you agree to these terms.\n\n2. PAPER TRADING DISCLAIMER\nAll paper trades are simulations. No real money is involved.\n\n3. BACKTEST DISCLAIMER\nBacktest results are historical simulations. Past performance does not guarantee future results.\n\n4. RISK WARNING\nOptions trading involves substantial risk. Only trade with capital you can afford to lose.\n\n5. DATA ACCURACY\nMarket data is reconstructed for simulation purposes and may not exactly match live market data.\n\n6. NO FINANCIAL ADVICE\nTRD is an educational and simulation platform. Nothing here constitutes financial advice.\n\n7. LIABILITY\nTRD and its creators are not liable for any trading losses.\n\n8. MODIFICATIONS\nWe reserve the right to modify these terms at any time.",
+        },
+        "privacy": {
+            "title": "Privacy Policy",
+            "content": "TRD v12.3 Privacy Policy\n\n1. DATA COLLECTION\nWe collect: username, email, trading preferences, and paper trade history.\n\n2. DATA USE\nYour data is used only to provide the TRD platform services.\n\n3. DATA STORAGE\nAll data is stored securely on encrypted servers.\n\n4. NO SALE OF DATA\nWe do not sell, rent, or share your personal data with third parties.\n\n5. COOKIES\nWe use cookies for session management and user preferences.\n\n6. YOUR RIGHTS\nYou may request deletion of your account and data at any time.\n\n7. CONTACT\nFor privacy concerns, contact the administrator.",
+        },
+        "risk_disclosure": {
+            "title": "Risk Disclosure",
+            "content": "RISK DISCLOSURE STATEMENT\n\nOPTIONS TRADING RISK\nOptions and derivatives trading carries HIGH RISK.\n\nKEY RISKS:\n• You can lose 100% of premium paid on long options\n• Short options carry unlimited risk\n• Leverage amplifies both gains and losses\n• Liquidity risk: options can become illiquid\n• Time decay (theta) works against option buyers\n• Volatility risk can change option values rapidly\n\nPAPER TRADING NOTE\nThis platform uses paper trading simulation only.\nResults may differ significantly from live trading.\n\nBEFORE TRADING:\n• Understand all risks involved\n• Only use money you can afford to lose\n• Consider consulting a SEBI registered advisor\n• Practice extensively with paper trading first",
+        },
+        "disclaimer": {
+            "title": "Disclaimer",
+            "content": "DISCLAIMER\n\nTRD v12.3 is an educational derivatives simulation platform.\n\n• Not SEBI registered\n• Not a broker or investment advisor\n• For educational and simulation purposes only\n• Paper trading results ≠ live trading results\n• Historical backtests do not predict future performance\n\nAlways consult a qualified financial advisor before trading real money.",
+        },
+    }
+    doc = docs.get(doc_type, docs.get("tos"))
+    if ENTERPRISE:
+        try: return legal.get_doc(doc_type)
+        except: pass
+    return doc
 
 @app.post("/legal/consent")
 def record_consent(user_id: str, consent_type: str, version: str = "1.0"):
@@ -4398,6 +4420,61 @@ def api_export_report(user_id: str, format: str = "json"):
                 "total_pnl": portfolio.get("total_pnl", 0),
             }
         }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/users/profile/{user_id}")
+def get_user_profile(user_id: str):
+    """Get user profile data"""
+    try:
+        if USER_SYSTEM:
+            with user_db.conn() as c:
+                row = c.execute(
+                    "SELECT * FROM users WHERE id=?", (user_id,)
+                ).fetchone()
+            if row:
+                r = dict(row)
+                r.pop("password_hash", None)
+                return {
+                    "user_id":    r.get("id",""),
+                    "username":   r.get("username",""),
+                    "email":      r.get("email",""),
+                    "full_name":  r.get("full_name",""),
+                    "plan":       r.get("subscription_plan","FREE"),
+                    "capital":    r.get("capital", 500000),
+                    "phone":      r.get("phone",""),
+                    "created_at": str(r.get("created_at","")),
+                    "is_active":  r.get("is_active", 1),
+                    "stats": {
+                        "total_trades": 0,
+                        "win_rate": 0,
+                        "total_pnl": 0,
+                        "strategies_count": len(user_db.get_strategies(user_id)),
+                    }
+                }
+        # Demo fallback
+        return {
+            "user_id": user_id, "username": "demo",
+            "email": "demo@trading.com", "full_name": "Demo Trader",
+            "plan": "PRO", "capital": 500000, "phone": "",
+            "stats": {"total_trades":0,"win_rate":0,"total_pnl":0,"strategies_count":0},
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.put("/users/profile/{user_id}")
+def update_user_profile(user_id: str, payload: dict):
+    """Update user profile"""
+    try:
+        updates = {}
+        if payload.get("full_name"): updates["full_name"]   = payload["full_name"]
+        if payload.get("email"):     updates["email"]       = payload["email"]
+        if payload.get("phone"):     updates["phone"]       = payload["phone"]
+        if payload.get("capital"):   updates["capital"]     = float(payload["capital"])
+        if USER_SYSTEM and updates:
+            user_db.update_user(user_id, updates)
+        return {"success": True, "updated": list(updates.keys())}
     except Exception as e:
         return {"error": str(e)}
 
