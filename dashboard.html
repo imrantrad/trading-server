@@ -1041,6 +1041,9 @@ setInterval(function(){
   <div style="display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none">
     <button id="bt-tab-run" onclick="btTab('run',this)" style="flex-shrink:0;padding:7px 14px;font-size:9px;font-weight:700;background:rgba(79,142,247,.12);border:1px solid rgba(79,142,247,.3);color:#4f8ef7;border-radius:6px;cursor:pointer">⚡ RUN</button>
     <button id="bt-tab-compare" onclick="btTab('compare',this)" style="flex-shrink:0;padding:7px 14px;font-size:9px;font-weight:700;background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-radius:6px;cursor:pointer">🔀 COMPARE</button>
+    <button id="bt-tab-optimizer" onclick="btTab('optimizer',this)" style="flex-shrink:0;padding:7px 14px;font-size:9px;font-weight:700;background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-radius:6px;cursor:pointer">⚙️ OPTIMIZE</button>
+    <button id="bt-tab-stress" onclick="btTab('stress',this)" style="flex-shrink:0;padding:7px 14px;font-size:9px;font-weight:700;background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-radius:6px;cursor:pointer">🔥 STRESS</button>
+    <button id="bt-tab-monte" onclick="btTab('monte',this)" style="flex-shrink:0;padding:7px 14px;font-size:9px;font-weight:700;background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-radius:6px;cursor:pointer">🎲 MONTE CARLO</button>
     <button id="bt-tab-history" onclick="btTab('history',this)" style="flex-shrink:0;padding:7px 14px;font-size:9px;font-weight:700;background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-radius:6px;cursor:pointer">📋 HISTORY</button>
   </div>
 
@@ -1210,6 +1213,114 @@ setInterval(function(){
         <div id="bt-calendar" style="max-height:260px;overflow-y:auto"></div>
       </div>
 
+    </div>
+  </div>
+
+
+  <!-- ══ OPTIMIZER TAB ══ -->
+  <div id="bt-optimizer" style="display:none">
+    <div class="card" style="margin-bottom:8px;border-color:rgba(251,191,36,.2)">
+      <div class="chdr" style="color:var(--am)">⚙️ AUTO STRATEGY OPTIMIZER</div>
+      <div style="font-size:10px;color:var(--mu);margin-bottom:10px">Grid search: best SL% × Target% combination. Overfitting protection built-in.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><div class="lbl">STRATEGY</div>
+          <select id="opt-strategy" style="font-size:10px">
+            <option value="STR_THETA_DECAY">Theta Decay</option>
+            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor</option>
+            <option value="STR_ORB">Opening Range</option>
+            <option value="STR_VWAP_BOUNCE">VWAP Bounce</option>
+          </select>
+        </div>
+        <div><div class="lbl">INSTRUMENT</div>
+          <select id="opt-inst" style="font-size:10px">
+            <option value="NIFTY">NIFTY</option>
+            <option value="BANKNIFTY">BANKNIFTY</option>
+            <option value="FINNIFTY">FINNIFTY</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="runOptimizer()" class="btn" style="width:100%;padding:10px;font-size:11px;background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:var(--am)">⚙️ FIND BEST PARAMETERS</button>
+    </div>
+    <div id="optimizer-results" style="display:none">
+      <div class="card" style="margin-bottom:8px">
+        <div class="chdr">🏆 BEST PARAMETERS</div>
+        <div id="opt-best" style="font-size:11px;line-height:2"></div>
+      </div>
+      <div class="card">
+        <div class="chdr">📊 ALL PARAMETER COMBINATIONS</div>
+        <div id="opt-grid" style="max-height:300px;overflow-y:auto;font-size:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STRESS TEST TAB ══ -->
+  <div id="bt-stress" style="display:none">
+    <div class="card" style="margin-bottom:8px;border-color:rgba(255,51,102,.2)">
+      <div class="chdr" style="color:var(--rd)">🔥 STRESS TEST ENGINE</div>
+      <div style="font-size:10px;color:var(--mu);margin-bottom:10px">Test strategy survival under historical crisis scenarios</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><div class="lbl">STRATEGY</div>
+          <select id="stress-strategy" style="font-size:10px">
+            <option value="STR_THETA_DECAY">Theta Decay</option>
+            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor</option>
+            <option value="STR_ORB">Opening Range</option>
+          </select>
+        </div>
+        <div><div class="lbl">SCENARIO</div>
+          <select id="stress-scenario" style="font-size:10px">
+            <option value="COVID_CRASH">💀 COVID Crash (Mar 2020)</option>
+            <option value="FLASH_CRASH">⚡ Flash Crash</option>
+            <option value="ELECTION_VOL">🗳️ Election Volatility 2024</option>
+            <option value="BUDGET_SHOCK">📋 Union Budget Shock</option>
+            <option value="EXPIRY_CHAOS">📅 Expiry Day Chaos</option>
+            <option value="LIQUIDITY_COLLAPSE">💧 Liquidity Collapse</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="runStressTest()" class="btn br" style="width:100%;padding:10px;font-size:11px">🔥 RUN STRESS TEST</button>
+    </div>
+    <div id="stress-results" style="display:none">
+      <div id="stress-survival-badge" style="text-align:center;padding:16px;border-radius:10px;margin-bottom:8px">
+        <div id="stress-survived-icon" style="font-size:40px;margin-bottom:6px">—</div>
+        <div id="stress-rating" style="font-size:16px;font-weight:800">—</div>
+        <div id="stress-dd" style="font-size:12px;margin-top:4px;color:var(--mu)">—</div>
+      </div>
+      <div id="stress-detail-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+      <div class="card" style="margin-top:8px">
+        <div class="chdr">📋 SCENARIO DETAILS</div>
+        <div id="stress-scenario-detail" style="font-size:10px;line-height:1.9;color:var(--mu)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MONTE CARLO TAB ══ -->
+  <div id="bt-monte" style="display:none">
+    <div class="card" style="margin-bottom:8px;border-color:rgba(139,92,246,.2)">
+      <div class="chdr" style="color:var(--p0)">🎲 MONTE CARLO SIMULATION</div>
+      <div style="font-size:10px;color:var(--mu);margin-bottom:10px">Run 1000 randomized simulations to test strategy robustness</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><div class="lbl">STRATEGY</div>
+          <select id="mc-strategy" style="font-size:10px">
+            <option value="STR_THETA_DECAY">Theta Decay</option>
+            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor</option>
+            <option value="STR_ORB">Opening Range</option>
+            <option value="STR_VWAP_BOUNCE">VWAP Bounce</option>
+          </select>
+        </div>
+        <div><div class="lbl">SIMULATIONS</div>
+          <select id="mc-sims" style="font-size:10px">
+            <option value="500">500 runs</option>
+            <option value="1000" selected>1,000 runs</option>
+            <option value="2000">2,000 runs</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="runMonteCarlo()" class="btn" style="width:100%;padding:10px;font-size:11px;background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.3);color:var(--p0)">🎲 RUN MONTE CARLO</button>
+    </div>
+    <div id="monte-results" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px" id="monte-stats-grid"></div>
+      <canvas id="mc-canvas" width="340" height="140" style="width:100%;border-radius:8px;background:#0a0d18"></canvas>
+      <div id="monte-detail" style="margin-top:8px;font-size:10px;line-height:1.9;color:var(--mu)"></div>
     </div>
   </div>
 
@@ -8872,6 +8983,223 @@ runInstitutionalBT = function(){
   // Built-in strategy - use original function
   _origRunBT();
 };
+
+// ══════════════════════════════════════════════════════════
+// QUANT ENGINES UI — Optimizer, Stress, Monte Carlo
+// ══════════════════════════════════════════════════════════
+
+// Extend btTab to include new tabs
+var _origBtTab = btTab;
+btTab = function(tab, btn){
+  ['run','compare','optimizer','stress','monte','history'].forEach(function(t){
+    var el = document.getElementById('bt-'+t);
+    if(el) el.style.display = t===tab ? 'block' : 'none';
+    var b = document.getElementById('bt-tab-'+t);
+    if(b){
+      b.style.background = t===tab ? 'rgba(79,142,247,.12)' : 'none';
+      b.style.borderColor = t===tab ? 'rgba(79,142,247,.3)' : 'rgba(255,255,255,.1)';
+      b.style.color = t===tab ? '#4f8ef7' : 'rgba(255,255,255,.5)';
+    }
+  });
+  if(tab==='history') loadBtHistory();
+};
+
+// ── OPTIMIZER ──────────────────────────────────────────────
+function runOptimizer(){
+  var strategy = document.getElementById('opt-strategy').value;
+  var inst     = document.getElementById('opt-inst').value;
+  var btn = event.target;
+  btn.textContent = '⏳ Optimizing...'; btn.disabled = true;
+  toast('Optimizing parameters...','info');
+
+  req('/quant/optimize','POST',{strategy:strategy, instrument:inst, months:3, capital:500000},
+  function(err,d){
+    btn.textContent='⚙️ FIND BEST PARAMETERS'; btn.disabled=false;
+    if(err||!d||d.error){ toast('Optimization failed: '+(d&&d.error||err),'error'); return; }
+
+    document.getElementById('optimizer-results').style.display='block';
+
+    var bp = d.best_params||{};
+    var bestEl = document.getElementById('opt-best');
+    if(bestEl){
+      bestEl.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">'
+        +['SL%','Target%','Sharpe','Win Rate','P&L','Max DD'].map(function(k,i){
+          var vals=[bp.sl_pct,bp.target_pct,bp.sharpe,bp.win_rate+'%','\u20b9'+(bp.total_pnl||0).toFixed(0),bp.max_dd+'%'];
+          var colors=['var(--rd)','var(--gr)','var(--am)','var(--bl)','var(--gr)','var(--rd)'];
+          return '<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">'
+            +'<div style="font-size:15px;font-weight:700;color:'+colors[i]+'">'+vals[i]+'</div>'
+            +'<div style="font-size:8px;color:var(--mu)">'+k+'</div></div>';
+        }).join('')+'</div>'
+        +(d.overfitting_warning?'<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);padding:8px;border-radius:6px;font-size:10px;color:var(--am)">⚠️ Overfitting Warning: Extreme parameters detected. Use with caution.</div>':'');
+    }
+
+    var gridEl = document.getElementById('opt-grid');
+    if(gridEl){
+      var top5 = d.top5_params||[];
+      gridEl.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:4px;padding:4px;font-size:9px;color:var(--mu);border-bottom:1px solid var(--bo)">'
+        +'<div>SL%</div><div>TGT%</div><div>Sharpe</div><div>WR%</div><div>P&L</div></div>'
+        +top5.map(function(r,i){
+          return '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:4px;padding:6px 4px;font-size:9px;'+(i===0?'background:rgba(0,255,136,.06);':'')+'border-bottom:1px solid rgba(255,255,255,.04)">'
+            +'<div style="color:var(--rd)">'+r.sl_pct+'%</div>'
+            +'<div style="color:var(--gr)">'+r.target_pct+'%</div>'
+            +'<div style="color:var(--am)">'+r.sharpe.toFixed(2)+'</div>'
+            +'<div style="color:var(--bl)">'+r.win_rate.toFixed(1)+'%</div>'
+            +'<div style="color:'+(r.total_pnl>=0?'var(--gr)':'var(--rd)')+'">'+'\u20b9'+(r.total_pnl/1000).toFixed(1)+'k</div>'
+            +'</div>';
+        }).join('');
+    }
+    toast('Optimization complete! Best: SL='+bp.sl_pct+'% TGT='+bp.target_pct+'%','success');
+  });
+}
+
+// ── STRESS TEST ────────────────────────────────────────────
+function runStressTest(){
+  var strategy = document.getElementById('stress-strategy').value;
+  var scenario = document.getElementById('stress-scenario').value;
+  var btn = event.target;
+  btn.textContent='🔥 Running...'; btn.disabled=true;
+  toast('Running stress test: '+scenario,'info');
+
+  req('/quant/stress_test','POST',{strategy:strategy, scenario:scenario, capital:500000, lots:1},
+  function(err,d){
+    btn.textContent='🔥 RUN STRESS TEST'; btn.disabled=false;
+    if(err||!d||d.error){ toast('Failed','error'); return; }
+
+    document.getElementById('stress-results').style.display='block';
+
+    var badge = document.getElementById('stress-survival-badge');
+    var icons = {EXCELLENT:'🟢',GOOD:'🟡',FAIR:'🟠',CRITICAL:'🔴'};
+    var colors = {EXCELLENT:'rgba(0,255,136,.1)',GOOD:'rgba(251,191,36,.1)',FAIR:'rgba(245,158,11,.1)',CRITICAL:'rgba(255,51,102,.1)'};
+    var rating = d.survival_rating||'UNKNOWN';
+
+    if(badge){ badge.style.background=colors[rating]||'var(--bg4)'; badge.style.border='1px solid rgba(255,255,255,.1)'; }
+    var si = document.getElementById('stress-survived-icon');
+    var sr = document.getElementById('stress-rating');
+    var sd = document.getElementById('stress-dd');
+    if(si) si.textContent = icons[rating]||'❓';
+    if(sr) sr.textContent = d.survived ? 'SURVIVED — '+rating : '💀 DID NOT SURVIVE';
+    if(sd) sd.textContent = 'Max Drawdown: '+d.max_drawdown_pct+'% | Recovery: '+d.recovery_days+' days';
+
+    var grid = document.getElementById('stress-detail-grid');
+    if(grid){
+      var items=[
+        ['Loss During Stress','\u20b9'+(d.loss_during_stress||0).toFixed(0),'var(--rd)'],
+        ['Final Capital','\u20b9'+(d.final_capital||0).toLocaleString('en-IN'),'var(--gr)'],
+        ['Max Drawdown',d.max_drawdown_pct+'%',d.max_drawdown_pct>20?'var(--rd)':'var(--am)'],
+        ['Recovery Days',d.recovery_days,'var(--bl)'],
+        ['Stressed Win Rate',d.stressed_win_rate+'%','var(--am)'],
+        ['Survival',d.survived?'YES':'NO',d.survived?'var(--gr)':'var(--rd)'],
+      ];
+      grid.innerHTML=items.map(function(it){
+        return '<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">'
+          +'<div style="font-size:13px;font-weight:700;color:'+it[2]+'">'+it[1]+'</div>'
+          +'<div style="font-size:8px;color:var(--mu)">'+it[0]+'</div></div>';
+      }).join('');
+    }
+
+    var detail = document.getElementById('stress-scenario-detail');
+    if(detail && d.scenario_details){
+      var sc=d.scenario_details;
+      detail.innerHTML='Name: <b>'+sc.name+'</b><br>'
+        +'VIX Spike: <b style="color:var(--rd)">'+sc.vix_spike+'</b> | '
+        +'Spot Drop: <b style="color:var(--rd)">'+sc.spot_drop_pct+'%</b><br>'
+        +'Duration: <b>'+sc.duration_days+' days</b> | Recovery: <b>'+sc.recovery_days+' days</b><br>'
+        +'Recommendation: <b style="color:var(--am)">'+d.recommendation+'</b>';
+    }
+    toast(d.survived?'Strategy survived!':'Strategy failed stress test',d.survived?'success':'error');
+  });
+}
+
+// ── MONTE CARLO ────────────────────────────────────────────
+function runMonteCarlo(){
+  var strategy = document.getElementById('mc-strategy').value;
+  var sims     = parseInt(document.getElementById('mc-sims').value)||1000;
+  var btn = event.target;
+  btn.textContent='🎲 Running '+sims+' sims...'; btn.disabled=true;
+  toast('Running '+sims+' Monte Carlo simulations...','info');
+
+  // First run backtest to get P&L series, then Monte Carlo
+  req('/backtest/institutional','POST',{strategy:strategy,capital:500000,months:3,lots:1},
+  function(err,d){
+    if(err||!d||d.error||!d.daily_results){
+      btn.textContent='🎲 RUN MONTE CARLO'; btn.disabled=false;
+      toast('Need backtest data first','error'); return;
+    }
+
+    var pnl_series = d.daily_results.filter(function(r){ return r.net_pnl!==0; })
+                                    .map(function(r){ return r.net_pnl; });
+
+    req('/quant/monte_carlo','POST',{pnl_series:pnl_series,capital:500000,simulations:sims},
+    function(err2,mc){
+      btn.textContent='🎲 RUN MONTE CARLO'; btn.disabled=false;
+      if(err2||!mc||mc.error){ toast('Monte Carlo failed','error'); return; }
+
+      document.getElementById('monte-results').style.display='block';
+
+      var statsGrid = document.getElementById('monte-stats-grid');
+      if(statsGrid){
+        var items=[
+          ['Prob Profit',mc.prob_profit+'%','var(--gr)'],
+          ['Median Return',mc.expected_return+'%',mc.expected_return>=0?'var(--gr)':'var(--rd)'],
+          ['Median MaxDD',mc.median_max_dd+'%','var(--am)'],
+          ['5th pct Capital','\u20b9'+(mc.p5_final/1000).toFixed(1)+'k','var(--rd)'],
+          ['95th pct Capital','\u20b9'+(mc.p95_final/1000).toFixed(1)+'k','var(--gr)'],
+          ['VaR (95%)','\u20b9'+Math.abs(mc.var_95).toFixed(0),'var(--rd)'],
+        ];
+        statsGrid.innerHTML=items.map(function(it){
+          return '<div style="background:var(--bg4);padding:8px;border-radius:6px;text-align:center">'
+            +'<div style="font-size:13px;font-weight:700;color:'+it[2]+'">'+it[1]+'</div>'
+            +'<div style="font-size:8px;color:var(--mu)">'+it[0]+'</div></div>';
+        }).join('');
+      }
+
+      // Draw histogram
+      _drawMCHistogram(mc);
+
+      var detail = document.getElementById('monte-detail');
+      if(detail){
+        detail.innerHTML='<b>'+sims+' simulations</b> completed<br>'
+          +'Prob of 10%+ loss: <b style="color:var(--rd)">'+mc.prob_loss_10pct+'%</b><br>'
+          +'Return std deviation: <b>'+mc.return_std+'%</b><br>'
+          +'Worst 5%ile Max DD: <b style="color:var(--rd)">'+mc.worst_dd_5pct+'%</b>';
+      }
+      toast('Monte Carlo: Prob profit = '+mc.prob_profit+'%','success');
+    });
+  });
+}
+
+function _drawMCHistogram(mc){
+  var canvas = document.getElementById('mc-canvas');
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0a0d18'; ctx.fillRect(0,0,W,H);
+
+  // Draw distribution bar
+  var bars = [
+    {label:'Loss >10%',val:mc.prob_loss_10pct,color:'#ff3366'},
+    {label:'Loss 0-10%',val:100-mc.prob_profit-mc.prob_loss_10pct,color:'#f59e0b'},
+    {label:'Profit',val:mc.prob_profit,color:'#00ff88'},
+  ];
+  var total=bars.reduce(function(s,b){ return s+Math.max(0,b.val); },0)||100;
+  var x=10;
+  bars.forEach(function(b){
+    var w=(Math.max(0,b.val)/total)*(W-20);
+    ctx.fillStyle=b.color; ctx.globalAlpha=0.7;
+    ctx.fillRect(x,H/2-20,w,40);
+    ctx.globalAlpha=1;
+    if(w>30){
+      ctx.fillStyle='#fff'; ctx.font='9px monospace';
+      ctx.fillText(b.val.toFixed(1)+'%',x+w/2-15,H/2+4);
+    }
+    x+=w;
+  });
+  ctx.fillStyle='rgba(255,255,255,.4)'; ctx.font='8px monospace';
+  ctx.fillText('Loss >10%',10,H-8);
+  ctx.fillText('Profit '+(mc.prob_profit||0)+'%',W-70,H-8);
+}
 </script>
 </body>
 </html>
