@@ -3433,7 +3433,7 @@ function show(name, btn) {
   // Auto-load panel data
   if(name==='ref') { setTimeout(function(){ if(typeof loadRefPanel==='function') loadRefPanel(); },100); }
   if(name==='legal') { setTimeout(function(){ showLegal('tos'); },100); }
-  if(name==='prof') { setTimeout(function(){ if(typeof loadProfile==='function') loadProfile(); },100); }
+  if(name==='prof')  { setTimeout(function(){ loadProfile(); },100); }
   if(name==='ai') { setTimeout(function(){ if(typeof loadAIStrats==='function') loadAIStrats('all'); },100); }
   if(name==='strats') { setTimeout(function(){ if(typeof loadBuiltin==='function') loadBuiltin(); },100); }
   if(name==='prof') { setTimeout(function(){ if(typeof loadProfile==='function') loadProfile(); },100); }
@@ -4150,23 +4150,15 @@ function loadAudit(){req('/security/audit?limit=20','GET',null,function(err,d){v
 
 // LEGAL
 function showLegal(type){
-  var card = document.getElementById('legal-card');
-  if(!card) return;
-  card.innerHTML = '<div style="color:var(--am);padding:12px;text-align:center">Loading...</div>';
-  
+  var card=document.getElementById('legal-card');
+  if(!card)return;
+  card.innerHTML='<div style="color:var(--am);padding:12px;text-align:center">Loading...</div>';
   req('/legal/'+type,'GET',null,function(err,d){
-    if(err||!d||!d.title){
-      card.innerHTML = '<div style="color:var(--rd);padding:12px">Failed to load. Please try again.</div>';
-      return;
-    }
-    card.innerHTML = 
-      '<div class="chdr" style="margin-bottom:12px">' + d.title + '</div>'
-      + '<div style="font-size:11px;line-height:1.9;color:var(--mu);white-space:pre-line">' 
-      + (d.content||'').replace(/\n/g,'<br>') 
-      + '</div>';
+    if(err||!d||!d.title){card.innerHTML='<div style="color:var(--rd);padding:12px">Load failed</div>';return;}
+    card.innerHTML='<div class="chdr" style="margin-bottom:10px">'+d.title+'</div>'
+      +'<div style="font-size:11px;line-height:2;color:var(--mu)">'+d.content.replace(/\n/g,'<br>')+'</div>';
   });
 }
-
 function signRisk(){
   var all=['ck1','ck2','ck3','ck4'].every(function(id){var e=$(id);return e&&e.checked;});
   if(!all){toast('Check all boxes first!','error');return;}
@@ -9498,76 +9490,36 @@ window.addEventListener('load',function(){
 </script>
 </body>
 </htmlfunction loadProfile(){
-  var uid = window.UID || 'demo';
-  
+  var uid=window.UID||'demo';
   req('/users/profile/'+uid,'GET',null,function(err,d){
-    if(err||!d) d = {
-      user_id:uid, username:window.USER_NAME||'demo',
-      full_name:window.USER_NAME||'Demo Trader',
-      email:'', plan:'PRO', capital:window.USER_CAPITAL||500000,
-      stats:{total_trades:0,win_rate:0,total_pnl:0,strategies_count:0}
-    };
-    
-    // Fill profile header
-    var setEl = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v||'—'; };
-    var setHtml= function(id,v){ var e=document.getElementById(id); if(e) e.innerHTML=v||''; };
-    
-    // Avatar initials
-    var av = document.getElementById('prof-avatar');
-    if(av){
-      var name = d.full_name||d.username||'U';
-      av.textContent = name.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2);
-    }
-    
-    setEl('prof-name-display', d.full_name||d.username);
-    setEl('prof-email-display', d.email||'No email set');
-    setEl('prof-cap-display',   '₹'+(d.capital||500000).toLocaleString('en-IN'));
-    
-    // Plan badge
-    var badge = document.getElementById('prof-mode-badge');
-    if(badge){
-      var planColors={FREE:'#6b7280',BASIC:'#4f8ef7',PRO:'#00ff88',INSTITUTIONAL:'#f59e0b'};
-      var plan = d.plan||'FREE';
-      badge.textContent = plan;
-      badge.style.background = 'rgba(0,255,136,.1)';
-      badge.style.color = planColors[plan]||'#00ff88';
-    }
-    
-    // Stats
-    var stats = d.stats||{};
-    setEl('pp-trades', stats.total_trades||0);
-    setEl('pp-pnl',    '₹'+(stats.total_pnl||0));
-    setEl('pp-wr',     (stats.win_rate||0)+'%');
-    setEl('pp-strats', stats.strategies_count||0);
-    
-    // Fill edit form
-    var setVal = function(id,v){ var e=document.getElementById(id); if(e) e.value=v||''; };
-    setVal('pf-n',  d.full_name||'');
-    setVal('pf-ph', d.phone||'');
-    setVal('pf-c',  d.capital||500000);
-    setVal('pf-r',  d.referral_code||'');
-    setVal('pf-ml', d.email||'');
-    setVal('pf-b',  d.username||'');
+    if(!d||err) d={full_name:window.USER_NAME||'Demo',email:'',plan:'PRO',capital:window.USER_CAPITAL||500000,phone:'',stats:{}};
+    var se=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v||'—';};
+    var av=document.getElementById('prof-avatar');
+    if(av){var nm=d.full_name||d.username||'U';av.textContent=nm.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2);}
+    se('prof-name-display',d.full_name||d.username);
+    se('prof-email-display',d.email||'—');
+    se('prof-cap-display','₹'+(d.capital||500000).toLocaleString('en-IN'));
+    var b=document.getElementById('prof-mode-badge');
+    if(b){b.textContent=d.plan||'PRO';b.style.color='var(--gr)';}
+    var s=d.stats||{};
+    se('pp-trades',s.total_trades||0);se('pp-pnl','₹'+(s.total_pnl||0));
+    se('pp-wr',(s.win_rate||0)+'%');se('pp-strats',s.strategies_count||0);
+    var sv=function(id,v){var e=document.getElementById(id);if(e)e.value=v||'';};
+    sv('pf-n',d.full_name||'');sv('pf-ph',d.phone||'');sv('pf-c',d.capital||500000);sv('pf-ml',d.email||'');
   });
 }
-
 function saveProfile(){
-  var uid = window.UID||'demo';
-  var payload = {
-    full_name: (document.getElementById('pf-n')||{}).value||'',
-    phone:     (document.getElementById('pf-ph')||{}).value||'',
-    capital:   parseFloat((document.getElementById('pf-c')||{}).value)||500000,
-    email:     (document.getElementById('pf-ml')||{}).value||'',
-  };
-  req('/users/profile/'+uid,'PUT',payload,function(err,r){
-    if(err||!r||r.error){ toast('Save failed: '+(r&&r.error||err),'error'); return; }
-    toast('Profile saved!','success');
-    // Update global capital
-    if(payload.capital) window.USER_CAPITAL = payload.capital;
-    loadProfile();
+  var uid=window.UID||'demo';
+  req('/users/profile/'+uid,'PUT',{
+    full_name:(document.getElementById('pf-n')||{}).value||'',
+    phone:(document.getElementById('pf-ph')||{}).value||'',
+    capital:parseFloat((document.getElementById('pf-c')||{}).value)||500000,
+    email:(document.getElementById('pf-ml')||{}).value||'',
+  },function(err,r){
+    if(err||!r||r.error){toast('Save failed','error');return;}
+    toast('Profile saved!','success');loadProfile();
   });
 }
-
 function $(id){ return document.getElementById(id); }
 
 // Google Client ID
