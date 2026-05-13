@@ -693,6 +693,16 @@ setInterval(function(){
       </div>
       
       <!-- Demo Login -->
+      <div id="register-form" style="display:none;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--tx);margin-bottom:8px">📝 CREATE ACCOUNT</div>
+        <input id="reg-name" placeholder="Full Name" style="width:100%;margin-bottom:6px;font-size:11px">
+        <input id="reg-email" placeholder="Email" style="width:100%;margin-bottom:6px;font-size:11px">
+        <input id="reg-user" placeholder="Username" style="width:100%;margin-bottom:6px;font-size:11px">
+        <input id="reg-pass" type="password" placeholder="Password" style="width:100%;margin-bottom:8px;font-size:11px">
+        <button onclick="registerUser()" class="btn bg blg" style="width:100%;font-size:12px;margin-bottom:6px">✅ CREATE ACCOUNT</button>
+        <div onclick="document.getElementById('register-form').style.display='none'" style="font-size:10px;color:var(--mu);text-align:center;cursor:pointer">← Back to Login</div>
+        <div id="reg-msg" style="display:none;font-size:10px;margin-top:6px"></div>
+      </div>
       <button onclick="demoLogin()" style="width:100%;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:8px;padding:10px;font-size:12px;cursor:pointer;margin-bottom:16px">
         🎯 Try Demo Account
       </button>
@@ -705,6 +715,7 @@ setInterval(function(){
       </div>
       
       <div onclick="document.getElementById('manual-login-form').style.display=document.getElementById('manual-login-form').style.display==='none'?'block':'none'" style="font-size:10px;color:var(--mu);cursor:pointer;margin-top:8px">Username/Password Login</div>
+      <div onclick="showRegister()" style="font-size:10px;color:var(--bl);cursor:pointer;margin-top:4px;text-align:center">📝 Create New Account</div>
       
       <div id="login-error" style="color:var(--rd);font-size:11px;margin-top:8px;display:none"></div>
     </div>
@@ -6843,18 +6854,34 @@ function loadAIStatus(){
 
 // ── Scan Signals ──────────────────────────────────────────────────────────────
 function scanAllSignals(){
-  var insts=['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'];
-  var cards=document.getElementById('ai-signal-cards');
-  if(cards) cards.innerHTML='<div style="text-align:center;color:var(--am);padding:16px">🔍 Scanning...</div>';
-  var results={}, done=0;
-  insts.forEach(function(inst){
-    req('/ai/signal/'+inst,'GET',null,function(err,d){
-      results[inst] = err ? {signal:'WAIT',confidence:0,regime:'UNKNOWN'} : d;
-      done++;
-      if(done===insts.length) renderSignalCards(results);
-    });
+  toast('Scanning live signals...','info');
+  var list = document.getElementById('signal-list');
+  if(list) list.innerHTML='<div style="color:var(--am);padding:12px;text-align:center">⏳ Scanning...</div>';
+  
+  req('/ml/scan_all','POST',{instruments:['NIFTY','BANKNIFTY','FINNIFTY'],vix_max:25},function(err,d){
+    if(err||!d){ 
+      req('/ai/status','GET',null,function(err2,s){
+        if(list) list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center">No live signals. Market may be closed.</div>';
+      });
+      return;
+    }
+    var signals = d.signals || d.predictions || [];
+    if(!signals.length){
+      if(list) list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center">No signals right now. Market is '+((new Date().getHours()<9||new Date().getHours()>=15)?'CLOSED':'open but no setups')+'</div>';
+      return;
+    }
+    if(list) list.innerHTML = signals.map(function(s){
+      var isPos = s.direction==='BUY'||s.signal==='BULLISH';
+      return '<div style="background:var(--bg3);padding:10px;border-radius:8px;margin-bottom:6px;border-left:3px solid '+(isPos?'var(--gr)':'var(--rd)')+'">'+
+        '<div style="display:flex;justify-content:space-between">'+
+        '<span style="font-weight:700;color:'+(isPos?'var(--gr)':'var(--rd)')+'">'+( s.direction||s.signal||'BUY')+' '+s.instrument+'</span>'+
+        '<span style="font-size:10px;color:var(--am)">'+(s.confidence||s.strength||80)+'% confidence</span></div>'+
+        '<div style="font-size:9px;color:var(--mu);margin-top:3px">'+(s.reason||s.description||'Technical setup detected')+'</div></div>';
+    }).join('');
+    toast(signals.length+' signals found!','success');
   });
 }
+function mlScanAll(){ scanAllSignals(); }
 
 function scanSignal(inst){
   var cards=document.getElementById('ai-signal-cards');
@@ -9200,6 +9227,203 @@ function _drawMCHistogram(mc){
   ctx.fillText('Loss >10%',10,H-8);
   ctx.fillText('Profit '+(mc.prob_profit||0)+'%',W-70,H-8);
 }
+
+// ══════════════════════════════════════════════════════════
+// MISSING FEATURES — All connected to backend
+// ══════════════════════════════════════════════════════════
+
+// Register new user
+function registerUser(){
+  var name  = (document.getElementById('reg-name')||{}).value||'';
+  var email = (document.getElementById('reg-email')||{}).value||'';
+  var user  = (document.getElementById('reg-user')||{}).value||'';
+  var pass  = (document.getElementById('reg-pass')||{}).value||'';
+  var msg   = document.getElementById('reg-msg');
+  
+  if(!name||!email||!user||!pass){
+    if(msg){msg.style.display='block';msg.style.color='var(--rd)';msg.textContent='All fields required';}
+    return;
+  }
+  if(pass.length < 6){
+    if(msg){msg.style.display='block';msg.style.color='var(--rd)';msg.textContent='Password min 6 chars';}
+    return;
+  }
+  req('/users/register','POST',{username:user,email:email,password:pass,full_name:name,capital:500000},
+  function(err,r){
+    if(err||!r||r.error){
+      if(msg){msg.style.display='block';msg.style.color='var(--rd)';msg.textContent=r&&r.error||'Registration failed';}
+      return;
+    }
+    if(msg){msg.style.display='block';msg.style.color='var(--gr)';msg.textContent='✅ Account created! Logging in...';}
+    setTimeout(function(){
+      localStorage.setItem('trd_user',JSON.stringify(r));
+      loginSuccess(r, true);
+    },1000);
+  });
+}
+
+// Show register form
+function showRegister(){
+  var rf = document.getElementById('register-form');
+  var mf = document.getElementById('manual-login-form');
+  if(rf) rf.style.display='block';
+  if(mf) mf.style.display='none';
+}
+
+// IV Surface viewer
+function loadIVSurface(){
+  var inst = (document.getElementById('ch-i')||{}).value||'NIFTY';
+  var el   = document.getElementById('iv-surface-container');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--am);padding:12px;text-align:center">Loading IV Surface...</div>';
+  
+  req('/quant/iv_surface/'+inst+'?trade_date=','GET',null,function(err,d){
+    if(err||!d||d.error){
+      el.innerHTML='<div style="color:var(--rd);padding:12px">Failed to load IV surface</div>';
+      return;
+    }
+    var skew = d.skew_summary||{};
+    el.innerHTML = '<div style="margin-bottom:10px">'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">'
+      +[['ATM IV',skew.atm_iv+'%','var(--tx)'],
+        ['OTM Put IV',skew.otm_put_25d_iv+'%','var(--gr)'],
+        ['OTM Call IV',skew.otm_call_25d_iv+'%','var(--bl)'],
+        ['Put-Call Skew',skew.put_call_skew+'%','var(--am)'],
+        ['Term Structure',skew.term_structure||'—','var(--p0)'],
+        ['Base IV',d.base_iv_pct+'%','var(--mu)'],
+      ].map(function(i){
+        return '<div style="background:var(--bg4);padding:6px;border-radius:6px;text-align:center">'
+          +'<div style="font-size:12px;font-weight:700;color:'+i[2]+'">'+i[1]+'</div>'
+          +'<div style="font-size:8px;color:var(--mu)">'+i[0]+'</div></div>';
+      }).join('')+'</div>'
+      
+      +'<div style="font-size:10px;font-weight:700;margin-bottom:4px">Strike-wise IV Skew (7 DTE)</div>'
+      +'<div style="overflow-x:auto">'
+      +'<table style="width:100%;font-size:9px;border-collapse:collapse">'
+      +'<tr style="color:var(--mu)"><th>Strike</th><th>IV%</th><th>CE ₹</th><th>PE ₹</th><th>PCR</th></tr>'
+      +(function(){
+        var exp7 = d.expiries&&d.expiries[7];
+        if(!exp7) return '<tr><td colspan="5" style="color:var(--mu);padding:8px;text-align:center">No data</td></tr>';
+        return Object.values(exp7.strikes||{}).map(function(s){
+          var atm = s.strike===exp7.atm_strike;
+          return '<tr style="'+(atm?'background:rgba(251,191,36,.08)':'')+'border-bottom:1px solid rgba(255,255,255,.04)">'
+            +'<td style="padding:4px;'+(atm?'color:var(--am);font-weight:700':'')+'">'+(atm?'⭐':'')+s.strike+'</td>'
+            +'<td style="color:var(--bl)">'+s.iv_pct+'%</td>'
+            +'<td style="color:var(--gr)">₹'+s.ce_price+'</td>'
+            +'<td style="color:var(--rd)">₹'+s.pe_price+'</td>'
+            +'<td style="color:var(--mu)">'+s.pcr+'</td>'
+            +'</tr>';
+        }).join('');
+      })()
+      +'</table></div></div>';
+    toast('IV Surface loaded for '+inst,'success');
+  });
+}
+
+// Dynamic SL calculator - shown after paper/live trade
+function showDynamicSL(entryPrice, spot, vix, delta, theta, dte){
+  req('/quant/dynamic_sl','POST',{
+    entry_price:entryPrice||200, spot:spot||24000, vix:vix||15,
+    delta:delta||0.5, theta:theta||-10, dte:dte||7, sl_mode:'VOLATILITY'
+  },function(err,d){
+    if(err||!d) return;
+    var slEl = document.getElementById('dynamic-sl-display');
+    if(slEl){
+      slEl.innerHTML = 'Suggested SL: <b style="color:var(--rd)">₹'+d.sl_price+'</b> ('
+        +d.sl_pct+'%) | Mode: '+d.sl_mode
+        +'<br><span style="font-size:9px;color:var(--mu)">ATR: ₹'+d.all_levels.atr_sl
+        +' | Vol: ₹'+d.all_levels.vol_sl+' | 50% Trail: ₹'+d.all_levels.trailing_50+'</span>';
+      slEl.style.display='block';
+    }
+  });
+}
+
+// Event calendar check
+function checkEventCalendar(dateStr){
+  var d = dateStr || new Date().toISOString().slice(0,10);
+  req('/quant/events/'+d,'GET',null,function(err,r){
+    if(err||!r) return;
+    var el = document.getElementById('event-alert');
+    if(!el) return;
+    if(r.has_event||r.event_risk==='HIGH'){
+      el.style.display='block';
+      el.innerHTML='⚠️ <b>'+(r.event&&r.event.type||r.event_risk)+'</b> — '
+        +(r.adjustments&&r.adjustments.reason||'Market event today')
+        +(r.adjustments&&r.adjustments.reduce_lot_size_pct?
+          ' | Reduce size: '+r.adjustments.reduce_lot_size_pct+'%':'');
+    } else {
+      el.style.display='none';
+    }
+  });
+}
+
+// Load reports (journal/reports panel)
+function loadReports(){
+  req('/reports/performance','GET',null,function(err,d){
+    var el=document.getElementById('rep-content');
+    if(!el||err||!d) return;
+    el.innerHTML='<div style="font-size:10px;color:var(--mu);padding:8px">'+
+      (d.message||JSON.stringify(d).slice(0,200))+'</div>';
+  });
+}
+
+// Risk calculator
+function calcRisk(){
+  var cap = parseFloat((document.getElementById('risk-capital')||{}).value)||500000;
+  var lots= parseInt((document.getElementById('risk-lots')||{}).value)||1;
+  var prem= parseFloat((document.getElementById('risk-premium')||{}).value)||200;
+  var inst= (document.getElementById('risk-inst')||{}).value||'NIFTY';
+  
+  req('/risk/calculate','POST',{capital:cap,lots:lots,premium:prem,instrument:inst},
+  function(err,d){
+    var el=document.getElementById('risk-result');
+    if(!el) return;
+    if(err||!d){
+      el.innerHTML='<div style="color:var(--rd)">Calculation failed</div>';
+      return;
+    }
+    el.innerHTML='<div style="font-size:10px;line-height:1.9">'
+      +(d.max_loss?'Max Loss: <b style="color:var(--rd)">₹'+d.max_loss+'</b><br>':'')
+      +(d.margin?'Margin: <b>₹'+d.margin+'</b><br>':'')
+      +(d.exposure_pct?'Exposure: <b>'+d.exposure_pct+'%</b><br>':'')
+      +(d.lot_value?'Lot Value: <b>₹'+d.lot_value+'</b>':'')
+      +'</div>';
+  });
+}
+
+// Market scanner
+function runScanner(){
+  var list=document.getElementById('scan-list');
+  if(list) list.innerHTML='<div style="color:var(--am);padding:12px;text-align:center">Scanning...</div>';
+  req('/scanner/run','GET',null,function(err,d){
+    if(err||!d||!list) return;
+    var items=d.signals||d.results||[];
+    if(!items.length){list.innerHTML='<div style="color:var(--mu);padding:12px;text-align:center">No signals</div>';return;}
+    list.innerHTML=items.map(function(s){
+      return '<div style="padding:8px;border-bottom:1px solid rgba(255,255,255,.05)">'
+        +'<b style="color:'+(s.direction==='BUY'?'var(--gr)':'var(--rd)')+'">'+s.direction+' '+s.symbol+'</b>'
+        +' <span style="font-size:9px;color:var(--mu)">'+s.reason+'</span>'
+        +'</div>';
+    }).join('');
+  });
+}
+
+// FII/DII data
+function loadFIIDII(){
+  req('/fii_dii','GET',null,function(err,d){
+    var el=document.getElementById('fii-dii-data');
+    if(!el||err||!d) return;
+    el.innerHTML='<div style="font-size:10px;line-height:2;color:var(--mu)">'
+      +JSON.stringify(d).slice(0,300)+'</div>';
+  });
+}
+
+// Auto-check events on page load
+window.addEventListener('load',function(){
+  setTimeout(function(){
+    checkEventCalendar();
+  }, 3000);
+});
 </script>
 </body>
 </html>
