@@ -2420,13 +2420,70 @@ setInterval(function(){
         <span id="pt-maxloss" style="font-weight:700;color:var(--rd)">₹1,500</span>
       </div>
 
+      
+      <!-- AI Quality Panel -->
+      <div id="pt-quality-panel" style="display:none;background:rgba(79,142,247,.06);border:1px solid rgba(79,142,247,.2);border-radius:8px;padding:10px;margin-bottom:8px;font-size:10px"></div>
+      
+      <!-- Execution Status -->
+      <div id="pt-exec-status" style="display:none;font-size:10px;padding:6px 8px;border-radius:6px;margin-bottom:6px;background:var(--bg4)"></div>
+      
+      <!-- Emergency Alert -->
+      <div id="pt-emergency" style="display:none;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);border-radius:6px;padding:8px;margin-bottom:8px;font-size:10px;color:var(--rd);text-align:center">
+        🚨 EMERGENCY MODE — Circuit breaker active. Capital protection engaged.
+      </div>
+      
       <button id="pt-exec-btn" onclick="execPaperTrade()" class="btn bg blg" style="width:100%;font-size:12px">
         📄 EXECUTE PAPER BUY NIFTY CE
       </button>
     </div>
 
     <!-- Paper log -->
-    <div class="card">
+    <!-- Portfolio Stats -->
+      <div class="card" style="margin-bottom:8px">
+        <div class="chdr" style="display:flex;justify-content:space-between">
+          <span>📊 LIVE PORTFOLIO</span>
+          <button onclick="loadPaperPortfolio()" style="font-size:9px;padding:2px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">🔄</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+          <div style="background:var(--bg4);padding:6px;border-radius:6px;text-align:center">
+            <div id="pt-total-pnl" style="font-size:14px;font-weight:700;color:var(--gr)">₹0</div>
+            <div style="font-size:8px;color:var(--mu)">TOTAL P&L</div>
+          </div>
+          <div style="background:var(--bg4);padding:6px;border-radius:6px;text-align:center">
+            <div id="pt-win-rate" style="font-size:14px;font-weight:700;color:var(--bl)">0%</div>
+            <div style="font-size:8px;color:var(--mu)">WIN RATE</div>
+          </div>
+          <div style="background:var(--bg4);padding:6px;border-radius:6px;text-align:center">
+            <div id="pt-trades" style="font-size:14px;font-weight:700">0</div>
+            <div style="font-size:8px;color:var(--mu)">TRADES</div>
+          </div>
+        </div>
+        <!-- Portfolio Greeks -->
+        <div style="margin-bottom:6px"><div class="lbl">PORTFOLIO GREEKS</div>
+          <div id="pt-greeks" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px">
+            <div style="background:var(--bg4);padding:4px;border-radius:4px;text-align:center"><div style="font-size:10px;color:var(--bl)">—</div><div style="font-size:8px;color:var(--mu)">Net Δ</div></div>
+            <div style="background:var(--bg4);padding:4px;border-radius:4px;text-align:center"><div style="font-size:10px;color:var(--bl)">—</div><div style="font-size:8px;color:var(--mu)">Net Γ</div></div>
+            <div style="background:var(--bg4);padding:4px;border-radius:4px;text-align:center"><div style="font-size:10px;color:var(--rd)">—</div><div style="font-size:8px;color:var(--mu)">Net Θ</div></div>
+            <div style="background:var(--bg4);padding:4px;border-radius:4px;text-align:center"><div style="font-size:10px;color:var(--am)">—</div><div style="font-size:8px;color:var(--mu)">Net ν</div></div>
+          </div>
+        </div>
+        <!-- Regime -->
+        <div><div class="lbl">MARKET REGIME</div>
+          <div id="pt-regime" style="font-size:11px;padding:4px 0">Loading...</div>
+        </div>
+      </div>
+      
+      <!-- Open Positions -->
+      <div class="card" style="margin-bottom:8px">
+        <div class="chdr">📂 OPEN POSITIONS
+          <button onclick="resetPaperSession()" style="font-size:8px;padding:2px 6px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer;float:right">RESET</button>
+        </div>
+        <div id="pt-positions-list" style="max-height:300px;overflow-y:auto">
+          <div style="color:var(--mu);padding:16px;text-align:center">No open positions</div>
+        </div>
+      </div>
+
+      <div class="card">
       <div class="chdr">PAPER LOG <button onclick="var l=$('paper-log');if(l)l.innerHTML=''" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">CLR</button></div>
       <div id="paper-log" style="font-size:9px;color:var(--mu);max-height:120px;overflow-y:auto;line-height:1.8">No paper trades yet</div>
     </div>
@@ -5360,38 +5417,190 @@ function updatePaperBtn(){
 }
 
 function execPaperTrade(){
-  var price=nv('ppf-price')||100, lots=iv('ppf-lots')||1, sl=nv('ppf-sl')||100, tgt=nv('ppf-tgt')||200;
-  var order={instrument:PAPER_INST, action:PAPER_ACT, option_type:PAPER_TYP,
-    strike:iv('ppf-strike')||23900, expiry:gv('ppf-exp')||'WEEKLY',
-    quantity:lots, entry_price:price, mode:'PAPER',
-    risk_metrics:{stoploss_points:sl, target_points:tgt}};
+  var inst  = window.PAPER_INST || 'NIFTY';
+  var otype = window.PAPER_TYP  || 'CE';
+  var lots  = parseInt((document.getElementById('ppf-lots')||{}).value)||1;
+  var mode  = (document.getElementById('ppf-strike-mode')||{}).value||'ATM';
+  var strat = (document.getElementById('ppf-strategy')||{}).value||'MANUAL';
   
-  req('/trade','POST',order,function(err,r){
-    if(err){toast('Paper trade failed: '+err,'error');return;}
-    if(r.status==='EXECUTED'){
-      // Add to paper positions
-      var pos = {
-        id: r.position_id, instrument: PAPER_INST, option_type: PAPER_TYP,
-        quantity: lots, entry_price: price, current_price: price,
-        pnl: 0, mode: 'PAPER', timestamp: new Date().toLocaleTimeString()
-      };
-      paperPositions.unshift(pos);
-      toast('📄 Paper trade executed!','success');
-      loadPaperStats();
-      // Log it
-      var log = $('paper-log');
-      if(log){
-        var d=document.createElement('div');
-        d.style.cssText='padding:4px 0;border-bottom:1px solid var(--bo);color:var(--am)';
-        d.textContent=new Date().toLocaleTimeString()+' | '+PAPER_ACT+' '+PAPER_INST+' '+PAPER_TYP+' @ ₹'+price+' × '+lots+' lots';
-        log.insertBefore(d,log.firstChild);
-      }
-    } else {
-      toast('Rejected: '+(r.reason||''),'error');
+  var btn = document.getElementById('pt-exec-btn');
+  if(btn){ btn.textContent='⏳ Executing...'; btn.disabled=true; }
+  
+  // Show AI quality check
+  var statusEl = document.getElementById('pt-exec-status');
+  if(statusEl){ statusEl.style.display='block'; statusEl.textContent='🤖 Running AI quality check...'; statusEl.style.color='var(--am)'; }
+  
+  var payload = {
+    user_id: window.UID || 'demo',
+    capital: window.USER_CAPITAL || 500000,
+    instrument: inst,
+    strike: 0,           // 0 = auto-select based on mode
+    option_type: otype,
+    lots: lots,
+    strategy: strat,
+    strike_mode: mode,
+  };
+  
+  req('/paper/v3/execute','POST',payload,function(err,r){
+    if(btn){ btn.textContent='📄 EXECUTE PAPER TRADE'; btn.disabled=false; }
+    
+    if(err||!r){
+      if(statusEl){ statusEl.textContent='❌ Execution failed'; statusEl.style.color='var(--rd)'; }
+      toast('Execution failed','error');
+      return;
     }
+    
+    if(!r.success){
+      var reason = r.reason || r.error || 'Unknown error';
+      if(statusEl){ statusEl.textContent='⛔ '+reason; statusEl.style.color='var(--rd)'; }
+      toast('Rejected: '+reason, 'error');
+      // Show quality score if available
+      if(r.quality){
+        _showQualityScore(r.quality);
+      }
+      return;
+    }
+    
+    // Success!
+    var msg = inst+' '+r.strike+' '+otype+' | '+r.lots+' lot | ₹'+r.exec_price+
+              ' | Score: '+r.quality.score+'/100';
+    if(statusEl){ statusEl.textContent='✅ Executed: '+msg; statusEl.style.color='var(--gr)'; }
+    toast('Paper trade executed! '+inst+' '+r.strike+' '+otype,'success');
+    
+    // Show quality score
+    _showQualityScore(r.quality);
+    
+    // Log it
+    _paperLog('ENTRY', r);
+    
+    // Refresh portfolio
+    setTimeout(loadPaperPortfolio, 500);
   });
 }
 
+function _showQualityScore(quality){
+  var el = document.getElementById('pt-quality-panel');
+  if(!el) return;
+  var color = quality.score>=75?'var(--gr)':quality.score>=55?'var(--am)':'var(--rd)';
+  el.style.display='block';
+  el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    +'<span style="font-size:11px;font-weight:700">🤖 AI QUALITY SCORE</span>'
+    +'<span style="font-size:18px;font-weight:800;color:'+color+'">'+quality.score+'/100 ('+quality.grade+')</span>'
+    +'</div>'
+    +'<div style="font-size:9px;color:var(--mu);margin-bottom:4px">'+quality.explanation+'</div>'
+    +'<div style="font-size:9px">'
+    +(quality.reasons&&quality.reasons.length?'<span style="color:var(--gr)">✅ '+ quality.reasons.slice(0,2).join(' · ')+'</span>':'')
+    +(quality.rejects&&quality.rejects.length?'<br><span style="color:var(--rd)">⚠️ '+quality.rejects.slice(0,2).join(' · ')+'</span>':'')
+    +'</div>';
+}
+
+function loadPaperPortfolio(){
+  var uid = window.UID || 'demo';
+  req('/paper/v3/portfolio/'+uid+'?capital='+(window.USER_CAPITAL||500000),'GET',null,function(err,d){
+    if(err||!d) return;
+    _renderPaperPortfolio(d);
+  });
+}
+
+function _renderPaperPortfolio(d){
+  // Update stats
+  var setEl = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+  var setC  = function(id,v,pos){ var e=document.getElementById(id); if(e){ e.textContent=v; e.style.color=pos?'var(--gr)':'var(--rd)'; }};
+  
+  setEl('pt-capital', '\u20b9'+(d.capital||0).toLocaleString('en-IN'));
+  setC('pt-total-pnl', (d.total_pnl>=0?'+':'')+'\u20b9'+(d.total_pnl||0).toFixed(0), d.total_pnl>=0);
+  setC('pt-daily-pnl', (d.daily_pnl>=0?'+':'')+'\u20b9'+(d.daily_pnl||0).toFixed(0), d.daily_pnl>=0);
+  setEl('pt-win-rate', (d.win_rate||0).toFixed(1)+'%');
+  setEl('pt-trades', d.total_trades||0);
+  setEl('pt-max-dd', (d.max_drawdown||0).toFixed(2)+'%');
+  
+  // Emergency mode alert
+  var em = document.getElementById('pt-emergency');
+  if(em) em.style.display = d.emergency_mode ? 'block' : 'none';
+  
+  // Portfolio Greeks
+  var pg = d.portfolio_greeks || {};
+  var pgEl = document.getElementById('pt-greeks');
+  if(pgEl){
+    pgEl.innerHTML = [
+      ['Net \u0394', pg.net_delta||0],
+      ['Net \u0393', pg.net_gamma||0],
+      ['Net \u0398', pg.net_theta||0],
+      ['Net \u03bd', pg.net_vega||0],
+    ].map(function(g){
+      return '<div style="text-align:center;background:var(--bg4);padding:4px;border-radius:4px">'
+        +'<div style="font-size:10px;font-weight:700;color:var(--bl)">'+parseFloat(g[1]).toFixed(3)+'</div>'
+        +'<div style="font-size:8px;color:var(--mu)">'+g[0]+'</div></div>';
+    }).join('');
+  }
+  
+  // Regime
+  var regime = d.regime || {};
+  var regEl = document.getElementById('pt-regime');
+  if(regEl){
+    var colors = {TRENDING:'var(--gr)',SIDEWAYS:'var(--am)',HIGH_VOL:'var(--rd)',
+                  EXPIRY:'var(--p0)',LOW_VOL:'var(--mu)',NORMAL:'var(--bl)'};
+    regEl.innerHTML = '<span style="color:'+(colors[regime.regime]||'var(--tx)')+'">⬤ '
+      +(regime.regime||'NORMAL')+'</span>'
+      +(regime.strategy_bias?'<br><span style="font-size:9px;color:var(--mu)">'+regime.strategy_bias+'</span>':'');
+  }
+  
+  // Open positions
+  var posEl = document.getElementById('pt-positions-list');
+  if(posEl){
+    var positions = d.open_positions || [];
+    if(!positions.length){
+      posEl.innerHTML = '<div style="color:var(--mu);padding:16px;text-align:center">No open positions</div>';
+    } else {
+      posEl.innerHTML = positions.map(function(p){
+        var isPos = p.unrealized_pnl >= 0;
+        return '<div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:8px;border-left:3px solid '+(isPos?'var(--gr)':'var(--rd)')+'">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<div><span style="font-weight:700;font-size:11px">'+p.instrument+' '+p.strike+' '+p.option_type+'</span>'+
+          ' <span style="font-size:9px;color:var(--mu)">'+p.lots+' lot | '+p.strategy+'</span></div>'+
+          '<span style="font-size:13px;font-weight:700;color:'+(isPos?'var(--gr)':'var(--rd)')+'">'+
+          (isPos?'+':'')+'\u20b9'+(p.unrealized_pnl||0).toFixed(0)+'</span></div>'+
+          '<div style="font-size:9px;color:var(--mu);margin-top:4px">'+
+          'Entry: \u20b9'+p.entry_price+' | LTP: \u20b9'+p.current_price+
+          ' | Score: '+p.quality_score+'/100 | '+p.regime+'</div>'+
+          '<div style="display:flex;gap:4px;margin-top:6px">'+
+          '<button onclick="closePaperPos(\''+p.pos_id+'\')" style="flex:1;font-size:9px;padding:4px;background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);color:var(--rd);border-radius:4px;cursor:pointer">✕ CLOSE</button>'+
+          '</div></div>';
+      }).join('');
+    }
+  }
+}
+
+function closePaperPos(posId){
+  req('/paper/v3/close/'+posId,'POST',{user_id:window.UID||'demo',reason:'MANUAL'},function(err,r){
+    if(err||!r||!r.success){ toast('Close failed','error'); return; }
+    var col = r.net_pnl>=0?'success':'error';
+    toast('Closed! P&L: '+(r.net_pnl>=0?'+':'')+'\u20b9'+r.net_pnl.toFixed(0),col);
+    loadPaperPortfolio();
+  });
+}
+
+function resetPaperSession(){
+  if(!confirm('Reset paper trading session? All positions will be closed.')) return;
+  req('/paper/v3/reset/'+(window.UID||'demo'),'POST',{capital:window.USER_CAPITAL||500000},function(err,r){
+    toast('Session reset!','success');
+    loadPaperPortfolio();
+  });
+}
+
+function _paperLog(dir, r){
+  var logEl = document.getElementById('paper-log');
+  if(!logEl) return;
+  var ts = new Date().toLocaleTimeString('en-IN');
+  var isPos = dir==='EXIT' && (r.net_pnl||0)>=0;
+  var txt = '<div style="border-bottom:1px solid rgba(255,255,255,.05);padding:4px 0">'
+    +'<span style="color:var(--mu)">['+ts+']</span> '
+    +(dir==='ENTRY'
+      ?'<span style="color:var(--gr)">BUY '+r.instrument+' '+r.strike+' '+r.option_type+'</span> '+r.lots+'lot @ \u20b9'+r.exec_price+' | Score:'+r.quality.score+'/100 | '+r.regime.regime
+      :'<span style="color:'+(isPos?'var(--gr)':'var(--rd)')+'">EXIT</span> P&L '+(r.net_pnl>=0?'+':'')+'\u20b9'+r.net_pnl)
+    +'</div>';
+  logEl.innerHTML = txt + logEl.innerHTML;
+}
 
 function loadPaperStrats(type){
   var psl = document.getElementById('paper-strat-list');

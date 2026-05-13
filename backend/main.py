@@ -3987,6 +3987,107 @@ def run_institutional_bt(payload: dict):
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()[-500:]}
 
+# ══════════════════════════════════════════════════════════════════════════════
+# INSTITUTIONAL PAPER TRADING API
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/paper/v3/execute")
+def paper_execute(payload: dict):
+    """Execute paper trade — full institutional simulation"""
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+        from backtest.paper_engine import get_session
+        
+        user_id    = payload.get("user_id", "demo")
+        capital    = float(payload.get("capital", 500000))
+        instrument = payload.get("instrument", "NIFTY")
+        strike     = int(payload.get("strike", 0))
+        otype      = payload.get("option_type", "CE")
+        lots       = int(payload.get("lots", 1))
+        strategy   = payload.get("strategy", "MANUAL")
+        mode       = payload.get("strike_mode", "ATM")
+        dte        = payload.get("dte")
+        
+        engine = get_session(user_id, capital)
+        result = engine.execute_order(instrument, strike, otype, lots,
+                                       strategy, mode, dte)
+        return result
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()[-400:]}
+
+@app.post("/paper/v3/close/{pos_id}")
+def paper_close(pos_id: str, payload: dict = {}):
+    """Close a paper position"""
+    try:
+        from backtest.paper_engine import get_session
+        user_id = payload.get("user_id", "demo")
+        reason  = payload.get("reason", "MANUAL")
+        engine  = get_session(user_id)
+        return engine.close_position(pos_id, reason)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/paper/v3/portfolio/{user_id}")
+def paper_portfolio(user_id: str, capital: float = 500000):
+    """Get live paper trading portfolio"""
+    try:
+        from backtest.paper_engine import get_session
+        engine = get_session(user_id, capital)
+        return engine.get_portfolio()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/paper/v3/analytics/{user_id}")
+def paper_analytics(user_id: str):
+    """Get paper trading analytics"""
+    try:
+        from backtest.paper_engine import get_session
+        engine = get_session(user_id)
+        return engine.get_analytics()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/paper/v3/reset/{user_id}")
+def paper_reset(user_id: str, payload: dict = {}):
+    """Reset paper trading session"""
+    try:
+        from backtest.paper_engine import reset_session
+        capital = float(payload.get("capital", 500000))
+        reset_session(user_id, capital)
+        return {"success": True, "message": "Session reset", "capital": capital}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/paper/v3/live_option/{instrument}")
+def paper_live_option(instrument: str, strike: int = 0,
+                       option_type: str = "CE", dte: int = 7):
+    """Get live option price with Greeks"""
+    try:
+        from backtest.paper_engine import get_live_option_price, get_live_spot, get_live_vix, select_strike
+        spot = get_live_spot(instrument)
+        vix  = get_live_vix()
+        if strike == 0:
+            strike = select_strike(instrument, option_type, "ATM", spot=spot)
+        return get_live_option_price(instrument, strike, option_type, dte, spot, vix)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/paper/v3/regime")
+def paper_regime():
+    """Get current market regime"""
+    try:
+        from backtest.paper_engine import detect_live_regime, get_live_vix
+        from datetime import datetime
+        vix    = get_live_vix()
+        hour   = datetime.now().hour
+        expiry = datetime.now().weekday() == 3
+        return detect_live_regime(vix, 0, expiry, hour)
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
     """Scan all instruments with ML models - auto-trains if needed"""
