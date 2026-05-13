@@ -447,7 +447,7 @@ def run_institutional_backtest(
     spot = params["spot_base"]
     
     # ── Get Trading Days ──────────────────────────────────────────────────────
-    days = _get_trading_days(months, end_date)
+    days = _get__get_trading_days(months, end_date)
     
     # ── Risk State ────────────────────────────────────────────────────────────
     risk = RiskState(
