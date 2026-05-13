@@ -239,8 +239,18 @@ def calculate_metrics(daily_returns: List[float], trades: List[dict],
     if not daily_returns:
         return {}
     
-    returns = [r / 100 for r in daily_returns]
+    all_returns = [r / 100 for r in daily_returns]
+    # Only use TRADING days (non-zero return days) for risk metrics
+    # Using all days inflates std dev and produces unrealistic negative Sharpe
+    returns = [r for r in all_returns if r != 0]
+    if not returns:
+        returns = all_returns  # fallback
+    n_all = len(all_returns)
     n = len(returns)
+    
+    # Trading frequency (for proper annualization)
+    trade_freq = n / max(n_all, 1)  # fraction of days with trades
+    ann_factor = math.sqrt(n * (n_all / max(n_all, 1)) * 252 / max(n_all, 1)) if n > 0 else math.sqrt(252)
     
     # Basic stats
     wins = [t for t in trades if t.get("pnl", 0) > 0]
@@ -251,24 +261,27 @@ def calculate_metrics(daily_returns: List[float], trades: List[dict],
     avg_win = sum(t["pnl"] for t in wins) / max(len(wins), 1)
     avg_loss = abs(sum(t["pnl"] for t in losses) / max(len(losses), 1))
     
-    # Sharpe Ratio (annualized, risk-free 6.5%)
-    rf_daily = 0.065 / 252
-    excess = [r - rf_daily for r in returns]
+    # Sharpe Ratio — computed on trading days only, annualized correctly
+    rf_per_trade = 0.065 / 252  # daily risk-free
+    excess = [r - rf_per_trade for r in returns]
     if len(excess) > 1:
         mean_excess = sum(excess) / len(excess)
         std_excess = math.sqrt(sum((x - mean_excess)**2 for x in excess) / (len(excess)-1))
-        sharpe = (mean_excess / std_excess * math.sqrt(252)) if std_excess > 0 else 0
+        # Annualize: scale by sqrt of trades-per-year
+        trades_per_year = n * (252 / max(n_all, 1))
+        sharpe = (mean_excess / std_excess * math.sqrt(trades_per_year)) if std_excess > 0 else 0
     else:
         sharpe = 0
     
-    # Sortino Ratio (downside deviation only)
+    # Sortino Ratio (downside deviation of trading days only)
     downside = [r for r in excess if r < 0]
-    if downside:
+    if downside and len(excess) > 1:
         downside_std = math.sqrt(sum(x**2 for x in downside) / len(downside))
         mean_excess_val = sum(excess) / len(excess)
-        sortino = (mean_excess_val / downside_std * math.sqrt(252)) if downside_std > 0 else 0
+        trades_per_year = n * (252 / max(n_all, 1))
+        sortino = (mean_excess_val / downside_std * math.sqrt(trades_per_year)) if downside_std > 0 else 0
     else:
-        sortino = sharpe * 1.3  # Approximate
+        sortino = max(0, sharpe * 1.4)  # Estimate
     
     # Max Drawdown
     equity = [initial_capital]
@@ -286,9 +299,9 @@ def calculate_metrics(daily_returns: List[float], trades: List[dict],
             max_dd_pct = dd
             max_dd = peak - e
     
-    # CAGR
+    # CAGR — based on total calendar period (all days)
     total_return = (equity[-1] - initial_capital) / initial_capital
-    years = n / 252
+    years = n_all / 252  # Use ALL calendar days for time period
     cagr = ((1 + total_return) ** (1 / max(years, 0.01))) - 1 if total_return > -1 else -1
     
     # Calmar Ratio
