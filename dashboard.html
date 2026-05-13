@@ -7417,23 +7417,37 @@ function adminLogout(){
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function adminTab(tab,btn){
-  ['dash','users','analytics','pay','notifs','sys','referral'].forEach(function(t){
-    var el=document.getElementById('adm-'+t);
-    if(el) el.style.display=t===tab?'block':'none';
-    var b=document.getElementById('adm-tab-'+t);
-    if(b){
-      b.style.background=t===tab?'rgba(168,85,247,.08)':'transparent';
-      b.style.borderBottomColor=t===tab?'var(--p0)':'transparent';
-      b.style.color=t===tab?'var(--p0)':'var(--mu)';
+  // Hide ALL admin sub-panels including nested ones
+  document.querySelectorAll('[id^="adm-"]').forEach(function(el){
+    if(el.id.match(/^adm-(dash|users|analytics|pay|notifs|sys|referral)$/)){
+      el.style.display='none';
     }
   });
+  
+  // Show target panel - use setAttribute for priority
+  var target = document.getElementById('adm-'+tab);
+  if(target){
+    target.style.cssText='display:block!important;padding:8px';
+  }
+  
+  // Highlight active tab
+  document.querySelectorAll('[id^="adm-tab-"]').forEach(function(b){
+    b.style.background='transparent';
+    b.style.borderBottomColor='transparent';
+    b.style.color='var(--mu)';
+  });
+  if(btn){
+    btn.style.background='rgba(168,85,247,.08)';
+    btn.style.borderBottomColor='var(--p0)';
+    btn.style.color='var(--p0)';
+  }
+  
   if(tab==='dash')     loadAdminDash();
   if(tab==='users')    loadAdminUsers();
   if(tab==='pay')      loadPaymentConfig();
   if(tab==='sys')      loadSysStatus();
   if(tab==='analytics')loadAdminAnalytics();
-  if(tab==='referral') { setTimeout(function(){ if(typeof loadAdminReferral==='function') loadAdminReferral(); },100); }
-  if(tab==='notifs') {}
+  if(tab==='referral') { setTimeout(function(){ if(typeof loadAdminReferral==='function') loadAdminReferral(); },150); }
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
