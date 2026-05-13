@@ -1968,6 +1968,32 @@ setInterval(function(){
         <div class="stat"><div class="sl">DISK</div><div class="sv" id="sys-disk" style="color:var(--bl)">—</div></div>
         <div class="stat"><div class="sl">UPTIME</div><div class="sv" id="sys-uptime" style="color:var(--gr)">—</div></div>
       </div>
+      <!-- REFERRAL MANAGEMENT PANEL -->
+      
+
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">🖥️ SERVER INFO <button onclick="loadSysStatus()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button></div>
+        <div id="sys-info" style="font-size:10px;color:var(--mu);line-height:2">Loading...</div>
+      </div>
+
+      <!-- API Health -->
+      <div class="card" style="margin-bottom:10px">
+        <div class="chdr">🔗 API HEALTH CHECK</div>
+        <div id="adm-api-health" style="font-size:10px;color:var(--mu)">Loading...</div>
+        <button onclick="checkAPIHealth()" class="btn bg" style="width:100%;margin-top:8px;padding:8px;font-size:10px">🔍 CHECK ALL ENDPOINTS</button>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="card" style="border-color:rgba(255,51,102,.2)">
+        <div class="chdr" style="color:var(--rd)">⚠️ DANGER ZONE</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button onclick="if(confirm('Reset ALL paper trading data?'))adminAction('reset_paper')" style="padding:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px">🔄 Reset All Paper Trading</button>
+          <button onclick="if(confirm('Clear ALL backtests?'))adminAction('clear_backtests')" style="padding:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px">🗑️ Clear All Backtests</button>
+          <button onclick="if(confirm('RESTART SERVER? All connections will drop for 10s'))adminAction('restart')" style="padding:10px;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.4);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px;font-weight:700">⚡ RESTART SERVER</button>
+        </div>
+      </div>
+    </div>
+
       <div id="adm-referral" style="display:none;padding:8px">
         <div class="card" style="margin-bottom:8px">
           <div class="chdr" style="color:var(--gr)">🎁 CREATE REFERRAL CODE</div>
@@ -2023,31 +2049,7 @@ setInterval(function(){
           </div>
         </div>
       </div>
-      <!-- REFERRAL MANAGEMENT PANEL -->
-      
 
-      <div class="card" style="margin-bottom:10px">
-        <div class="chdr">🖥️ SERVER INFO <button onclick="loadSysStatus()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button></div>
-        <div id="sys-info" style="font-size:10px;color:var(--mu);line-height:2">Loading...</div>
-      </div>
-
-      <!-- API Health -->
-      <div class="card" style="margin-bottom:10px">
-        <div class="chdr">🔗 API HEALTH CHECK</div>
-        <div id="adm-api-health" style="font-size:10px;color:var(--mu)">Loading...</div>
-        <button onclick="checkAPIHealth()" class="btn bg" style="width:100%;margin-top:8px;padding:8px;font-size:10px">🔍 CHECK ALL ENDPOINTS</button>
-      </div>
-
-      <!-- Danger zone -->
-      <div class="card" style="border-color:rgba(255,51,102,.2)">
-        <div class="chdr" style="color:var(--rd)">⚠️ DANGER ZONE</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <button onclick="if(confirm('Reset ALL paper trading data?'))adminAction('reset_paper')" style="padding:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px">🔄 Reset All Paper Trading</button>
-          <button onclick="if(confirm('Clear ALL backtests?'))adminAction('clear_backtests')" style="padding:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px">🗑️ Clear All Backtests</button>
-          <button onclick="if(confirm('RESTART SERVER? All connections will drop for 10s'))adminAction('restart')" style="padding:10px;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.4);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px;font-weight:700">⚡ RESTART SERVER</button>
-        </div>
-      </div>
-    </div>
 
     </div><!-- end padding -->
   </div><!-- end panel content -->
