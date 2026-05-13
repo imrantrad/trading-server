@@ -1726,6 +1726,7 @@ setInterval(function(){
       <button id="adm-tab-pay" onclick="adminTab('pay',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">💳 PAYMENTS</button>
       <button id="adm-tab-notifs" onclick="adminTab('notifs',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🔔 ALERTS</button>
       <button id="adm-tab-sys" onclick="adminTab('sys',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🖥️ SYSTEM</button>
+          <button id="adm-tab-referral" onclick="adminTab('referral',this)" style="flex-shrink:0;padding:10px 14px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">🎁 REFERRAL</button>
     </div>
 
     <div style="padding:10px">
@@ -4026,7 +4027,11 @@ function loadBuiltin(){
     var list=$('strat-list');if(!list)return;
     if(err||!d||!d.strategies){list.innerHTML='<div style="color:var(--rd);padding:16px">Failed to load</div>';return;}
     list.innerHTML='';
-    d.strategies.forEach(function(s){
+    // Sort by win rate (best first)
+    var sorted = (d.strategies||[]).slice().sort(function(a,b){
+      return (b.win_rate||b.avg_win_rate||0) - (a.win_rate||a.avg_win_rate||0);
+    });
+    sorted.forEach(function(s){
       var div=document.createElement('div');div.className='card';
       div.style.borderLeft='3px solid '+(s.avg_win_rate>=70?'var(--gr)':s.avg_win_rate>=65?'var(--am)':'var(--bl)');
       div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div><div style="font-size:11px;font-weight:700">'+s.name+'</div><div style="font-size:8px;color:var(--mu)">'+(s.instrument||'')+' | '+(s.type||'')+'</div></div><div style="text-align:right"><div style="font-size:17px;font-weight:700;color:'+(s.avg_win_rate>=70?'var(--gr)':'var(--am)')+'">'+s.avg_win_rate+'%</div><div style="font-size:8px;color:var(--bl)">'+s.avg_monthly_return+'%/mo | DD:'+s.max_drawdown+'%</div></div></div><div style="font-size:9px;color:var(--mu);margin-bottom:6px">'+s.description+'</div>'+(s.notes?'<div style="font-size:8px;color:var(--am);padding:5px 8px;background:#1a0e00;border-radius:4px;margin-bottom:6px">'+s.notes+'</div>':'');
@@ -4048,7 +4053,11 @@ function loadBuiltin(){
     });
   });
 }
-function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){var list=$('strat-list');if(!list)return;var strats=(d&&d.user_strategies)||[];if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="toggleNLP()">CREATE WITH NLP</button></div>';return;}list.innerHTML='';strats.forEach(function(s){var div=document.createElement('div');div.className='card';div.style.borderLeft='3px solid var(--bl)';var sid=s.id;div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div></div><div style="font-size:9px;color:var(--mu)">'+s.instrument+' | SL:'+s.sl_value+' TGT:'+s.target_value+'</div>';var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';var b1=document.createElement('button');b1.className='btn bg';b1.style.cssText='padding:4px 10px;font-size:8px';b1.textContent='BT';b1.onclick=function(){$('bt-s').value=sid;show('bt',null);};var b2=document.createElement('button');b2.className='btn br';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='DELETE';b2.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};var bCp=document.createElement('button');
+function loadMy(){req('/strategies/user/'+UID,'GET',null,function(err,d){var list=$('strat-list');if(!list)return;var strats=(d&&d.user_strategies)||[];if(!strats.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu)">No saved strategies<br><br><button class="btn bg" onclick="toggleNLP()">CREATE WITH NLP</button></div>';return;}list.innerHTML='';// Sort by win rate desc
+    strats.sort(function(a,b){
+      return (b.avg_win_rate||b.win_rate||0)-(a.avg_win_rate||a.win_rate||0);
+    });
+    strats.forEach(function(s){var div=document.createElement('div');div.className='card';div.style.borderLeft='3px solid var(--bl)';var sid=s.id;div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:11px;font-weight:700">'+s.name+'</div></div><div style="font-size:9px;color:var(--mu)">'+s.instrument+' | SL:'+s.sl_value+' TGT:'+s.target_value+'</div>';var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;margin-top:8px';var b1=document.createElement('button');b1.className='btn bg';b1.style.cssText='padding:4px 10px;font-size:8px';b1.textContent='BT';b1.onclick=function(){$('bt-s').value=sid;show('bt',null);};var b2=document.createElement('button');b2.className='btn br';b2.style.cssText='padding:4px 10px;font-size:8px';b2.textContent='DELETE';b2.onclick=function(){if(confirm('Delete?'))req('/strategies/'+sid+'?user_id='+UID,'DELETE',null,function(){loadMy();});};var bCp=document.createElement('button');
       bCp.className='btn';
       bCp.style.cssText='padding:4px 10px;font-size:12px;background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:var(--bl)';
       bCp.textContent='📋';
@@ -7407,18 +7416,23 @@ function adminLogout(){
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function adminTab(tab,btn){
-  ['dash','users','analytics','pay','notifs','sys'].forEach(function(t){
+  ['dash','users','analytics','pay','notifs','sys','referral'].forEach(function(t){
     var el=document.getElementById('adm-'+t);
     if(el) el.style.display=t===tab?'block':'none';
     var b=document.getElementById('adm-tab-'+t);
-    if(b){b.style.background=t===tab?'rgba(168,85,247,.08)':'transparent';b.style.borderBottomColor=t===tab?'var(--p0)':'transparent';b.style.color=t===tab?'var(--p0)':'var(--mu)';}
+    if(b){
+      b.style.background=t===tab?'rgba(168,85,247,.08)':'transparent';
+      b.style.borderBottomColor=t===tab?'var(--p0)':'transparent';
+      b.style.color=t===tab?'var(--p0)':'var(--mu)';
+    }
   });
-  if(tab==='dash') loadAdminDash();
-  if(tab==='users') loadAdminUsers();
-  if(tab==='pay') loadPaymentConfig();
-  if(tab==='sys') loadSysStatus();
-  if(tab==='analytics') loadAdminAnalytics();
-  if(tab==='notifs') {} // static UI
+  if(tab==='dash')     loadAdminDash();
+  if(tab==='users')    loadAdminUsers();
+  if(tab==='pay')      loadPaymentConfig();
+  if(tab==='sys')      loadSysStatus();
+  if(tab==='analytics')loadAdminAnalytics();
+  if(tab==='referral') { setTimeout(function(){ if(typeof loadAdminReferral==='function') loadAdminReferral(); },100); }
+  if(tab==='notifs') {}
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
