@@ -418,7 +418,7 @@ def run_institutional_backtest(
     Institutional-grade backtest with full execution simulation,
     realistic charges, Greeks, regime detection, and performance metrics.
     """
-    from backtest.advanced_backtest import _get_seed, _get_trading_days, STRATEGY_CONFIGS
+    from backtest.advanced_backtest import _get_seed, _get_trading_days as _trading_days, STRATEGY_CONFIGS
     
     if end_date is None:
         end_date = date.today()
@@ -447,7 +447,7 @@ def run_institutional_backtest(
     spot = params["spot_base"]
     
     # ── Get Trading Days ──────────────────────────────────────────────────────
-    days = _get__get_trading_days(months, end_date)
+    days = _trading_days(months, end_date)
     
     # ── Risk State ────────────────────────────────────────────────────────────
     risk = RiskState(
