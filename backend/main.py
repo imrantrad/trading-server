@@ -4131,6 +4131,170 @@ def paper_regime():
         return {"error": str(e)}
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# QUANT ENGINE APIs — Spec 3,9,12,16,17,18,19,47,48,29
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/quant/option_chain/{instrument}")
+def api_option_chain(instrument: str, dte: int = 7, trade_date: str = ""):
+    """SPEC 3: Full historical option chain reconstruction"""
+    try:
+        import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+        from backtest.quant_engines import reconstruct_option_chain
+        from datetime import date as _d
+        d = _d.fromisoformat(trade_date) if trade_date else _d.today()
+        return reconstruct_option_chain(instrument, d, dte)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/quant/iv_surface/{instrument}")
+def api_iv_surface(instrument: str, trade_date: str = ""):
+    """SPEC 47: IV Surface — Skew, Smile, Term Structure"""
+    try:
+        from backtest.quant_engines import build_iv_surface
+        from datetime import date as _d
+        d = _d.fromisoformat(trade_date) if trade_date else _d.today()
+        return build_iv_surface(instrument, d)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/quant/events/{trade_date}")
+def api_event_context(trade_date: str):
+    """SPEC 19: Event awareness — RBI, Budget, Expiry, FED"""
+    try:
+        from backtest.quant_engines import get_event_context
+        from datetime import date as _d
+        return get_event_context(_d.fromisoformat(trade_date))
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/quant/dynamic_sl")
+def api_dynamic_sl(payload: dict):
+    """SPEC 12: Dynamic stop-loss calculation"""
+    try:
+        from backtest.quant_engines import calculate_dynamic_sl
+        return calculate_dynamic_sl(
+            entry_price=float(payload.get("entry_price", 200)),
+            spot=float(payload.get("spot", 24000)),
+            vix=float(payload.get("vix", 15)),
+            delta=float(payload.get("delta", 0.5)),
+            theta=float(payload.get("theta", -10)),
+            dte=int(payload.get("dte", 7)),
+            sl_mode=payload.get("sl_mode", "VOLATILITY"),
+        )
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/quant/filter")
+def api_hp_filter(payload: dict):
+    """SPEC 17: High-probability filter engine"""
+    try:
+        from backtest.quant_engines import high_probability_filter
+        from datetime import date as _d
+        return high_probability_filter(
+            instrument=payload.get("instrument","NIFTY"),
+            trade_date=_d.today(),
+            option_data=payload.get("option_data",{}),
+            regime=payload.get("regime","NORMAL"),
+            vix=float(payload.get("vix",15)),
+        )
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/quant/monte_carlo")
+def api_monte_carlo(payload: dict):
+    """SPEC 9: Monte Carlo simulation"""
+    try:
+        from backtest.quant_engines import monte_carlo_simulation
+        pnl = payload.get("pnl_series", [])
+        cap = float(payload.get("capital", 500000))
+        sims = int(payload.get("simulations", 1000))
+        if not pnl:
+            return {"error": "pnl_series required"}
+        return monte_carlo_simulation(pnl, sims, cap)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/quant/walk_forward")
+def api_walk_forward(payload: dict):
+    """SPEC 9: Walk-forward analysis"""
+    try:
+        from backtest.quant_engines import walk_forward_analysis
+        return walk_forward_analysis(
+            strategy=payload.get("strategy","STR_THETA_DECAY"),
+            instrument=payload.get("instrument","NIFTY"),
+            total_months=int(payload.get("total_months",12)),
+            train_months=int(payload.get("train_months",3)),
+            test_months=int(payload.get("test_months",1)),
+        )
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/quant/optimize")
+def api_optimize(payload: dict):
+    """SPEC 16: Auto strategy optimizer"""
+    try:
+        from backtest.quant_engines import optimize_strategy
+        return optimize_strategy(
+            strategy=payload.get("strategy","STR_THETA_DECAY"),
+            instrument=payload.get("instrument","NIFTY"),
+            months=int(payload.get("months",3)),
+            capital=float(payload.get("capital",500000)),
+        )
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/quant/stress_test")
+def api_stress_test(payload: dict):
+    """SPEC 48: Stress test engine — crash/election/expiry scenarios"""
+    try:
+        from backtest.quant_engines import run_stress_test, STRESS_SCENARIOS
+        scenario = payload.get("scenario","COVID_CRASH")
+        if scenario == "LIST":
+            return {"scenarios": list(STRESS_SCENARIOS.keys()),
+                    "details": STRESS_SCENARIOS}
+        return run_stress_test(
+            strategy=payload.get("strategy","STR_THETA_DECAY"),
+            capital=float(payload.get("capital",500000)),
+            lots=int(payload.get("lots",1)),
+            instrument=payload.get("instrument","NIFTY"),
+            scenario_name=scenario,
+        )
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/quant/ai_insights/{user_id}")
+def api_ai_insights(user_id: str):
+    """SPEC 29: AI execution learning insights"""
+    try:
+        from backtest.quant_engines import get_learning_engine
+        return get_learning_engine().get_insights()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/quant/report/{user_id}")
+def api_export_report(user_id: str, format: str = "json"):
+    """SPEC 38: Export trading report"""
+    try:
+        from backtest.paper_engine import get_session
+        engine = get_session(user_id)
+        analytics = engine.get_analytics()
+        portfolio = engine.get_portfolio()
+        return {
+            "report": {
+                "user_id": user_id,
+                "generated": datetime.now().isoformat(),
+                "analytics": analytics,
+                "open_positions": len(portfolio.get("open_positions", [])),
+                "total_trades": portfolio.get("total_trades", 0),
+                "capital": portfolio.get("capital", 0),
+                "total_pnl": portfolio.get("total_pnl", 0),
+            }
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
     """Scan all instruments with ML models - auto-trains if needed"""
