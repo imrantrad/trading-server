@@ -49,6 +49,45 @@ HISTORICAL_VIX = {
 }
 
 # Lot sizes (fixed, regulated by SEBI)
+
+import math as _math
+
+def black_scholes_greeks(S: float, K: float, T: float, r: float,
+                          sigma: float, option_type: str = "CE") -> dict:
+    """Black-Scholes option pricing and Greeks"""
+    if T <= 0 or sigma <= 0:
+        intrinsic = max(0, S-K) if option_type=="CE" else max(0, K-S)
+        return {"price":round(intrinsic,2),"delta":1.0 if intrinsic>0 else 0,
+                "gamma":0,"theta":0,"vega":0,"iv":sigma*100,
+                "intrinsic":round(intrinsic,2),"time_value":0}
+    def ncdf(x): return 0.5*(1+_math.erf(x/_math.sqrt(2)))
+    def npdf(x): return _math.exp(-0.5*x*x)/_math.sqrt(2*_math.pi)
+    d1 = (_math.log(S/K)+(r+0.5*sigma**2)*T)/(sigma*_math.sqrt(T))
+    d2 = d1 - sigma*_math.sqrt(T)
+    if option_type == "CE":
+        price = S*ncdf(d1) - K*_math.exp(-r*T)*ncdf(d2)
+        delta = ncdf(d1)
+        intrinsic = max(0, S-K)
+    else:
+        price = K*_math.exp(-r*T)*ncdf(-d2) - S*ncdf(-d1)
+        delta = ncdf(d1) - 1
+        intrinsic = max(0, K-S)
+    gamma = npdf(d1)/(S*sigma*_math.sqrt(T))
+    theta = (-(S*npdf(d1)*sigma)/(2*_math.sqrt(T)) -
+              r*K*_math.exp(-r*T)*(ncdf(d2) if option_type=="CE" else ncdf(-d2)))/365
+    vega  = S*npdf(d1)*_math.sqrt(T)/100
+    price = max(0.05, price)
+    return {
+        "price":    round(price, 2),
+        "delta":    round(delta, 4),
+        "gamma":    round(gamma, 6),
+        "theta":    round(theta, 4),
+        "vega":     round(vega,  4),
+        "iv":       round(sigma*100, 2),
+        "intrinsic":round(intrinsic, 2),
+        "time_value":round(max(0, price-intrinsic), 2),
+    }
+
 LOT_SIZES = {
     "NIFTY": 65, "BANKNIFTY": 30, "FINNIFTY": 60,
     "MIDCPNIFTY": 120, "SENSEX": 10,
