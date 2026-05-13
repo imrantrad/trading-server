@@ -26,92 +26,74 @@ class DailyResult:
 
 # ── STRATEGY CONFIGS (fixed, deterministic) ─────────────────────────────────
 STRATEGY_CONFIGS = {
+    # avg_win/avg_loss are PER LOT (premium points × lot_size)
+    # NIFTY: 1 lot = 65 units
+    # Win rates based on real Indian market strategy performance data
+
     "STR_IRON_CONDOR_WEEKLY": {
-        "name": "Weekly Iron Condor", "win_rate": 0.78, "avg_win": 2800,
-        "avg_loss": 4200, "trades_per_week": 1.0, "min_vix": 12, "max_vix": 22,
-        "entry_day": 1,  # Monday
+        "name": "Weekly Iron Condor", 
+        "win_rate": 0.68,          # Real: 65-72% for IC
+        "avg_win": 3000,           # ~46 pts × 65 = ₹3000 per lot
+        "avg_loss": 6000,          # ~92 pts loss when wrong
+        "trades_per_week": 1.0,
+        "min_vix": 12, "max_vix": 22,
     },
     "STR_MAX_PAIN_EXPIRY": {
-        "name": "Max Pain Expiry", "win_rate": 0.76, "avg_win": 3200,
-        "avg_loss": 5000, "trades_per_week": 1.0, "entry_day": 3,  # Wed
+        "name": "Max Pain Expiry", 
+        "win_rate": 0.65,
+        "avg_win": 3500,
+        "avg_loss": 7000,
+        "trades_per_week": 1.0,
     },
     "STR_THETA_DECAY": {
-        "name": "Theta Decay", "win_rate": 0.72, "avg_win": 2200,
-        "avg_loss": 3800, "trades_per_week": 1.5,
+        "name": "Theta Decay",
+        "win_rate": 0.63,          # Real: 60-68%
+        "avg_win": 2200,
+        "avg_loss": 4000,
+        "trades_per_week": 1.5,
     },
     "STR_GAP_FADE": {
-        "name": "Gap Fade", "win_rate": 0.74, "avg_win": 1800,
-        "avg_loss": 2600, "trades_per_week": 2.0,
+        "name": "Gap Fade",
+        "win_rate": 0.58,          # Real: 55-63%
+        "avg_win": 2500,
+        "avg_loss": 3500,
+        "trades_per_week": 2.0,
     },
     "STR_PCR_REVERSAL": {
-        "name": "PCR Reversal", "win_rate": 0.71, "avg_win": 2100,
-        "avg_loss": 3200, "trades_per_week": 2.0,
+        "name": "PCR Reversal",
+        "win_rate": 0.60,
+        "avg_win": 2000,
+        "avg_loss": 3200,
+        "trades_per_week": 1.5,
     },
     "STR_ORB": {
-        "name": "Opening Range Breakout", "win_rate": 0.68, "avg_win": 1600,
-        "avg_loss": 2800, "trades_per_week": 3.0,
+        "name": "Opening Range Breakout",
+        "win_rate": 0.55,          # Real: 52-60%
+        "avg_win": 3000,
+        "avg_loss": 2000,          # Good R:R ratio
+        "trades_per_week": 3.0,
     },
-    "STR_VWAP_PULLBACK": {
-        "name": "VWAP Pullback", "win_rate": 0.65, "avg_win": 1400,
-        "avg_loss": 2400, "trades_per_week": 3.0,
+    "STR_VWAP_BOUNCE": {
+        "name": "VWAP Bounce",
+        "win_rate": 0.57,
+        "avg_win": 2200,
+        "avg_loss": 2800,
+        "trades_per_week": 2.5,
     },
-    "STR_SUPERTREND_EMA": {
-        "name": "Supertrend+EMA", "win_rate": 0.63, "avg_win": 1500,
-        "avg_loss": 2200, "trades_per_week": 2.5,
+    "STR_STRADDLE_EXPIRY": {
+        "name": "Expiry Straddle",
+        "win_rate": 0.52,          # Real: 50-58% - risky
+        "avg_win": 5000,
+        "avg_loss": 4500,
+        "trades_per_week": 1.0,
     },
-    "STR_BANKNIFTY_SCALP": {
-        "name": "BankNifty Scalp", "win_rate": 0.62, "avg_win": 1200,
-        "avg_loss": 1800, "trades_per_week": 4.0,
+    "STR_MOMENTUM": {
+        "name": "Momentum CE",
+        "win_rate": 0.54,
+        "avg_win": 4000,
+        "avg_loss": 2500,
+        "trades_per_week": 2.0,
     },
-    "STR_FII_MOMENTUM": {
-        "name": "FII Momentum", "win_rate": 0.69, "avg_win": 2400,
-        "avg_loss": 3600, "trades_per_week": 1.5,
-    },
-    "EMA_CROSS": {
-        "name": "EMA Crossover", "win_rate": 0.58, "avg_win": 1800,
-        "avg_loss": 2800, "trades_per_week": 2.0,
-    },
-    "RSI_MEAN_REVERSION": {
-        "name": "RSI Mean Reversion", "win_rate": 0.61, "avg_win": 1600,
-        "avg_loss": 2400, "trades_per_week": 2.0,
-    },
-    "BOLLINGER_BREAKOUT": {
-        "name": "Bollinger Breakout", "win_rate": 0.59, "avg_win": 2000,
-        "avg_loss": 2800, "trades_per_week": 1.5,
-    },
-    "STRONG_TREND_CONT": {
-        "name": "Strong Trend Continuation", "win_rate": 0.72, "avg_win": 1800,
-        "avg_loss": 2400, "trades_per_week": 2.0,
-    },
-    "BREAKOUT_TREND": {
-        "name": "Breakout Trend Strategy", "win_rate": 0.68, "avg_win": 2500,
-        "avg_loss": 3500, "trades_per_week": 2.5,
-    },
-    "MTF_TREND_ALIGN": {
-        "name": "Multi-Timeframe Alignment", "win_rate": 0.75, "avg_win": 2200,
-        "avg_loss": 2600, "trades_per_week": 2.0,
-    },
-    "TREND_REVERSAL": {
-        "name": "Trend Reversal Strategy", "win_rate": 0.65, "avg_win": 3600,
-        "avg_loss": 3000, "trades_per_week": 1.5,
-    },
-    "MOMENTUM_ACCEL": {
-        "name": "Momentum Acceleration", "win_rate": 0.70, "avg_win": 2400,
-        "avg_loss": 2200, "trades_per_week": 3.0,
-    },
-    "CONFLUENCE_930": {
-        "name": "9:30 AM Confluence", "win_rate": 0.73, "avg_win": 1350,
-        "avg_loss": 600, "trades_per_week": 3.5,
-    },
-    "ORB_ATM_930": {
-        "name": "ORB ATM 9:30", "win_rate": 0.71, "avg_win": 1125,
-        "avg_loss": 480, "trades_per_week": 2.5,
-    },
-    "AI_GEN5_001": {"name": "Gen5 Momentum AI", "win_rate": 0.74, "avg_win": 2100, "avg_loss": 1800, "trades_per_week": 3.0},
-    "AI_GEN5_002": {"name": "Gen5 Mean Reversion AI", "win_rate": 0.71, "avg_win": 1800, "avg_loss": 1500, "trades_per_week": 2.5},
-    "AI_GEN5_003": {"name": "Gen5 Breakout AI", "win_rate": 0.67, "avg_win": 3600, "avg_loss": 3000, "trades_per_week": 2.0},
-    "AI_GEN5_004": {"name": "Gen5 Opening Range AI", "win_rate": 0.73, "avg_win": 1125, "avg_loss": 480, "trades_per_week": 2.5},
-    "AI_GEN5_005": {"name": "Gen5 Theta Harvester AI", "win_rate": 0.78, "avg_win": 1200, "avg_loss": 900, "trades_per_week": 1.5},
 }
 
 def _get_seed(strategy: str, capital: float, months: int, quantity: int) -> int:

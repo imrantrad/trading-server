@@ -565,23 +565,38 @@ def run_institutional_backtest(
                 # Determine win/loss (deterministic per day)
                 # Quality score influences win probability slightly
                 adj_wr = win_rate + (quality["score"] - 50) * 0.001
-                adj_wr = max(0.3, min(0.85, adj_wr))
+                # Apply regime penalty to win rate
+                regime_penalty = {"HIGH_VOL": -0.12, "GAPDAY": -0.10, 
+                                   "SIDEWAYS": 0.05, "EXPIRY": 0.03,
+                                   "TRENDING": 0.02, "NORMAL": 0, "LOW_VOL": -0.05}
+                adj_wr += regime_penalty.get(regime, 0)
+                adj_wr = max(0.30, min(0.80, adj_wr))
                 
                 is_win = day_rng.random() < adj_wr
                 
                 # P&L simulation
+                # P&L based on REALISTIC options premium movement
+                # Options typically move 30-100% from entry on winning trades
+                # and lose 30-70% on losing trades (not 1-3% like spot)
+                entry_px  = entry_exec["exec_price"]
+
                 if is_win:
-                    pnl_variance = day_rng.uniform(0.6, 1.4)
-                    gross_pnl = base_avg_win * pnl_variance
-                    # Cap by target
-                    max_target = entry_exec["exec_price"] * (sl_pct / 100) * lot_size * actual_lots * target_pct / sl_pct
-                    gross_pnl = min(gross_pnl, max_target * 1.2)
+                    # Winning option trade: realistic premium move
+                    # Directional buyers: 50-80% gain on premium
+                    # Premium sellers (IC/theta): collect 30-50% of premium
+                    win_pct   = day_rng.uniform(0.30, 0.65)
+                    profit_pts= entry_px * win_pct
+                    gross_pnl = profit_pts * lot_size * actual_lots
+                    # Hard cap: max ₹8000 per lot per trade (realistic)
+                    gross_pnl = min(gross_pnl, 8000 * actual_lots)
+
                 else:
-                    loss_variance = day_rng.uniform(0.7, 1.3)
-                    gross_pnl = -base_avg_loss * loss_variance
-                    # Cap by SL
-                    max_sl = entry_exec["exec_price"] * (sl_pct / 100) * lot_size * actual_lots
-                    gross_pnl = max(gross_pnl, -max_sl * 1.1)
+                    # Losing option trade: SL hit
+                    loss_pct  = day_rng.uniform(0.35, 0.65)
+                    loss_pts  = entry_px * loss_pct
+                    gross_pnl = -(loss_pts * lot_size * actual_lots)
+                    # Hard floor: max ₹7000 loss per lot per trade
+                    gross_pnl = max(gross_pnl, -7000 * actual_lots)
                 
                 # Transaction charges
                 charges_entry = calculate_charges(entry_exec["exec_price"], lot_size, actual_lots, broker)

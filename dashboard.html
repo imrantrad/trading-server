@@ -7443,49 +7443,56 @@ function adminLogout(){
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function adminTab(tab,btn){
-  // Hide all admin sub-panels
-  ['dash','users','analytics','pay','notifs','sys'].forEach(function(t){
-    var el=document.getElementById('adm-'+t);
-    if(el) el.style.display='none';
-    var b=document.getElementById('adm-tab-'+t);
+  var ADM_TABS = ['dash','users','analytics','pay','notifs','sys','referral'];
+  
+  // Step 1: Hide all top-level adm panels
+  ADM_TABS.forEach(function(t){
+    var el = document.getElementById('adm-'+t);
+    if(el) el.style.display = 'none';
+    var b = document.getElementById('adm-tab-'+t);
     if(b){b.style.background='transparent';b.style.borderBottomColor='transparent';b.style.color='var(--mu)';}
   });
-  
-  // Hide referral overlay if switching to another tab
-  var refOverlay=document.getElementById('adm-referral-overlay');
-  if(refOverlay&&tab!=='referral') refOverlay.style.display='none';
-  
-  // Highlight tab
-  if(btn){btn.style.background='rgba(168,85,247,.08)';btn.style.borderBottomColor='var(--p0)';btn.style.color='var(--p0)';}
-  
-  if(tab==='referral'){
-    // Show referral as content inside admin panel
-    var orig=document.getElementById('adm-referral');
-    if(orig){
-      // Force show it regardless of where it is in DOM
-      orig.style.cssText='display:block!important;padding:8px;position:relative;z-index:1';
-      // Make all ancestor divs visible
-      var el=orig;
-      while(el&&el.id!=='pnl-admin'){
-        if(el.style&&el.style.display==='none') el.style.display='block';
-        el=el.parentElement;
-      }
+
+  // Step 2: For referral - it is nested inside adm-sys HTML
+  // Show adm-sys as container but hide all its children EXCEPT referral
+  if(tab === 'referral'){
+    var sysEl = document.getElementById('adm-sys');
+    if(sysEl){
+      sysEl.style.display = 'block';
+      // Hide all direct children of adm-sys except referral
+      Array.prototype.forEach.call(sysEl.children, function(child){
+        child.style.display = child.id === 'adm-referral' ? 'block' : 'none';
+      });
     }
-    if(typeof loadAdminReferral==='function') setTimeout(loadAdminReferral,100);
+    var refEl = document.getElementById('adm-referral');
+    if(refEl) refEl.style.display = 'block';
+    if(btn){btn.style.background='rgba(168,85,247,.08)';btn.style.borderBottomColor='var(--p0)';btn.style.color='var(--p0)';}
+    setTimeout(function(){ if(typeof loadAdminReferral==='function') loadAdminReferral(); }, 100);
     return;
   }
-  
-  // Hide referral if visible
-  var orig=document.getElementById('adm-referral');
-  if(orig) orig.style.cssText='display:none;padding:8px';
-  
-  var target=document.getElementById('adm-'+tab);
-  if(target) target.style.display='block';
+
+  // Step 3: For sys tab - restore all sys children visibility
+  if(tab === 'sys'){
+    var sysEl2 = document.getElementById('adm-sys');
+    if(sysEl2){
+      sysEl2.style.display = 'block';
+      Array.prototype.forEach.call(sysEl2.children, function(child){
+        child.style.display = child.id === 'adm-referral' ? 'none' : '';
+      });
+    }
+    if(btn){btn.style.background='rgba(168,85,247,.08)';btn.style.borderBottomColor='var(--p0)';btn.style.color='var(--p0)';}
+    if(typeof loadSysStatus==='function') loadSysStatus();
+    return;
+  }
+
+  // Step 4: Normal tabs
+  var target = document.getElementById('adm-'+tab);
+  if(target) target.style.display = 'block';
+  if(btn){btn.style.background='rgba(168,85,247,.08)';btn.style.borderBottomColor='var(--p0)';btn.style.color='var(--p0)';}
   if(tab==='dash')      loadAdminDash();
-  if(tab==='users')     loadAdminUsers();
-  if(tab==='pay')       loadPaymentConfig();
-  if(tab==='sys')       loadSysStatus();
-  if(tab==='analytics') loadAdminAnalytics();
+  else if(tab==='users')     loadAdminUsers();
+  else if(tab==='pay')       { if(typeof loadPaymentConfig==='function') loadPaymentConfig(); }
+  else if(tab==='analytics') { if(typeof loadAdminAnalytics==='function') loadAdminAnalytics(); }
 }
 
 

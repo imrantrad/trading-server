@@ -3774,8 +3774,11 @@ def admin_create_referral(payload: dict):
     bonus = float(payload.get("bonus_amount", 500))
     discount = float(payload.get("discount_amount", 200))
     months = int(payload.get("validity_months", 1))
+    # Accept either user_id or email - use email as user_id if no user_id
     if not owner_id and not owner_email:
-        return {"error": "owner_user_id ya owner_email required"}
+        return {"error": "User ID ya email required"}
+    if not owner_id:
+        owner_id = owner_email  # Use email as identifier
     code = _gen_code()
     from datetime import datetime, timedelta
     expires = (datetime.now() + timedelta(days=30*months)).isoformat()
