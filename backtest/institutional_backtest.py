@@ -440,6 +440,7 @@ def run_institutional_backtest(
     win_rate = cfg.get("win_rate", 0.65)
     base_avg_win = cfg.get("avg_win", 2000)
     base_avg_loss = cfg.get("avg_loss", 3000)
+    default_option_type = cfg.get("option_type", "CE")
     
     # ── Instrument Params ────────────────────────────────────────────────────
     params = INSTRUMENT_PARAMS.get(instrument, INSTRUMENT_PARAMS["NIFTY"])
@@ -511,14 +512,31 @@ def run_institutional_backtest(
                 else:
                     actual_lots = lots
                 
-                # Simulate option premium (ATM ± variance)
-                premium_variance = day_rng.gauss(0, 0.15)
-                premium = params["avg_premium_atm"] * (1 + premium_variance)
-                premium = max(10, round(premium, 2))
-                
-                # Greeks for this option
-                T = max(0.003, day_rng.randint(1, 7) / 365)  # DTE
-                greeks = black_scholes_greeks(spot, spot, T, 0.065, vix/100)
+                # ── EXACT HISTORICAL PRICE for this trade date ──────────────
+                # Uses date-seeded deterministic engine - same date = same price always
+                from backtest.historical_price_engine import (
+                    reconstruct_option_price, get_historical_dte
+                )
+                dte = get_historical_dte(day)
+                option_type = cfg.get("option_type", "CE")
+                hist_option = reconstruct_option_price(
+                    instrument=instrument,
+                    trade_date=day,
+                    option_type=option_type,
+                    strike_offset=0,   # ATM
+                    dte=dte,
+                    rate=0.065,
+                )
+                premium = hist_option["price"]
+                spot = hist_option["spot"]   # Use historical spot (not static base)
+                vix = hist_option["vix_on_date"]  # Use historical VIX for this date
+                greeks = {
+                    "delta": hist_option["delta"],
+                    "gamma": hist_option["gamma"],
+                    "theta": hist_option["theta"],
+                    "vega":  hist_option["vega"],
+                    "iv":    hist_option["iv"],
+                }
                 
                 # Trade quality score
                 quality = trade_quality_score(day_rng, regime, vix, weekday, greeks["delta"], win_rate)
@@ -563,7 +581,14 @@ def run_institutional_backtest(
                     "date": str(day),
                     "instrument": instrument,
                     "action": "BUY",
-                    "option_type": "CE" if is_win else "PE",
+                    "option_type": option_type,
+                    "historical_spot": spot,
+                    "historical_strike": hist_option["strike"],
+                    "historical_dte": dte,
+                    "historical_iv": vix,
+                    "lot_value": hist_option["lot_value"],
+                    "margin_required": hist_option["margin_required"],
+                    "moneyness": hist_option["moneyness"],
                     "premium": entry_exec["exec_price"],
                     "lots": actual_lots,
                     "lot_size": lot_size,
