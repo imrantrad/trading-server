@@ -633,36 +633,79 @@ def test_notif():
 # ─── BROKER STATUS ──────────────────────────────────
 @app.get("/broker/status")
 def broker_status():
-    return {"active_broker": "ZERODHA", "mode": "PAPER",
-            "brokers": ["ZERODHA","ANGEL","FYERS"],
-            "note": "Add API keys in config/settings.py for live trading",
-            "live_trading": False}
+    """Get current broker connection status"""
+    if MODULES_LOADED:
+        try:
+            status = get_broker_status()
+            return {
+                "connected": bool(status),
+                "broker":    status.get("broker",""),
+                "mode":      "LIVE",
+                "status":    "CONNECTED" if status else "DISCONNECTED",
+            }
+        except:
+            pass
+    return {
+        "connected": False,
+        "broker":    "NONE",
+        "mode":      "PAPER",
+        "status":    "PAPER MODE — Connect broker for live trading",
+    }
+
 
 @app.get("/broker/connect/{broker_name}")
 def connect_broker(broker_name: str, api_key: str = "", access_token: str = ""):
-    """Connect to broker - simulation mode if module not available"""
-    if not api_key:
-        return {"error": "API key required", "connected": False}
+    """Connect to broker - validates credentials and returns connection status"""
+    broker_name = broker_name.upper()
     
-    # Try real broker module first
+    if not api_key:
+        return {"connected": False, "error": "API key required"}
+    
+    # Validate key format per broker
+    min_lengths = {
+        "ZERODHA":  8, "ANGEL": 8, "UPSTOX": 10,
+        "FYERS": 8, "DHAN": 10, "DEFAULT": 6,
+    }
+    min_len = min_lengths.get(broker_name, 6)
+    
+    if len(api_key.strip()) < min_len:
+        return {
+            "connected": False,
+            "error": f"Invalid API key format for {broker_name} (min {min_len} chars)",
+        }
+    
+    # Try real broker module
     if MODULES_LOADED:
         try:
-            broker = get_broker(broker_name, api_key=api_key, access_token=access_token)
+            broker = get_broker(broker_name.lower(), 
+                               api_key=api_key, 
+                               access_token=access_token)
             connected = broker.login()
-            return {"connected": connected, "broker": broker_name, 
-                    "message": "Connected!" if connected else "Connection failed"}
+            return {
+                "connected":  connected,
+                "broker":     broker_name,
+                "mode":       "LIVE",
+                "status":     "CONNECTED" if connected else "FAILED",
+                "message":    f"{broker_name} {'connected successfully' if connected else 'connection failed'}",
+            }
         except Exception as e:
-            pass
-    
-    # Demo/simulation mode - validate API key format
-    valid_brokers = {"zerodha": 8, "angel": 8, "upstox": 12, "fyers": 8}
-    min_len = valid_brokers.get(broker_name.lower(), 6)
-    if len(api_key) >= min_len:
-        return {"connected": True, "broker": broker_name.upper(), 
-                "status": "PAPER MODE", 
-                "message": f"{broker_name.upper()} connected in PAPER mode",
-                "note": "Live trading requires valid API credentials"}
-    return {"connected": False, "error": "Invalid API key format"}
+            pass  # Fall through to paper mode
+
+    # Paper/Demo mode - always succeeds with valid key format
+    return {
+        "connected":   True,
+        "broker":      broker_name,
+        "mode":        "PAPER",
+        "status":      "CONNECTED",
+        "account_id":  f"DEMO_{broker_name[:3]}_{api_key[-4:]}",
+        "message":     f"{broker_name} connected in PAPER mode",
+        "note":        "Live trading requires real broker integration",
+        "features": {
+            "paper_trading": True,
+            "live_trading":  False,
+            "portfolio_view": True,
+        }
+    }
 
 
 @app.get("/system/status")

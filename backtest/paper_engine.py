@@ -596,14 +596,12 @@ class PaperTradingEngine:
                       dte: int = None) -> dict:
         """Full institutional execution pipeline"""
 
-        # Market session check
+        # Paper trading works 24/7 (simulation)
         now  = datetime.now()
         hour = now.hour
-        if not (NSE_OPEN[0] <= hour < NSE_CLOSE[0]):
-            return {"success": False, "reason": "Market is CLOSED — NSE 09:15-15:30"}
-
-        if str(date.today()) in NSE_HOLIDAYS:
-            return {"success": False, "reason": "NSE Holiday — market closed"}
+        is_market_hours = NSE_OPEN[0] <= hour < NSE_CLOSE[0]
+        is_holiday = str(date.today()) in NSE_HOLIDAYS
+        # Note: Paper trading NOT restricted — simulate any time
 
         # Live market data
         spot = get_live_spot(instrument)
@@ -619,7 +617,7 @@ class PaperTradingEngine:
         opt  = get_live_option_price(instrument, strike, option_type, dte, spot, vix)
 
         # Market regime
-        is_expiry = (now.weekday() == 3)
+        is_expiry = (now.weekday() == 3)  # Thursday = expiry
         regime    = detect_live_regime(vix, 0, is_expiry, hour)
 
         # Allocated capital
