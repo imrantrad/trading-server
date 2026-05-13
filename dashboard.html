@@ -1968,32 +1968,53 @@ setInterval(function(){
         <div class="stat"><div class="sl">DISK</div><div class="sv" id="sys-disk" style="color:var(--bl)">—</div></div>
         <div class="stat"><div class="sl">UPTIME</div><div class="sv" id="sys-uptime" style="color:var(--gr)">—</div></div>
       </div>
-      <!-- REFERRAL MANAGEMENT PANEL -->
-      
 
-      <div class="card" style="margin-bottom:10px">
-        <div class="chdr">🖥️ SERVER INFO <button onclick="loadSysStatus()" style="font-size:8px;padding:2px 8px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:3px;cursor:pointer">↻</button></div>
-        <div id="sys-info" style="font-size:10px;color:var(--mu);line-height:2">Loading...</div>
-      </div>
 
-      <!-- API Health -->
-      <div class="card" style="margin-bottom:10px">
-        <div class="chdr">🔗 API HEALTH CHECK</div>
-        <div id="adm-api-health" style="font-size:10px;color:var(--mu)">Loading...</div>
-        <button onclick="checkAPIHealth()" class="btn bg" style="width:100%;margin-top:8px;padding:8px;font-size:10px">🔍 CHECK ALL ENDPOINTS</button>
-      </div>
+    </div><!-- end padding -->
+  </div><!-- end panel content -->
+</div>
 
-      <!-- Danger zone -->
-      <div class="card" style="border-color:rgba(255,51,102,.2)">
-        <div class="chdr" style="color:var(--rd)">⚠️ DANGER ZONE</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <button onclick="if(confirm('Reset ALL paper trading data?'))adminAction('reset_paper')" style="padding:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px">🔄 Reset All Paper Trading</button>
-          <button onclick="if(confirm('Clear ALL backtests?'))adminAction('clear_backtests')" style="padding:10px;background:rgba(255,51,102,.08);border:1px solid rgba(255,51,102,.2);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px">🗑️ Clear All Backtests</button>
-          <button onclick="if(confirm('RESTART SERVER? All connections will drop for 10s'))adminAction('restart')" style="padding:10px;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.4);color:var(--rd);border-radius:6px;cursor:pointer;font-size:10px;font-weight:700">⚡ RESTART SERVER</button>
-        </div>
-      </div>
+<div id="pnl-ref" class="pnl">
+  <!-- Referral Code Input for logged-in user -->
+  <div class="card" style="margin-bottom:8px;border-color:rgba(0,255,136,.2)">
+    <div class="chdr" style="color:var(--gr)">🎁 MY REFERRAL</div>
+    <div style="font-size:10px;color:var(--mu);margin-bottom:12px">Apna referral code share karo — dono ko benefit milega</div>
+    <div id="my-referral-code-display" style="background:var(--bg4);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--mu);margin-bottom:6px">YOUR REFERRAL CODE</div>
+      <div id="my-ref-code" style="font-size:22px;font-weight:800;font-family:monospace;color:var(--gr);letter-spacing:3px">—</div>
     </div>
+    <div style="display:flex;gap:6px">
+      <button onclick="copyMyRefCode()" class="btn bg" style="flex:1;font-size:11px;padding:10px">📋 COPY CODE</button>
+      <button onclick="shareRefCode()" class="btn bb" style="flex:1;font-size:11px;padding:10px">📤 SHARE</button>
+    </div>
+    <div id="my-ref-stats" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+  </div>
 
+  <!-- Apply Referral Code -->
+  <div class="card" style="margin-bottom:8px">
+    <div class="chdr">🏷️ APPLY REFERRAL CODE</div>
+    <div style="font-size:10px;color:var(--mu);margin-bottom:8px">Dusre ka code use karke discount pao</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <input id="apply-ref-input" placeholder="Enter referral code (e.g. TRDABCD123)" 
+             style="flex:1;font-size:12px;font-family:monospace;letter-spacing:1px;text-transform:uppercase"
+             oninput="this.value=this.value.toUpperCase()">
+      <button onclick="applyRefCode()" class="btn bg blg" style="padding:8px 14px;font-size:11px">APPLY</button>
+    </div>
+    <div id="apply-ref-msg" style="font-size:11px;display:none;padding:8px;border-radius:6px"></div>
+  </div>
+
+  <!-- How it works -->
+  <div class="card">
+    <div class="chdr">ℹ️ HOW IT WORKS</div>
+    <div style="font-size:11px;color:var(--mu);line-height:2">
+      <div>1️⃣ Admin aapke liye ek unique code generate karta hai</div>
+      <div>2️⃣ Aap woh code share karo apne dosto ke saath</div>
+      <div>3️⃣ Wo sign up karte waqt code use kare — unhe discount milta hai</div>
+      <div>4️⃣ Aapke account mein bonus credit hota hai automatically</div>
+    </div>
+  </div>
+      
+      <!-- REFERRAL PANEL - TOP LEVEL -->
       <div id="adm-referral" style="display:none;padding:8px">
         <div class="card" style="margin-bottom:8px">
           <div class="chdr" style="color:var(--gr)">🎁 CREATE REFERRAL CODE</div>
@@ -2050,50 +2071,6 @@ setInterval(function(){
         </div>
       </div>
 
-
-    </div><!-- end padding -->
-  </div><!-- end panel content -->
-</div>
-
-<div id="pnl-ref" class="pnl">
-  <!-- Referral Code Input for logged-in user -->
-  <div class="card" style="margin-bottom:8px;border-color:rgba(0,255,136,.2)">
-    <div class="chdr" style="color:var(--gr)">🎁 MY REFERRAL</div>
-    <div style="font-size:10px;color:var(--mu);margin-bottom:12px">Apna referral code share karo — dono ko benefit milega</div>
-    <div id="my-referral-code-display" style="background:var(--bg4);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
-      <div style="font-size:11px;color:var(--mu);margin-bottom:6px">YOUR REFERRAL CODE</div>
-      <div id="my-ref-code" style="font-size:22px;font-weight:800;font-family:monospace;color:var(--gr);letter-spacing:3px">—</div>
-    </div>
-    <div style="display:flex;gap:6px">
-      <button onclick="copyMyRefCode()" class="btn bg" style="flex:1;font-size:11px;padding:10px">📋 COPY CODE</button>
-      <button onclick="shareRefCode()" class="btn bb" style="flex:1;font-size:11px;padding:10px">📤 SHARE</button>
-    </div>
-    <div id="my-ref-stats" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
-  </div>
-
-  <!-- Apply Referral Code -->
-  <div class="card" style="margin-bottom:8px">
-    <div class="chdr">🏷️ APPLY REFERRAL CODE</div>
-    <div style="font-size:10px;color:var(--mu);margin-bottom:8px">Dusre ka code use karke discount pao</div>
-    <div style="display:flex;gap:6px;margin-bottom:8px">
-      <input id="apply-ref-input" placeholder="Enter referral code (e.g. TRDABCD123)" 
-             style="flex:1;font-size:12px;font-family:monospace;letter-spacing:1px;text-transform:uppercase"
-             oninput="this.value=this.value.toUpperCase()">
-      <button onclick="applyRefCode()" class="btn bg blg" style="padding:8px 14px;font-size:11px">APPLY</button>
-    </div>
-    <div id="apply-ref-msg" style="font-size:11px;display:none;padding:8px;border-radius:6px"></div>
-  </div>
-
-  <!-- How it works -->
-  <div class="card">
-    <div class="chdr">ℹ️ HOW IT WORKS</div>
-    <div style="font-size:11px;color:var(--mu);line-height:2">
-      <div>1️⃣ Admin aapke liye ek unique code generate karta hai</div>
-      <div>2️⃣ Aap woh code share karo apne dosto ke saath</div>
-      <div>3️⃣ Wo sign up karte waqt code use kare — unhe discount milta hai</div>
-      <div>4️⃣ Aapke account mein bonus credit hota hai automatically</div>
-    </div>
-  </div>
 </div>
 
 <div id="pnl-legal" class="pnl">
@@ -8492,7 +8469,15 @@ function loadAdminReferral(){
     if(!list) return;
     if(err||!d){ list.innerHTML='<div style="color:var(--rd);padding:12px">Server error</div>'; return; }
     var codes=d.codes||[];
-    if(!codes.length){ list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center">No codes yet</div>'; return; }
+    if(!codes.length){
+      list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center">'
+        +'No referral codes created yet.<br><br>'
+        +'<button onclick="document.getElementById(\'ref-owner-id\').focus()" '
+        +'style="font-size:10px;padding:6px 14px;background:rgba(0,255,136,.1);'
+        +'border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:6px;cursor:pointer">'
+        +'➕ Create First Code</button></div>';
+      return;
+    }
     list.innerHTML=codes.map(function(c){
       var active=c.is_active===1||c.is_active===true;
       return '<div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:8px;border-left:3px solid '+(active?'var(--gr)':'var(--rd)')+'">'+
