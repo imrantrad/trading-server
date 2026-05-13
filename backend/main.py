@@ -121,7 +121,7 @@ INSTRUMENTS={"nifty 50":"NIFTY","nifty50":"NIFTY","nifty":"NIFTY","nf":"NIFTY","
     "reliance":"RELIANCE","tcs":"TCS","hdfc":"HDFCBANK","infosys":"INFY","icici":"ICICIBANK",
     "usdinr":"USDINR","crude":"CRUDEOIL","gold":"GOLD",
 }
-LOT_SIZES={"NIFTY":50,"BANKNIFTY":15,"FINNIFTY":40,"MIDCPNIFTY":75,"SENSEX":10}
+LOT_SIZES={"NIFTY":65,"BANKNIFTY":30,"FINNIFTY":60,"MIDCPNIFTY":120,"SENSEX":10,"NIFTYNXT50":25}
 BUY_WORDS=["buy","long","bullish","call buy","entry","enter","accumulate","kharido","le lo","lelo","lo","खरीदो","badhega","upar"]
 SELL_WORDS=["sell","short","bearish","put buy","exit","close","square off","becho","bech","niklo","nikal","बेचो","girega","neeche"]
 OPTION_TYPES={"call":"CE","ce":"CE","कॉल":"CE","put":"PE","pe":"PE","पुट":"PE"}
@@ -918,7 +918,7 @@ def expiry_cal(): return reporter.expiry_calendar()
 @app.get("/margin/calculate")
 def calc_margin(instrument: str="NIFTY", quantity: int=1,
                 position_type: str="OPTIONS", price: float=100):
-    lot_size = {"NIFTY":50,"BANKNIFTY":15,"FINNIFTY":40,"MIDCPNIFTY":75}.get(instrument,50)
+    lot_size = {"NIFTY":65,"BANKNIFTY":30,"FINNIFTY":60,"MIDCPNIFTY":120}.get(instrument,50)
     lots_val = quantity*lot_size
     span = {"NIFTY":1.0,"BANKNIFTY":1.2,"FINNIFTY":0.8}.get(instrument,1.0)
     if position_type=="OPTIONS":

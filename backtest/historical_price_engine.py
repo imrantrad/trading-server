@@ -50,8 +50,9 @@ HISTORICAL_VIX = {
 
 # Lot sizes (fixed, regulated by SEBI)
 LOT_SIZES = {
-    "NIFTY": 75, "BANKNIFTY": 30, "FINNIFTY": 65,
-    "MIDCPNIFTY": 150, "SENSEX": 10,
+    "NIFTY": 65, "BANKNIFTY": 30, "FINNIFTY": 60,
+    "MIDCPNIFTY": 120, "SENSEX": 10,
+    "NIFTYNXT50": 25,
 }
 
 # ── DETERMINISTIC SPOT PRICE RECONSTRUCTION ──────────────────────────────────
