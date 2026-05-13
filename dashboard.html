@@ -1053,14 +1053,22 @@ setInterval(function(){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div>
           <div class="lbl">STRATEGY</div>
-          <select id="bt-s" style="font-size:10px">
-            <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor Weekly</option>
-            <option value="STR_THETA_DECAY" selected>Theta Decay</option>
-            <option value="STR_ORB">Opening Range Breakout</option>
-            <option value="STR_VWAP_BOUNCE">VWAP Bounce</option>
-            <option value="STR_GAP_FADE">Gap Fade</option>
-            <option value="STR_PCR_REVERSAL">PCR Reversal</option>
-            <option value="STR_STRADDLE_EXPIRY">Straddle Expiry</option>
+          <select id="bt-s" style="font-size:10px" onchange="onBTStrategyChange(this)">
+            <optgroup label="── BUILT-IN ──">
+              <option value="STR_IRON_CONDOR_WEEKLY">Iron Condor Weekly</option>
+              <option value="STR_THETA_DECAY" selected>Theta Decay</option>
+              <option value="STR_ORB">Opening Range Breakout</option>
+              <option value="STR_VWAP_BOUNCE">VWAP Bounce</option>
+              <option value="STR_GAP_FADE">Gap Fade</option>
+              <option value="STR_PCR_REVERSAL">PCR Reversal</option>
+              <option value="STR_STRADDLE_EXPIRY">Straddle Expiry</option>
+            </optgroup>
+            <optgroup label="── MY STRATEGIES ──" id="bt-my-strats-group">
+              <option value="__load_my__" style="color:var(--am)">↻ Load My Strategies...</option>
+            </optgroup>
+            <optgroup label="── AI STRATEGIES ──" id="bt-ai-strats-group">
+              <option value="__load_ai__" style="color:var(--p0)">↻ Load AI Strategies...</option>
+            </optgroup>
           </select>
         </div>
         <div>
@@ -1127,6 +1135,11 @@ setInterval(function(){
         </label>
       </div>
 
+      <!-- Custom strategy preview -->
+      <div id="bt-custom-preview" style="display:none;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:10px;margin-bottom:8px">
+        <div class="chdr" style="color:var(--gr);margin-bottom:6px">📋 SELECTED STRATEGY</div>
+        <div id="bt-custom-details" style="font-size:10px;line-height:1.8;color:var(--mu)"></div>
+      </div>
       <button id="bt-btn" onclick="runInstitutionalBT()" class="btn bg blg" style="width:100%;font-size:12px;padding:11px;letter-spacing:0.5px">⚡ RUN INSTITUTIONAL BACKTEST</button>
     </div>
 
@@ -6653,7 +6666,9 @@ function loadAIStrats(type){
       // Store strategy data on div for event delegation
       div.dataset.strategyJson = JSON.stringify(s);
       div.querySelector('.ai-use-btn').onclick = function(){ applyStrategyToOrderEntry(JSON.parse(this.closest('[data-strategy-json]').dataset.strategyJson)); };
-      div.querySelector('.ai-bt-btn').onclick = function(){ showBt(); };
+      div.querySelector('.ai-bt-btn').onclick = function(){ 
+        runAIStrategyBacktest(JSON.parse(this.closest('[data-strategy-json]').dataset.strategyJson)); 
+      };
       div.querySelector('.ai-pt-btn').onclick = function(){ showPaper(); };
       // Copy button
       var aiCpBtn = document.createElement('button');
@@ -8423,6 +8438,251 @@ function loadBtHistory(){
 function runBT(){
   runInstitutionalBT();
 }
+
+// ══════════════════════════════════════════════════════════
+// STRATEGY BACKTEST INTEGRATION
+// My Strategies + AI Strategies → Backtest
+// ══════════════════════════════════════════════════════════
+
+var _btCustomStrategy = null;  // Holds selected custom strategy
+
+function onBTStrategyChange(sel){
+  var val = sel.value;
+  _btCustomStrategy = null;
+  document.getElementById('bt-custom-preview').style.display = 'none';
+  
+  if(val === '__load_my__'){
+    loadMyStratsIntoBT();
+    return;
+  }
+  if(val === '__load_ai__'){
+    loadAIStratsIntoBT();
+    return;
+  }
+  // Check if it's a custom strategy
+  if(val.startsWith('MY_') || val.startsWith('AI_') || val.startsWith('USER_')){
+    // Retrieve from stored data
+    try{
+      var stored = JSON.parse(localStorage.getItem('bt_strat_' + val) || 'null');
+      if(stored) _showBTCustomPreview(stored);
+    }catch(e){}
+  }
+}
+
+function loadMyStratsIntoBT(){
+  var grp = document.getElementById('bt-my-strats-group');
+  if(!grp) return;
+  
+  req('/strategies/user/'+window.UID,'GET',null,function(err,d){
+    var strats = (d && d.user_strategies) || [];
+    if(!strats.length){
+      toast('No saved strategies found. Create one in STRATEGIES tab.','warn');
+      return;
+    }
+    // Clear group and repopulate
+    grp.innerHTML = '';
+    strats.forEach(function(s){
+      var key = 'MY_' + (s.id || s.name||'').replace(/\s/g,'_');
+      try{ localStorage.setItem('bt_strat_'+key, JSON.stringify(s)); }catch(e){}
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = s.name || 'Strategy ' + s.id;
+      grp.appendChild(opt);
+    });
+    // Select first
+    if(grp.children[0]){
+      grp.children[0].selected = true;
+      document.getElementById('bt-s').value = grp.children[0].value;
+      var first = JSON.parse(localStorage.getItem('bt_strat_'+grp.children[0].value)||'null');
+      if(first) _showBTCustomPreview(first);
+      _btCustomStrategy = first;
+    }
+    toast(strats.length + ' strategies loaded into backtest','success');
+  });
+}
+
+function loadAIStratsIntoBT(){
+  var grp = document.getElementById('bt-ai-strats-group');
+  if(!grp) return;
+  
+  req('/ai/strategies/all','GET',null,function(err,d){
+    var strats = (d && d.strategies) || [];
+    if(!strats.length){
+      toast('No AI strategies found','warn');
+      return;
+    }
+    grp.innerHTML = '';
+    strats.forEach(function(s){
+      var key = 'AI_' + s.id;
+      try{ localStorage.setItem('bt_strat_'+key, JSON.stringify(s)); }catch(e){}
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = (s.approved?'✅ ':'🧪 ') + s.name;
+      grp.appendChild(opt);
+    });
+    if(grp.children[0]){
+      grp.children[0].selected = true;
+      document.getElementById('bt-s').value = grp.children[0].value;
+      var first = JSON.parse(localStorage.getItem('bt_strat_'+grp.children[0].value)||'null');
+      if(first) _showBTCustomPreview(first);
+      _btCustomStrategy = first;
+    }
+    toast(strats.length + ' AI strategies loaded into backtest','success');
+  });
+}
+
+function _showBTCustomPreview(s){
+  _btCustomStrategy = s;
+  var preview = document.getElementById('bt-custom-preview');
+  var details = document.getElementById('bt-custom-details');
+  if(!preview||!details) return;
+  
+  var name = s.name || s.strategy_name || 'Custom Strategy';
+  var inst = s.instrument || 'NIFTY';
+  var action = s.action || 'BUY';
+  var otype = s.option_type || 'CE';
+  var sl = s.stop_loss || s.sl_value || 80;
+  var tgt = s.target || s.target_value || 160;
+  var tf = s.timeframe || '15m';
+  var wr = s.avg_win_rate || s.win_rate || 0;
+  var ec = Array.isArray(s.entry_conditions) ? s.entry_conditions : [];
+  var desc = s.description || s.nlp_input || '';
+  
+  details.innerHTML = 
+    '<b style="color:var(--tx)">' + name + '</b><br>' +
+    inst + ' ' + action + ' ' + otype + ' | SL: ' + sl + ' pts | TGT: ' + tgt + ' pts | TF: ' + tf + '<br>' +
+    (wr ? 'Win Rate: <b style="color:var(--gr)">' + wr + '%</b> | ' : '') +
+    'Entry: ' + (ec.length ? ec.slice(0,2).join(', ') : '—') + '<br>' +
+    (desc ? '<span style="color:rgba(255,255,255,.3)">' + desc.slice(0,120) + '</span>' : '');
+  
+  preview.style.display = 'block';
+  
+  // Auto-fill BT form fields from strategy
+  var setField = function(id, val){ var e=document.getElementById(id); if(e&&val) e.value=val; };
+  setField('bt-inst', inst);
+  if(sl) setField('bt-sl', (sl/10000*100).toFixed(1) || 1.5);  // Convert pts to %
+  if(tgt) setField('bt-tgt', (tgt/10000*100).toFixed(1) || 2.5);
+}
+
+// ── Backtest from Strategy Card (called by USE BT button) ──
+function runStrategyBacktest(s){
+  // Navigate to backtest tab
+  show('bt', null);
+  
+  setTimeout(function(){
+    // Store strategy
+    var key = (s.id ? 'MY_'+s.id : 'MY_'+s.name||'').replace(/\s/g,'_');
+    try{ localStorage.setItem('bt_strat_'+key, JSON.stringify(s)); }catch(e){}
+    
+    // Add to selector if not present
+    var grp = document.getElementById('bt-my-strats-group');
+    if(grp){
+      var existing = grp.querySelector('[value="'+key+'"]');
+      if(!existing){
+        var opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = s.name || 'Custom Strategy';
+        grp.insertBefore(opt, grp.firstChild);
+      }
+    }
+    
+    // Select it
+    var btSel = document.getElementById('bt-s');
+    if(btSel) btSel.value = key;
+    
+    // Show preview
+    _showBTCustomPreview(s);
+    
+    toast('Strategy loaded. Configure and run backtest!', 'success');
+  }, 300);
+}
+
+function runAIStrategyBacktest(s){
+  // Navigate to backtest
+  show('bt', null);
+  
+  setTimeout(function(){
+    var key = 'AI_' + (s.id || 'custom');
+    try{ localStorage.setItem('bt_strat_'+key, JSON.stringify(s)); }catch(e){}
+    
+    var grp = document.getElementById('bt-ai-strats-group');
+    if(grp){
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = s.name;
+      grp.insertBefore(opt, grp.firstChild);
+    }
+    
+    var btSel = document.getElementById('bt-s');
+    if(btSel) btSel.value = key;
+    
+    _showBTCustomPreview(s);
+    toast('AI Strategy loaded for backtest!', 'success');
+  }, 300);
+}
+
+// ── Upgrade runInstitutionalBT to handle custom strategies ──
+var _origRunBT = runInstitutionalBT;
+runInstitutionalBT = function(){
+  var selVal = (document.getElementById('bt-s')||{}).value || '';
+  
+  // If custom strategy selected, merge its params into payload
+  if(_btCustomStrategy && (selVal.startsWith('MY_') || selVal.startsWith('AI_') || selVal.startsWith('USER_'))){
+    var s = _btCustomStrategy;
+    var btn = document.getElementById('bt-btn');
+    if(btn){ btn.textContent='⏳ Running...'; btn.disabled=true; }
+    
+    var payload = {
+      strategy: selVal,
+      instrument: s.instrument || document.getElementById('bt-inst').value || 'NIFTY',
+      capital: parseFloat(document.getElementById('bt-c').value) || 500000,
+      months: parseInt(document.getElementById('bt-m').value) || 3,
+      lots: parseInt(document.getElementById('bt-l').value) || 1,
+      broker: document.getElementById('bt-broker').value || 'zerodha',
+      use_kelly: document.getElementById('bt-kelly').checked,
+      compound: document.getElementById('bt-compound').checked,
+      // Strategy-specific params
+      sl_pct: parseFloat(document.getElementById('bt-sl').value) || 1.5,
+      target_pct: parseFloat(document.getElementById('bt-tgt').value) || 2.5,
+      // Custom strategy data
+      custom_strategy: {
+        name: s.name || selVal,
+        win_rate: (s.avg_win_rate || s.win_rate || 65) / 100,
+        avg_win: s.avg_win || 2000,
+        avg_loss: s.avg_loss || 3000,
+        action: s.action || 'BUY',
+        option_type: s.option_type || 'CE',
+        timeframe: s.timeframe || '15m',
+        entry_conditions: s.entry_conditions || [],
+        exit_conditions: s.exit_conditions || [],
+        description: s.description || s.nlp_input || '',
+        ai_score: s.ai_score || 0,
+      }
+    };
+    
+    req('/backtest/institutional','POST',payload,function(err,d){
+      if(btn){ btn.textContent='⚡ RUN INSTITUTIONAL BACKTEST'; btn.disabled=false; }
+      if(err||!d||d.error){
+        toast('Backtest failed: '+(d&&d.error||'Error'),'error');
+        return;
+      }
+      _renderInstitutionalResults(d);
+      toast('Backtest complete! '+d.total_trades+' trades | '+
+            (d.total_pnl>=0?'+':'')+'\u20b9'+Math.round(d.total_pnl||0).toLocaleString('en-IN'),'success');
+      try{
+        var hist=JSON.parse(localStorage.getItem('bt_history')||'[]');
+        hist.unshift({id:Date.now(),strategy:payload.custom_strategy.name,
+          months:payload.months,capital:payload.capital,pnl:d.total_pnl,
+          win_rate:d.win_rate,sharpe:d.sharpe_ratio,time:new Date().toLocaleString()});
+        localStorage.setItem('bt_history',JSON.stringify(hist.slice(0,20)));
+      }catch(e){}
+    });
+    return;
+  }
+  
+  // Built-in strategy - use original function
+  _origRunBT();
+};
 </script>
 </body>
 </html>

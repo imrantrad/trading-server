@@ -3935,15 +3935,37 @@ def nlp_parse(payload: dict):
 # ══════════════════════════════════════════════════════════════════════════════
 @app.post("/backtest/institutional")
 def run_institutional_bt(payload: dict):
-    """Run institutional-grade backtest with full analytics"""
+    """Run institutional-grade backtest - works with built-in AND custom strategies"""
     try:
         import sys, os
         sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
         from backtest.institutional_backtest import run_institutional_backtest
-        from datetime import date as _date
+        from backtest.advanced_backtest import STRATEGY_CONFIGS
+        
+        strategy_id = payload.get("strategy", "STR_THETA_DECAY")
+        custom = payload.get("custom_strategy")
+        
+        # If custom strategy provided, inject it into STRATEGY_CONFIGS
+        if custom:
+            wr = float(custom.get("win_rate", 0.65))
+            if wr > 1: wr = wr / 100  # Handle percentage format
+            
+            # Map custom strategy data to backtest config format
+            STRATEGY_CONFIGS[strategy_id] = {
+                "name": custom.get("name", strategy_id),
+                "win_rate": wr,
+                "avg_win": float(custom.get("avg_win", 2000)),
+                "avg_loss": float(custom.get("avg_loss", 3000)),
+                "trades_per_week": 2.0,
+                "option_type": custom.get("option_type", "CE"),
+                "description": custom.get("description", ""),
+                "entry_conditions": custom.get("entry_conditions", []),
+                "exit_conditions": custom.get("exit_conditions", []),
+                "ai_score": custom.get("ai_score", 0),
+            }
         
         result = run_institutional_backtest(
-            strategy=payload.get("strategy", "STR_THETA_DECAY"),
+            strategy=strategy_id,
             capital=float(payload.get("capital", 500000)),
             months=int(payload.get("months", 3)),
             lots=int(payload.get("lots", 1)),
@@ -3954,11 +3976,16 @@ def run_institutional_bt(payload: dict):
             compound=payload.get("compound", True),
             use_kelly=payload.get("use_kelly", True),
         )
+        
+        # Add strategy name to result
+        if custom:
+            result["strategy_display_name"] = custom.get("name", strategy_id)
+            result["is_custom"] = True
+        
         return result
     except Exception as e:
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()[-500:]}
-
 
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
