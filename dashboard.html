@@ -1970,51 +1970,8 @@ setInterval(function(){
       </div>
 
 
-    </div><!-- end padding -->
-  </div><!-- end panel content -->
-</div>
+    </div>
 
-<div id="pnl-ref" class="pnl">
-  <!-- Referral Code Input for logged-in user -->
-  <div class="card" style="margin-bottom:8px;border-color:rgba(0,255,136,.2)">
-    <div class="chdr" style="color:var(--gr)">🎁 MY REFERRAL</div>
-    <div style="font-size:10px;color:var(--mu);margin-bottom:12px">Apna referral code share karo — dono ko benefit milega</div>
-    <div id="my-referral-code-display" style="background:var(--bg4);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
-      <div style="font-size:11px;color:var(--mu);margin-bottom:6px">YOUR REFERRAL CODE</div>
-      <div id="my-ref-code" style="font-size:22px;font-weight:800;font-family:monospace;color:var(--gr);letter-spacing:3px">—</div>
-    </div>
-    <div style="display:flex;gap:6px">
-      <button onclick="copyMyRefCode()" class="btn bg" style="flex:1;font-size:11px;padding:10px">📋 COPY CODE</button>
-      <button onclick="shareRefCode()" class="btn bb" style="flex:1;font-size:11px;padding:10px">📤 SHARE</button>
-    </div>
-    <div id="my-ref-stats" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
-  </div>
-
-  <!-- Apply Referral Code -->
-  <div class="card" style="margin-bottom:8px">
-    <div class="chdr">🏷️ APPLY REFERRAL CODE</div>
-    <div style="font-size:10px;color:var(--mu);margin-bottom:8px">Dusre ka code use karke discount pao</div>
-    <div style="display:flex;gap:6px;margin-bottom:8px">
-      <input id="apply-ref-input" placeholder="Enter referral code (e.g. TRDABCD123)" 
-             style="flex:1;font-size:12px;font-family:monospace;letter-spacing:1px;text-transform:uppercase"
-             oninput="this.value=this.value.toUpperCase()">
-      <button onclick="applyRefCode()" class="btn bg blg" style="padding:8px 14px;font-size:11px">APPLY</button>
-    </div>
-    <div id="apply-ref-msg" style="font-size:11px;display:none;padding:8px;border-radius:6px"></div>
-  </div>
-
-  <!-- How it works -->
-  <div class="card">
-    <div class="chdr">ℹ️ HOW IT WORKS</div>
-    <div style="font-size:11px;color:var(--mu);line-height:2">
-      <div>1️⃣ Admin aapke liye ek unique code generate karta hai</div>
-      <div>2️⃣ Aap woh code share karo apne dosto ke saath</div>
-      <div>3️⃣ Wo sign up karte waqt code use kare — unhe discount milta hai</div>
-      <div>4️⃣ Aapke account mein bonus credit hota hai automatically</div>
-    </div>
-  </div>
-      
-      <!-- REFERRAL PANEL - TOP LEVEL -->
       <div id="adm-referral" style="display:none;padding:8px">
         <div class="card" style="margin-bottom:8px">
           <div class="chdr" style="color:var(--gr)">🎁 CREATE REFERRAL CODE</div>
@@ -2070,6 +2027,51 @@ setInterval(function(){
           </div>
         </div>
       </div>
+
+<!-- end padding -->
+  </div><!-- end panel content -->
+</div>
+
+<div id="pnl-ref" class="pnl">
+  <!-- Referral Code Input for logged-in user -->
+  <div class="card" style="margin-bottom:8px;border-color:rgba(0,255,136,.2)">
+    <div class="chdr" style="color:var(--gr)">🎁 MY REFERRAL</div>
+    <div style="font-size:10px;color:var(--mu);margin-bottom:12px">Apna referral code share karo — dono ko benefit milega</div>
+    <div id="my-referral-code-display" style="background:var(--bg4);border:1px solid rgba(0,255,136,.3);border-radius:8px;padding:12px;text-align:center;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--mu);margin-bottom:6px">YOUR REFERRAL CODE</div>
+      <div id="my-ref-code" style="font-size:22px;font-weight:800;font-family:monospace;color:var(--gr);letter-spacing:3px">—</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button onclick="copyMyRefCode()" class="btn bg" style="flex:1;font-size:11px;padding:10px">📋 COPY CODE</button>
+      <button onclick="shareRefCode()" class="btn bb" style="flex:1;font-size:11px;padding:10px">📤 SHARE</button>
+    </div>
+    <div id="my-ref-stats" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+  </div>
+
+  <!-- Apply Referral Code -->
+  <div class="card" style="margin-bottom:8px">
+    <div class="chdr">🏷️ APPLY REFERRAL CODE</div>
+    <div style="font-size:10px;color:var(--mu);margin-bottom:8px">Dusre ka code use karke discount pao</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <input id="apply-ref-input" placeholder="Enter referral code (e.g. TRDABCD123)" 
+             style="flex:1;font-size:12px;font-family:monospace;letter-spacing:1px;text-transform:uppercase"
+             oninput="this.value=this.value.toUpperCase()">
+      <button onclick="applyRefCode()" class="btn bg blg" style="padding:8px 14px;font-size:11px">APPLY</button>
+    </div>
+    <div id="apply-ref-msg" style="font-size:11px;display:none;padding:8px;border-radius:6px"></div>
+  </div>
+
+  <!-- How it works -->
+  <div class="card">
+    <div class="chdr">ℹ️ HOW IT WORKS</div>
+    <div style="font-size:11px;color:var(--mu);line-height:2">
+      <div>1️⃣ Admin aapke liye ek unique code generate karta hai</div>
+      <div>2️⃣ Aap woh code share karo apne dosto ke saath</div>
+      <div>3️⃣ Wo sign up karte waqt code use kare — unhe discount milta hai</div>
+      <div>4️⃣ Aapke account mein bonus credit hota hai automatically</div>
+    </div>
+  </div>
+
 
 </div>
 
@@ -7396,38 +7398,51 @@ function adminLogout(){
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function adminTab(tab,btn){
-  // Hide ALL admin sub-panels including nested ones
-  document.querySelectorAll('[id^="adm-"]').forEach(function(el){
-    if(el.id.match(/^adm-(dash|users|analytics|pay|notifs|sys|referral)$/)){
-      el.style.display='none';
+  // Hide all admin sub-panels
+  ['dash','users','analytics','pay','notifs','sys'].forEach(function(t){
+    var el=document.getElementById('adm-'+t);
+    if(el) el.style.display='none';
+    var b=document.getElementById('adm-tab-'+t);
+    if(b){b.style.background='transparent';b.style.borderBottomColor='transparent';b.style.color='var(--mu)';}
+  });
+  
+  // Hide referral overlay if switching to another tab
+  var refOverlay=document.getElementById('adm-referral-overlay');
+  if(refOverlay&&tab!=='referral') refOverlay.style.display='none';
+  
+  // Highlight tab
+  if(btn){btn.style.background='rgba(168,85,247,.08)';btn.style.borderBottomColor='var(--p0)';btn.style.color='var(--p0)';}
+  
+  if(tab==='referral'){
+    // Show referral as content inside admin panel
+    var orig=document.getElementById('adm-referral');
+    if(orig){
+      // Force show it regardless of where it is in DOM
+      orig.style.cssText='display:block!important;padding:8px;position:relative;z-index:1';
+      // Make all ancestor divs visible
+      var el=orig;
+      while(el&&el.id!=='pnl-admin'){
+        if(el.style&&el.style.display==='none') el.style.display='block';
+        el=el.parentElement;
+      }
     }
-  });
-  
-  // Show target panel - use setAttribute for priority
-  var target = document.getElementById('adm-'+tab);
-  if(target){
-    target.style.cssText='display:block!important;padding:8px';
+    if(typeof loadAdminReferral==='function') setTimeout(loadAdminReferral,100);
+    return;
   }
   
-  // Highlight active tab
-  document.querySelectorAll('[id^="adm-tab-"]').forEach(function(b){
-    b.style.background='transparent';
-    b.style.borderBottomColor='transparent';
-    b.style.color='var(--mu)';
-  });
-  if(btn){
-    btn.style.background='rgba(168,85,247,.08)';
-    btn.style.borderBottomColor='var(--p0)';
-    btn.style.color='var(--p0)';
-  }
+  // Hide referral if visible
+  var orig=document.getElementById('adm-referral');
+  if(orig) orig.style.cssText='display:none;padding:8px';
   
-  if(tab==='dash')     loadAdminDash();
-  if(tab==='users')    loadAdminUsers();
-  if(tab==='pay')      loadPaymentConfig();
-  if(tab==='sys')      loadSysStatus();
-  if(tab==='analytics')loadAdminAnalytics();
-  if(tab==='referral') { setTimeout(function(){ if(typeof loadAdminReferral==='function') loadAdminReferral(); },150); }
+  var target=document.getElementById('adm-'+tab);
+  if(target) target.style.display='block';
+  if(tab==='dash')      loadAdminDash();
+  if(tab==='users')     loadAdminUsers();
+  if(tab==='pay')       loadPaymentConfig();
+  if(tab==='sys')       loadSysStatus();
+  if(tab==='analytics') loadAdminAnalytics();
 }
+
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 function loadAdminDash(){
@@ -7989,30 +8004,51 @@ function saveStratWithAI(){
     if(err||!d){ toast('NLP parse failed, saving as-is...','warn'); saveStratAsIs(); return; }
     var aiText = _buildStrategyText(d);
     if(ta){ ta.value = aiText; ta.style.borderColor='rgba(0,255,136,.4)'; }
+    
+    // Show NLP audit box — what was understood
+    var auditEl = document.getElementById('nlp-audit-box');
+    if(!auditEl){
+      auditEl = document.createElement('div');
+      auditEl.id = 'nlp-audit-box';
+      auditEl.style.cssText = 'background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:10px;margin-top:8px;font-size:10px;line-height:1.9';
+      if(ta && ta.parentNode) ta.parentNode.appendChild(auditEl);
+    }
+    var otype_color = d.option_type==='PE'?'var(--rd)':'var(--gr)';
+    var act_color   = d.action==='SELL'?'var(--rd)':'var(--gr)';
+    auditEl.innerHTML = '<div style="font-weight:700;color:var(--am);margin-bottom:4px">🤖 NLP UNDERSTOOD:</div>'
+      +'<div><b>Action:</b> <span style="color:'+act_color+'">'+d.action+'</span></div>'
+      +'<div><b>Instrument:</b> <span style="color:var(--bl)">'+d.instrument+'</span></div>'
+      +'<div><b>Option Type:</b> <span style="color:'+otype_color+'">'+d.option_type+'</span></div>'
+      +(d.strike?'<div><b>Strike:</b> '+d.strike+'</div>':'')
+      +'<div><b>Lots:</b> '+d.quantity+'</div>'
+      +(d.stop_loss?'<div><b>SL:</b> ₹'+d.stop_loss+'</div>':'')
+      +(d.target?'<div><b>Target:</b> ₹'+d.target+'</div>':'')
+      +'<div><b>Confidence:</b> '+d.confidence+'%</div>'
+      +'<div style="color:var(--gr);font-size:9px;margin-top:4px">✅ '+d.parsed_summary+'</div>';
+    
     if(msgEl){ msgEl.style.color='var(--gr)'; msgEl.textContent='✅ AI enhanced! Review and click SAVE AS-IS'; }
     toast('AI enhanced! Ab SAVE AS-IS dabao','success');
   });
 }
 
 function _buildStrategyText(d){
-  var lines=['=== '+(d.strategy_name||'STRATEGY').toUpperCase()+' ===',''];
-  lines.push('\uD83D\uDCCC ORDER COMMAND:');
-  lines.push((d.action||'BUY')+' '+(d.instrument||'NIFTY')+' '+(d.option_type||'CE')+' '+(d.quantity||1)+' LOT');
-  lines.push('Stop Loss: '+(d.stop_loss||80)+' pts | Target: '+(d.target||160)+' pts');
-  lines.push('Timeframe: '+(d.timeframe||'15m'));
-  if(d.entry_conditions&&d.entry_conditions.length){
-    lines.push('');lines.push('\uD83D\uDCCA ENTRY CONDITIONS:');
-    d.entry_conditions.forEach(function(c,i){lines.push((i+1)+'. '+c);});
-  }
-  if(d.exit_conditions&&d.exit_conditions.length){
-    lines.push('');lines.push('\uD83D\uDEAA EXIT CONDITIONS:');
-    d.exit_conditions.forEach(function(c){lines.push('\u2022 '+c);});
-  }
-  return lines.join('\n');
+  // Build clean strategy text from NLP parsed data
+  // CRITICAL: preserve action and option_type exactly as parsed
+  var action = d.action || 'BUY';
+  var inst   = d.instrument || 'NIFTY';
+  var otype  = d.option_type || 'CE';
+  var strike = d.strike ? d.strike + ' ' : 'ATM ';
+  var lots   = d.quantity || 1;
+  var sl     = d.stop_loss ? '\nSL: ' + d.stop_loss + ' pts' : '';
+  var tgt    = d.target    ? '\nTARGET: ' + d.target + ' pts' : '';
+  var tf     = d.timeframe ? '\nTIMEFRAME: ' + d.timeframe : '';
+  var conds  = d.entry_conditions && d.entry_conditions.length
+    ? '\nIF: ' + d.entry_conditions.join(' AND ') : '';
+  
+  return action + ' ' + inst + ' ' + strike + otype + ' ' + lots + ' LOT'
+    + sl + tgt + tf + conds;
 }
 
-// ══ FIX 4: Triple-click TRD logo → Admin ═══════════════
-var _logoClicks = 0, _logoTimer = null;
 function handleLogoClick(){
   _logoClicks++;
   clearTimeout(_logoTimer);

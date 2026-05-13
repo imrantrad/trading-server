@@ -3935,47 +3935,154 @@ def google_auth(payload: dict):
 
 @app.post("/nlp/parse")
 def nlp_parse(payload: dict):
-    """Parse strategy text using NLP"""
-    text = payload.get("text","")
-    if not text: return {"error": "No text provided"}
+    """
+    NLP Strategy Parser — accurately extracts:
+    action (BUY/SELL), instrument, option_type (CE/PE),
+    strike, lots, SL, target, conditions
+    """
     import re as _re
+    text = payload.get("text","").strip()
+    if not text:
+        return {"error": "No text provided"}
+    
     tu = text.upper()
+    words = tu.split()
     
-    action = "SELL" if _re.search(r"\bSELL\b|\bSHORT\b",tu) else "BUY"
-    inst = "BANKNIFTY" if _re.search(r"BANKNIFTY",tu) else "FINNIFTY" if _re.search(r"FINNIFTY",tu) else "SENSEX" if "SENSEX" in tu else "NIFTY"
-    otype = "PE" if _re.search(r"\bPE\b|\bPUT\b",tu) else "CE"
+    # ── 1. ACTION — must come first in text ─────────────────
+    # Look for BUY/SELL as standalone words
+    action = "BUY"  # default
+    for w in words:
+        w_clean = _re.sub(r'[^A-Z]','',w)
+        if w_clean in ("SELL","SHORT","WRITE"):
+            action = "SELL"
+            break
+        if w_clean in ("BUY","LONG","PURCHASE"):
+            action = "BUY"
+            break
     
-    m = _re.search(r"(\d+)\s*(?:lot|LOT)",text)
-    lots = int(m.group(1)) if m else 1
+    # ── 2. INSTRUMENT ───────────────────────────────────────
+    inst = "NIFTY"
+    if "BANKNIFTY" in tu or "BANK NIFTY" in tu:
+        inst = "BANKNIFTY"
+    elif "FINNIFTY" in tu or "FIN NIFTY" in tu:
+        inst = "FINNIFTY"
+    elif "MIDCPNIFTY" in tu or "MIDCAP" in tu:
+        inst = "MIDCPNIFTY"
+    elif "NIFTYNXT" in tu or "NEXT50" in tu:
+        inst = "NIFTYNXT50"
+    elif "SENSEX" in tu:
+        inst = "SENSEX"
     
-    sl_m = _re.search(r"(?:stop.?loss|\bsl\b)[:\s]+(\d+\.?\d*)",text,_re.I)
-    tgt_m = _re.search(r"(?:target|\btgt\b)[:\s]+(\d+\.?\d*)",text,_re.I)
-    tf_m = _re.search(r"(?:timeframe|\btf\b)[:\s]*(\d+\s*(?:m|min|h|hr))",text,_re.I)
+    # ── 3. OPTION TYPE — CE or PE (critical, must be exact) ─
+    option_type = None
     
-    sl = float(sl_m.group(1)) if sl_m else 80
-    tgt = float(tgt_m.group(1)) if tgt_m else 160
-    tf = tf_m.group(1).strip() if tf_m else "15m"
+    # Check explicit CE/PE first
+    if _re.search(r'\b(CALL|CE)\b', tu):
+        option_type = "CE"
+    if _re.search(r'\b(PUT|PE)\b', tu):
+        option_type = "PE"
     
-    entry_conds = []
-    for p in [r"(RSI\s*[><=]+\s*[\d-]+)",r"(EMA\s*\d+[^,\n]{0,20})",r"(VWAP[^,\n]{0,15})",r"(Price\s*[><=][^,\n]{0,20})"]:
-        mm = _re.search(p,text,_re.I)
-        if mm: entry_conds.append(mm.group(1).strip())
+    # If both found, use the one closer to action word
+    if option_type is None:
+        # Default: BUY→CE for directional, SELL→PE for selling premium
+        option_type = "CE" if action == "BUY" else "PE"
     
-    exit_conds = []
-    ex = _re.search(r"(?:\d{1,2}:\d{2}\s*(?:AM|PM))",text,_re.I)
-    if sl: exit_conds.append(f"Stop Loss: {sl} pts")
-    if tgt: exit_conds.append(f"Target: {tgt} pts")
-    if ex: exit_conds.append(f"Time Exit at {ex.group()}")
+    # ── 4. STRIKE ───────────────────────────────────────────
+    strike = 0
+    # Look for 4-5 digit number (strike price)
+    strike_matches = _re.findall(r'\b(\d{4,6})\b', text)
+    # Filter out lot sizes (small numbers) and years
+    for m in strike_matches:
+        val = int(m)
+        if 5000 <= val <= 100000:  # valid index strike range
+            strike = val
+            break
     
-    return {"action":action,"instrument":inst,"option_type":otype,"quantity":lots,
-            "stop_loss":sl,"target":tgt,"timeframe":tf,
-            "entry_conditions":entry_conds,"exit_conditions":exit_conds,
-            "original_text":text,"confidence":min(100,50+len(entry_conds)*10)}
+    # ── 5. LOTS / QUANTITY ──────────────────────────────────
+    lots = 1
+    lot_match = _re.search(r'(\d+)\s*(?:LOT|LOTS)\b', tu)
+    if lot_match:
+        lots = int(lot_match.group(1))
+    else:
+        qty_match = _re.search(r'(?:QTY|QUANTITY)[:\s]+(\d+)', tu)
+        if qty_match:
+            lots = int(qty_match.group(1))
+    
+    # ── 6. STOP LOSS ────────────────────────────────────────
+    sl = None
+    sl_match = _re.search(r'(?:STOP\.?LOSS|S\.?L\.?|SL)[:\s]+([\d.]+)', tu)
+    if sl_match:
+        sl = float(sl_match.group(1))
+    
+    # ── 7. TARGET ───────────────────────────────────────────
+    target = None
+    tgt_match = _re.search(r'(?:TARGET|TGT|TP)[:\s]+([\d.]+)', tu)
+    if tgt_match:
+        target = float(tgt_match.group(1))
+    
+    # ── 8. TIMEFRAME ────────────────────────────────────────
+    tf = "15m"
+    tf_match = _re.search(r'(\d+)\s*(MIN|M|MINUTE|HR|H|HOUR|D|DAY)', tu)
+    if tf_match:
+        val  = tf_match.group(1)
+        unit = tf_match.group(2)
+        if unit in ("HR","H","HOUR"):
+            tf = val+"h"
+        elif unit in ("D","DAY"):
+            tf = val+"d"
+        else:
+            tf = val+"m"
+    
+    # ── 9. CONDITIONS ───────────────────────────────────────
+    entry_conditions = []
+    patterns = [
+        (r'RSI\s*([<>=]+)\s*([\d.]+)', lambda m: f"RSI {m.group(1)} {m.group(2)}"),
+        (r'EMA\s*(\d+)\s*(?:CROSS|>|<)\s*EMA\s*(\d+)', lambda m: f"EMA{m.group(1)} crosses EMA{m.group(2)}"),
+        (r'VWAP\s*([<>=]+)', lambda m: "Price vs VWAP"),
+        (r'MACD\s*(CROSS|BULLISH|BEARISH)', lambda m: f"MACD {m.group(1)}"),
+        (r'ADX\s*([<>=]+)\s*([\d.]+)', lambda m: f"ADX {m.group(1)} {m.group(2)}"),
+        (r'VOLUME\s*(\w+)', lambda m: f"Volume {m.group(1)}"),
+    ]
+    for pat, fmt in patterns:
+        m = _re.search(pat, tu)
+        if m:
+            try: entry_conditions.append(fmt(m))
+            except: pass
+    
+    exit_conditions = []
+    if sl:     exit_conditions.append(f"Stop Loss: {sl} pts")
+    if target: exit_conditions.append(f"Target: {target} pts")
+    
+    # ── 10. CONFIDENCE ──────────────────────────────────────
+    confidence = 50
+    if option_type: confidence += 20
+    if strike:      confidence += 10
+    if sl:          confidence += 10
+    if target:      confidence += 5
+    if entry_conditions: confidence += len(entry_conditions) * 5
+    
+    result = {
+        "action":           action,
+        "instrument":       inst,
+        "option_type":      option_type,
+        "strike":           strike,
+        "quantity":         lots,
+        "stop_loss":        sl,
+        "target":           target,
+        "timeframe":        tf,
+        "entry_conditions": entry_conditions,
+        "exit_conditions":  exit_conditions,
+        "original_text":    text,
+        "confidence":       min(100, confidence),
+        "parsed_summary":   f"{action} {inst} {option_type}" 
+                            + (f" {strike}" if strike else " ATM")
+                            + f" | {lots} Lot"
+                            + (f" | SL: {sl}" if sl else "")
+                            + (f" | TGT: {target}" if target else ""),
+    }
+    return result
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# INSTITUTIONAL BACKTEST — Full hedge-fund grade engine
-# ══════════════════════════════════════════════════════════════════════════════
 @app.post("/backtest/institutional")
 def run_institutional_bt(payload: dict):
     """Run institutional-grade backtest - works with built-in AND custom strategies"""

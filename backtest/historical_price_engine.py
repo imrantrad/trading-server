@@ -252,7 +252,10 @@ def reconstruct_option_price(
     
     # Step 6: Lot value and margin
     lot_value = round(price * lot_size, 2)
-    margin_required = round(spot * lot_size * 0.12, 2)  # ~12% SPAN margin approx
+    # SPAN margin: ~12% of notional value per lot
+    # margin scales linearly: 2 lots = 2x margin
+    margin_per_lot   = round(spot * lot_size * 0.12, 2)
+    margin_required  = margin_per_lot   # per lot value (caller multiplies by lots)
     
     return {
         "price": round(price, 2),
