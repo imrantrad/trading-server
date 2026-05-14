@@ -96,7 +96,7 @@ STRATEGY_CONFIGS = {
     },
     "STR_ARIBA_REVERSAL_PUT": {
         "name": "Ariba Reversal Put Entry",
-        "win_rate": 0.62,        # VWAP + Volume confirmation = higher accuracy
+        "win_rate": 0.55,        # Base 55%; VWAP+Volume filters raise effective WR to ~62%
         "avg_win": 10400,        # 160 pts × 65 (NIFTY lot)
         "avg_loss": 5200,        # 80 pts × 65 (1:2 R:R)
         "trades_per_week": 1.0,  # Max 1 trade per day
