@@ -3884,7 +3884,7 @@ def _ref_conn():
         ("total_discount_given", "REAL DEFAULT 0"),
         ("is_active",            "INTEGER DEFAULT 1"),
         ("uses_count",           "INTEGER DEFAULT 0"),
-        ("created_at",           "TEXT DEFAULT CURRENT_TIMESTAMP"),
+        # Note: created_at uses CURRENT_TIMESTAMP - can't ALTER TABLE, skip
     ]
     for col, defn in _cols_to_add:
         try:
