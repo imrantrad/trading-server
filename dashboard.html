@@ -2414,10 +2414,18 @@ function runCalc(){
 
 // ── MARKET PRICES ─────────────────────────────────
 function loadMarketPrices(){
-  req('/market/prices','GET',null,function(err,d){
+  req('/market/all','GET',null,function(err,d){
     if(err||!d) return;
-    var p=d.prices||d||{};
-    window._spotPrice=p.NIFTY||24000;
+    // /market/all returns: {nifty:{price:X}, banknifty:{price:X}, india_vix:{price:X}}
+    var p={};
+    if(d.nifty)    p.NIFTY     = d.nifty.price||d.nifty.ltp||d.nifty||24000;
+    if(d.banknifty) p.BANKNIFTY = d.banknifty.price||d.banknifty.ltp||d.banknifty||51000;
+    if(d.india_vix) p.INDIA_VIX  = d.india_vix.price||d.india_vix.ltp||d.india_vix||14.5;
+    if(d.prices)   Object.assign(p, d.prices);
+    if(!p.NIFTY)   p.NIFTY     = 24000;
+    if(!p.BANKNIFTY) p.BANKNIFTY = 51000;
+    if(!p.INDIA_VIX) p.INDIA_VIX = 14.5;
+    window._spotPrice=p.NIFTY;
     function sm(id,v){ var e=document.getElementById(id); if(e) e.textContent='₹'+Math.round(v).toLocaleString('en-IN'); }
     sm('t-nifty',  p.NIFTY||24000);
     sm('t-bnifty', p.BANKNIFTY||51000);
