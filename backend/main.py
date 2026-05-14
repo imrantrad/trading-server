@@ -2765,6 +2765,7 @@ def admin_get_users():
             with user_db.conn() as c:
                 rows = c.execute("""SELECT id,username,email,full_name,capital,
                     subscription_plan,is_active,created_at,phone FROM users 
+                    WHERE is_active != 0 OR is_active IS NULL
                     ORDER BY created_at DESC""").fetchall()
             users = [{"user_id":r["id"],"username":r["username"],"email":r["email"],
                       "full_name":r["full_name"],"capital":r["capital"],
@@ -2822,7 +2823,12 @@ def admin_delete_user(user_id: str):
     try:
         if USER_SYSTEM:
             with user_db.conn() as c:
-                c.execute("UPDATE users SET is_active=0 WHERE id=?", (user_id,))
+                # Hard delete from DB
+                c.execute("DELETE FROM users WHERE id=?", (user_id,))
+                deleted = c.execute("SELECT changes()").fetchone()[0]
+                if not deleted:
+                    # Try soft delete as fallback
+                    c.execute("UPDATE users SET is_active=0 WHERE id=?", (user_id,))
         else:
             _all_users.pop(user_id, None)
         return {"deleted": True, "user_id": user_id}

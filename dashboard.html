@@ -2202,8 +2202,13 @@ function saveUser(){
 function deleteUser(uid){
   if(!confirm('Delete user '+uid+'?')) return;
   req('/admin/users/'+uid,'DELETE',null,function(err,r){
-    toast(r&&r.deleted?'Deleted!':'Error',r&&r.deleted?'success':'error');
-    loadAdminUsers();
+    if(err||!r){ toast('Delete failed: '+(err||'Error'),'error'); return; }
+    if(r.deleted){
+      toast('User deleted!','success');
+      setTimeout(loadAdminUsers, 800);  // Wait for DB to commit
+    } else {
+      toast('Delete failed: '+(r.error||'Unknown error'),'error');
+    }
   });
 }
 
@@ -2255,7 +2260,7 @@ function adminLoadCodes(){
     var codes=d&&d.codes||[];
     if(!codes.length){list.innerHTML='<div style="color:var(--mu);padding:12px;text-align:center;font-size:10px">No codes yet. Generate one above!</div>';return;}
     list.innerHTML=codes.map(function(c){
-      var active=(c.is_active===1||c.is_active===true);
+      var active=(c.is_active==1||c.is_active===true||c.is_active==='1');
       return '<div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:6px;border-left:3px solid '+(active?'var(--gr)':'var(--rd)')+';">'
         +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
         +'<b style="font-family:monospace;font-size:14px;letter-spacing:2px;color:'+(active?'var(--gr)':'var(--mu)')+'">'+c.code+'</b>'
