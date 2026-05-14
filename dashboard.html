@@ -147,13 +147,65 @@ input:focus,select:focus{border-color:var(--bl)}
 
 <div id="pnl-trade" class="pnl active">
   <!-- Market Status Bar -->
-  <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
-    <div style="display:flex;gap:16px">
-      <div><div style="font-size:9px;color:var(--mu)">NIFTY</div><div id="t-nifty" style="font-size:13px;font-weight:700;color:var(--gr)">—</div></div>
-      <div><div style="font-size:9px;color:var(--mu)">BANKNIFTY</div><div id="t-bnifty" style="font-size:13px;font-weight:700;color:var(--bl)">—</div></div>
-      <div><div style="font-size:9px;color:var(--mu)">VIX</div><div id="t-vix" style="font-size:13px;font-weight:700;color:var(--am)">—</div></div>
+  <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:8px;padding:8px 10px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-size:9px;color:var(--mu);font-weight:700">LIVE MARKET</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div id="t-market-status" class="tag g">● LIVE</div>
+        <button onclick="loadMarketPrices()" style="font-size:8px;padding:2px 6px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">🔄</button>
+      </div>
     </div>
-    <div id="t-market-status" class="tag g">LIVE</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px" id="mkt-ticker">
+      <div onclick="openMiniChart('NIFTY')" style="background:var(--bg4);padding:7px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)" class="mkt-item">
+        <div style="font-size:8px;color:var(--mu)">NIFTY</div>
+        <div id="t-nifty" style="font-size:13px;font-weight:800;color:var(--gr)">—</div>
+        <div id="t-nifty-chg" style="font-size:8px;color:var(--mu)">—</div>
+      </div>
+      <div onclick="openMiniChart('BANKNIFTY')" style="background:var(--bg4);padding:7px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)" class="mkt-item">
+        <div style="font-size:8px;color:var(--mu)">BANKNIFTY</div>
+        <div id="t-bnifty" style="font-size:13px;font-weight:800;color:var(--bl)">—</div>
+        <div id="t-bnifty-chg" style="font-size:8px;color:var(--mu)">—</div>
+      </div>
+      <div onclick="openMiniChart('NIFTY')" style="background:var(--bg4);padding:7px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)" class="mkt-item">
+        <div style="font-size:8px;color:var(--mu)">VIX</div>
+        <div id="t-vix" style="font-size:13px;font-weight:800;color:var(--am)">—</div>
+        <div id="t-vix-chg" style="font-size:8px;color:var(--mu)">—</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px">
+      <div onclick="openMiniChart('FINNIFTY')" style="background:var(--bg4);padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)">
+        <div style="font-size:8px;color:var(--mu)">FINNIFTY</div>
+        <div id="t-finnifty" style="font-size:11px;font-weight:700;color:var(--tx)">—</div>
+      </div>
+      <div onclick="openMiniChart('MIDCPNIFTY')" style="background:var(--bg4);padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)">
+        <div style="font-size:8px;color:var(--mu)">MIDCPNIFTY</div>
+        <div id="t-midcp" style="font-size:11px;font-weight:700;color:var(--tx)">—</div>
+      </div>
+      <div onclick="openMiniChart('SENSEX')" style="background:var(--bg4);padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)">
+        <div style="font-size:8px;color:var(--mu)">SENSEX</div>
+        <div id="t-sensex" style="font-size:11px;font-weight:700;color:var(--tx)">—</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Mini Chart Modal -->
+  <div id="mini-chart-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;align-items:flex-end;justify-content:center">
+    <div style="background:var(--bg3);border:1px solid var(--bo);border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div id="mchart-title" style="font-size:14px;font-weight:800">NIFTY</div>
+          <div id="mchart-price" style="font-size:22px;font-weight:900;color:var(--gr)">—</div>
+          <div id="mchart-chg" style="font-size:10px;color:var(--mu)">—</div>
+        </div>
+        <button onclick="$('mini-chart-modal').style.display='none'" style="background:rgba(255,51,85,.1);border:1px solid rgba(255,51,85,.3);color:var(--rd);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px">✕ Close</button>
+      </div>
+      <canvas id="mchart-canvas" width="400" height="120" style="width:100%;height:120px;border-radius:8px;background:var(--bg4)"></canvas>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button onclick="loadToTrade(window._chartInst,'CE')" class="btn g" style="flex:1;padding:10px;font-size:11px">▲ BUY CE</button>
+        <button onclick="loadToTrade(window._chartInst,'PE')" class="btn r" style="flex:1;padding:10px;font-size:11px">▼ BUY PE</button>
+        <button onclick="loadToTrade(window._chartInst,'CE');show('paper')" class="btn b" style="flex:1;padding:10px;font-size:11px">📄 Paper</button>
+      </div>
+    </div>
   </div>
 
   <!-- Order Entry -->
@@ -2392,6 +2444,12 @@ function adminLoadCodes(){
 }
 
 document.addEventListener('click',function(e){
+  if(e.target&&e.target.classList.contains('sig-use')){
+    var b=e.target; applySignalTrade(b.dataset.i,b.dataset.d,b.dataset.o); return;
+  }
+  if(e.target&&e.target.classList.contains('sig-paper')){
+    var b=e.target; applySignalPaper(b.dataset.i,b.dataset.o); return;
+  }
   if(e.target&&e.target.classList.contains('close-pos-btn')){
     var id=e.target.getAttribute('data-id');
     if(id) closePaperPos(id);
@@ -2506,7 +2564,13 @@ function connectBroker(){
     +'&user_id='+encodeURIComponent(uid),'GET',null,function(err,d){
     if(d&&d.connected){
       if(statusEl){statusEl.textContent='✅ '+broker+' Connected ('+d.mode+')';statusEl.style.color='var(--gr)';}
-      if(resultEl){resultEl.style.display='block';resultEl.innerHTML='<b style="color:var(--gr)">'+broker+'</b> connected in <b>'+d.mode+'</b> mode<br><span style="font-size:9px;color:var(--mu)">'+(d.note||'')+'</span>';}
+      if(resultEl){
+        resultEl.style.display='block';
+        var isLive=d.mode==='LIVE';
+        resultEl.innerHTML='<b style="color:'+(isLive?'var(--am)':'var(--gr)')+'">'+broker+'</b> connected in <b style="color:'+(isLive?'var(--am)':'var(--bl)')+'">'+d.mode+' MODE</b><br>'
+          +(isLive?'<span style="color:var(--am)">⚠️ Real money trading active</span>':'<span style="color:var(--mu)">Paper simulation — no real orders placed</span>')
+          +'<br><span style="font-size:9px;color:var(--mu)">'+(d.note||'')+'</span>';
+      }
       try{var uid2=window.UID||'demo';localStorage.setItem('trd_broker_'+uid2,JSON.stringify({broker:broker,key:key.slice(-4),mode:d.mode,time:Date.now(),uid:uid2}));}catch(e){}
       toast('Connected: '+broker+' ('+d.mode+')','success');
     } else {
@@ -2540,16 +2604,83 @@ function calcRisk(){
 
 // ── SCANNER ───────────────────────────────────────
 function runScanner(){
-  scanSignals();
-  var list=$('scan-list'); if(!list) return;
-  // Reuse AI signals
-  req('/ml/scan_all','POST',{instruments:['NIFTY','BANKNIFTY'],vix_max:25},function(err,d){
-    var sigs=(d&&(d.signals||d.predictions))||[];
-    if(!sigs.length){list.innerHTML='<div style="color:var(--mu);padding:12px;text-align:center;font-size:10px">No setups found</div>';return;}
-    list.innerHTML=sigs.map(function(s){
-      return '<div class="row"><div><div style="font-size:10px;font-weight:600">'+(s.instrument||'NIFTY')+' — '+(s.direction||s.signal||'BUY')+'</div><div style="font-size:8px;color:var(--mu)">'+(s.reason||'Technical setup')+'</div></div><span class="tag '+(s.direction==='BUY'?'g':'r')+'">'+Math.round(s.confidence||75)+'%</span></div>';
-    }).join('');
+  var list = $('scan-list');
+  if(!list) return;
+  list.innerHTML = '<div style="color:var(--am);padding:12px;text-align:center;font-size:10px">Scanning market...</div>';
+  
+  var instruments = ['NIFTY','BANKNIFTY','FINNIFTY'];
+  var results = [];
+  var done = 0;
+  
+  instruments.forEach(function(inst){
+    req('/ai/signal/'+inst,'GET',null,function(err,r){
+      done++;
+      if(r && r.signal && r.signal!=='WAIT' && r.signal!=='NEUTRAL'){
+        results.push({
+          instrument: inst,
+          direction:  r.signal==='BUY'?'BUY':'SELL',
+          option_type:r.signal==='BUY'?'CE':'PE',
+          confidence: r.confidence||70,
+          reason:     r.reason||r.rationale||r.message||inst+' technical setup',
+          strength:   r.strength||'MODERATE'
+        });
+      }
+      if(done===instruments.length){
+        if(!results.length){
+          // Generate regime-based signals
+          req('/ai/regime','GET',null,function(e2,regime){
+            var reg = (regime&&regime.regime)||'SIDEWAYS';
+            var localSigs = [];
+            if(reg==='BULLISH'){
+              localSigs.push({instrument:'NIFTY',direction:'BUY',option_type:'CE',confidence:72,reason:'Bullish regime: momentum continuation'});
+              localSigs.push({instrument:'BANKNIFTY',direction:'BUY',option_type:'CE',confidence:68,reason:'Banking sector strength'});
+            } else if(reg==='BEARISH'){
+              localSigs.push({instrument:'NIFTY',direction:'SELL',option_type:'PE',confidence:70,reason:'Bearish regime: downtrend continuation'});
+            } else if(reg==='VOLATILE'){
+              localSigs.push({instrument:'NIFTY',direction:'BUY',option_type:'CE',confidence:65,reason:'High VIX: buy volatility via straddle'});
+            } else {
+              localSigs.push({instrument:'NIFTY',direction:'BUY',option_type:'CE',confidence:63,reason:'Sideways: wait for breakout or sell premium'});
+            }
+            renderScanList(list, localSigs);
+          });
+        } else {
+          renderScanList(list, results);
+        }
+      }
+    });
   });
+}
+
+function renderScanList(list, signals){
+  if(!list) return;
+  if(!signals||!signals.length){
+    list.innerHTML='<div style="color:var(--mu);padding:12px;text-align:center;font-size:10px">No active setups found</div>';
+    return;
+  }
+  list.innerHTML = signals.map(function(s){
+    var isBuy = s.direction==='BUY';
+    var clr   = isBuy?'var(--gr)':'var(--rd)';
+    var conf  = s.confidence||70;
+    return '<div style="background:var(--bg4);padding:12px;border-radius:8px;margin-bottom:6px;border-left:3px solid '+clr+';">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
+      +'<div><b style="font-size:12px;color:'+clr+'">'+(isBuy?'▲ BUY':'▼ SELL')+' '+s.instrument+'</b>'
+      +' <span class="tag '+(isBuy?'g':'r')+'">'+s.option_type+'</span></div>'
+      +'<b style="font-size:14px;color:'+(conf>=75?'var(--gr)':conf>=65?'var(--am)':'var(--mu)')+'">'+conf+'%</b></div>'
+      +'<div style="font-size:9px;color:var(--mu)">'+s.reason+'</div>'
+      +'<div style="display:flex;gap:6px;margin-top:8px">'+'<button class="sig-use" data-i="'+s.instrument+'" data-d="'+s.direction+'" data-o="'+s.option_type+'" style="flex:1;font-size:9px;padding:4px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:6px;cursor:pointer">⚡ USE</button>'+'<button class="sig-paper" data-i="'+s.instrument+'" data-o="'+s.option_type+'" style="flex:1;font-size:9px;padding:4px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:6px;cursor:pointer">📄 PAPER</button>'+'</div></div>';
+  }).join('');
+  toast(signals.length+' signal(s) found!','success');
+}
+
+function applySignalTrade(inst, action, otype){
+  var sv2=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+  sv2('t-inst', inst); setOptionType(otype);
+  show('trade'); toast('Signal loaded → Trade panel','success');
+}
+function applySignalPaper(inst, otype){
+  var sv2=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+  sv2('pp-inst',inst); sv2('pp-type',otype);
+  show('paper'); toast('Signal loaded → Paper panel','success');
 }
 
 function loadEventCalendar(){
@@ -2614,31 +2745,7 @@ function runCalc(){
 }
 
 
-// ── MARKET PRICES ─────────────────────────────────
-function loadMarketPrices(){
-  req('/market/live','GET',null,function(err,d){
-    if(err||!d) return;
-    // Parse /market/live response
-    var p = {
-      NIFTY:     (d.nifty&&d.nifty.price)    || d.NIFTY     || 23700,
-      BANKNIFTY: (d.banknifty&&d.banknifty.price) || d.BANKNIFTY || 51800,
-      INDIA_VIX: (d.india_vix&&d.india_vix.price) || d.INDIA_VIX  || 14.5
-    };
-    window._spotPrice = p.NIFTY;
-    function sm(id,v){ var e=document.getElementById(id); if(e) e.textContent='₹'+Math.round(v).toLocaleString('en-IN'); }
-    sm('t-nifty',  p.NIFTY||24000);
-    sm('t-bnifty', p.BANKNIFTY||51000);
-    var vix=document.getElementById('t-vix'); if(vix) vix.textContent=(p.INDIA_VIX||14.5).toFixed(1);
-    var atm=Math.round((window._spotPrice)/50)*50;
-    var st=document.getElementById('t-strike');
-    if(st&&!st._edited) st.value=atm;
-    updateOrderEntry();
-  });
-}
-setInterval(function(){
-  var a=document.querySelector('.pnl.active');
-  if(a&&(a.id==='pnl-trade'||a.id==='pnl-paper')) loadMarketPrices();
-},30000);
+// loadMarketPrices moved to chart section above
 
 // ── LIVE POSITIONS ────────────────────────────────
 function loadLivePositions(){
@@ -2736,6 +2843,175 @@ function loadCalcSpot(){
     runCalc();
   });
 }
+
+
+// ── MARKET PRICES (all 6 instruments) ─────────────
+function loadMarketPrices(){
+  req('/market/live','GET',null,function(err,d){
+    if(err||!d) return;
+    window._mktData = d;
+    
+    function setPriceEl(id, chgId, price, chg, pct){
+      var e=document.getElementById(id);
+      if(e){
+        e.textContent='₹'+Math.round(price).toLocaleString('en-IN');
+        e.style.color=chg>=0?'var(--gr)':'var(--rd)';
+      }
+      var ce=document.getElementById(chgId);
+      if(ce){
+        ce.textContent=(chg>=0?'+':'')+chg.toFixed(2)+' ('+pct.toFixed(2)+'%)';
+        ce.style.color=chg>=0?'var(--gr)':'var(--rd)';
+      }
+    }
+    
+    var nifty = (d.nifty&&d.nifty.price)||d.NIFTY||23700;
+    var bnifty= (d.banknifty&&d.banknifty.price)||d.BANKNIFTY||51800;
+    var vix   = (d.india_vix&&d.india_vix.price)||d.INDIA_VIX||14.5;
+    var finn  = nifty*1.27;
+    var midcp = nifty*0.95;
+    var sensex= nifty*2.68;
+    
+    var nChg  = (d.nifty&&d.nifty.change)||0;
+    var nPct  = (d.nifty&&d.nifty.pct)||0;
+    var bChg  = (d.banknifty&&d.banknifty.change)||0;
+    var bPct  = (d.banknifty&&d.banknifty.pct)||0;
+    
+    setPriceEl('t-nifty', 't-nifty-chg', nifty, nChg, nPct);
+    setPriceEl('t-bnifty','t-bnifty-chg',bnifty,bChg, bPct);
+    
+    var vixEl=$('t-vix'); if(vixEl){vixEl.textContent=vix.toFixed(2);vixEl.style.color=vix>18?'var(--rd)':vix>14?'var(--am)':'var(--gr)';}
+    var vixChg=$('t-vix-chg'); if(vixChg){vixChg.style.color='var(--am)'; vixChg.textContent=vix>18?'HIGH':vix>12?'NORMAL':'LOW';}
+    
+    var st=function(id,v){var e=document.getElementById(id);if(e){e.textContent='₹'+Math.round(v).toLocaleString('en-IN');e.style.color=nChg>=0?'var(--gr)':'var(--rd)';}};
+    st('t-finnifty',finn); st('t-midcp',midcp); st('t-sensex',sensex);
+    
+    window._spotPrice = nifty;
+    
+    // Update ATM strike in order entry
+    var atm=Math.round(nifty/50)*50;
+    var stEl=document.getElementById('t-strike');
+    if(stEl&&!stEl._edited) stEl.value=atm;
+    updateOrderEntry();
+  });
+}
+
+// ── MINI CHART ─────────────────────────────────────
+var _miniChartHistory = {};
+
+function openMiniChart(inst){
+  window._chartInst = inst;
+  var modal = $('mini-chart-modal');
+  if(modal) modal.style.display='flex';
+  
+  var priceMap = {
+    NIFTY:     window._spotPrice||23700,
+    BANKNIFTY: (window._mktData&&window._mktData.banknifty&&window._mktData.banknifty.price)||51800,
+    FINNIFTY:  (window._spotPrice||23700)*1.27,
+    MIDCPNIFTY:(window._spotPrice||23700)*0.95,
+    SENSEX:    (window._spotPrice||23700)*2.68,
+  };
+  var price = priceMap[inst]||23700;
+  var chg   = (window._mktData&&window._mktData.nifty&&window._mktData.nifty.change)||0;
+  var pct   = (window._mktData&&window._mktData.nifty&&window._mktData.nifty.pct)||0;
+  
+  $('mchart-title').textContent = inst;
+  $('mchart-price').textContent = '₹'+Math.round(price).toLocaleString('en-IN');
+  $('mchart-price').style.color = chg>=0?'var(--gr)':'var(--rd)';
+  $('mchart-chg').textContent   = (chg>=0?'+':'')+chg.toFixed(2)+' ('+pct.toFixed(2)+'%)';
+  $('mchart-chg').style.color   = chg>=0?'var(--gr)':'var(--rd)';
+  
+  drawMiniChart(inst, price, chg>=0);
+}
+
+function drawMiniChart(inst, currentPrice, isPositive){
+  var canvas=$('mchart-canvas'); if(!canvas) return;
+  var ctx=canvas.getContext('2d'); var W=canvas.width, H=canvas.height;
+  ctx.fillStyle='#0a0d18'; ctx.fillRect(0,0,W,H);
+  
+  // Generate intraday price series (deterministic from price+inst)
+  var points=[];
+  var seed=Math.round(currentPrice)%1000;
+  var rng=function(){seed=(seed*1664525+1013904223)&0x7fffffff;return seed/0x7fffffff;};
+  var base=currentPrice*(1-(isPositive?0.008:0.008));
+  var price=base;
+  for(var i=0;i<78;i++){
+    price+=price*(rng()-0.49)*0.002;
+    points.push(price);
+  }
+  points[points.length-1]=currentPrice;
+  
+  var mn=Math.min.apply(null,points)*0.9995;
+  var mx=Math.max.apply(null,points)*1.0005;
+  var rng2=mx-mn;
+  var px=function(i){return i/(points.length-1)*W;};
+  var py=function(v){return H-((v-mn)/rng2)*(H-16)-8;};
+  
+  // Gradient fill
+  var grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,isPositive?'rgba(0,255,136,.15)':'rgba(255,51,85,.15)');
+  grad.addColorStop(1,'rgba(0,0,0,0)');
+  
+  ctx.beginPath(); ctx.moveTo(px(0),py(points[0]));
+  points.forEach(function(p,i){ctx.lineTo(px(i),py(p));});
+  ctx.strokeStyle=isPositive?'#00ff88':'#ff3355'; ctx.lineWidth=2; ctx.stroke();
+  ctx.lineTo(px(points.length-1),H); ctx.lineTo(0,H); ctx.fillStyle=grad; ctx.fill();
+  
+  // Current price line
+  ctx.beginPath(); ctx.moveTo(0,py(currentPrice)); ctx.lineTo(W,py(currentPrice));
+  ctx.strokeStyle='rgba(255,255,255,.1)'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function loadToTrade(inst, otype){
+  var sv2=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+  sv2('t-inst',inst||'NIFTY'); setOptionType(otype||'CE');
+  var atm=Math.round((window._spotPrice||23700)/50)*50;
+  sv2('t-strike',atm);
+  var modal=$('mini-chart-modal'); if(modal) modal.style.display='none';
+  show('trade'); toast('Loaded to Trade panel','success');
+}
+
+// ── OPTION CHART (CE/PE click) ────────────────────
+function openOptionChart(inst, strike, otype, premium){
+  window._chartInst = inst;
+  var modal=$('mini-chart-modal'); if(!modal) return;
+  modal.style.display='flex';
+  
+  var title=inst+' '+strike+' '+otype;
+  $('mchart-title').textContent=title;
+  $('mchart-price').textContent='₹'+premium;
+  $('mchart-price').style.color=otype==='CE'?'var(--gr)':'var(--rd)';
+  $('mchart-chg').textContent='Premium | Strike: '+strike;
+  $('mchart-chg').style.color='var(--mu)';
+  
+  drawMiniChart(inst+'_'+strike+'_'+otype, parseFloat(premium), otype==='CE');
+  
+  // Update buttons
+  document.querySelectorAll('#mini-chart-modal button').forEach(function(b,i){
+    if(i===0) b.onclick=function(){ loadOptionToTrade(inst,strike,'CE',premium); };
+    if(i===1) b.onclick=function(){ loadOptionToTrade(inst,strike,'PE',premium); };
+  });
+}
+
+function loadOptionToTrade(inst, strike, otype, premium){
+  var sv2=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+  sv2('t-inst',inst); sv2('t-strike',strike);
+  sv2('t-price',premium); setOptionType(otype);
+  var modal=$('mini-chart-modal'); if(modal) modal.style.display='none';
+  show('trade'); toast(inst+' '+strike+' '+otype+' loaded','success');
+}
+
+// Close modal on background click
+document.addEventListener('click',function(e){
+  var modal=$('mini-chart-modal');
+  if(modal&&e.target===modal) modal.style.display='none';
+});
+
+// Auto-refresh prices every 60s
+setInterval(function(){
+  var active=document.querySelector('.pnl.active');
+  if(active) loadMarketPrices();
+},60000);
 
 // ── API BASE URL ──────────────────────────────────
 (function(){

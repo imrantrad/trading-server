@@ -3783,6 +3783,10 @@ def _ref_conn():
         discount_given REAL DEFAULT 0,
         used_at TEXT DEFAULT CURRENT_TIMESTAMP
     )""")
+    # Migrate uses table
+    for _col2, _def2 in [("bonus_paid","REAL DEFAULT 0"),("discount_given","REAL DEFAULT 0")]:
+        try: c.execute(f"ALTER TABLE referral_uses ADD COLUMN {_col2} {_def2}")
+        except: pass
     c.commit()
     return c
 
