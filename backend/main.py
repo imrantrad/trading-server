@@ -1430,8 +1430,55 @@ def builtin_strategies():
         }
     ]
     
-    # Merge premium with any existing
-    all_strats = premium_strats + [s for s in strategies if s.get('id') not in [p['id'] for p in premium_strats]]
+    # ── ARIBA strategy ──────────────────────────────────────
+    ariba_strat = {
+        "id":          "STR_ARIBA_REVERSAL_PUT",
+        "strategy_id": "STR_ARIBA_REVERSAL_PUT",
+        "name":        "Ariba Reversal Put Entry",
+        "creator":     "Ariba",
+        "instrument":  "NIFTY",
+        "action":      "BUY",
+        "option_type": "PE",
+        "quantity":    1,
+        "stop_loss":   80,
+        "target":      160,
+        "timeframe":   "5m",
+        "avg_win_rate":62,
+        "avg_monthly_return": 8.5,
+        "max_drawdown":  5,
+        "type":        "REVERSAL",
+        "strategy_type":"REVERSAL",
+        "indicators":  "VWAP,Volume,PE_Premium,Trend",
+        "description": "Bearish reversal after bullish open. BUY NIFTY PE when trend turns below VWAP with PE premium recovery + volume spike confirmation.",
+        "entry_time":  "AFTER 09:30 AM",
+        "max_trades_per_day": 1,
+        "expiry":      "CURRENT_WEEKLY",
+        "strike_selection": "NEAREST_ATM",
+        "conditions":  "TIME > 09:30 AND NIFTY trend BEARISH AND NIFTY < VWAP AND PE_PRICE >= PE_PRICE_AT_09:15 AND VOLUME_SPIKE = TRUE AND BEARISH_CANDLE_CONFIRMATION",
+        "entry_conditions": [
+            "Time > 09:30 AM",
+            "NIFTY trend = DOWNTREND",
+            "NIFTY price < VWAP",
+            "ATM PE price >= 09:15 reference PE price",
+            "Volume spike detected",
+            "Bearish candle confirmation"
+        ],
+        "risk_management": {
+            "stop_loss_pts": 80,
+            "target_pts":   160,
+            "risk_reward":  "1:2"
+        },
+        "exit_conditions": "SL 80pts hit OR Target 160pts hit OR NIFTY reclaims VWAP OR momentum weakens",
+        "safety_filters":  "No trade before 09:30 | Skip sideways | Skip over-expanded premium | Skip extreme volatility",
+        "no_trade":        "Before 09:30 AM | Sideways market | Premium already over-expanded | Extremely high VIX",
+        "notes":           "Max 1 trade per day. Wait for VWAP rejection + volume confirmation. Bullish open is prerequisite.",
+        "_badge":          "⭐ ARIBA",
+        "_badge_color":    "var(--am)",
+        "approved":        True,
+    }
+    
+    # Add Ariba first so it appears prominently
+    all_strats = [ariba_strat] + premium_strats + [s for s in strategies if s.get('id') not in [p['id'] for p in premium_strats] and s.get('id') != 'STR_ARIBA_REVERSAL_PUT']
     return {"strategies": all_strats, "count": len(all_strats)}
 
 # ── ADVANCED BACKTEST ──────────────────────────────────
@@ -3802,6 +3849,8 @@ REFERRAL_DB = _os.path.join(_os.path.dirname(__file__), "../database/referrals.d
 def _ref_conn():
     c = _sq3.connect(REFERRAL_DB)
     c.row_factory = _sq3.Row
+    
+    # Create tables if not exist
     c.execute("""CREATE TABLE IF NOT EXISTS referral_codes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT UNIQUE NOT NULL,
@@ -3826,11 +3875,43 @@ def _ref_conn():
         discount_given REAL DEFAULT 0,
         used_at TEXT DEFAULT CURRENT_TIMESTAMP
     )""")
-    # Migrate uses table
-    for _col2, _def2 in [("bonus_paid","REAL DEFAULT 0"),("discount_given","REAL DEFAULT 0")]:
-        try: c.execute(f"ALTER TABLE referral_uses ADD COLUMN {_col2} {_def2}")
-        except: pass
-    c.commit()
+    
+    # ── MIGRATE OLD TABLE: add missing columns one by one ──
+    _cols_to_add = [
+        ("validity_months",      "INTEGER DEFAULT 1"),
+        ("owner_email",          "TEXT DEFAULT ''"),
+        ("total_bonus_paid",     "REAL DEFAULT 0"),
+        ("total_discount_given", "REAL DEFAULT 0"),
+        ("is_active",            "INTEGER DEFAULT 1"),
+        ("uses_count",           "INTEGER DEFAULT 0"),
+        ("created_at",           "TEXT DEFAULT CURRENT_TIMESTAMP"),
+    ]
+    for col, defn in _cols_to_add:
+        try:
+            c.execute(f"ALTER TABLE referral_codes ADD COLUMN {col} {defn}")
+            c.commit()
+        except Exception:
+            pass  # Column already exists - OK
+    
+    # Fix NULL values left from old records
+    try:
+        c.execute("UPDATE referral_codes SET is_active=1 WHERE is_active IS NULL")
+        c.execute("UPDATE referral_codes SET validity_months=1 WHERE validity_months IS NULL")
+        c.execute("UPDATE referral_codes SET uses_count=0 WHERE uses_count IS NULL")
+        c.execute("UPDATE referral_codes SET total_bonus_paid=0 WHERE total_bonus_paid IS NULL")
+        c.execute("UPDATE referral_codes SET total_discount_given=0 WHERE total_discount_given IS NULL")
+        c.commit()
+    except Exception:
+        pass
+    
+    # Migrate uses table columns
+    for col2, defn2 in [("bonus_paid","REAL DEFAULT 0"),("discount_given","REAL DEFAULT 0")]:
+        try:
+            c.execute(f"ALTER TABLE referral_uses ADD COLUMN {col2} {defn2}")
+            c.commit()
+        except Exception:
+            pass
+    
     return c
 
 def _gen_code():
