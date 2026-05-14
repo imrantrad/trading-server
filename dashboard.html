@@ -70,6 +70,13 @@ input:focus,select:focus{border-color:var(--bl)}
       <div style="margin-bottom:8px"><div class="lbl">USERNAME</div><input id="l-user" placeholder="username" autocomplete="username"></div>
       <div style="margin-bottom:12px"><div class="lbl">PASSWORD</div><input id="l-pass" type="password" placeholder="password" autocomplete="current-password"></div>
       <button onclick="manualLogin()" class="btn g full" style="margin-bottom:8px">LOGIN</button>
+      <div style="text-align:right;margin-bottom:4px"><span onclick="toggleForgotPwd()" style="font-size:9px;color:var(--bl);cursor:pointer;text-decoration:underline">Forgot password?</span></div>
+      <div id="forgot-form" style="display:none;background:var(--bg4);border-radius:8px;padding:10px;margin-bottom:8px">
+        <div class="lbl" style="margin-bottom:4px">ENTER YOUR EMAIL</div>
+        <input id="forgot-email" type="email" placeholder="your@email.com" style="margin-bottom:8px">
+        <button onclick="submitForgotPwd()" class="btn b full" style="font-size:10px">SEND RESET LINK</button>
+        <div id="forgot-msg" style="display:none;font-size:9px;text-align:center;margin-top:6px"></div>
+      </div>
     </div>
 
     <!-- Register Form -->
@@ -957,6 +964,21 @@ input:focus,select:focus{border-color:var(--bl)}
   <div class="card">
     <div class="chdr">EVENT CALENDAR</div>
     <div id="event-calendar"></div>
+  </div>
+  
+  <!-- Global Markets -->
+  <div class="card" style="margin-top:8px">
+    <div class="chdr" style="display:flex;justify-content:space-between">
+      🌍 GLOBAL MARKETS
+      <div class="tab-strip" style="gap:4px;margin:0">
+        <button class="tpill active" onclick="loadGlobalMkt('india_eq',this)" style="font-size:8px;padding:3px 8px">🇮🇳 India</button>
+        <button class="tpill" onclick="loadGlobalMkt('us_eq',this)" style="font-size:8px;padding:3px 8px">🇺🇸 US</button>
+        <button class="tpill" onclick="loadGlobalMkt('crypto',this)" style="font-size:8px;padding:3px 8px">₿ Crypto</button>
+        <button class="tpill" onclick="loadGlobalMkt('forex',this)" style="font-size:8px;padding:3px 8px">💱 Forex</button>
+        <button class="tpill" onclick="loadGlobalMkt('commodities',this)" style="font-size:8px;padding:3px 8px">🏅 Commod</button>
+      </div>
+    </div>
+    <div id="global-mkt-list"><div style="color:var(--mu);padding:8px;text-align:center;font-size:9px">Click a market above</div></div>
   </div>
 </div>
 
@@ -3012,6 +3034,80 @@ setInterval(function(){
   var active=document.querySelector('.pnl.active');
   if(active) loadMarketPrices();
 },60000);
+
+
+// ── FORGOT PASSWORD ────────────────────────────────
+function toggleForgotPwd(){
+  var f=$('forgot-form'); if(f) f.style.display=f.style.display==='none'?'block':'none';
+}
+function submitForgotPwd(){
+  var email=(($('forgot-email')||{}).value||'').trim();
+  var msg=$('forgot-msg');
+  if(!email){ toast('Enter email','warn'); return; }
+  req('/users/forgot_password','POST',{email:email},function(err,r){
+    if(msg){ msg.style.display='block'; msg.style.color=r&&r.token?'var(--gr)':'var(--rd)';
+      msg.textContent=r&&r.message||'Failed'; }
+    if(r&&r.token){
+      toast('Reset token: '+r.token,'success');
+      // In production: this would be emailed to user
+      if(confirm('Dev mode: Token = '+r.token+'\nOpen reset form?')){
+        var np=prompt('Enter new password (min 6 chars):');
+        if(np&&np.length>=6){
+          req('/users/reset_password','POST',{token:r.token,new_password:np},function(e2,r2){
+            toast(r2&&r2.success?'Password reset! Please login again':'Reset failed','success');
+            $('forgot-form').style.display='none';
+          });
+        }
+      }
+    }
+  });
+}
+
+// ── GLOBAL MARKETS ─────────────────────────────────
+function loadGlobalMkt(assetClass, btn){
+  document.querySelectorAll('#pnl-scan .tpill').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  var list=$('global-mkt-list');
+  if(list) list.innerHTML='<div style="color:var(--am);padding:8px;text-align:center;font-size:9px">Loading...</div>';
+  req('/global/market/'+assetClass,'GET',null,function(err,d){
+    if(err||!d||d.error){
+      if(list) list.innerHTML='<div style="color:var(--rd);padding:8px;font-size:9px">Load failed</div>';
+      return;
+    }
+    var data = d.data||{};
+    var flags = {india_eq:'🇮🇳',us_eq:'🇺🇸',crypto:'₿',forex:'💱',commodities:'🏅'};
+    if(list) list.innerHTML = Object.entries(data).map(function(kv){
+      var sym=kv[0], info=kv[1];
+      var isPos=(info.change||0)>=0;
+      var clr=isPos?'var(--gr)':'var(--rd)';
+      var currency=info.currency==='INR'?'₹':'$';
+      return '<div class="row">'
+        +'<div><b style="font-size:10px">'+sym+'</b>'
+        +(info.unit?'<span style="font-size:7px;color:var(--mu)"> /'+info.unit+'</span>':'')
+        +'</div>'
+        +'<div style="text-align:right">'
+        +'<div style="font-size:11px;font-weight:700;color:'+clr+'">'+currency+info.price.toLocaleString()+'</div>'
+        +'<div style="font-size:8px;color:'+clr+'">'+(isPos?'+':'')+info.change+' ('+info.pct+'%)</div>'
+        +'</div></div>';
+    }).join('');
+    toast(Object.keys(data).length+' markets loaded','success');
+  });
+}
+
+// ── SESSION MANAGEMENT ──────────────────────────────
+// Create session token after login for secure API access
+var _origLogin = loginSuccess;
+loginSuccess = function(d){
+  _origLogin(d);
+  // Create server-side session
+  if(d.user_id && d.user_id!=='DEMO'){
+    req('/sessions/create','POST',{user_id:d.user_id},function(err,r){
+      if(r&&r.session_id){
+        try{ localStorage.setItem('trd_session_'+d.user_id, r.session_id); }catch(e){}
+      }
+    });
+  }
+};
 
 // ── API BASE URL ──────────────────────────────────
 (function(){

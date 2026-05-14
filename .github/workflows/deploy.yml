@@ -1,0 +1,25 @@
+name: TRD CI/CD
+on:
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with: {python-version: '3.11'}
+      - run: pip install fastapi uvicorn
+      - run: python -m py_compile backend/main.py backend/middleware.py backend/db_migrations.py backend/cache_layer.py && echo "✅ All compiled"
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: cd ~/trading-server && git pull origin main && sudo fuser -k 8000/tcp 2>/dev/null; sleep 2 && nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 > /tmp/api.log 2>&1 & sleep 5 && curl -f http://localhost:8000/health

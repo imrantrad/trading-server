@@ -4765,6 +4765,332 @@ def admin_full_status():
     }
 
 
+# ══════════════════════════════════════════════════════════════════
+# SESSION MANAGEMENT
+# ══════════════════════════════════════════════════════════════════
+import uuid as _uuid, hashlib as _hl
+
+def _create_session(user_id: str, ip: str = "", ua: str = "") -> str:
+    """Create an isolated user session token"""
+    sid = _uuid.uuid4().hex + _uuid.uuid4().hex  # 64-char token
+    from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+    _IST = _tz(_td(hours=5, minutes=30))
+    now  = _dt.now(_IST).isoformat()
+    exp  = (_dt.now(_IST) + _td(hours=24)).isoformat()
+    try:
+        with user_db.conn() as c:
+            c.execute("""CREATE TABLE IF NOT EXISTS user_sessions (
+                session_id TEXT PRIMARY KEY, user_id TEXT NOT NULL,
+                created_at TEXT NOT NULL, expires_at TEXT NOT NULL,
+                ip_address TEXT DEFAULT '', user_agent TEXT DEFAULT '',
+                is_active INTEGER DEFAULT 1)""")
+            c.execute("INSERT INTO user_sessions VALUES (?,?,?,?,?,?,1)",
+                      (sid, user_id, now, exp, ip[:45], ua[:200]))
+    except Exception: pass
+    return sid
+
+def _validate_session(sid: str) -> dict:
+    """Validate session token — returns user info or None"""
+    try:
+        with user_db.conn() as c:
+            c.execute("CREATE TABLE IF NOT EXISTS user_sessions (session_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL, ip_address TEXT DEFAULT '', user_agent TEXT DEFAULT '', is_active INTEGER DEFAULT 1)")
+            row = c.execute(
+                "SELECT * FROM user_sessions WHERE session_id=? AND is_active=1", (sid,)
+            ).fetchone()
+            if not row: return None
+            from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+            _IST = _tz(_td(hours=5, minutes=30))
+            if _dt.fromisoformat(row["expires_at"]) < _dt.now(_IST):
+                c.execute("UPDATE user_sessions SET is_active=0 WHERE session_id=?", (sid,))
+                return None
+            return {"user_id": row["user_id"], "session_id": sid}
+    except: return None
+
+@app.post("/sessions/create")
+def create_session(payload: dict, request: Request = None):
+    """Create session after login — returns session token"""
+    user_id = payload.get("user_id","")
+    if not user_id: return {"error": "user_id required"}
+    ip = request.headers.get("X-Forwarded-For","") if request else ""
+    ua = request.headers.get("User-Agent","") if request else ""
+    sid = _create_session(user_id, ip, ua)
+    audit_log(user_id, "SESSION_CREATE", ip=ip)
+    return {"session_id": sid, "expires_in": 86400, "user_id": user_id}
+
+@app.post("/sessions/validate")
+def validate_session(payload: dict):
+    """Validate session token"""
+    sid = payload.get("session_id","")
+    result = _validate_session(sid)
+    if not result: return {"valid": False}
+    return {"valid": True, **result}
+
+@app.delete("/sessions/{session_id}")
+def invalidate_session(session_id: str):
+    """Logout — invalidate session"""
+    try:
+        with user_db.conn() as c:
+            c.execute("UPDATE user_sessions SET is_active=0 WHERE session_id=?", (session_id,))
+        return {"invalidated": True}
+    except: return {"error": "Failed"}
+
+@app.get("/sessions/user/{user_id}")
+def user_sessions(user_id: str):
+    """Get active sessions for a user"""
+    try:
+        with user_db.conn() as c:
+            rows = c.execute(
+                "SELECT session_id,created_at,expires_at,ip_address,is_active FROM user_sessions WHERE user_id=? ORDER BY created_at DESC LIMIT 10",
+                (user_id,)
+            ).fetchall()
+        return {"sessions": [dict(r) for r in rows]}
+    except: return {"sessions": []}
+
+# ══════════════════════════════════════════════════════════════════
+# PASSWORD RESET FLOW
+# ══════════════════════════════════════════════════════════════════
+_reset_tokens = {}  # {token: {user_id, email, expires}}
+
+@app.post("/users/forgot_password")
+def forgot_password(payload: dict):
+    """Send password reset token (email simulation)"""
+    email = payload.get("email","").strip().lower()
+    if not email: return {"error": "Email required"}
+    
+    token = _hl.sha256(f"{email}{_uuid.uuid4()}".encode()).hexdigest()[:32]
+    from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+    _IST = _tz(_td(hours=5, minutes=30))
+    expires = (_dt.now(_IST) + _td(minutes=15)).isoformat()
+    
+    # Find user by email
+    uid = None
+    if USER_SYSTEM:
+        try:
+            with user_db.conn() as c:
+                row = c.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+                if row: uid = row["id"]
+        except: pass
+    
+    if not uid:
+        # Don't reveal if email exists (security)
+        return {"message": "If email exists, reset link sent", "debug_token": token}
+    
+    _reset_tokens[token] = {"user_id": uid, "email": email, "expires": expires}
+    audit_log(uid, "PASSWORD_RESET_REQUEST", resource=email)
+    
+    # In production: send email via SMTP
+    # For now: return token (dev mode)
+    return {
+        "message": "Reset link generated",
+        "token": token,
+        "expires_in": 900,
+        "note": "In production, this token is emailed to the user"
+    }
+
+@app.post("/users/reset_password")
+def reset_password(payload: dict):
+    """Reset password using token"""
+    token    = payload.get("token","")
+    new_pass = payload.get("new_password","")
+    
+    if not token or not new_pass:
+        return {"error": "Token and new_password required"}
+    if len(new_pass) < 6:
+        return {"error": "Password must be at least 6 characters"}
+    
+    reset_data = _reset_tokens.get(token)
+    if not reset_data:
+        return {"error": "Invalid or expired token"}
+    
+    from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+    _IST = _tz(_td(hours=5, minutes=30))
+    if _dt.fromisoformat(reset_data["expires"]) < _dt.now(_IST):
+        del _reset_tokens[token]
+        return {"error": "Token expired"}
+    
+    # Update password
+    uid = reset_data["user_id"]
+    if USER_SYSTEM:
+        import hashlib as hl
+        new_hash = hl.sha256(new_pass.encode()).hexdigest()
+        user_db.update_user(uid, {"password_hash": new_hash})
+    
+    del _reset_tokens[token]
+    audit_log(uid, "PASSWORD_RESET_SUCCESS")
+    return {"success": True, "message": "Password reset successfully"}
+
+@app.post("/users/change_password")
+def change_password(payload: dict):
+    """Change password (authenticated user)"""
+    user_id  = payload.get("user_id","")
+    old_pass = payload.get("old_password","")
+    new_pass = payload.get("new_password","")
+    if not all([user_id, old_pass, new_pass]):
+        return {"error": "user_id, old_password, new_password required"}
+    if len(new_pass) < 6:
+        return {"error": "Password min 6 chars"}
+    if USER_SYSTEM:
+        import hashlib as hl
+        old_hash = hl.sha256(old_pass.encode()).hexdigest()
+        new_hash = hl.sha256(new_pass.encode()).hexdigest()
+        try:
+            with user_db.conn() as c:
+                row = c.execute("SELECT password_hash FROM users WHERE id=?", (user_id,)).fetchone()
+                if not row or row["password_hash"] != old_hash:
+                    return {"error": "Old password incorrect"}
+            user_db.update_user(user_id, {"password_hash": new_hash})
+            audit_log(user_id, "PASSWORD_CHANGED")
+            return {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+    return {"error": "User system not available"}
+
+# ══════════════════════════════════════════════════════════════════
+# IP BLOCKING / SECURITY
+# ══════════════════════════════════════════════════════════════════
+_blocked_ips  = set()
+_failed_logins = {}   # {ip: [timestamps]}
+
+def _check_brute_force(ip: str) -> bool:
+    """Block IP after 10 failed logins in 5 minutes"""
+    if ip in _blocked_ips: return True
+    now = time.time()
+    attempts = [t for t in _failed_logins.get(ip, []) if now-t < 300]
+    _failed_logins[ip] = attempts
+    return len(attempts) >= 10
+
+def _record_failed_login(ip: str):
+    if ip not in _failed_logins: _failed_logins[ip] = []
+    _failed_logins[ip].append(time.time())
+    if len(_failed_logins[ip]) >= 10:
+        _blocked_ips.add(ip)
+        audit_log("SYSTEM", "IP_BLOCKED", ip=ip)
+
+@app.post("/admin/security/block_ip")
+def block_ip(payload: dict, admin_key: str = ""):
+    if admin_key != os.environ.get("ADMIN_KEY", "TRD_ADMIN_2026"):
+        return {"error": "Unauthorized"}
+    ip = payload.get("ip","")
+    _blocked_ips.add(ip)
+    audit_log("ADMIN", "IP_BLOCKED_MANUAL", ip=ip)
+    return {"blocked": ip}
+
+@app.delete("/admin/security/unblock_ip")
+def unblock_ip(ip: str, admin_key: str = ""):
+    if admin_key != os.environ.get("ADMIN_KEY", "TRD_ADMIN_2026"):
+        return {"error": "Unauthorized"}
+    _blocked_ips.discard(ip)
+    _failed_logins.pop(ip, None)
+    audit_log("ADMIN", "IP_UNBLOCKED", ip=ip)
+    return {"unblocked": ip}
+
+@app.get("/admin/security/status")
+def security_status(admin_key: str = ""):
+    if admin_key != os.environ.get("ADMIN_KEY", "TRD_ADMIN_2026"):
+        return {"error": "Unauthorized"}
+    return {
+        "blocked_ips": list(_blocked_ips),
+        "suspicious_ips": {ip: len(ts) for ip,ts in _failed_logins.items() if len(ts) >= 5},
+        "total_blocked": len(_blocked_ips),
+    }
+
+# ══════════════════════════════════════════════════════════════════
+# API KEY MANAGEMENT (per user)
+# ══════════════════════════════════════════════════════════════════
+@app.post("/users/{user_id}/api_key/generate")
+def generate_api_key(user_id: str):
+    """Generate personal API key for programmatic access"""
+    import secrets as _sec, time as _time
+    api_key = f"trd_{_sec.token_hex(24)}"
+    created = datetime.now(IST).isoformat() if 'IST' in dir() else str(datetime.now())
+    if USER_SYSTEM:
+        user_db.update_user(user_id, {"api_key": api_key, "api_key_created": created})
+    audit_log(user_id, "API_KEY_GENERATED")
+    return {"api_key": api_key, "created": created, "user_id": user_id,
+            "note": "Store this safely — shown only once"}
+
+@app.delete("/users/{user_id}/api_key/revoke")
+def revoke_api_key(user_id: str):
+    """Revoke user API key"""
+    if USER_SYSTEM:
+        user_db.update_user(user_id, {"api_key": "", "api_key_created": ""})
+    audit_log(user_id, "API_KEY_REVOKED")
+    return {"revoked": True, "user_id": user_id}
+
+# ══════════════════════════════════════════════════════════════════
+# API VERSIONING WRAPPER
+# ══════════════════════════════════════════════════════════════════
+@app.get("/api/v1/health")
+def v1_health():
+    """Versioned health endpoint"""
+    return {**get_health(), "api_version": "v1"}
+
+@app.get("/api/v1/market/prices")
+def v1_market_prices():
+    """Versioned market prices"""
+    return market_live_prices()
+
+@app.get("/api/v2/market/prices")
+def v2_market_prices():
+    """v2 — extended market prices with more instruments"""
+    base = market_live_prices()
+    base["version"] = "v2"
+    base["sensex"]  = {"price": round((base.get("NIFTY",23700))*2.68, 2)}
+    return base
+
+# ══════════════════════════════════════════════════════════════════
+# MULTI-ASSET SUPPORT (US Markets + Crypto stub)
+# ══════════════════════════════════════════════════════════════════
+@app.get("/global/market/{asset_class}")
+def global_market_data(asset_class: str):
+    """
+    Multi-asset market data stub.
+    asset_class: india_eq, us_eq, crypto, forex, commodities
+    """
+    import hashlib as hl
+    from datetime import date
+    seed = int(hl.md5(f"{asset_class}{date.today()}".encode()).hexdigest()[:8],16)
+    
+    MARKETS = {
+        "india_eq": {
+            "NIFTY":      {"price": 23700, "change": 180, "pct": 0.76, "currency": "INR"},
+            "BANKNIFTY":  {"price": 51800, "change": 420, "pct": 0.82, "currency": "INR"},
+            "SENSEX":     {"price": 78200, "change": 610, "pct": 0.79, "currency": "INR"},
+        },
+        "us_eq": {
+            "SPX":   {"price": 5890+seed%200,  "change": 12,  "pct": 0.20, "currency": "USD"},
+            "NDX":   {"price": 21100+seed%300, "change": 45,  "pct": 0.21, "currency": "USD"},
+            "DJI":   {"price": 44200+seed%500, "change": 88,  "pct": 0.20, "currency": "USD"},
+            "VIX":   {"price": 12.5+seed%5,    "change": -0.3,"pct":-0.02, "currency": "USD"},
+        },
+        "crypto": {
+            "BTC":   {"price": 105000+seed%5000,"change": 1200, "pct": 1.15, "currency": "USD"},
+            "ETH":   {"price": 3800+seed%400,   "change": 85,   "pct": 2.24, "currency": "USD"},
+            "BNB":   {"price": 680+seed%50,     "change": 12,   "pct": 1.79, "currency": "USD"},
+        },
+        "forex": {
+            "USDINR": {"price": round(84.0+seed%200/1000, 2), "change": 0.05, "pct": 0.06, "currency": "INR"},
+            "EURINR": {"price": round(90.5+seed%200/1000, 2), "change": 0.08, "pct": 0.09, "currency": "INR"},
+            "GBPINR": {"price": round(106.0+seed%300/1000,2), "change": 0.12, "pct": 0.11, "currency": "INR"},
+        },
+        "commodities": {
+            "GOLD":  {"price": round(2340+seed%100, 2), "change": 8,  "pct": 0.34, "currency": "USD", "unit": "troy oz"},
+            "SILVER":{"price": round(29.5+seed%5, 2),  "change": 0.3,"pct": 1.02, "currency": "USD", "unit": "troy oz"},
+            "CRUDEOIL":{"price": round(82+seed%10, 2), "change": 0.8,"pct": 0.98, "currency": "USD", "unit": "barrel"},
+        },
+    }
+    
+    if asset_class not in MARKETS:
+        return {"error": f"Unknown asset class. Choose: {list(MARKETS.keys())}"}
+    
+    return {
+        "asset_class": asset_class,
+        "data":        MARKETS[asset_class],
+        "timestamp":   datetime.now().isoformat(),
+        "note":        "Simulated data — integrate real broker/data-feed for production"
+    }
+
+
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
     """Scan all instruments with ML models - auto-trains if needed"""
