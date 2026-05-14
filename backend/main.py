@@ -3837,8 +3837,64 @@ def _gen_code():
     return "TRD" + "".join(_rnd.choices(_str.ascii_uppercase + _str.digits, k=8))
 
 # Admin: Create referral code
+
+def _migrate_ref_db():
+    """Standalone referral DB migration — always safe to call"""
+    import sqlite3 as _s
+    c = _s.connect(REFERRAL_DB)
+    c.row_factory = _s.Row
+    
+    # Create tables if missing
+    c.execute("""CREATE TABLE IF NOT EXISTS referral_codes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        owner_user_id TEXT NOT NULL DEFAULT '',
+        owner_email TEXT DEFAULT '',
+        bonus_amount REAL DEFAULT 0,
+        discount_amount REAL DEFAULT 0,
+        validity_months INTEGER DEFAULT 1,
+        expires_at TEXT DEFAULT '',
+        is_active INTEGER DEFAULT 1,
+        uses_count INTEGER DEFAULT 0,
+        total_bonus_paid REAL DEFAULT 0,
+        total_discount_given REAL DEFAULT 0
+    )""")
+    
+    # Add any missing columns
+    existing = {row[1] for row in c.execute("PRAGMA table_info(referral_codes)").fetchall()}
+    needed = {
+        "owner_email":          "TEXT DEFAULT ''",
+        "validity_months":      "INTEGER DEFAULT 1",
+        "expires_at":           "TEXT DEFAULT ''",
+        "is_active":            "INTEGER DEFAULT 1",
+        "uses_count":           "INTEGER DEFAULT 0",
+        "total_bonus_paid":     "REAL DEFAULT 0",
+        "total_discount_given": "REAL DEFAULT 0",
+    }
+    for col, defn in needed.items():
+        if col not in existing:
+            try:
+                c.execute(f"ALTER TABLE referral_codes ADD COLUMN {col} {defn}")
+            except Exception:
+                pass
+    
+    # Fix NULLs
+    c.execute("UPDATE referral_codes SET is_active=1 WHERE is_active IS NULL")
+    c.execute("UPDATE referral_codes SET validity_months=1 WHERE validity_months IS NULL")
+    c.execute("UPDATE referral_codes SET uses_count=0 WHERE uses_count IS NULL")
+    c.execute("UPDATE referral_codes SET total_bonus_paid=0 WHERE total_bonus_paid IS NULL")
+    c.execute("UPDATE referral_codes SET total_discount_given=0 WHERE total_discount_given IS NULL")
+    c.commit()
+    c.close()
+
 @app.post("/admin/referral/create")
 def admin_create_referral(payload: dict):
+    # ── Ensure DB schema is up to date ──
+    try:
+        _migrate_ref_db()
+    except Exception:
+        pass
+    
     owner_id = payload.get("owner_user_id","")
     owner_email = payload.get("owner_email","")
     bonus = float(payload.get("bonus_amount", 500))
@@ -3853,13 +3909,16 @@ def admin_create_referral(payload: dict):
     from datetime import datetime, timedelta
     expires = (datetime.now() + timedelta(days=30*months)).isoformat()
     try:
-        c = _ref_conn()
-        c.execute("""INSERT INTO referral_codes 
-            (code,owner_user_id,owner_email,bonus_amount,discount_amount,validity_months,expires_at,is_active)
-            VALUES (?,?,?,?,?,?,?,1)""",
+        import sqlite3 as _sq
+        conn = _sq.connect(REFERRAL_DB)
+        conn.execute("""INSERT INTO referral_codes 
+            (code, owner_user_id, owner_email, bonus_amount, discount_amount,
+             validity_months, expires_at, is_active, uses_count,
+             total_bonus_paid, total_discount_given)
+            VALUES (?,?,?,?,?,?,?,1,0,0,0)""",
             (code, owner_id, owner_email, bonus, discount, months, expires))
-        c.commit()
-        c.close()
+        conn.commit()
+        conn.close()
     except Exception as db_err:
         return {"error": f"DB error: {db_err}"}
     return {"code": code, "owner_user_id": owner_id, "bonus_amount": bonus,

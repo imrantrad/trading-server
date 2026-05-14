@@ -1929,13 +1929,7 @@ function loadBuiltin(){
     var strats=(d&&(d.strategies||d))||[];
     if(!strats.length){list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">No strategies</div>';return;}
     strats.sort(function(a,b){return (b.win_rate||b.avg_win_rate||0)-(a.win_rate||a.avg_win_rate||0);});
-    // Mark Ariba strategy with special badge
-    strats.forEach(function(s){
-      if((s.strategy_id||s.id||'').indexOf('ARIBA')>=0 || (s.name||'').indexOf('Ariba')>=0){
-        s._badge = '⭐ ARIBA';
-        s._badge_color = 'var(--am)';
-      }
-    });
+
     _allBuiltinStrats=strats;
     renderStratCards(list, strats, 'builtin');
   });
@@ -2004,7 +1998,7 @@ function renderStratCards(container, strats, type){
     return '<div class="strat-card" data-s="'+key+'">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
       +'<div><div style="font-size:11px;font-weight:700">'+(type==='ai'?'🤖 ':'')+s.name+'</div>'
-      +(s._badge?'<span style="font-size:8px;font-weight:700;color:'+s._badge_color+';background:rgba(245,158,11,.1);padding:2px 6px;border-radius:4px;margin-bottom:4px;display:inline-block">'+s._badge+'</span><br>':'')      +'<div style="font-size:8px;color:var(--mu)">'+(s.instrument||'NIFTY')+' · '+(s.strategy_type||s.type||'SYSTEM')+(s.approved===true?' · <span style="color:var(--gr)">✅ Approved</span>':s.approved===false?' · <span style="color:var(--am)">🧪 Testing</span>':'')+(s.description?' · '+s.description.slice(0,60)+'...':'')+'</div></div>'
+      +'<div style="font-size:8px;color:var(--mu)">'+(s.instrument||'NIFTY')+' · '+(s.strategy_type||s.type||'SYSTEM')+(s.approved===true?' · <span style="color:var(--gr)">✅ Approved</span>':s.approved===false?' · <span style="color:var(--am)">🧪 Testing</span>':'')+'</div></div>'
       +'<div style="text-align:right"><div style="font-size:20px;font-weight:800;color:'+wrc+'">'+wr+'%</div><div style="font-size:8px;color:var(--mu)">WIN RATE</div></div></div>'
       +(s.description?'<div style="font-size:9px;color:var(--mu);margin-bottom:6px;line-height:1.5">'+s.description.slice(0,100)+'</div>':'')
       +'<div style="display:flex;gap:6px">'
