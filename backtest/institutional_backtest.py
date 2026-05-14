@@ -572,7 +572,7 @@ def run_institutional_backtest(
                 adj_wr += regime_penalty.get(regime, 0)
                 
                 # Reversal strategies get NEGATIVE boost in trending regimes
-                if "REVERSAL" in strategy_id or "ARIBA" in strategy_id:
+                if "REVERSAL" in strategy or "ARIBA" in strategy:
                     if regime == "TRENDING": adj_wr -= 0.10  # Reversals fail in strong trends
                     if regime == "SIDEWAYS": adj_wr += 0.05  # Reversals work best sideways
                 
