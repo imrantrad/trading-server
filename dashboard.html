@@ -1132,11 +1132,50 @@ function handleLogoClick(){
 }
 
 function googleLogin(){
-  // Google OAuth - show TnC first
-  var tnc = $('tnc-section');
-  if(tnc) tnc.style.display = 'block';
-  $('manual-form').style.display = 'none';
-  $('reg-form').style.display = 'none';
+  // Check if Google Client is loaded (real OAuth)
+  if(window.google && window.google.accounts){
+    window.google.accounts.id.prompt();
+    return;
+  }
+  // Fallback: show Google-style quick form
+  var gf = $('google-quick-form');
+  if(gf){
+    gf.style.display = gf.style.display==='none' ? 'block' : 'none';
+    return;
+  }
+  // Create quick form dynamically
+  var overlay = $('login-overlay');
+  var div = document.createElement('div');
+  div.id = 'google-quick-form';
+  div.style.cssText = 'margin-top:12px;background:var(--bg4);border:1px solid rgba(79,142,247,.3);border-radius:10px;padding:14px';
+  div.innerHTML = '<div style="font-size:10px;font-weight:700;color:var(--bl);margin-bottom:10px">🔑 GOOGLE QUICK LOGIN</div>'
+    + '<div class="lbl" style="margin-bottom:4px">YOUR EMAIL</div>'
+    + '<input id="g-email" type="email" placeholder="your@gmail.com" style="margin-bottom:8px">'
+    + '<div class="lbl" style="margin-bottom:4px">YOUR NAME</div>'
+    + '<input id="g-name" placeholder="Your Name" style="margin-bottom:12px">'
+    + '<button onclick="submitGoogleLogin()" class="btn g full" style="padding:10px">Continue with Google →</button>'
+    + '<div style="font-size:9px;color:var(--mu);margin-top:8px;text-align:center">TRD will create your account automatically</div>';
+  // Insert after google button
+  var googleBtn = overlay.querySelector('button');
+  if(googleBtn && googleBtn.parentNode) googleBtn.parentNode.insertBefore(div, googleBtn.nextSibling);
+  else overlay.appendChild(div);
+}
+
+function submitGoogleLogin(){
+  var email = ($('g-email')||{}).value||'';
+  var name  = ($('g-name')||{}).value||'';
+  if(!email){ toast('Email required','warn'); return; }
+  if(!name)  name = email.split('@')[0];
+  var googleId = 'G_' + btoa(email).replace(/=/g,'').slice(0,16);
+  req('/auth/google','POST',{
+    google_id: googleId,
+    email:     email,
+    name:      name,
+    picture:   ''
+  }, function(err,d){
+    if(err||!d||d.error){ toast('Login failed: '+(d&&d.error||err),'error'); return; }
+    loginSuccess(d);
+  });
 }
 
 function toggleManual(){
@@ -2098,27 +2137,65 @@ function showAddUser(){
 }
 
 function editUser(uid){
-  req('/admin/users','GET',null,function(err,d){
-    var users=(d&&d.users)||[];
-    var u=users.find(function(x){return x.user_id===uid;});
-    if(!u) return;
+  // Load user data from profile endpoint (faster, no need to load all users)
+  req('/users/profile/'+uid,'GET',null,function(err,u){
+    if(err||!u){ toast('Could not load user data','error'); return; }
     $('adm-user-form').style.display='block';
-    sv('uf-id',u.user_id);sv('uf-name',u.full_name||'');sv('uf-user',u.username||'');
-    sv('uf-email',u.email||'');sv('uf-plan',u.plan||'FREE');sv('uf-cap',u.capital||500000);
+    sv('uf-id',  uid);
+    sv('uf-name', u.full_name||'');
+    sv('uf-user', u.username||'');
+    sv('uf-email',u.email||'');
+    sv('uf-plan', u.plan||'FREE');
+    sv('uf-cap',  u.capital||500000);
+    var msg=$('uf-msg'); if(msg) msg.style.display='none';
+    // Scroll form into view
+    $('adm-user-form').scrollIntoView({behavior:'smooth',block:'start'});
+    toast('Editing: '+(u.full_name||u.username||uid),'info');
   });
 }
 
 function saveUser(){
-  var uid=gv('uf-id');
-  var payload={full_name:gv('uf-name'),email:gv('uf-email'),plan:gv('uf-plan'),capital:nv('uf-cap'),status:'active'};
-  var url=uid?('/admin/users/'+uid):'/admin/users/add';
-  var method=uid?'PUT':'POST';
-  req(url,method,payload,function(err,r){
-    var msg=$('uf-msg');
-    if(err||!r||r.error){if(msg){msg.style.display='block';msg.style.color='var(--rd)';msg.textContent=r&&r.error||'Failed';} return;}
-    if(msg){msg.style.display='block';msg.style.color='var(--gr)';msg.textContent='Saved!';}
-    setTimeout(function(){$('adm-user-form').style.display='none';loadAdminUsers();},1000);
-    toast('User saved!','success');
+  var uid  = gv('uf-id');
+  var name = gv('uf-name').trim();
+  var user = gv('uf-user').trim();
+  var email= gv('uf-email').trim();
+  var plan = gv('uf-plan');
+  var cap  = nv('uf-cap')||500000;
+  var msg  = $('uf-msg');
+
+  if(!name){ toast('Full name required','warn'); return; }
+  if(!uid && !email){ toast('Email required for new user','warn'); return; }
+
+  var payload = {
+    full_name: name,
+    email:     email,
+    plan:      plan,
+    capital:   cap,
+    status:    'active'
+  };
+
+  var url, method;
+  if(uid){
+    // UPDATE existing user
+    url    = '/admin/users/' + uid;
+    method = 'PUT';
+  } else {
+    // ADD new user - include username
+    payload.username = user || email.split('@')[0] || 'user_'+Date.now();
+    url    = '/admin/users/add';
+    method = 'POST';
+  }
+
+  if(msg){ msg.style.display='none'; }
+  req(url, method, payload, function(err, r){
+    if(err||!r||r.error){
+      if(msg){ msg.style.display='block'; msg.style.color='var(--rd)'; msg.textContent=(r&&r.error)||'Save failed'; }
+      toast('Failed: '+((r&&r.error)||err||'Error'),'error');
+      return;
+    }
+    if(msg){ msg.style.display='block'; msg.style.color='var(--gr)'; msg.textContent= uid?'User updated!':'User added!'; }
+    toast(uid?'User updated!':'User added!','success');
+    setTimeout(function(){ $('adm-user-form').style.display='none'; loadAdminUsers(); }, 900);
   });
 }
 

@@ -2129,8 +2129,8 @@ def get_consents(user_id: str):
 
 @app.get("/admin/users")
 def admin_users(limit: int = 50):
-    if not ENTERPRISE: return {"users":[]}
-    return {"users": admin.get_user_list(limit)}
+    """Get all users - works with USER_SYSTEM (no ENTERPRISE required)"""
+    return admin_get_users()
 
 @app.get("/admin/health")
 def admin_health():
