@@ -1248,7 +1248,7 @@ function loginSuccess(d){
 }
 
 function logout(){
-  try{ localStorage.removeItem('trd_user'); localStorage.removeItem('trd_tab'); }catch(e){}
+  try{ var uid3=window.UID||'demo'; localStorage.removeItem('trd_user'); localStorage.removeItem('trd_tab'); localStorage.removeItem('trd_broker_'+uid3); }catch(e){}
   UID=null; UNAME=null;
   var lo=$('login-overlay'); var nav=$('top-nav');
   if(lo) lo.style.display='flex';
@@ -2501,11 +2501,13 @@ function connectBroker(){
   var resultEl=$('broker-result');
   if(!key){toast('API Key required','warn');return;}
   if(statusEl) statusEl.textContent='Connecting...';
-  req('/broker/connect/'+broker+'?api_key='+encodeURIComponent(key)+(token?'&access_token='+encodeURIComponent(token):''),'GET',null,function(err,d){
+  var uid=window.UID||'demo';
+  req('/broker/connect/'+broker+'?api_key='+encodeURIComponent(key)+(token?'&access_token='+encodeURIComponent(token):'')
+    +'&user_id='+encodeURIComponent(uid),'GET',null,function(err,d){
     if(d&&d.connected){
       if(statusEl){statusEl.textContent='✅ '+broker+' Connected ('+d.mode+')';statusEl.style.color='var(--gr)';}
       if(resultEl){resultEl.style.display='block';resultEl.innerHTML='<b style="color:var(--gr)">'+broker+'</b> connected in <b>'+d.mode+'</b> mode<br><span style="font-size:9px;color:var(--mu)">'+(d.note||'')+'</span>';}
-      try{localStorage.setItem('trd_broker',JSON.stringify({broker:broker,key:key.slice(-4),mode:d.mode,time:Date.now()}));}catch(e){}
+      try{var uid2=window.UID||'demo';localStorage.setItem('trd_broker_'+uid2,JSON.stringify({broker:broker,key:key.slice(-4),mode:d.mode,time:Date.now(),uid:uid2}));}catch(e){}
       toast('Connected: '+broker+' ('+d.mode+')','success');
     } else {
       if(statusEl){statusEl.textContent='❌ '+(d&&d.error||'Connection failed');statusEl.style.color='var(--rd)';}
@@ -2517,7 +2519,7 @@ function connectBroker(){
 // Restore broker from localStorage on load
 window.addEventListener('load',function(){
   try{
-    var saved=JSON.parse(localStorage.getItem('trd_broker')||'null');
+    var saved=JSON.parse(localStorage.getItem('trd_broker_'+(window.UID||'demo'))||'null');
     if(saved&&saved.time&&Date.now()-saved.time<86400000){
       var el=$('broker-status'); if(el){el.textContent='✅ '+saved.broker+' ('+saved.mode+')';el.style.color='var(--gr)';}
     }

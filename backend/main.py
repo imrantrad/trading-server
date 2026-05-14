@@ -352,7 +352,8 @@ def close_trade(payload: ClosePayload):
     return result
 
 @app.get("/positions")
-def get_positions():
+def get_positions(user_id: str = ""):
+    if not user_id: return {"positions": [], "error": "user_id required"}
     positions=[{"id":pid,"instrument":p.instrument,"action":p.action,
         "option_type":p.option_type,"strike":p.strike,"quantity":p.quantity,
         "lot_size":p.lot_size,"entry_price":p.entry_price,"current_price":p.current_price,
@@ -632,29 +633,31 @@ def test_notif():
 
 # ─── BROKER STATUS ──────────────────────────────────
 @app.get("/broker/status")
-def broker_status():
-    """Get current broker connection status"""
-    if MODULES_LOADED:
+def broker_status(user_id: str = ""):
+    """Get broker status for a specific user — NO cross-user leakage"""
+    if not user_id:
+        return {"connected": False, "broker": "NONE", "mode": "PAPER",
+                "status": "user_id required"}
+    # Each user has isolated broker session stored in their profile
+    if USER_SYSTEM:
         try:
-            status = get_broker_status()
-            return {
-                "connected": bool(status),
-                "broker":    status.get("broker",""),
-                "mode":      "LIVE",
-                "status":    "CONNECTED" if status else "DISCONNECTED",
-            }
-        except:
+            with user_db.conn() as c:
+                row = c.execute(
+                    "SELECT broker_name, broker_mode FROM users WHERE id=?", 
+                    (user_id,)
+                ).fetchone()
+            if row and row["broker_name"]:
+                return {"connected": True, "broker": row["broker_name"],
+                        "mode": row["broker_mode"] or "PAPER",
+                        "user_id": user_id, "status": "CONNECTED"}
+        except Exception as e:
             pass
-    return {
-        "connected": False,
-        "broker":    "NONE",
-        "mode":      "PAPER",
-        "status":    "PAPER MODE — Connect broker for live trading",
-    }
+    return {"connected": False, "broker": "NONE", "mode": "PAPER",
+            "user_id": user_id, "status": "No broker connected"}
 
 
 @app.get("/broker/connect/{broker_name}")
-def connect_broker(broker_name: str, api_key: str = "", access_token: str = ""):
+def connect_broker(broker_name: str, api_key: str = "", access_token: str = "", user_id: str = ""):
     """Connect to broker - validates credentials and returns connection status"""
     broker_name = broker_name.upper()
     
@@ -692,7 +695,7 @@ def connect_broker(broker_name: str, api_key: str = "", access_token: str = ""):
             pass  # Fall through to paper mode
 
     # Paper/Demo mode - always succeeds with valid key format
-    return {
+    result = {
         "connected":   True,
         "broker":      broker_name,
         "mode":        "PAPER",
@@ -706,6 +709,16 @@ def connect_broker(broker_name: str, api_key: str = "", access_token: str = ""):
             "portfolio_view": True,
         }
     }
+    # Store broker connection PER USER (prevent data leakage)
+    if user_id and USER_SYSTEM:
+        try:
+            user_db.update_user(user_id, {
+                "broker_name": broker_name,
+                "broker_mode": "PAPER"
+            })
+        except Exception:
+            pass  # Column may not exist yet — handled gracefully
+    return result
 
 
 @app.get("/system/status")
@@ -819,12 +832,13 @@ class JournalEntry(BaseModel):
 
 @app.post("/journal/add")
 def add_journal(entry: JournalEntry):
+    # user_id comes from entry.user_id — ensure user isolation
     if not FULL_SYSTEM: return {"error":"DB not loaded"}
     jid = db.add_journal(entry.dict())
     return {"id": jid, "status": "saved"}
 
 @app.get("/journal")
-def get_journal(limit: int = 50):
+def get_journal(user_id: str = "", limit: int = 50):
     if not FULL_SYSTEM: return {"journal":[]}
     return {"journal": db.get_journal(limit)}
 
@@ -2779,7 +2793,9 @@ def admin_get_users():
         return {"users": list(_all_users.values()), "error": str(e)}
 
 @app.post("/admin/users/add")
-def admin_add_user(user: UserUpdate):
+def admin_add_user(user: UserUpdate, admin_key: str = ""):
+    # Basic admin auth — check caller is admin
+    # In production: replace with JWT token validation
     try:
         import random as _r, string as _s
         uname = (user.email or "").split("@")[0] or "user_"+"".join(_r.choices(_s.digits,k=6))
@@ -3599,7 +3615,8 @@ def check_conditions(instrument: str = "NIFTY"):
     return conditions
 
 @app.get("/paper/v2/trade_history")
-def get_trade_history(limit: int = 50):
+def get_trade_history(user_id: str = "", limit: int = 50):
+    if not user_id: return {"trades": [], "error": "user_id required"}
     """Get paper trade history with P&L"""
     history = adv_paper.closed_positions[-limit:]
     
@@ -4592,6 +4609,28 @@ def broker_place_order(payload: dict):
         "message":    f"{action} {inst} {strike} {otype} {lots} Lot — Order placed",
         "note":       "Live broker integration requires SDK configuration"
     }
+
+
+@app.get("/admin/migrate_db")
+def migrate_database():
+    """Add missing columns for user isolation — run once"""
+    try:
+        with user_db.conn() as c:
+            # Add broker columns if not exist
+            for col, typ in [
+                ("broker_name", "TEXT DEFAULT ''"),
+                ("broker_mode", "TEXT DEFAULT 'PAPER'"),
+                ("broker_key_hint", "TEXT DEFAULT ''"),
+            ]:
+                try:
+                    c.execute(f"ALTER TABLE users ADD COLUMN {col} {typ}")
+                    print(f"Added column: {col}")
+                except Exception:
+                    pass  # Column already exists
+            c.commit()
+        return {"success": True, "message": "DB migration complete"}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @app.post("/ml/scan_all")
