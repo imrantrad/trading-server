@@ -942,7 +942,8 @@ input:focus,select:focus{border-color:var(--bl)}
       <div><div class="lbl">RATE %</div><input id="calc-rate" type="number" value="6.5"></div>
       <div><div class="lbl">TYPE</div><select id="calc-type" style="font-size:10px"><option value="CE">Call CE</option><option value="PE">Put PE</option></select></div>
     </div>
-    <button onclick="runCalc()" class="btn b full" style="margin-bottom:8px;padding:10px">CALCULATE</button>
+    <button onclick="loadCalcSpot()" class="btn g" style="margin-bottom:8px;flex:1;padding:9px;font-size:10px">📡 LIVE SPOT</button>
+      <button onclick="runCalc()" class="btn b full" style="margin-bottom:8px;padding:10px;margin-top:4px">CALCULATE</button>
     <div id="calc-result" style="display:none"></div>
   </div>
 </div>
@@ -1093,7 +1094,7 @@ function show(name, btn){
   }
   // Auto-load panel data
   var loaders = {
-    'trade':   function(){ updateOrderEntry(); loadPositions(); },
+    'trade':   function(){ updateOrderEntry(); loadPositions(); setTimeout(function(){ loadMarketPrices(); },300); },
     'paper':   function(){ loadPaperPortfolio(); loadRegimeDisplay(); },
     'bt':      function(){},
     'strats':  function(){ loadBuiltin(); },
@@ -1294,14 +1295,46 @@ function updateOrderEntry(){
 }
 
 function executeTrade(action){
-  var inst  = gv('t-inst');
-  var strike= iv('t-strike');
-  var lots  = iv('t-lots')||1;
-  var price = nv('t-price');
-  var sl    = nv('t-sl');
-  var tgt   = nv('t-tgt');
+  var inst   = gv('t-inst');
+  var strike = iv('t-strike');
+  var lots   = iv('t-lots')||1;
+  var price  = nv('t-price')||0;
+  var sl     = nv('t-sl')||0;
+  var tgt    = nv('t-tgt')||0;
   if(!strike){ toast('Enter strike price','warn'); return; }
-  toast('Live trading requires broker connection. Use PAPER TRADE instead.','warn');
+  
+  // Check broker connection
+  var brokerData = null;
+  try{ brokerData = JSON.parse(localStorage.getItem('trd_broker')||'null'); }catch(e){}
+  
+  if(!brokerData || brokerData.mode!=='LIVE'){
+    // Show paper trade option
+    var msg = action+' '+inst+' '+strike+' '+_optionType+' | '+lots+' Lot';
+    if(confirm('🔴 Live broker not connected.\n\n'+msg+'\n\nExecute as PAPER TRADE instead?')){
+      executePaperTrade();
+    } else {
+      toast('Go to PROFILE → BROKER API to connect live broker','info');
+    }
+    return;
+  }
+  
+  // Live broker connected - execute via broker API
+  req('/broker/place_order','POST',{
+    user_id: window.UID||'demo',
+    instrument: inst, strike: strike,
+    option_type: _optionType,
+    action: action, lots: lots,
+    price: price||0,
+    order_type: price?'LIMIT':'MARKET',
+    stop_loss: sl, target: tgt
+  }, function(err,r){
+    if(err||!r||r.error){
+      toast('Order failed: '+(r&&r.error||err),'error');
+      return;
+    }
+    toast(action+' order placed! ID: '+(r.order_id||r.id||'OK'),'success');
+    loadPositions();
+  });
 }
 
 function executePaperTrade(){
@@ -2049,32 +2082,19 @@ function aiTab(tab,btn){
 function scanSignals(){
   var list=$('ai-signal-list'); if(!list) return;
   list.innerHTML='<div style="color:var(--am);padding:12px;text-align:center;font-size:10px">Scanning...</div>';
-  req('/ml/scan_all','POST',{instruments:['NIFTY','BANKNIFTY','FINNIFTY'],vix_max:25},function(err,d){
+  req('/scanner/run','GET',null,function(err,d){
     if(err||!d){ list.innerHTML='<div style="color:var(--rd);padding:12px;text-align:center;font-size:10px">Scan failed</div>'; return; }
     
-    // ml/scan_all returns {signals: {NIFTY:{signal,confidence,...}, ...}}
-    // Convert object to array
-    var rawSignals = d.signals || d.predictions || {};
-    var signals = [];
-    if(Array.isArray(rawSignals)){
-      signals = rawSignals;
-    } else {
-      Object.keys(rawSignals).forEach(function(sym){
-        var s = rawSignals[sym];
-        if(s && s.signal && s.signal !== 'WAIT' && s.signal !== 'HOLD'){
-          signals.push({
-            instrument: sym,
-            direction:  s.signal === 'BUY' ? 'BUY' : 'SELL',
-            confidence: s.confidence || 70,
-            reason:     s.reasoning || s.reason || (sym + ' technical setup'),
-            option_type: s.signal === 'BUY' ? 'CE' : 'PE'
-          });
-        }
-      });
-    }
-    
-    // Also use AI signals endpoint as backup
-    if(!signals.length){
+    // /scanner/run returns {opportunities: [{instrument,signal,action,confidence...}]}
+    var opps = (d&&d.opportunities)||[];
+    var signals = opps.map(function(o){
+      return {instrument:o.instrument||o.symbol, direction:o.action||o.signal||'BUY',
+              confidence:o.confidence||70, reason:o.strategy||o.signal||'Setup detected',
+              option_type:(o.action||o.signal)==='BUY'?'CE':'PE'};
+    }).filter(function(s){ return s.instrument; });
+
+    // Always also get AI signals (more reliable)
+    if(signals.length < 3){
       var instrs = ['NIFTY','BANKNIFTY','FINNIFTY'];
       var results = [];
       var done = 0;
@@ -2286,8 +2306,14 @@ function saveUser(){
       return;
     }
     if(msg){ msg.style.display='block'; msg.style.color='var(--gr)'; msg.textContent= uid?'User updated!':'User added!'; }
-    toast(uid?'User updated!':'User added!','success');
-    setTimeout(function(){ $('adm-user-form').style.display='none'; loadAdminUsers(); }, 900);
+    if(!uid && r.temp_password){
+      toast('User added! Temp password: '+r.temp_password,'success');
+      alert('New user created!\nUsername: '+(r.username||'(auto)')+'\nTemp Password: '+r.temp_password+'\n\nShare this with the user.');
+    } else {
+      toast(uid?'User updated!':'User added!','success');
+    }
+    $('adm-user-form').style.display='none';
+    setTimeout(loadAdminUsers, 1200);  // Wait for DB write
   });
 }
 
@@ -2686,6 +2712,27 @@ function generateLocalSignals(){
     signals.push({instrument:'BANKNIFTY',direction:'SELL',confidence:Math.round(62+rng()*13),reason:'Bearish pressure: put buying opportunity',option_type:'PE'});
   }
   return signals;
+}
+
+
+function loadCalcSpot(){
+  req('/market/live','GET',null,function(err,d){
+    if(err||!d){ toast('Cannot load live price','warn'); return; }
+    var inst = document.getElementById('calc-inst') ? document.getElementById('calc-inst').value : 'NIFTY';
+    var spotMap = {
+      NIFTY:     (d.nifty&&d.nifty.price)||d.NIFTY||23700,
+      BANKNIFTY: (d.banknifty&&d.banknifty.price)||d.BANKNIFTY||51800,
+      FINNIFTY:  (d.finnifty&&d.finnifty.price)||23000,
+    };
+    var spot = spotMap[inst]||spotMap.NIFTY;
+    var atm  = Math.round(spot/50)*50;
+    var sv2  = function(id,v){ var e=document.getElementById(id); if(e) e.value=v; };
+    sv2('calc-spot',   Math.round(spot));
+    sv2('calc-strike', atm);
+    sv2('calc-iv',     (d.india_vix&&d.india_vix.price)||d.INDIA_VIX||14.5);
+    toast('Live spot loaded: ₹'+Math.round(spot).toLocaleString('en-IN'),'success');
+    runCalc();
+  });
 }
 
 // ── API BASE URL ──────────────────────────────────

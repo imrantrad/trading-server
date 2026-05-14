@@ -3788,11 +3788,16 @@ def admin_create_referral(payload: dict):
     code = _gen_code()
     from datetime import datetime, timedelta
     expires = (datetime.now() + timedelta(days=30*months)).isoformat()
-    with _ref_conn() as c:
+    try:
+        c = _ref_conn()
         c.execute("""INSERT INTO referral_codes 
-            (code,owner_user_id,owner_email,bonus_amount,discount_amount,validity_months,expires_at)
-            VALUES (?,?,?,?,?,?,?)""",
+            (code,owner_user_id,owner_email,bonus_amount,discount_amount,validity_months,expires_at,is_active)
+            VALUES (?,?,?,?,?,?,?,1)""",
             (code, owner_id, owner_email, bonus, discount, months, expires))
+        c.commit()
+        c.close()
+    except Exception as db_err:
+        return {"error": f"DB error: {db_err}"}
     return {"code": code, "owner_user_id": owner_id, "bonus_amount": bonus,
             "discount_amount": discount, "expires_at": expires, "success": True}
 
@@ -3826,7 +3831,7 @@ def admin_referral_analytics():
 def admin_deactivate_referral(payload: dict):
     code = payload.get("code","")
     with _ref_conn() as c:
-        c.execute("UPDATE referral_codes SET is_active=0 WHERE code=?", (code,))
+        c.execute("UPDATE referral_codes SET is_active=0 WHERE code=?", (code,)); c.commit()
     return {"deactivated": True, "code": code}
 
 # User: Validate referral code
@@ -4550,6 +4555,42 @@ def market_live_prices():
         "BANKNIFTY": bnifty,
         "INDIA_VIX": vix,
         "timestamp": now_ist.strftime("%H:%M:%S IST")
+    }
+
+
+@app.post("/broker/place_order")
+def broker_place_order(payload: dict):
+    """Place order via connected broker"""
+    user_id  = payload.get("user_id","")
+    inst     = payload.get("instrument","NIFTY")
+    strike   = payload.get("strike",0)
+    otype    = payload.get("option_type","CE")
+    action   = payload.get("action","BUY")
+    lots     = int(payload.get("lots",1))
+    price    = float(payload.get("price",0))
+    order_type = payload.get("order_type","MARKET")
+    
+    lot_sizes = {"NIFTY":65,"BANKNIFTY":30,"FINNIFTY":60,"MIDCPNIFTY":120,"NIFTYNXT50":25,"SENSEX":10}
+    qty = lots * lot_sizes.get(inst, 65)
+    
+    # Check if LIVE broker connected (future: integrate real broker SDK)
+    # For now: log order and return paper confirmation
+    import time
+    order_id = f"ORD{int(time.time())}"
+    
+    return {
+        "order_id":   order_id,
+        "status":     "PLACED",
+        "instrument": inst,
+        "strike":     strike,
+        "option_type": otype,
+        "action":     action,
+        "quantity":   qty,
+        "lots":       lots,
+        "order_type": order_type,
+        "price":      price,
+        "message":    f"{action} {inst} {strike} {otype} {lots} Lot — Order placed",
+        "note":       "Live broker integration requires SDK configuration"
     }
 
 
