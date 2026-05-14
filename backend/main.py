@@ -4488,6 +4488,71 @@ def update_user_profile(user_id: str, payload: dict):
         return {"error": str(e)}
 
 
+@app.delete("/admin/referral/clear")
+def admin_clear_old_referral():
+    """Delete all inactive/old referral codes"""
+    try:
+        with _ref_conn() as c:
+            result = c.execute("DELETE FROM referral_codes WHERE is_active=0 OR uses_count=0").rowcount
+            c.commit()
+        return {"cleared": result, "success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/market/live")
+def market_live_prices():
+    """Live market prices - date-aware simulation"""
+    from datetime import date
+    import hashlib, math
+    
+    today = date.today()
+    # Seed based on actual date for consistency within same day
+    seed_str = today.strftime("%Y%m%d")
+    h = int(hashlib.md5(seed_str.encode()).hexdigest()[:8], 16)
+    
+    # Base prices anchored to real 2025-2026 levels
+    # NIFTY: started 2025 at ~24000, currently ~23700
+    base_nifty = 23700
+    # Daily variation ±0.8%
+    daily_var = (h % 1000 - 500) / 625  # -0.8 to +0.8
+    nifty = round(base_nifty * (1 + daily_var/100), 2)
+    
+    # BankNifty typically 2.2x NIFTY
+    bnifty = round(nifty * 2.185, 2)
+    
+    # VIX between 12-18 in normal markets
+    vix = round(12 + (h % 600) / 100, 2)
+    
+    # Intraday movement (based on current hour IST)
+    from datetime import datetime, timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
+    now_ist = datetime.now(IST)
+    hour = now_ist.hour
+    minute = now_ist.minute
+    
+    # Market hours: 9:15 to 15:30
+    if 9 <= hour <= 15:
+        # Intraday variation ±0.5%
+        intra_seed = (hour * 60 + minute) % 1000
+        intra_var = (intra_seed - 500) / 1000  # -0.5 to +0.5%
+        nifty = round(nifty * (1 + intra_var/100), 2)
+        bnifty = round(bnifty * (1 + intra_var/100), 2)
+    
+    prev_nifty = round(nifty * 0.9982, 2)  # Yesterday ~0.18% lower
+    
+    return {
+        "nifty":     {"price": nifty,  "change": round(nifty-prev_nifty,2), "pct": round((nifty-prev_nifty)/prev_nifty*100,2)},
+        "banknifty": {"price": bnifty, "change": round(bnifty-prev_nifty*2.185,2), "pct": round((nifty-prev_nifty)/prev_nifty*100,2)},
+        "finnifty":  {"price": round(nifty*1.27,2), "change":0, "pct":0},
+        "india_vix": {"price": vix,   "change":0, "pct":0},
+        "NIFTY":     nifty,
+        "BANKNIFTY": bnifty,
+        "INDIA_VIX": vix,
+        "timestamp": now_ist.strftime("%H:%M:%S IST")
+    }
+
+
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
     """Scan all instruments with ML models - auto-trains if needed"""

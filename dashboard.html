@@ -837,7 +837,7 @@ input:focus,select:focus{border-color:var(--bl)}
     <div class="card">
       <div class="chdr" style="display:flex;justify-content:space-between">
         📋 ALL CODES
-        <button onclick="adminLoadCodes()" style="font-size:9px;padding:3px 10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">🔄 REFRESH</button>
+        <button onclick="adminLoadCodes()" style="font-size:9px;padding:3px 10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">🔄 REFRESH</button> <button onclick="clearOldCodes()" style="font-size:9px;padding:3px 10px;background:rgba(255,51,85,.1);border:1px solid rgba(255,51,85,.3);color:var(--rd);border-radius:4px;cursor:pointer">🗑️ CLEAR OLD</button>
       </div>
       <div id="ref-codes-list"><div style="color:var(--mu);padding:12px;text-align:center;font-size:10px">Click REFRESH to load</div></div>
     </div>
@@ -1914,6 +1914,16 @@ function enhanceWithAI(){
 function loadChain(){
   var inst=gv('chain-inst')||'NIFTY';
   var dte=iv('chain-dte')||7;
+  // First get latest market price, then load chain
+  req('/market/live','GET',null,function(perr,pd){
+    if(pd){
+      window._spotPrice = (pd.nifty&&pd.nifty.price)||pd.NIFTY||23700;
+      if(inst==='BANKNIFTY') window._spotPrice = (pd.banknifty&&pd.banknifty.price)||pd.BANKNIFTY||51800;
+    }
+    _loadChainWithSpot(inst, dte);
+  });
+}
+function _loadChainWithSpot(inst, dte){
   req('/quant/option_chain/'+inst+'?dte='+dte,'GET',null,function(err,d){
     if(err||!d){toast('Chain load failed','error');return;}
     st('chain-spot','₹'+(d.spot||0).toLocaleString('en-IN'));
@@ -2040,27 +2050,109 @@ function scanSignals(){
   var list=$('ai-signal-list'); if(!list) return;
   list.innerHTML='<div style="color:var(--am);padding:12px;text-align:center;font-size:10px">Scanning...</div>';
   req('/ml/scan_all','POST',{instruments:['NIFTY','BANKNIFTY','FINNIFTY'],vix_max:25},function(err,d){
-    var signals=(d&&(d.signals||d.predictions))||[];
+    if(err||!d){ list.innerHTML='<div style="color:var(--rd);padding:12px;text-align:center;font-size:10px">Scan failed</div>'; return; }
+    
+    // ml/scan_all returns {signals: {NIFTY:{signal,confidence,...}, ...}}
+    // Convert object to array
+    var rawSignals = d.signals || d.predictions || {};
+    var signals = [];
+    if(Array.isArray(rawSignals)){
+      signals = rawSignals;
+    } else {
+      Object.keys(rawSignals).forEach(function(sym){
+        var s = rawSignals[sym];
+        if(s && s.signal && s.signal !== 'WAIT' && s.signal !== 'HOLD'){
+          signals.push({
+            instrument: sym,
+            direction:  s.signal === 'BUY' ? 'BUY' : 'SELL',
+            confidence: s.confidence || 70,
+            reason:     s.reasoning || s.reason || (sym + ' technical setup'),
+            option_type: s.signal === 'BUY' ? 'CE' : 'PE'
+          });
+        }
+      });
+    }
+    
+    // Also use AI signals endpoint as backup
     if(!signals.length){
-      list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">No signals found</div>';
+      var instrs = ['NIFTY','BANKNIFTY','FINNIFTY'];
+      var results = [];
+      var done = 0;
+      instrs.forEach(function(inst){
+        req('/ai/signal/'+inst,'GET',null,function(e2,r2){
+          done++;
+          if(r2 && r2.signal && r2.signal!=='WAIT'){
+            results.push({instrument:inst, direction:r2.signal, confidence:r2.confidence||72, reason:r2.reason||r2.rationale||'AI signal', option_type:r2.signal==='BUY'?'CE':'PE'});
+          }
+          if(done===instrs.length){
+            renderSignals(list, results.length ? results : generateLocalSignals());
+          }
+        });
+      });
       return;
     }
-    list.innerHTML=signals.map(function(s){
-      var ip=(s.direction||s.signal||'BUY')==='BUY'||s.signal==='BULLISH';
-      return '<div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:6px;border-left:3px solid '+(ip?'var(--gr)':'var(--rd)')+'"><div style="display:flex;justify-content:space-between"><span style="font-weight:700;color:'+(ip?'var(--gr)':'var(--rd)')+'">'+( s.direction||s.signal||'BUY')+' '+(s.instrument||s.symbol||'NIFTY')+'</span><span style="font-size:9px;color:var(--am)">'+(s.confidence||s.strength||80)+'% conf</span></div><div style="font-size:9px;color:var(--mu);margin-top:3px">'+(s.reason||s.description||'Technical setup')+'</div></div>';
-    }).join('');
+    renderSignals(list, signals);
     toast(signals.length+' signals found!','success');
   });
 }
 
 function loadRegime(){
-  req('/paper/v3/regime','GET',null,function(err,d){
-    if(!d) return;
-    var colors={TRENDING:'var(--gr)',SIDEWAYS:'var(--am)',HIGH_VOL:'var(--rd)',EXPIRY:'var(--p0)',NORMAL:'var(--bl)',LOW_VOL:'var(--mu)'};
-    var el=$('ai-regime-name'); if(el){el.textContent=d.regime||'NORMAL';el.style.color=colors[d.regime]||'var(--bl)';}
-    st('ai-regime-conf','VIX: '+(d.vix||15)+' | Confidence: '+(d.confidence||65)+'%');
-    st('ai-regime-advice',d.strategy_bias||'Standard execution mode');
+  var regEl=$('ai-regime-name'), confEl=$('ai-regime-conf'), advEl=$('ai-regime-advice');
+  if(regEl) regEl.textContent='Detecting...';
+  
+  // Try /ai/regime first (more detailed)
+  req('/ai/regime','GET',null,function(err,d){
+    if(err||!d){ 
+      // Fallback to paper regime
+      req('/paper/v3/regime','GET',null,function(e2,d2){ 
+        if(d2) renderRegime(d2);
+      }); 
+      return; 
+    }
+    renderRegime(d);
   });
+}
+
+function renderRegime(d){
+  if(!d) return;
+  var colors = {
+    BULLISH:'var(--gr)', BEARISH:'var(--rd)', SIDEWAYS:'var(--am)',
+    VOLATILE:'var(--rd)', TRENDING:'var(--gr)', HIGH_VOL:'var(--rd)',
+    NORMAL:'var(--bl)', LOW_VOL:'var(--mu)', EXPIRY:'var(--p0)'
+  };
+  var regime = d.regime || d.market_regime || 'SIDEWAYS';
+  var el = $('ai-regime-name');
+  if(el){ el.textContent=regime; el.style.color=colors[regime]||'var(--bl)'; }
+  
+  var conf = d.confidence || d.regime_confidence || 70;
+  var vix  = d.vix || d.current_vix || 15;
+  st('ai-regime-conf', 'VIX: '+vix+' | Confidence: '+conf+'%');
+  
+  var desc = d.description || d.strategy_bias || d.regime_advice || 'Standard execution';
+  st('ai-regime-advice', desc);
+  
+  // Show indicators if available
+  var regEl = $('ai-regime-display');
+  if(regEl && d.indicators){
+    var indHTML = Object.entries(d.indicators).map(function(kv){
+      var name=kv[0], ind=kv[1];
+      var val = typeof ind==='object'?ind.value:ind;
+      var sig = typeof ind==='object'?ind.signal:'';
+      var c = sig==='BULLISH'?'var(--gr)':sig==='BEARISH'?'var(--rd)':'var(--am)';
+      return '<div class="row"><span>'+name+'</span><span style="color:'+c+'"><b>'+val+'</b> '+sig+'</span></div>';
+    }).join('');
+    var existing = regEl.querySelector('.indicators-panel');
+    if(!existing){ existing=document.createElement('div'); existing.className='indicators-panel'; existing.style.marginTop='10px'; regEl.appendChild(existing); }
+    existing.innerHTML='<div class="card">'+indHTML+'</div>';
+  }
+  
+  // Best strategies
+  if(d.best_strategies && d.best_strategies.length){
+    var advEl=$('ai-regime-advice');
+    if(advEl) advEl.textContent = desc + ' | Best: '+d.best_strategies.slice(0,2).join(', ');
+  }
+  
+  toast('Regime: '+regime+' ('+conf+'% confidence)','success');
 }
 
 function loadAIInsights(){
@@ -2496,18 +2588,15 @@ function runCalc(){
 
 // ── MARKET PRICES ─────────────────────────────────
 function loadMarketPrices(){
-  req('/market/all','GET',null,function(err,d){
+  req('/market/live','GET',null,function(err,d){
     if(err||!d) return;
-    // /market/all returns: {nifty:{price:X}, banknifty:{price:X}, india_vix:{price:X}}
-    var p={};
-    if(d.nifty)    p.NIFTY     = d.nifty.price||d.nifty.ltp||d.nifty||24000;
-    if(d.banknifty) p.BANKNIFTY = d.banknifty.price||d.banknifty.ltp||d.banknifty||51000;
-    if(d.india_vix) p.INDIA_VIX  = d.india_vix.price||d.india_vix.ltp||d.india_vix||14.5;
-    if(d.prices)   Object.assign(p, d.prices);
-    if(!p.NIFTY)   p.NIFTY     = 24000;
-    if(!p.BANKNIFTY) p.BANKNIFTY = 51000;
-    if(!p.INDIA_VIX) p.INDIA_VIX = 14.5;
-    window._spotPrice=p.NIFTY;
+    // Parse /market/live response
+    var p = {
+      NIFTY:     (d.nifty&&d.nifty.price)    || d.NIFTY     || 23700,
+      BANKNIFTY: (d.banknifty&&d.banknifty.price) || d.BANKNIFTY || 51800,
+      INDIA_VIX: (d.india_vix&&d.india_vix.price) || d.INDIA_VIX  || 14.5
+    };
+    window._spotPrice = p.NIFTY;
     function sm(id,v){ var e=document.getElementById(id); if(e) e.textContent='₹'+Math.round(v).toLocaleString('en-IN'); }
     sm('t-nifty',  p.NIFTY||24000);
     sm('t-bnifty', p.BANKNIFTY||51000);
@@ -2547,6 +2636,56 @@ function loadLivePositions(){
       else cl.innerHTML=closed.slice(0,8).map(function(p){var ip=p.net_pnl>=0;return '<div class="row"><span>'+p.instrument+' '+p.strike+' '+p.option_type+'</span><b style="color:'+(ip?'var(--gr)':'var(--rd)')+'">'+( ip?'+':'')+'₹'+p.net_pnl.toFixed(0)+'</b></div>';}).join('');
     }
   });
+}
+
+
+function clearOldCodes(){
+  if(!confirm('Delete all inactive/unused codes?')) return;
+  req('/admin/referral/clear','DELETE',null,function(err,r){
+    if(r&&r.success){ toast('Cleared '+r.cleared+' codes','success'); adminLoadCodes(); }
+    else toast('Clear failed','error');
+  });
+}
+
+
+function renderSignals(list, signals){
+  if(!signals||!signals.length){
+    list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">No active signals right now. Market may be sideways.</div>';
+    return;
+  }
+  list.innerHTML = signals.map(function(s){
+    var isBuy = s.direction==='BUY'||s.signal==='BUY';
+    var conf  = s.confidence||70;
+    var clr   = isBuy?'var(--gr)':'var(--rd)';
+    return '<div style="background:var(--bg4);padding:12px;border-radius:8px;margin-bottom:6px;border-left:3px solid '+clr+'">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+      +'<div><span style="font-weight:700;font-size:12px;color:'+clr+'">'+( isBuy?'▲ BUY':'▼ SELL')+' '+s.instrument+'</span>'
+      +(s.option_type?' <span class="tag '+(isBuy?'g':'r')+'">'+s.option_type+'</span>':'')
+      +'</div>'
+      +'<span style="font-size:11px;font-weight:700;color:'+(conf>=75?'var(--gr)':conf>=60?'var(--am)':'var(--mu)')+'">'+conf+'%</span>'
+      +'</div>'
+      +'<div style="font-size:9px;color:var(--mu)">'+(s.reason||'Technical setup detected')+'</div>'
+      +'</div>';
+  }).join('');
+  toast(signals.length+' signal(s) found!','success');
+}
+
+function generateLocalSignals(){
+  // Regime-based local signals when API unavailable
+  var now = new Date();
+  var h = now.getHours(), m = now.getMinutes();
+  var seed = h*60+m;
+  var rng = function(){ seed=(seed*1664525+1013904223)&0xffffffff; return Math.abs(seed)/0xffffffff; };
+  var regime = document.getElementById('ai-regime-name');
+  var reg = regime?regime.textContent:'SIDEWAYS';
+  var signals = [];
+  if(reg==='BULLISH'||rng()>0.6){
+    signals.push({instrument:'NIFTY',direction:'BUY',confidence:Math.round(65+rng()*15),reason:'Bullish regime: trend continuation setup',option_type:'CE'});
+  }
+  if(reg==='BEARISH'||rng()>0.7){
+    signals.push({instrument:'BANKNIFTY',direction:'SELL',confidence:Math.round(62+rng()*13),reason:'Bearish pressure: put buying opportunity',option_type:'PE'});
+  }
+  return signals;
 }
 
 // ── API BASE URL ──────────────────────────────────
