@@ -32,7 +32,7 @@ STRATEGY_CONFIGS = {
 
     "STR_IRON_CONDOR_WEEKLY": {
         "name": "Weekly Iron Condor", 
-        "win_rate": 0.68,          # Real: 65-72% for IC
+        "win_rate": 0.65,          # Real: 65-72% for IC
         "avg_win": 3000,           # ~46 pts × 65 = ₹3000 per lot
         "avg_loss": 6000,          # ~92 pts loss when wrong
         "trades_per_week": 1.0,

@@ -1728,19 +1728,93 @@ function renderBTResults(d){
 
 function drawEquityCurve(data){
   var canvas=$('bt-canvas'); if(!canvas||!data.length) return;
-  var ctx=canvas.getContext('2d'); var W=canvas.width,H=canvas.height;
+  var ctx=canvas.getContext('2d');
+  var W=canvas.offsetWidth||400, H=150;
+  canvas.width=W; canvas.height=H;
+  
+  var eq   = data.map(function(d){return d.equity||0;});
+  var dts  = data.map(function(d){return (d.date||'').slice(5);}); // MM-DD
+  var mn   = Math.min.apply(null,eq)*0.998;
+  var mx   = Math.max.apply(null,eq)*1.002;
+  var rng  = mx-mn||1;
+  var PAD  = {top:20, right:10, bottom:25, left:60};
+  var cW   = W-PAD.left-PAD.right;
+  var cH   = H-PAD.top-PAD.bottom;
+  var isP  = eq[eq.length-1] >= eq[0];
+  
+  // Background
   ctx.fillStyle='#0a0d18'; ctx.fillRect(0,0,W,H);
-  var eq=data.map(function(d){return d.equity;});
-  var mn=Math.min.apply(null,eq), mx=Math.max.apply(null,eq), rng=mx-mn||1;
-  var x=function(i){return i/(eq.length-1)*W;};
-  var y=function(v){return H-((v-mn)/rng)*(H-20)-10;};
-  var isP=eq[eq.length-1]>=eq[0];
-  ctx.strokeStyle=isP?'#00ff88':'#ff3355'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(x(0),y(eq[0]));
-  for(var i=1;i<eq.length;i++) ctx.lineTo(x(i),y(eq[i]));
-  ctx.stroke();
-  ctx.fillStyle=isP?'rgba(0,255,136,.06)':'rgba(255,51,85,.06)';
-  ctx.lineTo(x(eq.length-1),H); ctx.lineTo(x(0),H); ctx.fill();
+  
+  // Grid lines
+  ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+  for(var gi=0;gi<=4;gi++){
+    var gy=PAD.top+cH*gi/4;
+    ctx.beginPath(); ctx.moveTo(PAD.left,gy); ctx.lineTo(W-PAD.right,gy); ctx.stroke();
+    var gv=mx-(mx-mn)*gi/4;
+    ctx.fillStyle='rgba(255,255,255,.25)'; ctx.font='8px monospace';
+    ctx.textAlign='right';
+    ctx.fillText('₹'+(gv/1000).toFixed(0)+'k', PAD.left-4, gy+3);
+  }
+  
+  // Vertical grid (every 20% of data)
+  for(var vi=0;vi<=4;vi++){
+    var vx=PAD.left+cW*vi/4;
+    ctx.strokeStyle='rgba(255,255,255,.05)';
+    ctx.beginPath(); ctx.moveTo(vx,PAD.top); ctx.lineTo(vx,H-PAD.bottom); ctx.stroke();
+    var di=Math.floor(eq.length*vi/4);
+    if(dts[di]){
+      ctx.fillStyle='rgba(255,255,255,.25)'; ctx.textAlign='center';
+      ctx.fillText(dts[di]||'', vx, H-PAD.bottom+10);
+    }
+  }
+  
+  // Zero/baseline reference
+  var baseY=PAD.top+cH*((mx-eq[0])/rng);
+  ctx.strokeStyle='rgba(255,255,255,.15)'; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(PAD.left,baseY); ctx.lineTo(W-PAD.right,baseY); ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // Equity line
+  var px=function(i){return PAD.left+i/Math.max(eq.length-1,1)*cW;};
+  var py=function(v){return PAD.top+((mx-v)/rng)*cH;};
+  
+  // Gradient fill
+  var grad=ctx.createLinearGradient(0,PAD.top,0,H-PAD.bottom);
+  grad.addColorStop(0, isP?'rgba(0,255,136,.18)':'rgba(255,51,85,.18)');
+  grad.addColorStop(1,'rgba(0,0,0,0)');
+  
+  ctx.beginPath();
+  ctx.moveTo(px(0),py(eq[0]));
+  for(var i=1;i<eq.length;i++) ctx.lineTo(px(i),py(eq[i]));
+  ctx.strokeStyle=isP?'#00ff88':'#ff3355';
+  ctx.lineWidth=2; ctx.stroke();
+  ctx.lineTo(px(eq.length-1),H-PAD.bottom);
+  ctx.lineTo(px(0),H-PAD.bottom);
+  ctx.fillStyle=grad; ctx.fill();
+  
+  // Drawdown overlay
+  var peak=eq[0];
+  ctx.fillStyle='rgba(255,51,85,.08)';
+  for(var i=0;i<eq.length;i++){
+    if(eq[i]>peak) peak=eq[i];
+    if(eq[i]<peak){
+      var ddH=(peak-eq[i])/rng*cH;
+      ctx.fillRect(px(i)-1,py(peak),2,ddH);
+    }
+  }
+  
+  // Final value label
+  var lastVal=eq[eq.length-1];
+  var lastX=px(eq.length-1), lastY=py(lastVal);
+  ctx.beginPath(); ctx.arc(lastX,lastY,4,0,Math.PI*2);
+  ctx.fillStyle=isP?'#00ff88':'#ff3355'; ctx.fill();
+  ctx.fillStyle=isP?'#00ff88':'#ff3355';
+  ctx.font='bold 9px monospace'; ctx.textAlign='right';
+  ctx.fillText('₹'+(lastVal/1000).toFixed(1)+'k', lastX-6, lastY-6);
+  
+  // Title
+  ctx.fillStyle='rgba(255,255,255,.4)'; ctx.font='9px sans-serif'; ctx.textAlign='left';
+  ctx.fillText('EQUITY CURVE', PAD.left, 12);
 }
 
 function loadBTHistory(){
@@ -2110,7 +2184,9 @@ function loadIVSurface(){
 
 function drawPayoff(){
   var canvas=$('payoff-canvas'); if(!canvas) return;
-  var ctx=canvas.getContext('2d'); var W=canvas.width,H=canvas.height;
+  var W=canvas.offsetWidth||400, H=200;
+  canvas.width=W; canvas.height=H;
+  var ctx=canvas.getContext('2d');
   ctx.fillStyle='#0a0d18'; ctx.fillRect(0,0,W,H);
   var spot=nv('po-spot')||24000; var strat=gv('po-strat');
   var points=[]; var step=spot*0.005;
@@ -2131,14 +2207,65 @@ function drawPayoff(){
   // Zero line
   ctx.strokeStyle='rgba(255,255,255,.15)'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(0,py(0)); ctx.lineTo(W,py(0)); ctx.stroke();
-  // Payoff line
-  ctx.strokeStyle='#4f8ef7'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(px(0),py(points[0].y));
-  points.forEach(function(p,i){ctx.lineTo(px(i),py(p.y));});
-  ctx.stroke();
-  // Fill
-  ctx.fillStyle='rgba(79,142,247,.06)';
-  ctx.lineTo(px(points.length-1),py(0)); ctx.lineTo(px(0),py(0)); ctx.fill();
+  var PAD2={top:15,right:15,bottom:20,left:55};
+  var cW2=W-PAD2.left-PAD2.right, cH2=H-PAD2.top-PAD2.bottom;
+  var maxPnl=Math.max.apply(null,points.map(function(p){return p.y;}));
+  var minPnl=Math.min.apply(null,points.map(function(p){return p.y;}));
+  var rngg=maxPnl-minPnl||1;
+  var px2=function(i){return PAD2.left+i/(points.length-1||1)*cW2;};
+  var py2=function(v){return PAD2.top+cH2/2-((v)/rngg)*cH2*0.9;};
+  
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+  for(var gi2=0;gi2<=4;gi2++){
+    var gy2=PAD2.top+cH2*gi2/4;
+    ctx.beginPath(); ctx.moveTo(PAD2.left,gy2); ctx.lineTo(W-PAD2.right,gy2); ctx.stroke();
+    var gv2=maxPnl-(maxPnl-minPnl)*gi2/4;
+    ctx.fillStyle='rgba(255,255,255,.2)'; ctx.font='7px monospace'; ctx.textAlign='right';
+    ctx.fillText('₹'+Math.round(gv2), PAD2.left-3, gy2+3);
+  }
+  
+  // Zero line
+  var z=py2(0);
+  ctx.strokeStyle='rgba(255,255,255,.2)'; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(PAD2.left,z); ctx.lineTo(W-PAD2.right,z); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,.3)'; ctx.textAlign='right'; ctx.font='7px sans-serif';
+  ctx.fillText('BREAKEVEN',PAD2.left-3,z+3);
+  
+  // Spot line
+  ctx.strokeStyle='rgba(245,158,11,.3)'; ctx.setLineDash([3,3]);
+  var spotX=px2(Math.floor(points.length/2));
+  ctx.beginPath(); ctx.moveTo(spotX,PAD2.top); ctx.lineTo(spotX,H-PAD2.bottom); ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // Payoff line (color by profit/loss)
+  ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.moveTo(px2(0),py2(points[0].y));
+  points.forEach(function(p,i){
+    if(i>0){
+      var prevY=points[i-1].y;
+      ctx.strokeStyle=p.y>=0?'#00ff88':'#ff3355';
+      ctx.beginPath(); ctx.moveTo(px2(i-1),py2(prevY)); ctx.lineTo(px2(i),py2(p.y)); ctx.stroke();
+    }
+  });
+  
+  // Fill profit area green, loss area red
+  var profitGrad=ctx.createLinearGradient(0,PAD2.top,0,z);
+  profitGrad.addColorStop(0,'rgba(0,255,136,.12)'); profitGrad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.moveTo(px2(0),py2(points[0].y));
+  points.forEach(function(p,i){ctx.lineTo(px2(i),py2(Math.max(0,p.y)));});
+  ctx.lineTo(px2(points.length-1),z); ctx.lineTo(px2(0),z); ctx.fillStyle=profitGrad; ctx.fill();
+  
+  var lossGrad=ctx.createLinearGradient(0,z,0,H-PAD2.bottom);
+  lossGrad.addColorStop(0,'rgba(0,0,0,0)'); lossGrad.addColorStop(1,'rgba(255,51,85,.12)');
+  ctx.beginPath(); ctx.moveTo(px2(0),py2(points[0].y));
+  points.forEach(function(p,i){ctx.lineTo(px2(i),py2(Math.min(0,p.y)));});
+  ctx.lineTo(px2(points.length-1),z); ctx.lineTo(px2(0),z); ctx.fillStyle=lossGrad; ctx.fill();
+  
+  // Labels
+  ctx.fillStyle='rgba(255,255,255,.3)'; ctx.font='7px sans-serif'; ctx.textAlign='left';
+  ctx.fillText('PAYOFF DIAGRAM — '+gv('po-strat').replace(/_/g,' '), PAD2.left, 12);
 }
 
 // ── AI ENGINE ─────────────────────────────────────
@@ -2947,41 +3074,67 @@ function openMiniChart(inst){
 
 function drawMiniChart(inst, currentPrice, isPositive){
   var canvas=$('mchart-canvas'); if(!canvas) return;
-  var ctx=canvas.getContext('2d'); var W=canvas.width, H=canvas.height;
+  var W=canvas.offsetWidth||400, H=120;
+  canvas.width=W; canvas.height=H;
+  var ctx=canvas.getContext('2d');
+  var PAD={top:8,right:8,bottom:18,left:50};
+  var cW=W-PAD.left-PAD.right, cH=H-PAD.top-PAD.bottom;
+  
+  // Deterministic intraday simulation
+  var now=new Date(), h=now.getHours(), m=now.getMinutes();
+  var bars=Math.max(10, Math.floor((h*60+m-9*60-15)/5)); // 5-min bars from 9:15
+  if(bars>75) bars=75;
+  var seed=Math.round(currentPrice);
+  var rng=function(){seed=(seed*1664525+1013904223)&0x7fffffff;return seed/0x7fffffff;};
+  
+  // OHLC data
+  var opens=[currentPrice*(1-(isPositive?0.009:0.009))];
+  for(var i=1;i<bars;i++) opens.push(opens[i-1]*(1+(rng()-0.495)*0.003));
+  opens[bars-1]=currentPrice;
+  
+  var mn=Math.min.apply(null,opens)*0.9992;
+  var mx=Math.max.apply(null,opens)*1.0008;
+  var rng2=mx-mn||1;
+  
   ctx.fillStyle='#0a0d18'; ctx.fillRect(0,0,W,H);
   
-  // Generate intraday price series (deterministic from price+inst)
-  var points=[];
-  var seed=Math.round(currentPrice)%1000;
-  var rng=function(){seed=(seed*1664525+1013904223)&0x7fffffff;return seed/0x7fffffff;};
-  var base=currentPrice*(1-(isPositive?0.008:0.008));
-  var price=base;
-  for(var i=0;i<78;i++){
-    price+=price*(rng()-0.49)*0.002;
-    points.push(price);
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.04)'; ctx.lineWidth=1;
+  for(var gi=0;gi<=3;gi++){
+    var gy=PAD.top+cH*gi/3;
+    ctx.beginPath(); ctx.moveTo(PAD.left,gy); ctx.lineTo(W-PAD.right,gy); ctx.stroke();
+    var gv=mx-(mx-mn)*gi/3;
+    ctx.fillStyle='rgba(255,255,255,.25)'; ctx.font='7px monospace'; ctx.textAlign='right';
+    ctx.fillText('₹'+(gv/1000).toFixed(1)+'k',PAD.left-3,gy+3);
   }
-  points[points.length-1]=currentPrice;
   
-  var mn=Math.min.apply(null,points)*0.9995;
-  var mx=Math.max.apply(null,points)*1.0005;
-  var rng2=mx-mn;
-  var px=function(i){return i/(points.length-1)*W;};
-  var py=function(v){return H-((v-mn)/rng2)*(H-16)-8;};
+  var px=function(i){return PAD.left+i/(opens.length-1||1)*cW;};
+  var py=function(v){return PAD.top+((mx-v)/rng2)*cH;};
   
-  // Gradient fill
-  var grad=ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,isPositive?'rgba(0,255,136,.15)':'rgba(255,51,85,.15)');
+  // Area fill
+  var grad=ctx.createLinearGradient(0,PAD.top,0,H-PAD.bottom);
+  grad.addColorStop(0,isPositive?'rgba(0,255,136,.2)':'rgba(255,51,85,.2)');
   grad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.moveTo(px(0),py(opens[0]));
+  opens.forEach(function(p,i){ctx.lineTo(px(i),py(p));});
+  ctx.strokeStyle=isPositive?'#00ff88':'#ff3355'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.lineTo(px(opens.length-1),H-PAD.bottom);
+  ctx.lineTo(px(0),H-PAD.bottom);
+  ctx.fillStyle=grad; ctx.fill();
   
-  ctx.beginPath(); ctx.moveTo(px(0),py(points[0]));
-  points.forEach(function(p,i){ctx.lineTo(px(i),py(p));});
-  ctx.strokeStyle=isPositive?'#00ff88':'#ff3355'; ctx.lineWidth=2; ctx.stroke();
-  ctx.lineTo(px(points.length-1),H); ctx.lineTo(0,H); ctx.fillStyle=grad; ctx.fill();
+  // Current price dot + label
+  var lx=px(opens.length-1), ly=py(currentPrice);
+  ctx.beginPath(); ctx.arc(lx,ly,4,0,Math.PI*2);
+  ctx.fillStyle=isPositive?'#00ff88':'#ff3355'; ctx.fill();
+  ctx.font='bold 9px monospace'; ctx.textAlign='right'; ctx.fillStyle='white';
+  ctx.fillText('₹'+Math.round(currentPrice).toLocaleString(),lx-8,ly-5);
   
-  // Current price line
-  ctx.beginPath(); ctx.moveTo(0,py(currentPrice)); ctx.lineTo(W,py(currentPrice));
-  ctx.strokeStyle='rgba(255,255,255,.1)'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.stroke();
-  ctx.setLineDash([]);
+  // Time labels
+  ctx.fillStyle='rgba(255,255,255,.2)'; ctx.font='7px sans-serif'; ctx.textAlign='center';
+  ['9:15','10:30','12:00','13:30','15:00','15:30'].forEach(function(t,i){
+    var tx=PAD.left+cW*i/5;
+    ctx.fillText(t, tx, H-PAD.bottom+12);
+  });
 }
 
 function loadToTrade(inst, otype){

@@ -570,7 +570,7 @@ def run_institutional_backtest(
                                    "SIDEWAYS": 0.05, "EXPIRY": 0.03,
                                    "TRENDING": 0.02, "NORMAL": 0, "LOW_VOL": -0.05}
                 adj_wr += regime_penalty.get(regime, 0)
-                adj_wr = max(0.30, min(0.80, adj_wr))
+                adj_wr = max(0.30, min(0.74, adj_wr))  # Max 74% - no strategy beats 75% consistently
                 
                 is_win = day_rng.random() < adj_wr
                 
