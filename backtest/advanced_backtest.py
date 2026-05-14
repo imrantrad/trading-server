@@ -94,6 +94,49 @@ STRATEGY_CONFIGS = {
         "avg_loss": 2500,
         "trades_per_week": 2.0,
     },
+    "STR_ARIBA_REVERSAL_PUT": {
+        "name": "Ariba Reversal Put Entry",
+        "win_rate": 0.62,        # VWAP + Volume confirmation = higher accuracy
+        "avg_win": 10400,        # 160 pts × 65 (NIFTY lot)
+        "avg_loss": 5200,        # 80 pts × 65 (1:2 R:R)
+        "trades_per_week": 1.0,  # Max 1 trade per day
+        "min_vix": 10,
+        "max_vix": 25,
+        "entry_after": "09:30",
+        "description": "Bearish reversal after bullish open. BUY NIFTY PE when trend turns below VWAP with PE premium recovery confirmation.",
+        "action": "BUY",
+        "instrument": "NIFTY",
+        "option_type": "PE",
+        "strike_selection": "NEAREST_ATM",
+        "expiry": "CURRENT_WEEKLY",
+        "entry_conditions": [
+            "TIME > 09:30",
+            "NIFTY TREND = BEARISH",
+            "NIFTY < VWAP",
+            "PE_PRICE >= PE_PRICE_AT_09:15",
+            "VOLUME_SPIKE = TRUE",
+            "BEARISH_CANDLE_CONFIRMATION"
+        ],
+        "stop_loss_pts":  80,
+        "target_pts":    160,
+        "risk_reward":   "1:2",
+        "safety_filters": [
+            "NO_TRADE_BEFORE_09:30",
+            "SKIP_SIDEWAYS_MARKET",
+            "SKIP_OVER_EXPANDED_PREMIUM",
+            "SKIP_EXTREME_VOLATILITY"
+        ],
+        "exit_rules": [
+            "SL_HIT_80_PTS",
+            "TARGET_HIT_160_PTS",
+            "NIFTY_RECLAIMS_VWAP",
+            "MOMENTUM_WEAKENS"
+        ],
+        "max_trades_per_day": 1,
+        "creator": "Ariba",
+        "strategy_type": "REVERSAL",
+        "strategy_id": "STR_ARIBA_REVERSAL_PUT",
+    },
 }
 
 def _get_seed(strategy: str, capital: float, months: int, quantity: int) -> int:

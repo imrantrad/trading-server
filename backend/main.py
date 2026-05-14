@@ -2807,7 +2807,6 @@ def admin_get_users():
             with user_db.conn() as c:
                 rows = c.execute("""SELECT id,username,email,full_name,capital,
                     subscription_plan,is_active,created_at,phone FROM users 
-                    WHERE is_active != 0 OR is_active IS NULL
                     ORDER BY created_at DESC""").fetchall()
             users = [{"user_id":r["id"],"username":r["username"],"email":r["email"],
                       "full_name":r["full_name"],"capital":r["capital"],
@@ -2834,9 +2833,25 @@ def admin_add_user(user: UserUpdate, admin_key: str = ""):
                 password=pwd, full_name=user.full_name or "",
                 capital=user.capital or 500000
             )
-            if user.plan and result.get("user_id"):
-                user_db.update_user(result["user_id"], {"subscription_plan": user.plan})
-            return {**result, "temp_password": pwd, "success": True}
+            if result.get("error"):
+                return {"error": result["error"], "success": False}
+            
+            uid = result.get("id") or result.get("user_id","")
+            if user.plan and uid:
+                try:
+                    user_db.update_user(uid, {"subscription_plan": user.plan})
+                except Exception:
+                    pass
+            
+            return {
+                "success":      True,
+                "user_id":      uid,
+                "username":     uname,
+                "temp_password":pwd,
+                "email":        user.email or "",
+                "plan":         user.plan or "FREE",
+                "message":      f"User created: {uname} | Temp password: {pwd}"
+            }
         uid = f"USR{int(datetime.now().timestamp())}"
         _all_users[uid] = {"user_id":uid,"full_name":user.full_name,"email":user.email,"plan":user.plan or "FREE"}
         return {"user_id":uid,"temp_password":pwd,"success":True}
@@ -4549,12 +4564,18 @@ def update_user_profile(user_id: str, payload: dict):
 
 @app.delete("/admin/referral/clear")
 def admin_clear_old_referral():
-    """Delete all inactive/old referral codes"""
+    """Delete inactive referral codes"""
     try:
-        with _ref_conn() as c:
-            result = c.execute("DELETE FROM referral_codes WHERE is_active=0 OR uses_count=0").rowcount
-            c.commit()
-        return {"cleared": result, "success": True}
+        c = _ref_conn()
+        # First fix any NULL values
+        c.execute("UPDATE referral_codes SET is_active=1 WHERE is_active IS NULL")
+        c.execute("UPDATE referral_codes SET validity_months=1 WHERE validity_months IS NULL")
+        c.commit()
+        # Delete truly inactive ones (is_active=0, not NULL)
+        result = c.execute("DELETE FROM referral_codes WHERE is_active=0").rowcount
+        c.commit()
+        c.close()
+        return {"cleared": result, "success": True, "message": f"Cleared {result} inactive codes"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -5089,6 +5110,47 @@ def global_market_data(asset_class: str):
         "timestamp":   datetime.now().isoformat(),
         "note":        "Simulated data — integrate real broker/data-feed for production"
     }
+
+
+@app.post("/admin/referral/fix_db")
+def fix_referral_db():
+    """Fix referral DB — add missing columns, fix NULL values, activate old codes"""
+    try:
+        c = _ref_conn()  # _ref_conn already runs migrations
+        
+        # Ensure all columns exist
+        for col, default in [
+            ("validity_months",      "INTEGER DEFAULT 1"),
+            ("total_bonus_paid",     "REAL DEFAULT 0"),
+            ("total_discount_given", "REAL DEFAULT 0"),
+            ("is_active",            "INTEGER DEFAULT 1"),
+            ("uses_count",           "INTEGER DEFAULT 0"),
+            ("owner_email",          "TEXT DEFAULT ''"),
+        ]:
+            try: c.execute(f"ALTER TABLE referral_codes ADD COLUMN {col} {default}"); c.commit()
+            except Exception: pass
+        
+        # Fix NULL values
+        c.execute("UPDATE referral_codes SET is_active=1       WHERE is_active IS NULL"); 
+        c.execute("UPDATE referral_codes SET validity_months=1 WHERE validity_months IS NULL")
+        c.execute("UPDATE referral_codes SET uses_count=0      WHERE uses_count IS NULL")
+        c.execute("UPDATE referral_codes SET total_bonus_paid=0     WHERE total_bonus_paid IS NULL")
+        c.execute("UPDATE referral_codes SET total_discount_given=0 WHERE total_discount_given IS NULL")
+        c.commit()
+        
+        # Count
+        total  = c.execute("SELECT COUNT(*) FROM referral_codes").fetchone()[0]
+        active = c.execute("SELECT COUNT(*) FROM referral_codes WHERE is_active=1").fetchone()[0]
+        c.close()
+        
+        return {
+            "success":  True,
+            "total":    total,
+            "active":   active,
+            "message":  f"Fixed! {total} codes, {active} now active"
+        }
+    except Exception as e:
+        return {"error": str(e), "success": False}
 
 
 @app.post("/ml/scan_all")
