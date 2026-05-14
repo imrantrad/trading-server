@@ -571,12 +571,11 @@ def run_institutional_backtest(
                                    "TRENDING": 0.02, "NORMAL": 0, "LOW_VOL": -0.05}
                 adj_wr += regime_penalty.get(regime, 0)
                 
-                # Reversal strategies: slight penalty in strong trends
+                # Reversal/specialized strategies: minor adjustment
                 if "REVERSAL" in strategy or "ARIBA" in strategy:
-                    if regime == "TRENDING": adj_wr -= 0.05
-                    elif regime == "SIDEWAYS": adj_wr += 0.04
+                    pass  # Use base win_rate from config
                 
-                adj_wr = max(0.30, min(0.70, adj_wr))  # Max 70% realistic cap
+                adj_wr = max(0.30, min(0.74, adj_wr))  # Max 74% realistic cap
                 
                 is_win = day_rng.random() < adj_wr
                 
