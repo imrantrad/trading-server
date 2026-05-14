@@ -571,10 +571,10 @@ def run_institutional_backtest(
                                    "TRENDING": 0.02, "NORMAL": 0, "LOW_VOL": -0.05}
                 adj_wr += regime_penalty.get(regime, 0)
                 
-                # Reversal strategies get NEGATIVE boost in trending regimes
+                # Reversal strategies: slight penalty in strong trends
                 if "REVERSAL" in strategy or "ARIBA" in strategy:
-                    if regime == "TRENDING": adj_wr -= 0.10  # Reversals fail in strong trends
-                    if regime == "SIDEWAYS": adj_wr += 0.05  # Reversals work best sideways
+                    if regime == "TRENDING": adj_wr -= 0.05
+                    elif regime == "SIDEWAYS": adj_wr += 0.04
                 
                 adj_wr = max(0.30, min(0.70, adj_wr))  # Max 70% realistic cap
                 
