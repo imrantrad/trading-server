@@ -136,6 +136,7 @@ input:focus,select:focus{border-color:var(--bl)}
     <button class="tab-btn" id="admin-tab-btn" onclick="show('admin',this)" data-pnl="admin" style="display:none">ADMIN</button>
     <button class="tab-btn" onclick="show('ref',this)" data-pnl="ref">🎁 REF</button>
     <button class="tab-btn" onclick="show('legal',this)" data-pnl="legal">LEGAL</button>
+    <button class="tab-btn" onclick="show('livepos',this)" data-pnl="livepos">📊 POSITIONS</button>
   </div>
 </div>
 <style>
@@ -1105,6 +1106,7 @@ function show(name, btn){
     'scan':    function(){ loadEventCalendar(); },
     'rep':     function(){},
     'jnl':     function(){ loadJournal(); },
+    'livepos': function(){ loadLivePositions(); },
   };
   if(loaders[name]) setTimeout(loaders[name], 100);
   try{ localStorage.setItem('trd_tab', name); }catch(e){}
@@ -2190,6 +2192,11 @@ function adminLoadCodes(){
 }
 
 document.addEventListener('click',function(e){
+  if(e.target&&e.target.classList.contains('close-pos-btn')){
+    var id=e.target.getAttribute('data-id');
+    if(id) closePaperPos(id);
+    return;
+  }
   if(e.target&&e.target.classList.contains('adm-deact')){
     var code=e.target.dataset.code;
     if(!code||!confirm('Deactivate: '+code+'?')) return;
@@ -2404,6 +2411,54 @@ function runCalc(){
     +[['Price','₹'+price.toFixed(2)],['Delta',delta.toFixed(4)],['IV',iv+'%'],['DTE',dte+' days'],['Lot Value','₹'+(price*ls).toFixed(0)],['Moneyness',spot===strike?'ATM':type==='CE'?strike>spot?'OTM':'ITM':strike<spot?'OTM':'ITM']].map(function(g){return '<div class="sbox"><div class="sval" style="font-size:14px">'+g[1]+'</div><div class="slbl">'+g[0]+'</div></div>';}).join('')+'</div>';}
 }
 
+
+// ── MARKET PRICES ─────────────────────────────────
+function loadMarketPrices(){
+  req('/market/prices','GET',null,function(err,d){
+    if(err||!d) return;
+    var p=d.prices||d||{};
+    window._spotPrice=p.NIFTY||24000;
+    function sm(id,v){ var e=document.getElementById(id); if(e) e.textContent='₹'+Math.round(v).toLocaleString('en-IN'); }
+    sm('t-nifty',  p.NIFTY||24000);
+    sm('t-bnifty', p.BANKNIFTY||51000);
+    var vix=document.getElementById('t-vix'); if(vix) vix.textContent=(p.INDIA_VIX||14.5).toFixed(1);
+    var atm=Math.round((window._spotPrice)/50)*50;
+    var st=document.getElementById('t-strike');
+    if(st&&!st._edited) st.value=atm;
+    updateOrderEntry();
+  });
+}
+setInterval(function(){
+  var a=document.querySelector('.pnl.active');
+  if(a&&(a.id==='pnl-trade'||a.id==='pnl-paper')) loadMarketPrices();
+},30000);
+
+// ── LIVE POSITIONS ────────────────────────────────
+function loadLivePositions(){
+  req('/paper/v3/portfolio/'+(window.UID||'demo')+'?capital='+(window.UCAP||500000),'GET',null,function(err,d){
+    if(err||!d) return;
+    var pnl=d.total_pnl||0, pos=d.open_positions||[], closed=d.closed_positions||[];
+    function se(id,v,c){var e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}}
+    se('lp-total-pnl',(pnl>=0?'+':'')+'₹'+Math.abs(pnl).toFixed(0),pnl>=0?'var(--gr)':'var(--rd)');
+    se('lp-open',pos.length);
+    var tv=pos.reduce(function(s,p){return s+(p.entry_price*(window.LOT_SIZES[p.instrument]||65)*p.lots);},0);
+    se('lp-exposure',tv?((tv/(window.UCAP||500000))*100).toFixed(1)+'%':'0%',tv/(window.UCAP||500000)>0.3?'var(--rd)':'var(--gr)');
+    var list=document.getElementById('lp-list');
+    if(list){
+      if(!pos.length){list.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">No open positions</div>';}
+      else list.innerHTML=pos.map(function(p){
+        var ip=p.unrealized_pnl>=0;
+        return '<div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:6px;border-left:3px solid '+(ip?'var(--gr)':'var(--rd)')+'"><div style="display:flex;justify-content:space-between"><div><div style="font-size:11px;font-weight:700">'+p.instrument+' '+p.strike+' <span style="color:'+(p.option_type==='CE'?'var(--gr)':'var(--rd)')+'">'+p.option_type+'</span></div><div style="font-size:9px;color:var(--mu)">'+p.lots+' lot | ₹'+p.entry_price+' entry</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:800;color:'+(ip?'var(--gr)':'var(--rd)')+'">'+( ip?'+':'')+'₹'+p.unrealized_pnl.toFixed(0)+'</div><button class="close-pos-btn" data-id="'+p.pos_id+'" style="font-size:8px;padding:2px 6px;background:rgba(255,51,85,.1);border:1px solid rgba(255,51,85,.3);color:var(--rd);border-radius:3px;cursor:pointer">CLOSE</button></div></div></div>';
+      }).join('');
+    }
+    var cl=document.getElementById('lp-closed');
+    if(cl){
+      if(!closed.length){cl.innerHTML='<div style="color:var(--mu);padding:12px;text-align:center;font-size:10px">No closed positions today</div>';}
+      else cl.innerHTML=closed.slice(0,8).map(function(p){var ip=p.net_pnl>=0;return '<div class="row"><span>'+p.instrument+' '+p.strike+' '+p.option_type+'</span><b style="color:'+(ip?'var(--gr)':'var(--rd)')+'">'+( ip?'+':'')+'₹'+p.net_pnl.toFixed(0)+'</b></div>';}).join('');
+    }
+  });
+}
+
 // ── API BASE URL ──────────────────────────────────
 (function(){
   var t=['localhost:8000','127.0.0.1:8000'];
@@ -2416,5 +2471,30 @@ function runCalc(){
 })();
 
 </script>
+
+<!-- LIVE POSITIONS -->
+<div id="pnl-livepos" class="pnl">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:800;color:var(--gr)">📊 LIVE POSITIONS</div>
+    <button onclick="loadLivePositions()" class="btn b" style="font-size:9px;padding:4px 10px">🔄 REFRESH</button>
+  </div>
+  <!-- Summary -->
+  <div class="g4" style="margin-bottom:10px">
+    <div class="sbox"><div id="lp-total-pnl" class="sval" style="font-size:14px;color:var(--gr)">₹0</div><div class="slbl">TOTAL P&L</div></div>
+    <div class="sbox"><div id="lp-open" class="sval" style="font-size:14px">0</div><div class="slbl">OPEN</div></div>
+    <div class="sbox"><div id="lp-day-pnl" class="sval" style="font-size:14px;color:var(--am)">₹0</div><div class="slbl">DAY P&L</div></div>
+    <div class="sbox"><div id="lp-exposure" class="sval" style="font-size:14px;color:var(--rd)">0%</div><div class="slbl">EXPOSURE</div></div>
+  </div>
+  <!-- Positions List -->
+  <div class="card">
+    <div class="chdr">OPEN POSITIONS</div>
+    <div id="lp-list"><div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">No open positions</div></div>
+  </div>
+  <!-- Closed Today -->
+  <div class="card" style="margin-top:8px">
+    <div class="chdr">CLOSED TODAY</div>
+    <div id="lp-closed"><div style="color:var(--mu);padding:12px;text-align:center;font-size:10px">No closed positions today</div></div>
+  </div>
+</div>
 </body>
 </html>
