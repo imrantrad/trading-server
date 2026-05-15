@@ -3781,6 +3781,15 @@ function scanSignals(){
   });
 }
 
+
+function reenterTOTP(){
+  show('prof');
+  setTimeout(function(){
+    var h=$('totp-help-box'); if(h) h.style.display='block';
+    var t=$('ao-totp'); if(t){ t.focus(); t.value=''; }
+  },300);
+}
+
 // ── API BASE URL ──────────────────────────────────
 (function(){
   var t=['localhost:8000','127.0.0.1:8000'];
