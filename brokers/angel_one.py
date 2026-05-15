@@ -109,8 +109,10 @@ EXCHANGE_TOKENS = {
     "BANKNIFTY":  {"exchange":"NSE","token":"26009","symbol":"Nifty Bank"},
     "FINNIFTY":   {"exchange":"NSE","token":"26037","symbol":"Nifty Fin Service"},
     "MIDCPNIFTY": {"exchange":"NSE","token":"26074","symbol":"Nifty Midcap Select"},
-    "SENSEX":     {"exchange":"BSE","token":"1","symbol":"SENSEX"},
+    "SENSEX":     {"exchange":"BSE","token":"1",    "symbol":"SENSEX"},
     "NIFTYNXT50": {"exchange":"NSE","token":"26013","symbol":"Nifty Next 50"},
+    "INDIA_VIX":  {"exchange":"NSE","token":"26017","symbol":"India VIX"},
+    "BANKEX":     {"exchange":"BSE","token":"270",  "symbol":"BANKEX"},
 }
 
 def get_live_quote(api_key: str, jwt_token: str, instrument: str) -> dict:
@@ -144,9 +146,8 @@ def get_live_quote(api_key: str, jwt_token: str, instrument: str) -> dict:
     return {"error": result.get("message","Quote failed"), "instrument": instrument}
 
 def get_all_live_prices(api_key: str, jwt_token: str) -> dict:
-    """Get live prices for all major indices"""
+    """Get live prices for ALL major indices with full OHLC data"""
     result = {}
-    # Batch request for all indices
     tokens_by_exchange = {}
     for inst, info in EXCHANGE_TOKENS.items():
         ex = info["exchange"]
@@ -155,21 +156,34 @@ def get_all_live_prices(api_key: str, jwt_token: str) -> dict:
         tokens_by_exchange[ex].append((inst, info["token"]))
     
     url  = f"{ANGEL_BASE}/rest/secure/angelbroking/market/v1/quote/"
-    body = {"mode": "LTP", "exchangeTokens": {
-        ex: [t for _,t in pairs] 
-        for ex,pairs in tokens_by_exchange.items()
+    # Use FULL mode to get OHLC + change data
+    body = {"mode": "FULL", "exchangeTokens": {
+        ex: [t for _,t in pairs]
+        for ex, pairs in tokens_by_exchange.items()
     }}
     resp = _http("POST", url, headers=_get_headers(api_key, jwt_token), body=body)
     
     if resp.get("status") == True:
-        fetched = resp.get("data",{}).get("fetched",[])
-        # Map token back to instrument
-        token_map = {info["token"]: inst for inst,info in EXCHANGE_TOKENS.items()}
+        fetched = resp.get("data", {}).get("fetched", [])
+        token_map = {info["token"]: inst for inst, info in EXCHANGE_TOKENS.items()}
         for q in fetched:
             inst = token_map.get(q.get("symbolToken",""), "UNKNOWN")
-            if inst != "UNKNOWN":
-                result[inst] = float(q.get("ltp",0))
-    
+            if inst == "UNKNOWN": continue
+            ltp    = float(q.get("ltp", 0) or 0)
+            close  = float(q.get("close", ltp) or ltp)
+            change = round(ltp - close, 2)
+            pct    = round(change / max(close, 1) * 100, 2)
+            result[inst] = {
+                "price":  ltp,
+                "ltp":    ltp,
+                "open":   float(q.get("open",  0) or 0),
+                "high":   float(q.get("high",  0) or 0),
+                "low":    float(q.get("low",   0) or 0),
+                "close":  close,
+                "change": change,
+                "pct":    pct,
+                "volume": int(q.get("tradeVolume", 0) or 0),
+            }
     return result
 
 # ── OPTION CHAIN ─────────────────────────────────────────────────

@@ -193,6 +193,17 @@ input:focus,select:focus{border-color:var(--bl)}
         <div id="t-sensex" style="font-size:11px;font-weight:700;color:var(--tx)">—</div>
       </div>
     </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px">
+      <div onclick="openMiniChart('NIFTYNXT50')" style="background:var(--bg4);padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)">
+        <div style="font-size:8px;color:var(--mu)">NIFTYNXT50</div>
+        <div id="t-nxt50" style="font-size:11px;font-weight:700;color:var(--tx)">—</div>
+      </div>
+      <div style="background:var(--bg4);padding:6px 8px;border-radius:6px;border:1px solid var(--bo);display:flex;align-items:center;justify-content:space-between">
+        <div><div style="font-size:8px;color:var(--mu)">DATA SRC</div>
+        <div id="mkt-source-badge" style="font-size:10px;font-weight:700;color:var(--mu)">📊 SIM</div></div>
+        <button onclick="loadMarketPrices(true)" style="font-size:9px;padding:4px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:6px;cursor:pointer">🔄</button>
+      </div>
+    </div>
   </div>
   
   <!-- Mini Chart Modal -->
@@ -3274,17 +3285,22 @@ function loadMarketPrices(force){
       }
     }
     
-    var nifty = (d.nifty&&d.nifty.price)||d.NIFTY||23700;
-    var bnifty= (d.banknifty&&d.banknifty.price)||d.BANKNIFTY||51800;
-    var vix   = (d.india_vix&&d.india_vix.price)||d.INDIA_VIX||14.5;
-    var finn  = nifty*0.97;   // FINNIFTY ~ same range as NIFTY
-    var midcp = (window._mktData&&window._mktData.midcpnifty&&window._mktData.midcpnifty.price)||Math.round(nifty*0.558);  // MIDCPNIFTY ~13,200
-    var sensex= nifty*3.32;  // ~78,700 at Nifty 23700
+    var nifty  = (d.nifty&&d.nifty.price)||d.NIFTY||23643;
+    var bnifty = (d.banknifty&&d.banknifty.price)||d.BANKNIFTY||(nifty*2.2717);
+    var vix    = (d.india_vix&&d.india_vix.price)||d.INDIA_VIX||18.79;
+    var finn   = (d.finnifty&&d.finnifty.price)||d.FINNIFTY||(nifty*1.0719);
+    var midcp  = (d.midcpnifty&&d.midcpnifty.price)||d.MIDCPNIFTY||(nifty*0.5993);
+    var sensex = (d.sensex&&d.sensex.price)||d.SENSEX||(nifty*3.1822);
+    var nxt50  = (d.niftynxt50&&d.niftynxt50.price)||d.NIFTYNXT50||(nifty*2.9302);
+    window._mktData = d;  // store full data
     
-    var nChg  = (d.nifty&&d.nifty.change)||0;
-    var nPct  = (d.nifty&&d.nifty.pct)||0;
-    var bChg  = (d.banknifty&&d.banknifty.change)||0;
-    var bPct  = (d.banknifty&&d.banknifty.pct)||0;
+    var nChg  = (d.nifty&&d.nifty.change!=null&&d.nifty.change)||0;
+    var nPct  = (d.nifty&&d.nifty.pct!=null&&d.nifty.pct)||0;
+    var bChg  = (d.banknifty&&d.banknifty.change!=null&&d.banknifty.change)||0;
+    var bPct  = (d.banknifty&&d.banknifty.pct!=null&&d.banknifty.pct)||0;
+    // Show data source badge
+    var srcEl=$('mkt-source-badge');
+    if(srcEl){srcEl.textContent=d.source==='ANGEL_ONE_LIVE'?'🔴 LIVE':'📊 SIM';srcEl.style.color=d.source==='ANGEL_ONE_LIVE'?'var(--am)':'var(--mu)';}
     
     setPriceEl('t-nifty', 't-nifty-chg', nifty, nChg, nPct);
     setPriceEl('t-bnifty','t-bnifty-chg',bnifty,bChg, bPct);
@@ -3297,6 +3313,8 @@ function loadMarketPrices(force){
     var sensex2= (d.sensex&&d.sensex.price)    || sensex;
     var st=function(id,v){var e=document.getElementById(id);if(e){e.textContent='₹'+Math.round(v).toLocaleString('en-IN');e.style.color=nChg>=0?'var(--gr)':'var(--rd)';}};
     st('t-finnifty',finn2); st('t-midcp',midcp2); st('t-sensex',sensex2);
+    var nxt502 = (d.niftynxt50&&d.niftynxt50.price)||nxt50;
+    var n50El=$('t-nxt50'); if(n50El){n50El.textContent='₹'+Math.round(nxt502).toLocaleString('en-IN');n50El.style.color=nChg>=0?'var(--gr)':'var(--rd)';}
     
     window._spotPrice = nifty;
     

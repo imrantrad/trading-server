@@ -5034,9 +5034,10 @@ def market_live_prices(user_id: str = ""):
     
     prev_nifty = round(nifty * 0.9982, 2)  # Yesterday ~0.18% lower
     
-    finnifty_price  = round(nifty * 0.97,   2)  # FINNIFTY ~same range as NIFTY
-    midcp_price     = round(nifty * 0.5575, 2)  # MIDCPNIFTY ~13,200 at NIFTY 23,700
-    sensex_price    = round(nifty * 3.32,   2)  # SENSEX ~78,000
+    finnifty_price  = round(nifty * 1.0719, 2)  # FINNIFTY ~25,343 at NIFTY 23,643
+    midcp_price     = round(nifty * 0.5993, 2)  # MIDCPNIFTY ~14,168 at NIFTY 23,643
+    sensex_price    = round(nifty * 3.1822, 2)  # SENSEX ~75,237 at NIFTY 23,643
+    nxt50_price     = round(nifty * 2.9302, 2)  # NIFTYNXT50 ~69,280
     prev_change     = round(nifty - prev_nifty, 2)
     prev_pct        = round(prev_change / max(prev_nifty,1) * 100, 2)
     
@@ -5047,11 +5048,13 @@ def market_live_prices(user_id: str = ""):
         "midcpnifty": {"price": midcp_price,  "change": 0, "pct": 0},
         "sensex":     {"price": sensex_price, "change": 0, "pct": 0},
         "india_vix":  {"price": vix,          "change": 0, "pct": 0},
-        "NIFTY":     nifty, "BANKNIFTY": bnifty,
-        "INDIA_VIX": vix,  "FINNIFTY": finnifty_price,
-        "MIDCPNIFTY":midcp_price, "SENSEX": sensex_price,
-        "timestamp": now_ist.strftime("%H:%M:%S IST"),
-        "source": "SIMULATION",
+        "NIFTY":      nifty,         "BANKNIFTY":   bnifty,
+        "INDIA_VIX":  vix,           "FINNIFTY":    finnifty_price,
+        "MIDCPNIFTY": midcp_price,   "SENSEX":      sensex_price,
+        "NIFTYNXT50": nxt50_price,
+        "niftynxt50": {"price": nxt50_price, "change": 0, "pct": 0},
+        "timestamp":  now_ist.strftime("%H:%M:%S IST"),
+        "source":     "SIMULATION (Angel One not connected)",
     }
     cache.set("market:live", result, 30)
     return result
