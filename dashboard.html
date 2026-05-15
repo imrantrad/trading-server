@@ -3172,13 +3172,30 @@ function renderSignals(list, signals){
         +'</div>'
         +'</div>':'')
       
-      // ── Index levels row ──
-      +(slPts?'<div style="font-size:9px;color:var(--mu);margin-bottom:6px;display:flex;gap:12px">'
-        +'<span>📍 Spot <b style="color:var(--tx)">₹'+Math.round(spotP).toLocaleString()+'</b></span>'
-        +'<span>❌ SL <b style="color:var(--rd)">-'+slPts+' pts</b></span>'
-        +'<span>✅ TGT <b style="color:var(--gr)">+'+tgtPts+' pts</b></span>'
-        +(ratio?' <span>⚖️ <b style="color:var(--am)">'+ratio+'</b></span>':'')
-        +'</div>':'')
+      // ── Index levels row (DIRECTION AWARE) ──
+      +(spotP?function(){
+        var isSell = !isBuy;
+        // For BUY CE: index must RISE for profit; SL if index FALLS
+        // For SELL/PE: index must FALL for profit; SL if index RISES
+        var idxTgt = s.index_tgt_level || (isSell ? Math.round(spotP-tgtPts) : Math.round(spotP+tgtPts));
+        var idxSL  = s.index_sl_level  || (isSell ? Math.round(spotP+slPts)  : Math.round(spotP-slPts));
+        var slDir  = isSell ? '▲ +'+slPts+' pts (index rises = stop out)'  : '▼ -'+slPts+' pts (index falls = stop out)';
+        var tgtDir = isSell ? '▼ -'+tgtPts+' pts (index falls = profit)'   : '▲ +'+tgtPts+' pts (index rises = profit)';
+        return '<div style="background:rgba(0,0,0,.2);border-radius:6px;padding:7px;margin-bottom:8px">'
+          +'<div style="font-size:8px;color:var(--mu);margin-bottom:5px;font-weight:700">📊 INDEX LEVELS</div>'
+          +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+          +'<div style="flex:1;text-align:center"><div style="font-size:8px;color:var(--mu)">CURRENT SPOT</div>'
+            +'<div style="font-size:12px;font-weight:700;color:var(--tx)">₹'+Math.round(spotP).toLocaleString('en-IN')+'</div></div>'
+          +'<div style="flex:1;text-align:center"><div style="font-size:8px;color:var(--rd)">🛑 STOP LOSS</div>'
+            +'<div style="font-size:12px;font-weight:700;color:var(--rd)">₹'+Math.round(idxSL).toLocaleString('en-IN')+'</div>'
+            +'<div style="font-size:7px;color:var(--rd)">'+(isSell?'▲ index up':'▼ index dn')+'</div></div>'
+          +'<div style="flex:1;text-align:center"><div style="font-size:8px;color:var(--gr)">🎯 TARGET</div>'
+            +'<div style="font-size:12px;font-weight:700;color:var(--gr)">₹'+Math.round(idxTgt).toLocaleString('en-IN')+'</div>'
+            +'<div style="font-size:7px;color:var(--gr)">'+(isSell?'▼ index dn':'▲ index up')+'</div></div>'
+          +(ratio?'<div style="flex:1;text-align:center"><div style="font-size:8px;color:var(--mu)">R:R</div>'
+            +'<div style="font-size:12px;font-weight:700;color:var(--am)">'+ratio+'</div></div>':'')
+          +'</div></div>';
+      }():'')
       
       // ── Rationale ──
       +(s.note?'<div style="font-size:8px;color:var(--am);padding:3px 6px;background:rgba(245,158,11,.08);border-radius:4px;margin-bottom:4px">⏰ '+s.note+'</div>':'')      +'<div style="font-size:9px;color:var(--mu);margin-bottom:8px;padding:5px;background:rgba(255,255,255,.03);border-radius:4px">💡 '+rat+'</div>'

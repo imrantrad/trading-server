@@ -255,11 +255,33 @@ class AISignalEngine:
         T         = 7/365
         premium   = round(curr_price * (vix_est/100) * math.sqrt(T) * 0.4, 2)
         entry     = round(premium * (1 + rng.uniform(0, 0.02)), 2)
-        sl        = round(entry * 0.60, 2)
-        target_1  = round(entry * 1.50, 2)
-        target_2  = round(entry * 2.20, 2)
-        sl_pts    = round(curr_price * 0.004)
-        tgt_pts   = round(curr_price * 0.008)
+        
+        # Option premium SL and Target (same for BUY CE and BUY PE)
+        # Premium rises when trade is profitable for both CE and PE
+        sl_option = round(entry * 0.60, 2)    # Exit if premium drops 40%
+        tgt1_opt  = round(entry * 1.50, 2)    # Exit at 50% premium gain
+        tgt2_opt  = round(entry * 2.20, 2)    # Exit at 120% premium gain
+        
+        # INDEX level SL and Target (direction-aware!)
+        sl_pts    = round(curr_price * 0.004)   # 0.4% of index
+        tgt_pts   = round(curr_price * 0.008)   # 0.8% of index
+        
+        if signal == "BUY":
+            # BUY CE: profit when index RISES
+            # Index SL = current - sl_pts (index falls = stop out)
+            # Index Target = current + tgt_pts (index rises = profit)
+            index_sl_level  = round(curr_price - sl_pts, 0)
+            index_tgt_level = round(curr_price + tgt_pts, 0)
+            index_sl_dir    = "▼ -"  # Index falls = bad for CE buyer
+            index_tgt_dir   = "▲ +"  # Index rises = good for CE buyer
+        else:
+            # SELL/BUY PE: profit when index FALLS
+            # Index SL = current + sl_pts (index rises = stop out)
+            # Index Target = current - tgt_pts (index falls = profit)
+            index_sl_level  = round(curr_price + sl_pts, 0)
+            index_tgt_level = round(curr_price - tgt_pts, 0)
+            index_sl_dir    = "▲ +"  # Index rises = bad for PE buyer
+            index_tgt_dir   = "▼ -"  # Index falls = good for PE buyer
         
         # NSE F&O Lot Sizes (as of 2025-2026)
         lot_sizes = {
@@ -286,13 +308,20 @@ class AISignalEngine:
             # Trade levels
             "spot_price":    round(curr_price, 2),
             "atm_strike":    atm_strike,
-            "entry_price":   entry,
-            "stop_loss":     sl,
-            "target_1":      target_1,
-            "target_2":      target_2,
-            "sl_pts":        sl_pts,
-            "target_pts":    tgt_pts,
-            "risk_reward":   f"1:{round(tgt_pts/max(sl_pts,1),1)}",
+            # Option premium levels (same direction for CE and PE buyer)
+            "entry_price":       entry,
+            "stop_loss":         sl_option,
+            "target_1":          tgt1_opt,
+            "target_2":          tgt2_opt,
+            
+            # Index price levels (DIRECTION AWARE)
+            "index_sl_level":    index_sl_level,   # Index price at which you STOP
+            "index_tgt_level":   index_tgt_level,  # Index price at which you PROFIT
+            "index_sl_dir":      index_sl_dir,
+            "index_tgt_dir":     index_tgt_dir,
+            "sl_pts":            sl_pts,
+            "target_pts":        tgt_pts,
+            "risk_reward":       f"1:{round(tgt_pts/max(sl_pts,1),1)}",
             "lot_size":      lot_size,
             "lot_value":     round(entry * lot_size, 2),
             
