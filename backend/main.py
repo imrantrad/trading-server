@@ -4978,7 +4978,7 @@ def market_live_prices(user_id: str = ""):
                 prices = get_all_live_prices(s["api_key"], s["jwt_token"])
                 if prices and prices.get("NIFTY"):
                     nifty  = prices["NIFTY"]
-                    bnifty = prices.get("BANKNIFTY", nifty * 2.185)
+                    bnifty = prices.get("BANKNIFTY", nifty * 2.2717)
                     result = {
                         "source":    "ANGEL_ONE_LIVE",
                         "nifty":     {"price": nifty,  "change": 0, "pct": 0},
@@ -5012,7 +5012,7 @@ def market_live_prices(user_id: str = ""):
     nifty = round(base_nifty * (1 + daily_var/100), 2)
     
     # BankNifty typically 2.2x NIFTY
-    bnifty = round(nifty * 2.185, 2)
+    bnifty = round(nifty * 2.2717, 2)  # Real BN/N ratio
     
     # VIX between 12-18 in normal markets
     vix = round(12 + (h % 600) / 100, 2)
@@ -5043,7 +5043,7 @@ def market_live_prices(user_id: str = ""):
     
     result = {
         "nifty":      {"price": nifty,        "change": prev_change, "pct": prev_pct},
-        "banknifty":  {"price": bnifty,       "change": round(bnifty - prev_nifty*2.185, 2), "pct": prev_pct},
+        "banknifty":  {"price": bnifty,       "change": round(bnifty - prev_nifty * 2.2717, 2), "pct": prev_pct},
         "finnifty":   {"price": finnifty_price,"change": 0, "pct": 0},
         "midcpnifty": {"price": midcp_price,  "change": 0, "pct": 0},
         "sensex":     {"price": sensex_price, "change": 0, "pct": 0},
