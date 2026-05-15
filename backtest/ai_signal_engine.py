@@ -61,10 +61,14 @@ def calc_bollinger(prices, period=20, std=2):
 def generate_ohlcv(instrument, days=30):
     """Generate realistic OHLCV for technical analysis"""
     base_prices = {
+        # Indices (approx May 2026)
         "NIFTY":23700,"BANKNIFTY":51800,"FINNIFTY":23000,
-        "MIDCPNIFTY":22500,"SENSEX":78000,"NIFTYNXT50":67000,
-        "RELIANCE":2890,"TCS":3650,"INFOSYS":1920,"HDFC":1720,
-        "SBI":820,"ICICI":1290,"ITC":480,"LT":3600
+        "MIDCPNIFTY":13200,"SENSEX":78000,"NIFTYNXT50":67000,
+        # F&O Stocks (approx prices)
+        "RELIANCE":2950,"TCS":3850,"INFOSYS":1920,"HDFC":1680,
+        "SBI":820,"ICICI":1290,"ITC":480,"LT":3600,
+        "BAJFINANCE":8900,"TITAN":3800,"KOTAKBANK":2100,
+        "WIPRO":460,"HCLTECH":1680,"MARUTI":12500,
     }
     base = base_prices.get(instrument, 23700)
     import random
@@ -100,8 +104,11 @@ class AISignalEngine:
     """
     
     INSTRUMENTS = [
+        # Indices
         "NIFTY","BANKNIFTY","FINNIFTY","MIDCPNIFTY",
-        "RELIANCE","TCS","INFOSYS","HDFC","SBI","ICICI"
+        # High-volume F&O stocks
+        "RELIANCE","TCS","INFOSYS","HDFC","SBI","ICICI",
+        "ITC","LT","BAJFINANCE","TITAN","KOTAKBANK",
     ]
     
     STRATEGIES = {
@@ -140,7 +147,7 @@ class AISignalEngine:
         macd, macd_sig, macd_hist = calc_macd(closes_with_today)
         bb_mid, bb_up, bb_dn = calc_bollinger(closes_with_today)
         atr    = calc_atr(highs, lows, closes, 14)
-        vwap   = calc_vwap(highs[-5:], lows[-5:], closes[-5:], vols[-5:])
+        vwap   = calc_vwap(highs[-10:], lows[-10:], closes[-10:], vols[-10:])
         
         # Volume analysis
         avg_vol = sum(vols[-10:])/10
@@ -214,12 +221,15 @@ class AISignalEngine:
         if bull_score >= 1.4 and bull_score > bear_score * 1.2:
             signal      = "BUY"
             option_type = "CE"
-            confidence  = min(92, round(50 + bull_score * 10 + rng.uniform(0,8), 1))
+            # Boost confidence during market hours
+            mkt_boost = 8 if is_market_hours else 0
+            confidence  = min(92, round(55 + bull_score * 12 + mkt_boost + rng.uniform(0,5), 1))
             reasons     = [r for _,_,r in bull_signals[:3]]
         elif bear_score >= 1.4 and bear_score > bull_score * 1.2:
             signal      = "SELL"
             option_type = "PE"
-            confidence  = min(92, round(50 + bear_score * 10 + rng.uniform(0,8), 1))
+            mkt_boost2 = 8 if is_market_hours else 0
+            confidence  = min(92, round(55 + bear_score * 12 + mkt_boost2 + rng.uniform(0,5), 1))
             reasons     = [r for _,_,r in bear_signals[:3]]
         else:
             # Weak signal - still show but with lower confidence
@@ -251,8 +261,19 @@ class AISignalEngine:
         sl_pts    = round(curr_price * 0.004)
         tgt_pts   = round(curr_price * 0.008)
         
-        lot_sizes = {"NIFTY":65,"BANKNIFTY":30,"FINNIFTY":60,"MIDCPNIFTY":120,"SENSEX":10}
-        lot_size  = lot_sizes.get(instrument, 65)
+        # NSE F&O Lot Sizes (as of 2025-2026)
+        lot_sizes = {
+            # Indices
+            "NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,
+            "MIDCPNIFTY":75,"SENSEX":10,"NIFTYNXT50":25,
+            # F&O Stocks
+            "RELIANCE":250,"TCS":175,"INFOSYS":300,
+            "HDFC":550,"SBI":1500,"ICICI":1375,
+            "ITC":1600,"LT":375,"BAJFINANCE":125,
+            "TITAN":175,"KOTAKBANK":400,"WIPRO":1500,
+            "HCLTECH":700,"MARUTI":75,
+        }
+        lot_size = lot_sizes.get(instrument, 100)
         
         return {
             "instrument":    instrument,
@@ -313,16 +334,25 @@ class AISignalEngine:
         # Rank by confidence × bull/bear score
         results.sort(key=lambda x: x["confidence"] * (x["bull_score"]+x["bear_score"]), reverse=True)
         
-        # Remove duplicates (keep highest confidence per instrument)
+        # Remove duplicates — keep highest confidence per instrument+signal+strategy
         seen  = {}
         final = []
         for r in results:
-            key = r["instrument"] + r["signal"]
-            if key not in seen:
-                seen[key] = True
-                final.append(r)
+            # Deduplicate: same instrument + option_type → keep highest confidence
+            key = f"{r['instrument']}_{r['option_type']}"
+            if key not in seen or r["confidence"] > seen[key]["confidence"]:
+                seen[key] = r
         
-        return final[:30]  # Top 30 signals
+        # Sort by confidence descending
+        final = sorted(seen.values(), key=lambda x: -x["confidence"])
+        
+        # After-market note
+        now_h = datetime.now(IST).hour
+        if now_h >= 16 or now_h < 9:
+            for r in final:
+                r["note"] = "After-hours signal — verify at market open (9:15 AM)"
+        
+        return final[:20]  # Top 20 unique signals
 
 
 # ── LEARNING ENGINE ───────────────────────────────────────────────
