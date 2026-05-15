@@ -5378,6 +5378,181 @@ def fix_referral_db():
         return {"error": str(e), "success": False}
 
 
+# ══════════════════════════════════════════════════════════════════
+# ANGEL ONE SMARTAPI — LIVE TRADING
+# ══════════════════════════════════════════════════════════════════
+
+# Per-user Angel One sessions (api_key, jwt_token)
+_angel_sessions = {}  # {user_id: {api_key, jwt_token, client_code, expires}}
+
+@app.post("/broker/angel/login")
+def angel_login(payload: dict):
+    """
+    Login to Angel One SmartAPI
+    Required: user_id, api_key, client_code, mpin, totp (or totp_secret)
+    """
+    try:
+        import sys, os as _os
+        _sys = sys
+        _sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
+        from brokers.angel_one import login as ao_login, generate_totp, store_session
+        
+        user_id      = payload.get("user_id","")
+        api_key      = payload.get("api_key","").strip()
+        client_code  = payload.get("client_code","").strip()
+        mpin         = payload.get("mpin","").strip()
+        totp         = payload.get("totp","").strip()
+        totp_secret  = payload.get("totp_secret","").strip()
+        
+        if not all([api_key, client_code, mpin]):
+            return {"error": "api_key, client_code (login ID), and mpin required"}
+        
+        # Generate TOTP if secret provided
+        if not totp and totp_secret:
+            totp = generate_totp(totp_secret)
+        
+        # Login to Angel One
+        result = ao_login(api_key, client_code, mpin, totp)
+        
+        if result.get("success"):
+            # Store session
+            session = {
+                "api_key":       api_key,
+                "jwt_token":     result["jwt_token"],
+                "refresh_token": result["refresh_token"],
+                "feed_token":    result["feed_token"],
+                "client_code":   client_code,
+                "expires":       time.time() + 7*3600
+            }
+            _angel_sessions[user_id] = session
+            store_session(user_id, session)
+            
+            # Update broker mode to LIVE
+            if USER_SYSTEM and user_id:
+                try:
+                    user_db.update_user(user_id, {
+                        "broker_name": "ANGEL_ONE",
+                        "broker_mode": "LIVE"
+                    })
+                except Exception: pass
+            
+            audit_log(user_id, "ANGEL_LOGIN", details={"client": client_code})
+            return {
+                "success":      True,
+                "mode":         "LIVE",
+                "client_code":  client_code,
+                "name":         result.get("name",""),
+                "message":      "Angel One connected in LIVE mode!",
+                "jwt_hint":     result["jwt_token"][:12] + "...",
+            }
+        else:
+            audit_log(user_id, "ANGEL_LOGIN_FAIL", details=result)
+            return {"success": False, "error": result.get("error","Login failed"), "code": result.get("code","")}
+    
+    except Exception as e:
+        return {"error": str(e), "success": False}
+
+@app.get("/broker/angel/prices/{user_id}")
+def angel_live_prices(user_id: str):
+    """Get live market prices from Angel One"""
+    try:
+        session = _angel_sessions.get(user_id)
+        if not session or time.time() > session.get("expires", 0):
+            return {"error": "Not logged in to Angel One", "use": "POST /broker/angel/login first"}
+        
+        import sys, os as _os
+        sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
+        from brokers.angel_one import get_all_live_prices
+        
+        prices = get_all_live_prices(session["api_key"], session["jwt_token"])
+        if not prices:
+            return {"error": "No prices returned", "hint": "Session may have expired — re-login"}
+        
+        nifty   = prices.get("NIFTY", 0)
+        bnifty  = prices.get("BANKNIFTY", 0)
+        vix_est = 14.5  # VIX needs separate call
+        
+        return {
+            "source":     "ANGEL_ONE_LIVE",
+            "nifty":      {"price": nifty,  "change": 0, "pct": 0},
+            "banknifty":  {"price": bnifty, "change": 0, "pct": 0},
+            "finnifty":   {"price": prices.get("FINNIFTY",0),  "change": 0, "pct": 0},
+            "midcpnifty": {"price": prices.get("MIDCPNIFTY",0),"change": 0, "pct": 0},
+            "sensex":     {"price": prices.get("SENSEX",0),    "change": 0, "pct": 0},
+            "india_vix":  {"price": vix_est},
+            "NIFTY":      nifty,
+            "BANKNIFTY":  bnifty,
+            "INDIA_VIX":  vix_est,
+            "timestamp":  datetime.now().strftime("%H:%M:%S IST"),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/broker/angel/order")
+def angel_place_order(payload: dict):
+    """Place LIVE order via Angel One SmartAPI"""
+    user_id = payload.get("user_id","")
+    session = _angel_sessions.get(user_id)
+    if not session or time.time() > session.get("expires", 0):
+        return {"error": "Not logged in to Angel One — call /broker/angel/login first", "success": False}
+    
+    try:
+        import sys, os as _os
+        sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
+        from brokers.angel_one import place_order as ao_order
+        
+        result = ao_order(
+            api_key=session["api_key"],
+            jwt_token=session["jwt_token"],
+            instrument=payload.get("instrument","NIFTY"),
+            strike=int(payload.get("strike",0)),
+            option_type=payload.get("option_type","CE"),
+            action=payload.get("action","BUY"),
+            lots=int(payload.get("lots",1)),
+            order_type=payload.get("order_type","MARKET"),
+            price=float(payload.get("price",0)),
+            sl=float(payload.get("stop_loss",0)),
+            target=float(payload.get("target",0))
+        )
+        
+        if result.get("success"):
+            audit_log(user_id, "LIVE_ORDER_PLACED", details=result)
+        return result
+    except Exception as e:
+        return {"error": str(e), "success": False}
+
+@app.get("/broker/angel/portfolio/{user_id}")
+def angel_portfolio(user_id: str):
+    """Get live portfolio from Angel One"""
+    session = _angel_sessions.get(user_id)
+    if not session or time.time() > session.get("expires", 0):
+        return {"error": "Not logged in", "positions": []}
+    try:
+        import sys, os as _os
+        sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
+        from brokers.angel_one import get_portfolio
+        return get_portfolio(session["api_key"], session["jwt_token"])
+    except Exception as e:
+        return {"error": str(e), "positions": []}
+
+@app.get("/broker/angel/status/{user_id}")
+def angel_session_status(user_id: str):
+    """Check if Angel One session is active"""
+    session = _angel_sessions.get(user_id)
+    if not session:
+        return {"connected": False, "mode": "NONE", "message": "Not connected"}
+    if time.time() > session.get("expires", 0):
+        return {"connected": False, "mode": "EXPIRED", "message": "Session expired — re-login"}
+    remaining = int((session.get("expires",0) - time.time()) / 60)
+    return {
+        "connected":    True,
+        "mode":         "LIVE",
+        "client_code":  session.get("client_code",""),
+        "expires_in":   f"{remaining} minutes",
+        "message":      f"LIVE — Active ({remaining} min remaining)",
+    }
+
+
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
     """Scan all instruments with ML models - auto-trains if needed"""

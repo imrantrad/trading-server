@@ -1095,22 +1095,74 @@ input:focus,select:focus{border-color:var(--bl)}
   </div>
   <!-- Broker Connect -->
   <div class="card" style="margin-bottom:8px">
-    <div class="chdr">🔗 BROKER API</div>
-    <div style="margin-bottom:8px">
-      <div class="lbl">BROKER</div>
-      <select id="broker-select" style="font-size:10px;margin-bottom:8px">
-        <option value="ZERODHA">Zerodha</option><option value="ANGEL">Angel One</option>
-        <option value="UPSTOX">Upstox</option><option value="FYERS">Fyers</option>
-        <option value="DHAN">Dhan</option>
-      </select>
-      <div class="lbl">API KEY</div>
-      <input id="broker-key" placeholder="API Key (8+ chars)" style="margin-bottom:6px">
-      <div class="lbl">ACCESS TOKEN / SECRET</div>
-      <input id="broker-token" placeholder="Access Token (optional)" style="margin-bottom:10px">
-      <button onclick="connectBroker()" class="btn g full">🔗 CONNECT</button>
+    <div class="chdr" style="display:flex;justify-content:space-between">
+      🔗 BROKER API
+      <div id="broker-status" class="tag g" style="font-size:8px">NOT CONNECTED</div>
     </div>
-    <div id="broker-status" style="font-size:10px;color:var(--mu);text-align:center">Not connected</div>
-    <div id="broker-result" style="display:none;margin-top:8px;padding:10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:8px;font-size:10px;text-align:center"></div>
+
+    <!-- Status bar -->
+    <div id="broker-result" style="display:none;padding:10px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:8px;font-size:10px;text-align:center;margin-bottom:10px"></div>
+
+    <!-- Broker selector -->
+    <div class="lbl" style="margin-bottom:4px">SELECT BROKER</div>
+    <select id="broker-select" style="font-size:11px;margin-bottom:10px" onchange="onBrokerChange(this.value)">
+      <option value="ANGEL">Angel One</option>
+      <option value="ZERODHA">Zerodha</option>
+      <option value="UPSTOX">Upstox</option>
+      <option value="FYERS">Fyers</option>
+      <option value="DHAN">Dhan</option>
+    </select>
+
+    <!-- Angel One Full Login Form -->
+    <div id="angel-form">
+      <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:var(--am);margin-bottom:6px">🔴 ANGEL ONE LIVE TRADING</div>
+        <div style="font-size:9px;color:var(--mu);line-height:1.7">
+          Real orders will be placed on your Angel One account.<br>
+          <b style="color:var(--rd)">⚠️ Real money at risk!</b>
+        </div>
+      </div>
+      <div class="g2" style="margin-bottom:8px">
+        <div>
+          <div class="lbl">API KEY</div>
+          <input id="ao-api-key" placeholder="6mjBNEDn" value="6mjBNEDn">
+        </div>
+        <div>
+          <div class="lbl">CLIENT ID (Login)</div>
+          <input id="ao-client" placeholder="Your Angel One ID">
+        </div>
+      </div>
+      <div class="g2" style="margin-bottom:8px">
+        <div>
+          <div class="lbl">MPIN (4-6 digits)</div>
+          <input id="ao-mpin" type="password" placeholder="MPIN">
+        </div>
+        <div>
+          <div class="lbl">TOTP (6 digits)</div>
+          <input id="ao-totp" placeholder="From Auth App" maxlength="6" style="font-family:monospace;letter-spacing:3px">
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div class="lbl">SECRET KEY</div>
+        <input id="ao-secret" placeholder="f63d9bc6-f49f-..." value="f63d9bc6-f49f-4225-b46f-df9af0489b2d" type="password">
+        <div style="font-size:8px;color:var(--mu);margin-top:3px">From Angel One SmartAPI dashboard</div>
+      </div>
+      <button id="ao-connect-btn" onclick="connectAngelOne()" class="btn a full" style="padding:11px;font-size:12px;font-weight:700">
+        🔴 CONNECT ANGEL ONE (LIVE)
+      </button>
+      <div style="text-align:center;margin-top:8px">
+        <span onclick="connectBrokerPaper()" style="font-size:9px;color:var(--bl);cursor:pointer;text-decoration:underline">Or continue in Paper mode (no TOTP needed)</span>
+      </div>
+    </div>
+
+    <!-- Other brokers form -->
+    <div id="other-broker-form" style="display:none">
+      <div class="lbl">API KEY</div>
+      <input id="broker-key" placeholder="API Key" style="margin-bottom:8px">
+      <div class="lbl">ACCESS TOKEN</div>
+      <input id="broker-token" placeholder="Access Token" style="margin-bottom:10px">
+      <button onclick="connectBroker()" class="btn g full">🔗 CONNECT (PAPER)</button>
+    </div>
   </div>
   <button onclick="logout()" class="btn r full" style="padding:12px;font-size:12px">⎋ LOGOUT</button>
 </div>
@@ -1386,18 +1438,16 @@ function executeTrade(action){
   try{ brokerData = JSON.parse(localStorage.getItem('trd_broker')||'null'); }catch(e){}
   
   if(!brokerData || brokerData.mode!=='LIVE'){
-    // Show paper trade option
     var msg = action+' '+inst+' '+strike+' '+_optionType+' | '+lots+' Lot';
-    if(confirm('🔴 Live broker not connected.\n\n'+msg+'\n\nExecute as PAPER TRADE instead?')){
+    if(confirm('🔴 Live broker not connected.\n\n'+msg+'\n\nExecute as PAPER TRADE instead?\n\n(Go to PROFILE → BROKER API to connect Angel One for live trading)')){
       executePaperTrade();
-    } else {
-      toast('Go to PROFILE → BROKER API to connect live broker','info');
     }
     return;
   }
   
-  // Live broker connected - execute via broker API
-  req('/broker/place_order','POST',{
+  // Angel One LIVE order
+  req('/broker/angel/order','POST',{
+    user_id: window.UID||'demo',
     user_id: window.UID||'demo',
     instrument: inst, strike: strike,
     option_type: _optionType,
@@ -3393,6 +3443,118 @@ function restoreBrokerSession(){
       if(keyEl) keyEl.value='**** **** '+saved.key;  // Show masked key
     }
   }catch(e){}
+}
+
+
+// ── ANGEL ONE LIVE CONNECTION ───────────────────────────────────
+function onBrokerChange(broker){
+  var af=$('angel-form'), of=$('other-broker-form');
+  if(broker==='ANGEL'){
+    if(af) af.style.display='block';
+    if(of) of.style.display='none';
+  } else {
+    if(af) af.style.display='none';
+    if(of) of.style.display='block';
+  }
+}
+
+function connectAngelOne(){
+  var apiKey    = ($('ao-api-key')||{}).value||'';
+  var client    = ($('ao-client')||{}).value||'';
+  var mpin      = ($('ao-mpin')||{}).value||'';
+  var totp      = ($('ao-totp')||{}).value||'';
+  var secret    = ($('ao-secret')||{}).value||'';
+  var btn       = $('ao-connect-btn');
+  var statusEl  = $('broker-status');
+  var resultEl  = $('broker-result');
+
+  if(!apiKey)   { toast('API Key required','warn'); return; }
+  if(!client)   { toast('Client ID (login) required','warn'); return; }
+  if(!mpin)     { toast('MPIN required','warn'); return; }
+  if(!totp)     { toast('TOTP required — open your authenticator app','warn'); return; }
+
+  if(btn){ btn.textContent='Connecting...'; btn.disabled=true; }
+  toast('Connecting to Angel One...','info');
+
+  req('/broker/angel/login','POST',{
+    user_id:     window.UID||'demo',
+    api_key:     apiKey,
+    client_code: client,
+    mpin:        mpin,
+    totp:        totp,
+    secret_key:  secret,
+  },function(err,r){
+    if(btn){ btn.textContent='🔴 CONNECT ANGEL ONE (LIVE)'; btn.disabled=false; }
+    if(err||!r||r.error){
+      toast('Login failed: '+(r&&r.error||err),'error');
+      if(resultEl){
+        resultEl.style.display='block';
+        resultEl.innerHTML='❌ <b>Login Failed</b><br><span style="color:var(--mu);font-size:9px">'+(r&&r.error||err)+'</span>';
+        resultEl.style.background='rgba(255,51,85,.08)'; resultEl.style.borderColor='rgba(255,51,85,.3)';
+      }
+      return;
+    }
+    
+    // SUCCESS - LIVE MODE
+    var uid2=window.UID||'demo';
+    try{
+      localStorage.setItem('trd_broker_'+uid2, JSON.stringify({
+        broker:'ANGEL_ONE', mode:'LIVE', client:client,
+        key:apiKey.slice(-4), time:Date.now(), uid:uid2
+      }));
+    }catch(e){}
+
+    if(statusEl){statusEl.textContent='🟢 LIVE';statusEl.style.color='var(--am)';}
+    if(resultEl){
+      resultEl.style.display='block';
+      resultEl.innerHTML='<b style="color:var(--am)">🔴 ANGEL ONE — LIVE MODE</b><br>'
+        +'<span style="color:var(--gr)">✅ '+r.name+' ('+r.client_code+')</span><br>'
+        +'<span style="font-size:9px;color:var(--rd)">⚠️ Real money trading active!</span>';
+      resultEl.style.background='rgba(245,158,11,.08)'; resultEl.style.borderColor='rgba(245,158,11,.3)';
+    }
+
+    toast('🔴 LIVE! Angel One connected for real trading!','success');
+    
+    // Start live price polling
+    window._angelLive = true;
+    startLivePrices();
+  });
+}
+
+function connectBrokerPaper(){
+  var broker = ($('broker-select')||{}).value||'ANGEL';
+  req('/broker/connect/'+broker+'?api_key='+(($('ao-api-key')||{}).value||'demo')+'&user_id='+(window.UID||'demo'),
+  'GET',null,function(err,d){
+    var statusEl=$('broker-status'), resultEl=$('broker-result');
+    if(d&&d.connected){
+      if(statusEl){statusEl.textContent='📄 PAPER';statusEl.style.color='var(--bl)';}
+      if(resultEl){resultEl.style.display='block';resultEl.innerHTML='<b style="color:var(--bl)">'+broker+'</b> in PAPER mode<br><span style="font-size:9px;color:var(--mu)">No real orders placed</span>';}
+      toast('Paper mode connected','success');
+    }
+  });
+}
+
+function startLivePrices(){
+  if(!window._angelLive) return;
+  var uid=window.UID||'demo';
+  req('/broker/angel/prices/'+uid,'GET',null,function(err,d){
+    if(!err&&d&&d.NIFTY){
+      window._mktData=d;
+      window._spotPrice=d.NIFTY||23700;
+      function sp(id,v,c){var e=document.getElementById(id);if(e){e.textContent='₹'+Math.round(v).toLocaleString('en-IN');if(c)e.style.color=c;}}
+      sp('t-nifty',  d.NIFTY,   d.nifty&&d.nifty.change>=0?'var(--gr)':'var(--rd)');
+      sp('t-bnifty', d.BANKNIFTY, 'var(--bl)');
+      var vE=$('t-vix'); if(vE) vE.textContent=(d.INDIA_VIX||14.5).toFixed(2);
+      var atm=Math.round((d.NIFTY||23700)/50)*50;
+      var sEl=$('t-strike'); if(sEl&&!sEl._edited) sEl.value=atm;
+      toast('📡 LIVE prices updated','success');
+    }
+    // Poll every 5s during market hours
+    var h=new Date().getHours(), m=new Date().getMinutes();
+    if(window._angelLive && h>=9 && (h<15||(h===15&&m<=30))){
+      setTimeout(startLivePrices, 5000);
+    }
+  });
 }
 
 // ── API BASE URL ──────────────────────────────────
