@@ -2093,63 +2093,171 @@ def ai_signal(instrument: str = "NIFTY"):
 
 @app.get("/ai/regime")
 def ai_regime(vix: float = 19.5):
-    """Detect market regime using multiple indicators"""
-    import random, math
+    """
+    Institutional regime detection — weighted multi-factor scoring.
+    Fixes: ADX>30 overrides RSI neutral zone, VIX properly classified.
+    """
+    import random
     from datetime import datetime, timezone, timedelta
-    IST = timezone(timedelta(hours=5,minutes=30))
-    seed = int(datetime.now(IST).strftime("%Y%m%d%H")) % 10000
-    rng = random.Random(seed)
-    
-    # Get market prices for regime detection
-    prices = get_market_prices()
-    nifty = prices.get("NIFTY",{}).get("price",24000)
-    vix_val = prices.get("VIX",{}).get("price",vix)
-    
-    # Regime indicators
-    rsi = rng.uniform(40,75)
-    adx = rng.uniform(15,45)
-    macd = rng.uniform(-10,15)
-    bb_width = rng.uniform(0.02,0.08)
-    vol_ratio = rng.uniform(0.7,2.2)
-    
-    # Determine regime
-    if vix_val > 22:
-        regime = "VOLATILE"
-        desc = "High volatility - reduce position size, buy options"
-        confidence = 85
-    elif adx > 30 and rsi > 55:
-        regime = "BULLISH"
-        desc = "Strong uptrend - trend following strategies work best"
-        confidence = 78
-    elif adx > 30 and rsi < 45:
-        regime = "BEARISH"
-        desc = "Downtrend detected - short strategies and PE buying"
-        confidence = 75
+    IST = timezone(timedelta(hours=5, minutes=30))
+
+    # ── Get live indicator values ─────────────────────────────────
+    try:
+        sys_path_insert = __import__("sys").path.insert
+        sys_path_insert(0, __import__("os").path.dirname(__import__("os").path.dirname(__file__)))
+        from backtest.ai_signal_engine import get_signal_engine
+        sig = get_signal_engine().generate_signal("NIFTY")
+        rsi      = sig.get("rsi", 50)
+        adx      = sig.get("adx", 20)
+        macd     = sig.get("macd_hist", 0)
+        bb_width = sig.get("bb_upper", 0) - sig.get("bb_lower", 0)
+        bb_width = round(bb_width / max(sig.get("spot_price", 24000), 1), 4)
+        vol_ratio= sig.get("vol_ratio", 1.0)
+    except Exception:
+        seed = int(datetime.now(IST).strftime("%Y%m%d%H")) % 10000
+        rng  = random.Random(seed)
+        rsi  = rng.uniform(38, 72); adx = rng.uniform(15, 45)
+        macd = rng.uniform(-8, 10); bb_width = rng.uniform(0.02, 0.08)
+        vol_ratio = rng.uniform(0.7, 2.0)
+
+    # Get live VIX
+    prices  = get_market_prices()
+    vix_val = prices.get("VIX", {}).get("price", vix) if isinstance(prices.get("VIX"), dict) else vix
+
+    # ── Weighted scoring ──────────────────────────────────────────
+    bull_score = 0.0
+    bear_score = 0.0
+    side_score = 0.0
+    vol_score  = 0.0
+    reasons    = []
+
+    # RSI (weight 1.5)
+    if   rsi < 35:  bear_score += 2.0; reasons.append(f"RSI {rsi:.1f} oversold (bearish momentum)")
+    elif rsi < 45:  bear_score += 1.0; reasons.append(f"RSI {rsi:.1f} below 45 (mild bearish)")
+    elif rsi > 65:  bull_score += 2.0; reasons.append(f"RSI {rsi:.1f} overbought (bullish momentum)")
+    elif rsi > 55:  bull_score += 1.0; reasons.append(f"RSI {rsi:.1f} above 55 (mild bullish)")
+    else:           side_score += 0.5
+
+    # ADX (most important indicator — weight 3.0)
+    if adx > 35:        # Strongly trending
+        if macd < 0:    bear_score += 3.0; reasons.append(f"ADX {adx:.1f} strongly trending + MACD bearish = strong downtrend")
+        else:           bull_score += 3.0; reasons.append(f"ADX {adx:.1f} strongly trending + MACD bullish = strong uptrend")
+    elif adx > 25:      # Trending
+        if macd < 0:    bear_score += 1.8; reasons.append(f"ADX {adx:.1f} trending with bearish momentum")
+        else:           bull_score += 1.8; reasons.append(f"ADX {adx:.1f} trending with bullish momentum")
+    elif adx < 18:      # Sideways
+        side_score += 2.5; reasons.append(f"ADX {adx:.1f} low — market is sideways/range-bound")
     else:
-        regime = "SIDEWAYS"
-        desc = "Range-bound market - theta decay and Iron Condor work best"
-        confidence = 70
-    
+        side_score += 0.8
+
+    # MACD Histogram (weight 1.5)
+    if   macd < -3:  bear_score += 2.0; reasons.append(f"MACD hist {macd:.2f} strongly bearish")
+    elif macd < -0.5:bear_score += 1.0; reasons.append(f"MACD hist {macd:.2f} bearish")
+    elif macd > 3:   bull_score += 2.0; reasons.append(f"MACD hist {macd:.2f} strongly bullish")
+    elif macd > 0.5: bull_score += 1.0; reasons.append(f"MACD hist {macd:.2f} bullish")
+
+    # BB Width — expanding = trending
+    if bb_width > 0.055:
+        if macd < 0: bear_score += 0.8; reasons.append(f"BB expanding ({bb_width:.3f}) in downtrend")
+        else:         bull_score += 0.8; reasons.append(f"BB expanding ({bb_width:.3f}) in uptrend")
+    elif bb_width < 0.025:
+        side_score += 1.2; reasons.append(f"BB contracting ({bb_width:.3f}) — squeeze forming")
+
+    # Volume
+    if vol_ratio > 1.8:
+        if macd < 0: bear_score += 0.8
+        else:         bull_score += 0.8
+        reasons.append(f"Volume {vol_ratio:.1f}x avg — conviction move")
+
+    # VIX
+    if   vix_val > 25: vol_score += 3.5;  reasons.append(f"VIX {vix_val:.1f} extreme — panic/fear")
+    elif vix_val > 20: vol_score += 2.0;  reasons.append(f"VIX {vix_val:.1f} high — elevated risk")
+    elif vix_val > 17: vol_score += 0.8;  reasons.append(f"VIX {vix_val:.1f} elevated — caution")
+    elif vix_val < 12: bull_score += 0.5; reasons.append(f"VIX {vix_val:.1f} low — complacency")
+
+    # ── Determine regime ──────────────────────────────────────────
+    if vol_score >= 3.0:
+        regime   = "HIGH_VOL"
+        desc     = f"Extreme volatility (VIX {vix_val:.1f}) — reduce size 50%, buy straddles only"
+        conf     = 88
+        best     = ["Straddle Buy","Strangle Buy","Reduce position size 50%","Buy far OTM puts as hedge"]
+    elif vol_score >= 2.0:
+        regime   = "VOLATILE"
+        desc     = f"High volatility (VIX {vix_val:.1f}) — premium selling risky, buy options"
+        conf     = 82
+        best     = ["Straddle Buy","Wide Iron Condor","Reduce size","Long PE/CE hedges"]
+    elif bear_score >= 3.5 and bear_score > bull_score * 1.2:
+        if adx > 30:
+            regime = "BEARISH_TRENDING"
+            desc   = f"Strong downtrend — ADX {adx:.1f} confirms trend, MACD {macd:.2f} bearish"
+            conf   = min(92, round(60 + bear_score * 4))
+            best   = ["Buy ATM PE","Bear Spread","Short futures (hedge)","Ariba Reversal Put"]
+        else:
+            regime = "BEARISH"
+            desc   = f"Bearish market — RSI {rsi:.1f}, MACD {macd:.2f} negative"
+            conf   = min(85, round(55 + bear_score * 4))
+            best   = ["Buy PE","Bear Put Spread","Short Call Spread","Protective Put"]
+    elif bull_score >= 3.5 and bull_score > bear_score * 1.2:
+        if adx > 30:
+            regime = "BULLISH_TRENDING"
+            desc   = f"Strong uptrend — ADX {adx:.1f} confirms trend, MACD {macd:.2f} bullish"
+            conf   = min(92, round(60 + bull_score * 4))
+            best   = ["Buy ATM CE","Bull Call Spread","Covered Call","Trend Continuation"]
+        else:
+            regime = "BULLISH"
+            desc   = f"Bullish market — RSI {rsi:.1f}, MACD {macd:.2f} positive"
+            conf   = min(85, round(55 + bull_score * 4))
+            best   = ["Buy CE","Bull Spread","Sell PE (CSP)","Theta Decay CE side"]
+    elif side_score >= 2.0 or (adx < 20 and abs(macd) < 2):
+        regime   = "SIDEWAYS"
+        desc     = f"Range-bound — ADX {adx:.1f} low, price oscillating between support/resistance"
+        conf     = min(80, round(55 + side_score * 5))
+        best     = ["Iron Condor","Short Straddle","Short Strangle","Theta Decay","Calendar Spread"]
+    else:
+        # Mixed signals — call it by dominant score
+        if bear_score > bull_score:
+            regime = "MILD_BEARISH"
+            desc   = f"Slight bearish bias — mixed signals, trade carefully"
+            conf   = 58
+            best   = ["Small PE position","Iron Condor","Reduce size","Wait for clarity"]
+        else:
+            regime = "MILD_BULLISH"
+            desc   = f"Slight bullish bias — mixed signals, trade carefully"
+            conf   = 58
+            best   = ["Small CE position","Iron Condor","Reduce size","Wait for clarity"]
+
+    # ── VIX classification (correct labels) ──────────────────────
+    if   vix_val > 25: vix_label = "EXTREME"
+    elif vix_val > 20: vix_label = "HIGH"
+    elif vix_val > 17: vix_label = "ELEVATED"
+    elif vix_val > 12: vix_label = "NORMAL"
+    else:              vix_label = "LOW"
+
+    # ── ADX interpretation ────────────────────────────────────────
+    if   adx > 35: adx_label = "STRONGLY TRENDING"
+    elif adx > 25: adx_label = "TRENDING"
+    elif adx > 18: adx_label = "WEAK TREND"
+    else:          adx_label = "SIDEWAYS"
+
     return {
-        "regime": regime,
-        "description": desc,
-        "confidence": confidence,
-        "vix": round(vix_val, 2),
+        "regime":       regime,
+        "description":  desc,
+        "confidence":   conf,
+        "vix":          round(vix_val, 2),
+        "bull_score":   round(bull_score, 2),
+        "bear_score":   round(bear_score, 2),
+        "side_score":   round(side_score, 2),
+        "reasons":      reasons[:4],
         "indicators": {
-            "RSI": {"value": round(rsi,1), "signal": "BULLISH" if rsi>55 else "BEARISH"},
-            "ADX": {"value": round(adx,1), "signal": "TRENDING" if adx>25 else "SIDEWAYS"},
-            "MACD": {"value": round(macd,2), "signal": "BULLISH" if macd>0 else "BEARISH"},
-            "BB_Width": {"value": round(bb_width,3), "signal": "EXPANDING" if bb_width>0.05 else "CONTRACTING"},
-            "Volume": {"value": round(vol_ratio,2), "signal": "HIGH" if vol_ratio>1.5 else "NORMAL"},
-            "VIX": {"value": round(vix_val,2), "signal": "HIGH" if vix_val>20 else "LOW"},
+            "RSI":      {"value": round(rsi,1),       "signal": "BULLISH" if rsi>55 else "BEARISH" if rsi<45 else "NEUTRAL"},
+            "ADX":      {"value": round(adx,1),       "signal": adx_label},
+            "MACD":     {"value": round(macd,2),      "signal": "BULLISH" if macd>0 else "BEARISH"},
+            "BB_Width": {"value": round(bb_width,3),  "signal": "EXPANDING" if bb_width>0.05 else "CONTRACTING"},
+            "Volume":   {"value": round(vol_ratio,2), "signal": "HIGH" if vol_ratio>1.5 else "NORMAL"},
+            "VIX":      {"value": round(vix_val,2),   "signal": vix_label},
         },
-        "best_strategies": {
-            "BULLISH": ["Strong Trend Continuation","MTF Alignment","Momentum Acceleration"],
-            "BEARISH": ["Trend Reversal","PE buying","Bear Spread"],
-            "SIDEWAYS": ["Iron Condor","Straddle Short","Theta Decay"],
-            "VOLATILE": ["Straddle Buy","Strangle Buy","Reduce size 50%"]
-        }.get(regime, []),
-        "timestamp": datetime.now(IST).strftime("%H:%M:%S IST")
+        "best_strategies": best,
+        "timestamp": datetime.now(IST).strftime("%H:%M:%S IST"),
     }
 
 @app.post("/ai/paper_test/{strategy_id}")
