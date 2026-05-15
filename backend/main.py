@@ -5281,7 +5281,7 @@ def v2_market_prices():
     """v2 — extended market prices with more instruments"""
     base = market_live_prices()
     base["version"] = "v2"
-    base["sensex"]  = {"price": round((base.get("NIFTY",23700))*2.68, 2)}
+    base["sensex"]  = {"price": round((base.get("NIFTY",23700))*3.32, 2)}  # Sensex/Nifty ratio ~3.3
     return base
 
 # ══════════════════════════════════════════════════════════════════

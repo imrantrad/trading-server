@@ -1425,7 +1425,7 @@ function executePaperTrade(){
     strategy:'MANUAL', strike_mode:'ATM'
   },function(err,r){
     if(err||!r){ toast('Paper trade failed','error'); return; }
-    if(!r.success){ toast('Rejected: '+(r.reason||'Error'),'error'); return; }
+    if(!r.success){ toast('Rejected: '+(r.reason||r.error||'Check server logs'),'error'); console.error('Paper trade error:',r); return; }
     toast('Paper trade: '+inst+' '+r.strike+' '+_optionType+' @ ₹'+r.exec_price,'success');
     loadPositions();
   });
@@ -2384,7 +2384,14 @@ function renderRegime(d){
 function loadAIInsights(){
   req('/quant/ai_insights/'+(UID||'demo'),'GET',null,function(err,d){
     var el=$('ai-insights-data'); if(!el) return;
-    if(!d||d.message){el.innerHTML='<div style="color:var(--mu);font-size:10px;padding:8px">Trade more to get insights</div>';return;}
+    // Always show recommendations even with 0 trades
+    if(d&&d.message&&!d.total_trades_analyzed){
+      var recs=(d.recommendations||[]);
+      el.innerHTML='<div style="color:var(--am);font-size:10px;padding:6px;margin-bottom:8px">'+d.message+'</div>'
+        +(recs.length?'<div class="chdr" style="margin-top:8px">RECOMMENDATIONS</div>'+recs.map(function(r){return '<div style="font-size:10px;color:var(--mu);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">'+r+'</div>';}).join(''):'');
+      return;
+    }
+    if(!d){ el.innerHTML='<div style="color:var(--mu);font-size:10px;padding:8px">Loading insights...</div>'; return; }
     el.innerHTML='<div class="row"><span>Total Analyzed</span><b>'+d.total_trades_analyzed+'</b></div>'
       +'<div class="row"><span>Overall Win Rate</span><b style="color:var(--gr)">'+d.overall_win_rate+'%</b></div>'
       +(d.recommendations?d.recommendations.map(function(r){return '<div style="font-size:10px;color:var(--mu);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">💡 '+r+'</div>';}).join(''):'');
@@ -3104,7 +3111,7 @@ function loadMarketPrices(){
     var vix   = (d.india_vix&&d.india_vix.price)||d.INDIA_VIX||14.5;
     var finn  = nifty*1.27;
     var midcp = nifty*0.95;
-    var sensex= nifty*2.68;
+    var sensex= nifty*3.32;  // ~78,700 at Nifty 23700
     
     var nChg  = (d.nifty&&d.nifty.change)||0;
     var nPct  = (d.nifty&&d.nifty.pct)||0;

@@ -665,7 +665,7 @@ class PaperTradingEngine:
 
         # Build position
         pos = PaperPosition(
-            pos_id       = f"PP_{user_id}_{int(time.time()*1000)}",
+            pos_id       = f"PP_{self.user_id}_{int(time.time()*1000)}",
             strategy     = strategy,
             instrument   = instrument,
             strike       = strike,
