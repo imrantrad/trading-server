@@ -4941,8 +4941,38 @@ def admin_clear_old_referral():
 
 
 @app.get("/market/live")
-def market_live_prices():
-    """Live market prices - date-aware simulation (30s cache)"""
+def market_live_prices(user_id: str = ""):
+    """Live market prices — uses broker if connected, else simulation"""
+    # Try broker live prices first (if user connected)
+    if user_id and user_id in _angel_sessions:
+        s = _angel_sessions[user_id]
+        if time.time() < s.get("expires", 0):
+            broker_cache_key = f"broker_live:{user_id}"
+            bc = cache.get(broker_cache_key)
+            if bc: return bc
+            try:
+                import sys as _sys, os as _os
+                _sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
+                from brokers.angel_one import get_all_live_prices
+                prices = get_all_live_prices(s["api_key"], s["jwt_token"])
+                if prices and prices.get("NIFTY"):
+                    nifty  = prices["NIFTY"]
+                    bnifty = prices.get("BANKNIFTY", nifty * 2.185)
+                    result = {
+                        "source":    "ANGEL_ONE_LIVE",
+                        "nifty":     {"price": nifty,  "change": 0, "pct": 0},
+                        "banknifty": {"price": bnifty, "change": 0, "pct": 0},
+                        "finnifty":  {"price": round(nifty*1.27,2), "change":0,"pct":0},
+                        "india_vix": {"price": prices.get("VIX",14.5)},
+                        "NIFTY":     nifty, "BANKNIFTY": bnifty, "INDIA_VIX": prices.get("VIX",14.5),
+                        "timestamp": datetime.now().strftime("%H:%M:%S IST"),
+                    }
+                    cache.set(broker_cache_key, result, 5)  # 5s cache for live
+                    cache.set("market:live", result, 5)     # also update main cache
+                    return result
+            except Exception:
+                pass
+
     cached = cache.get("market:live")
     if cached: return cached
     from datetime import date
@@ -5731,6 +5761,16 @@ def record_trade_for_learning(payload: dict):
         return {"recorded": True, "total_trades": eng.data["total_trades"]}
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.delete("/cache/market")
+def bust_market_cache():
+    """Clear market price cache — force fresh data"""
+    cache.delete("market:live")
+    for key in list(cache._store.keys()):
+        if key.startswith("broker_live:") or key.startswith("market:"):
+            cache.delete(key)
+    return {"cleared": True, "message": "Market cache cleared — next request will fetch fresh data"}
 
 
 @app.post("/ml/scan_all")

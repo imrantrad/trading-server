@@ -159,7 +159,7 @@ input:focus,select:focus{border-color:var(--bl)}
       <div style="font-size:9px;color:var(--mu);font-weight:700">LIVE MARKET</div>
       <div style="display:flex;align-items:center;gap:6px">
         <div id="t-market-status" class="tag g">● LIVE</div>
-        <button onclick="loadMarketPrices()" style="font-size:8px;padding:2px 6px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">🔄</button>
+        <button onclick="loadMarketPrices(true)" style="font-size:8px;padding:2px 6px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">🔄</button>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px" id="mkt-ticker">
@@ -3231,7 +3231,7 @@ function generateLocalSignals(){
 
 
 function loadCalcSpot(){
-  req('/market/live','GET',null,function(err,d){
+  req('/market/live?user_id='+(window.UID||''),'GET',null,function(err,d){
     if(err||!d){ toast('Cannot load live price','warn'); return; }
     var inst = document.getElementById('calc-inst') ? document.getElementById('calc-inst').value : 'NIFTY';
     var spotMap = {
@@ -3252,8 +3252,11 @@ function loadCalcSpot(){
 
 
 // ── MARKET PRICES (all 6 instruments) ─────────────
-function loadMarketPrices(){
-  req('/market/live','GET',null,function(err,d){
+function loadMarketPrices(force){
+  if(force){  // Bust cache first
+    req('/cache/market','DELETE',null,function(){}); 
+  }
+  req('/market/live?user_id='+(window.UID||''),'GET',null,function(err,d){
     if(err||!d) return;
     window._mktData = d;
     
