@@ -2136,7 +2136,7 @@ def ai_regime(vix: float = 19.5):
     elif rsi < 45:  bear_score += 1.0; reasons.append(f"RSI {rsi:.1f} below 45 (mild bearish)")
     elif rsi > 65:  bull_score += 2.0; reasons.append(f"RSI {rsi:.1f} overbought (bullish momentum)")
     elif rsi > 55:  bull_score += 1.0; reasons.append(f"RSI {rsi:.1f} above 55 (mild bullish)")
-    else:           side_score += 0.5
+    else:           side_score += 1.0  # RSI 45-55 = clearly neutral
 
     # ADX (most important indicator — weight 3.0)
     if adx > 35:        # Strongly trending
@@ -2151,23 +2151,41 @@ def ai_regime(vix: float = 19.5):
         side_score += 0.8
 
     # MACD Histogram (weight 1.5)
-    if   macd < -3:  bear_score += 2.0; reasons.append(f"MACD hist {macd:.2f} strongly bearish")
-    elif macd < -0.5:bear_score += 1.0; reasons.append(f"MACD hist {macd:.2f} bearish")
-    elif macd > 3:   bull_score += 2.0; reasons.append(f"MACD hist {macd:.2f} strongly bullish")
-    elif macd > 0.5: bull_score += 1.0; reasons.append(f"MACD hist {macd:.2f} bullish")
+    # NOTE: macd near 0 = NEUTRAL — do NOT label as bearish
+    if   macd < -3:   bear_score += 2.0; reasons.append(f"MACD hist {macd:.2f} — strongly bearish momentum")
+    elif macd < -0.5: bear_score += 1.0; reasons.append(f"MACD hist {macd:.2f} — bearish")
+    elif macd > 3:    bull_score += 2.0; reasons.append(f"MACD hist {macd:.2f} — strongly bullish momentum")
+    elif macd > 0.5:  bull_score += 1.0; reasons.append(f"MACD hist {macd:.2f} — bullish")
+    else:             side_score += 0.5  # MACD near 0 = neutral, adds to sideways
 
-    # BB Width — expanding = trending
+    # BB Width — expanding = trending; contracting = squeeze
+    _breakout_watch = False
     if bb_width > 0.055:
-        if macd < 0: bear_score += 0.8; reasons.append(f"BB expanding ({bb_width:.3f}) in downtrend")
-        else:         bull_score += 0.8; reasons.append(f"BB expanding ({bb_width:.3f}) in uptrend")
+        if abs(macd) < 0.5 and adx < 25:
+            # Expanding BB + neutral MACD + low ADX = BREAKOUT WATCH (direction unknown)
+            side_score += 1.0
+            _breakout_watch = True
+            reasons.append(f"BB expanding ({bb_width:.3f}) with no trend yet — breakout imminent")
+        elif macd < -0.5:
+            bear_score += 0.8; reasons.append(f"BB expanding ({bb_width:.3f}) in downtrend — confirms bearish")
+        else:
+            bull_score += 0.8; reasons.append(f"BB expanding ({bb_width:.3f}) in uptrend — confirms bullish")
     elif bb_width < 0.025:
-        side_score += 1.2; reasons.append(f"BB contracting ({bb_width:.3f}) — squeeze forming")
+        side_score += 1.5; reasons.append(f"BB squeeze ({bb_width:.3f}) — breakout building pressure")
+        _breakout_watch = True
 
     # Volume
     if vol_ratio > 1.8:
-        if macd < 0: bear_score += 0.8
-        else:         bull_score += 0.8
-        reasons.append(f"Volume {vol_ratio:.1f}x avg — conviction move")
+        if abs(macd) < 0.5 and adx < 25:
+            side_score += 0.5
+            _breakout_watch = True
+            reasons.append(f"Volume {vol_ratio:.1f}x avg — accumulation/distribution before breakout")
+        elif macd < -0.5:
+            bear_score += 0.8; reasons.append(f"Volume {vol_ratio:.1f}x on downward move — selling pressure")
+        else:
+            bull_score += 0.8; reasons.append(f"Volume {vol_ratio:.1f}x on upward move — buying conviction")
+    elif vol_ratio > 1.3:
+        side_score += 0.3  # Moderate volume, neutral
 
     # VIX
     if   vix_val > 25: vol_score += 3.5;  reasons.append(f"VIX {vix_val:.1f} extreme — panic/fear")
@@ -2213,18 +2231,41 @@ def ai_regime(vix: float = 19.5):
         desc     = f"Range-bound — ADX {adx:.1f} low, price oscillating between support/resistance"
         conf     = min(80, round(55 + side_score * 5))
         best     = ["Iron Condor","Short Straddle","Short Strangle","Theta Decay","Calendar Spread"]
+    elif _breakout_watch and abs(bull_score - bear_score) < 1.0:
+        # High volume + BB expanding + no clear trend = BREAKOUT_WATCH
+        regime = "BREAKOUT_WATCH"
+        desc   = f"Neutral zone — ADX {adx:.1f} weak, high volume ({vol_ratio:.1f}x) with BB expanding. Big move coming. Wait for direction."
+        conf   = min(75, round(55 + (vol_ratio - 1) * 5))
+        best   = ["Wait for breakout confirmation","Buy straddle if VIX permits","ATM CE+PE both",
+                  "Enter on breakout with tight SL","Avoid selling premium — direction unclear"]
+    elif side_score >= 1.5 or (abs(bull_score - bear_score) < 0.5 and adx < 25):
+        # Genuinely sideways — low ADX, neutral indicators
+        regime = "SIDEWAYS"
+        desc   = f"Sideways market — ADX {adx:.1f} weak, RSI {rsi:.1f} neutral, no clear direction. Sell time premium."
+        conf   = min(78, round(55 + side_score * 4))
+        best   = ["Iron Condor","Short Straddle","Short Strangle","Theta Decay","Calendar Spread"]
     else:
-        # Mixed signals — call it by dominant score
+        # Minor directional bias — trade with caution
         if bear_score > bull_score:
             regime = "MILD_BEARISH"
-            desc   = f"Slight bearish bias — mixed signals, trade carefully"
-            conf   = 58
-            best   = ["Small PE position","Iron Condor","Reduce size","Wait for clarity"]
-        else:
+            desc   = f"Mild bearish bias — RSI {rsi:.1f}, MACD {macd:.2f}. Small position only."
+            conf   = min(65, round(50 + (bear_score - bull_score) * 6))
+            best   = ["Small PE position","Bear Spread","Reduce lot size","Iron Condor"]
+        elif bull_score > bear_score:
             regime = "MILD_BULLISH"
-            desc   = f"Slight bullish bias — mixed signals, trade carefully"
-            conf   = 58
-            best   = ["Small CE position","Iron Condor","Reduce size","Wait for clarity"]
+            desc   = f"Mild bullish bias — RSI {rsi:.1f}, MACD {macd:.2f}. Small position only."
+            conf   = min(65, round(50 + (bull_score - bear_score) * 6))
+            best   = ["Small CE position","Bull Spread","Theta Decay","Reduce size"]
+        else:
+            # Truly neutral
+            regime = "NEUTRAL"
+            desc   = f"Perfectly neutral — all indicators balanced. Best to wait for signal."
+            conf   = 50
+            best   = ["Wait for clarity","Iron Condor","Very small position only","Review in 1 hour"]
+
+    # Add BREAKOUT_WATCH to strategy dict
+    if regime == "BREAKOUT_WATCH":
+        best = best  # Already set above
 
     # ── VIX classification (correct labels) ──────────────────────
     if   vix_val > 25: vix_label = "EXTREME"
@@ -2234,10 +2275,12 @@ def ai_regime(vix: float = 19.5):
     else:              vix_label = "LOW"
 
     # ── ADX interpretation ────────────────────────────────────────
-    if   adx > 35: adx_label = "STRONGLY TRENDING"
+    if   adx > 40: adx_label = "EXTREMELY STRONG"
+    elif adx > 35: adx_label = "STRONGLY TRENDING"
     elif adx > 25: adx_label = "TRENDING"
     elif adx > 18: adx_label = "WEAK TREND"
-    else:          adx_label = "SIDEWAYS"
+    elif adx > 13: adx_label = "SIDEWAYS"
+    else:          adx_label = "FLAT / NO TREND"
 
     return {
         "regime":       regime,
@@ -2251,7 +2294,7 @@ def ai_regime(vix: float = 19.5):
         "indicators": {
             "RSI":      {"value": round(rsi,1),       "signal": "BULLISH" if rsi>55 else "BEARISH" if rsi<45 else "NEUTRAL"},
             "ADX":      {"value": round(adx,1),       "signal": adx_label},
-            "MACD":     {"value": round(macd,2),      "signal": "BULLISH" if macd>0 else "BEARISH"},
+            "MACD":     {"value": round(macd,2),      "signal": "BULLISH" if macd>0.5 else "BEARISH" if macd<-0.5 else "NEUTRAL"},
             "BB_Width": {"value": round(bb_width,3),  "signal": "EXPANDING" if bb_width>0.05 else "CONTRACTING"},
             "Volume":   {"value": round(vol_ratio,2), "signal": "HIGH" if vol_ratio>1.5 else "NORMAL"},
             "VIX":      {"value": round(vix_val,2),   "signal": vix_label},
