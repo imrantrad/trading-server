@@ -1138,14 +1138,35 @@ input:focus,select:focus{border-color:var(--bl)}
           <input id="ao-mpin" type="password" placeholder="MPIN">
         </div>
         <div>
-          <div class="lbl">TOTP (6 digits)</div>
-          <input id="ao-totp" placeholder="From Auth App" maxlength="6" style="font-family:monospace;letter-spacing:3px">
+          <div class="lbl" style="display:flex;justify-content:space-between">
+            TOTP (6 digits)
+            <span onclick="showTOTPHelp()" style="color:var(--bl);cursor:pointer;font-size:8px">❓ TOTP kya hai?</span>
+          </div>
+          <input id="ao-totp" placeholder="123456" maxlength="6" style="font-family:monospace;letter-spacing:4px;font-size:15px;font-weight:700">
         </div>
       </div>
-      <div style="margin-bottom:10px">
-        <div class="lbl">SECRET KEY</div>
+      <div style="margin-bottom:8px">
+        <div class="lbl">SECRET KEY (Angel One SmartAPI)</div>
         <input id="ao-secret" placeholder="f63d9bc6-f49f-..." value="f63d9bc6-f49f-4225-b46f-df9af0489b2d" type="password">
-        <div style="font-size:8px;color:var(--mu);margin-top:3px">From Angel One SmartAPI dashboard</div>
+        <div style="font-size:8px;color:var(--mu);margin-top:2px">From SmartAPI dashboard → API Key section</div>
+      </div>
+      <div id="totp-help-box" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:var(--am);margin-bottom:6px">📱 TOTP kya hai aur kahan milega?</div>
+        <div style="font-size:9px;color:var(--mu);line-height:1.9">
+          <b style="color:var(--tx)">TOTP = Time-based One Time Password</b><br>
+          • SMS wala OTP nahi hai<br>
+          • Angel One account pe <b>2FA/TOTP</b> enable hona chahiye<br>
+          • <b>Google Authenticator</b> ya <b>Authy</b> app install karo<br>
+          • Angel One app → Settings → Security → TOTP Setup<br>
+          • QR code scan karo authenticator app se<br>
+          • Har 30 second pe naya 6-digit code milega<br><br>
+          <b style="color:var(--gr)">Woh code yahan daalo → CONNECT dabao</b>
+        </div>
+        <div style="margin-top:8px;font-size:9px">
+          <b style="color:var(--bl)">TOTP Secret key hai? Auto-generate karein:</b><br>
+          <input id="ao-totp-secret" placeholder="JBSWY3DPEHPK3PXP (base32 secret)" style="margin-top:4px;margin-bottom:6px;font-family:monospace;font-size:10px">
+          <button onclick="autoGenerateTOTP()" class="btn b" style="font-size:9px;padding:4px 10px">⚡ AUTO TOTP</button>
+        </div>
       </div>
       <button id="ao-connect-btn" onclick="connectAngelOne()" class="btn a full" style="padding:11px;font-size:12px;font-weight:700">
         🔴 CONNECT ANGEL ONE (LIVE)
@@ -1527,6 +1548,14 @@ function closePaperPos(posId){
   req('/paper/v3/close/'+posId,'POST',{user_id:UID||'demo',reason:'MANUAL'},function(err,r){
     if(!r||!r.success){ toast('Close failed','error'); return; }
     toast('Closed! P&L: '+(r.net_pnl>=0?'+':'')+'₹'+r.net_pnl.toFixed(0), r.net_pnl>=0?'success':'error');
+    // Record trade for AI learning
+    req('/ai/record_trade','POST',{
+      instrument: r.instrument||'NIFTY', strategy: r.strategy||'MANUAL',
+      regime: r.regime||'NORMAL', signal: 'BUY',
+      confidence: r.quality_score||70, entry: r.entry_price||0,
+      exit_price: r.exit_price||0, is_win: r.net_pnl>0,
+      pnl: r.net_pnl||0, vix: 15,
+    },function(){});
     loadPositions(); loadPaperPortfolio();
   });
 }
@@ -3619,6 +3648,78 @@ function startLivePrices(){
     if(window._angelLive && h>=9 && (h<15||(h===15&&m<=30))){
       setTimeout(startLivePrices, 5000);
     }
+  });
+}
+
+
+function showTOTPHelp(){
+  var h=$('totp-help-box');
+  if(h) h.style.display=h.style.display==='none'?'block':'none';
+}
+
+function autoGenerateTOTP(){
+  var secret=($('ao-totp-secret')||{}).value||'';
+  if(!secret){ toast('Enter your TOTP secret key','warn'); return; }
+  
+  // TOTP generation in browser (RFC 6238)
+  function base32decode(s){
+    var chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    s=s.toUpperCase().replace(/=+$/,'').replace(/\s/g,'');
+    var bits='',bytes=[];
+    for(var i=0;i<s.length;i++){
+      bits+=chars.indexOf(s[i]).toString(2).padStart(5,'0');
+    }
+    for(var i=0;i+8<=bits.length;i+=8){
+      bytes.push(parseInt(bits.slice(i,i+8),2));
+    }
+    return new Uint8Array(bytes);
+  }
+  
+  var keyBytes = base32decode(secret);
+  var counter  = Math.floor(Date.now()/1000/30);
+  var counterBytes = new Uint8Array(8);
+  for(var i=7;i>=0;i--){counterBytes[i]=counter&0xff;counter=counter>>8;}
+  
+  // Need crypto API
+  if(!window.crypto||!window.crypto.subtle){
+    toast('Auto TOTP requires HTTPS. Enter code manually.','warn'); return;
+  }
+  
+  window.crypto.subtle.importKey('raw',keyBytes,{name:'HMAC',hash:'SHA-1'},false,['sign'])
+    .then(function(key){
+      return window.crypto.subtle.sign('HMAC',key,counterBytes);
+    })
+    .then(function(sig){
+      var bytes=new Uint8Array(sig);
+      var offset=bytes[bytes.length-1]&0xf;
+      var code=((bytes[offset]&0x7f)<<24|(bytes[offset+1]&0xff)<<16|(bytes[offset+2]&0xff)<<8|(bytes[offset+3]&0xff))%1000000;
+      var otp=String(code).padStart(6,'0');
+      var el=$('ao-totp'); if(el) el.value=otp;
+      toast('TOTP generated: '+otp+' (valid 30s)','success');
+      // Auto-refresh in 30 seconds
+      setTimeout(function(){ toast('TOTP expired — click AUTO TOTP again','warn'); },29000);
+    })
+    .catch(function(e){ toast('TOTP failed: '+e,'error'); });
+}
+
+// Update scanSignals to use new /ai/scan endpoint
+var _origScanSignals = window.scanSignals;
+function scanSignals(){
+  var list=$('ai-signal-list');
+  if(list) list.innerHTML='<div style="color:var(--am);padding:12px;text-align:center;font-size:10px">🤖 AI scanning 10 instruments...</div>';
+  
+  req('/ai/scan','GET',null,function(err,d){
+    if(err||!d||d.error){
+      // Fallback to old method
+      if(typeof _origScanSignals==='function') _origScanSignals();
+      return;
+    }
+    var sigs = d.signals||[];
+    if(!sigs.length){
+      if(list) list.innerHTML='<div style="color:var(--mu);padding:12px;text-align:center;font-size:10px">No strong signals. Market may be sideways.</div>';
+      return;
+    }
+    renderSignals(list, sigs);
   });
 }
 
