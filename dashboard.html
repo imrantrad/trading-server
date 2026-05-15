@@ -3584,10 +3584,8 @@ function restoreBrokerSession(){
           if(statusEl){statusEl.textContent='⚡ Re-enter TOTP';statusEl.style.color='var(--am)';}
           if(resultEl){
             resultEl.style.display='block';
-            resultEl.innerHTML='<b style="color:var(--am)">'+saved.broker+'</b> session expired after restart<br>'
-              +'<span style="font-size:9px;color:var(--mu)">Re-enter TOTP to restore LIVE data</span><br>'
-              +'<button onclick="reenterTOTP()" '
-              +'style="font-size:9px;margin-top:4px;padding:3px 10px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--am);border-radius:6px;cursor:pointer">🔑 Re-enter TOTP</button>';'
+            var rbtn='<button onclick="reenterTOTP()" style="font-size:9px;margin-top:4px;padding:3px 10px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--am);border-radius:6px;cursor:pointer">🔑 Re-enter TOTP</button>';
+            resultEl.innerHTML='<b style="color:var(--am)">'+(saved.broker||'ANGEL')+'</b> session expired after restart<br><span style="font-size:9px;color:var(--mu)">Re-enter TOTP to restore LIVE data</span><br>'+rbtn;
           }
         } else if(saved){
           if(statusEl){statusEl.textContent='📄 '+saved.broker+' (PAPER)';statusEl.style.color='var(--bl)';}
