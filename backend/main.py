@@ -2090,21 +2090,82 @@ def ai_signal(instrument: str = "NIFTY"):
         signal, confidence = "WAIT", round(rng.uniform(30, 55), 1)
         regime = "SIDEWAYS" if adx < 20 else "HIGH_VOLATILITY"
     
+    # ── Calculate ATM option prices and risk levels ──
+    lot_steps = {"NIFTY":50,"BANKNIFTY":100,"FINNIFTY":50,"MIDCPNIFTY":25,"SENSEX":100}
+    step       = lot_steps.get(instrument, 50)
+    atm_strike = int(round(price / step) * step)
+    
+    # Black-Scholes ATM premium approximation
+    T = 7/365  # Weekly expiry
+    sigma = vix/100
+    atm_premium = round(price * sigma * (T**0.5) * 0.4, 2)
+    
+    # Determine option type and calculate levels
+    if signal == "BUY":
+        option_type  = "CE"
+        entry_price  = round(atm_premium * 1.01, 2)   # Slight slippage
+        stop_loss    = round(entry_price * 0.60, 2)    # 40% of premium = SL
+        target_1     = round(entry_price * 1.50, 2)    # 50% gain
+        target_2     = round(entry_price * 2.00, 2)    # 100% gain
+        sl_pts       = round(price * 0.004, 0)         # ~0.4% of index
+        tgt_pts      = round(price * 0.008, 0)         # ~0.8% of index
+        rationale    = f"Bullish: RSI {round(rsi,1)}, ADX {round(adx,1)}, MACD {'↑' if macd_hist>0 else '↓'}, Vol {round(vol_ratio,1)}x"
+    elif signal == "SELL":
+        option_type  = "PE"
+        entry_price  = round(atm_premium * 1.01, 2)
+        stop_loss    = round(entry_price * 0.60, 2)
+        target_1     = round(entry_price * 1.50, 2)
+        target_2     = round(entry_price * 2.00, 2)
+        sl_pts       = round(price * 0.004, 0)
+        tgt_pts      = round(price * 0.008, 0)
+        rationale    = f"Bearish: RSI {round(rsi,1)}, ADX {round(adx,1)}, MACD {'↓' if macd_hist<0 else '↑'}, Vol {round(vol_ratio,1)}x"
+    else:
+        option_type  = "CE"
+        entry_price  = atm_premium
+        stop_loss    = round(entry_price * 0.65, 2)
+        target_1     = round(entry_price * 1.40, 2)
+        target_2     = round(entry_price * 1.80, 2)
+        sl_pts       = round(price * 0.003, 0)
+        tgt_pts      = round(price * 0.006, 0)
+        rationale    = f"Sideways: ADX {round(adx,1)} low — wait for trend"
+    
+    lot_sizes = {"NIFTY":65,"BANKNIFTY":30,"FINNIFTY":60,"MIDCPNIFTY":120,"SENSEX":10}
+    lot_size  = lot_sizes.get(instrument, 65)
+    
     return {
-        "instrument": instrument,
-        "signal": signal,
-        "action": signal,
-        "confidence": confidence,
+        "instrument":    instrument,
+        "signal":        signal,
+        "action":        signal,
+        "option_type":   option_type,
+        "confidence":    confidence,
         "confidence_score": confidence,
-        "price": round(price, 2),
-        "rsi": round(rsi, 1),
-        "adx": round(adx, 1),
-        "macd_hist": round(macd_hist, 2),
-        "vol_ratio": round(vol_ratio, 2),
-        "regime": regime,
-        "vix": round(vix, 2),
-        "timestamp": now.strftime("%H:%M:%S IST"),
-        "strategy": "AI_ENGINE_V5"
+        
+        # ── TRADE LEVELS ──────────────────────────
+        "spot_price":    round(price, 2),
+        "atm_strike":    atm_strike,
+        "entry_price":   entry_price,
+        "stop_loss":     stop_loss,
+        "target_1":      target_1,
+        "target_2":      target_2,
+        "sl_pts":        sl_pts,
+        "target_pts":    tgt_pts,
+        "risk_reward":   f"1:{round(tgt_pts/max(sl_pts,1),1)}",
+        "lot_size":      lot_size,
+        "lot_value":     round(entry_price * lot_size, 2),
+        "margin_est":    round(price * lot_size * 0.12, 0),
+        
+        # ── INDICATORS ────────────────────────────
+        "rsi":           round(rsi, 1),
+        "adx":           round(adx, 1),
+        "macd_hist":     round(macd_hist, 2),
+        "vol_ratio":     round(vol_ratio, 2),
+        "regime":        regime,
+        "vix":           round(vix, 2),
+        "rationale":     rationale,
+        
+        "timestamp":     now.strftime("%H:%M:%S IST"),
+        "strategy":      "AI_ENGINE_V5",
+        "expiry":        "CURRENT_WEEKLY",
     }
 
 @app.get("/ai/regime")

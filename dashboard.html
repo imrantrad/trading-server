@@ -2663,7 +2663,10 @@ function adminLoadCodes(){
 
 document.addEventListener('click',function(e){
   if(e.target&&e.target.classList.contains('sig-use')){
-    var b=e.target; applySignalTrade(b.dataset.i,b.dataset.d,b.dataset.o); return;
+    var b=e.target;
+    applySignalTrade(b.dataset.i, b.dataset.d, b.dataset.o,
+                     b.dataset.e, b.dataset.sl, b.dataset.tgt);
+    return;
   }
   if(e.target&&e.target.classList.contains('sig-paper')){
     var b=e.target; applySignalPaper(b.dataset.i,b.dataset.o); return;
@@ -2964,10 +2967,15 @@ function renderScanList(list, signals){
   toast(signals.length+' signal(s) found!','success');
 }
 
-function applySignalTrade(inst, action, otype){
+function applySignalTrade(inst, action, otype, entry, sl, tgt){
   var sv2=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
-  sv2('t-inst', inst); setOptionType(otype);
-  show('trade'); toast('Signal loaded → Trade panel','success');
+  sv2('t-inst',  inst);
+  setOptionType(otype);
+  if(entry) sv2('t-price', entry);
+  if(sl)    sv2('t-sl',    sl);
+  if(tgt)   sv2('t-tgt',   tgt);
+  show('trade');
+  toast('Signal loaded: '+action+' '+inst+' '+otype+' Entry:₹'+entry,'success');
 }
 function applySignalPaper(inst, otype){
   var sv2=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
@@ -3081,17 +3089,74 @@ function renderSignals(list, signals){
     return;
   }
   list.innerHTML = signals.map(function(s){
-    var isBuy = s.direction==='BUY'||s.signal==='BUY';
-    var conf  = s.confidence||70;
-    var clr   = isBuy?'var(--gr)':'var(--rd)';
-    return '<div style="background:var(--bg4);padding:12px;border-radius:8px;margin-bottom:6px;border-left:3px solid '+clr+'">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-      +'<div><span style="font-weight:700;font-size:12px;color:'+clr+'">'+( isBuy?'▲ BUY':'▼ SELL')+' '+s.instrument+'</span>'
-      +(s.option_type?' <span class="tag '+(isBuy?'g':'r')+'">'+s.option_type+'</span>':'')
+    var isBuy  = s.direction==='BUY'||s.signal==='BUY';
+    var conf   = s.confidence||70;
+    var clr    = isBuy?'var(--gr)':'var(--rd)';
+    var otype  = s.option_type||(isBuy?'CE':'PE');
+    var entry  = s.entry_price||0;
+    var sl     = s.stop_loss||0;
+    var tgt1   = s.target_1||0;
+    var tgt2   = s.target_2||0;
+    var rr     = s.risk_reward||'1:2';
+    var ratio  = s.risk_reward||'';
+    var spotP  = s.spot_price||s.price||0;
+    var atm    = s.atm_strike||0;
+    var slPts  = s.sl_pts||0;
+    var tgtPts = s.target_pts||0;
+    var rat    = s.rationale||s.reason||'Technical setup';
+    var lotVal = s.lot_value||0;
+    
+    return '<div style="background:var(--bg4);padding:12px;border-radius:10px;margin-bottom:8px;border-left:4px solid '+clr+';">'
+      
+      // ── Header Row ──
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+      +'<div>'
+      +'<span style="font-weight:800;font-size:13px;color:'+clr+'">'+( isBuy?'▲ BUY':'▼ SELL')+' '+s.instrument+'</span>'
+      +' <span class="tag '+(isBuy?'g':'r')+'" style="font-size:9px">'+otype+'</span>'
+      +(atm?' <span style="font-size:9px;color:var(--am)">'+atm+'</span>':'')
       +'</div>'
-      +'<span style="font-size:11px;font-weight:700;color:'+(conf>=75?'var(--gr)':conf>=60?'var(--am)':'var(--mu)')+'">'+conf+'%</span>'
+      +'<div style="text-align:right">'
+      +'<div style="font-size:14px;font-weight:800;color:'+(conf>=75?'var(--gr)':conf>=60?'var(--am)':'var(--mu)')+'">'+conf+'%</div>'
+      +'<div style="font-size:7px;color:var(--mu)">CONFIDENCE</div>'
+      +'</div></div>'
+      
+      // ── Entry/SL/Target boxes ──
+      +(entry?'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-bottom:8px">'
+        +'<div style="background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);border-radius:6px;padding:6px;text-align:center">'
+        +'<div style="font-size:9px;color:var(--mu)">ENTRY</div>'
+        +'<div style="font-size:12px;font-weight:700;color:var(--bl)">₹'+entry+'</div>'
+        +'</div>'
+        +'<div style="background:rgba(255,51,85,.08);border:1px solid rgba(255,51,85,.2);border-radius:6px;padding:6px;text-align:center">'
+        +'<div style="font-size:9px;color:var(--mu)">STOP LOSS</div>'
+        +'<div style="font-size:12px;font-weight:700;color:var(--rd)">₹'+sl+'</div>'
+        +'</div>'
+        +'<div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:6px;padding:6px;text-align:center">'
+        +'<div style="font-size:9px;color:var(--mu)">TARGET 1</div>'
+        +'<div style="font-size:12px;font-weight:700;color:var(--gr)">₹'+tgt1+'</div>'
+        +'</div>'
+        +'<div style="background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:6px;padding:6px;text-align:center">'
+        +'<div style="font-size:9px;color:var(--mu)">TARGET 2</div>'
+        +'<div style="font-size:12px;font-weight:700;color:var(--gr)">₹'+tgt2+'</div>'
+        +'</div>'
+        +'</div>':'')
+      
+      // ── Index levels row ──
+      +(slPts?'<div style="font-size:9px;color:var(--mu);margin-bottom:6px;display:flex;gap:12px">'
+        +'<span>📍 Spot <b style="color:var(--tx)">₹'+Math.round(spotP).toLocaleString()+'</b></span>'
+        +'<span>❌ SL <b style="color:var(--rd)">-'+slPts+' pts</b></span>'
+        +'<span>✅ TGT <b style="color:var(--gr)">+'+tgtPts+' pts</b></span>'
+        +(ratio?' <span>⚖️ <b style="color:var(--am)">'+ratio+'</b></span>':'')
+        +'</div>':'')
+      
+      // ── Rationale ──
+      +'<div style="font-size:9px;color:var(--mu);margin-bottom:8px;padding:5px;background:rgba(255,255,255,.03);border-radius:4px">💡 '+rat+'</div>'
+      
+      // ── Action buttons ──
+      +'<div style="display:flex;gap:6px">'
+      +'<button class="sig-use" data-i="'+s.instrument+'" data-d="'+(s.direction||s.signal||'BUY')+'" data-o="'+otype+'" data-e="'+entry+'" data-sl="'+sl+'" data-tgt="'+tgt1+'" style="flex:1;font-size:9px;padding:5px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--gr);border-radius:6px;cursor:pointer;font-weight:700">⚡ TRADE</button>'
+      +'<button class="sig-paper" data-i="'+s.instrument+'" data-o="'+otype+'" data-e="'+entry+'" style="flex:1;font-size:9px;padding:5px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:6px;cursor:pointer">📄 PAPER</button>'
+      +(lotVal?'<div style="text-align:right;font-size:8px;color:var(--mu);padding:5px">Lot ₹'+(lotVal/1000).toFixed(1)+'k</div>':'')
       +'</div>'
-      +'<div style="font-size:9px;color:var(--mu)">'+(s.reason||'Technical setup detected')+'</div>'
       +'</div>';
   }).join('');
   toast(signals.length+' signal(s) found!','success');
