@@ -1037,12 +1037,16 @@ input:focus,select:focus{border-color:var(--bl)}
     <div class="chdr">MY STATS</div>
     <div id="ref-my-stats" class="g2"></div>
   </div>
-  <div class="card">
-    <div class="chdr">APPLY A CODE</div>
-    <div class="lbl" style="margin-bottom:4px">REFERRAL CODE</div>
-    <input id="apply-ref-code" placeholder="Enter referral code..." style="margin-bottom:8px">
-    <button onclick="applyRefCode()" class="btn g full">✅ APPLY CODE</button>
-    <div id="apply-ref-msg" style="display:none;font-size:10px;margin-top:6px;text-align:center"></div>
+  <div class="card" style="border-color:rgba(79,142,247,.3)">
+    <div class="chdr" style="color:var(--bl)">🎫 APPLY REFERRAL CODE</div>
+    <div style="font-size:10px;color:var(--mu);margin-bottom:10px;line-height:1.6">
+      Aapke paas koi referral code hai?<br>
+      Neeche enter karein aur ₹100 discount paayein!
+    </div>
+    <div class="lbl" style="margin-bottom:4px">ENTER CODE HERE 👇</div>
+    <input id="apply-ref-code" placeholder="e.g. TRDABCD1234" style="margin-bottom:8px;font-family:monospace;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase">
+    <button onclick="applyRefCode()" class="btn b full" style="padding:11px;font-size:12px;font-weight:700">✅ APPLY CODE</button>
+    <div id="apply-ref-msg" style="display:none;font-size:11px;margin-top:8px;padding:8px;background:rgba(0,255,136,.06);border-radius:8px;text-align:center"></div>
   </div>
 </div>
 
@@ -2703,6 +2707,7 @@ function applyRefCode(){
   if(msg){ msg.style.display='none'; }
   
   // First validate
+  code = code.toUpperCase();
   req('/referral/validate/'+code,'GET',null,function(err,dv){
     if(err||!dv||!dv.valid){
       if(msg){ msg.style.display='block'; msg.style.color='var(--rd)';
@@ -2817,12 +2822,7 @@ function connectBroker(){
 
 // Restore broker from localStorage on load
 window.addEventListener('load',function(){
-  try{
-    var saved=JSON.parse(localStorage.getItem('trd_broker_'+(window.UID||'demo'))||'null');
-    if(saved&&saved.time&&Date.now()-saved.time<86400000){
-      var el=$('broker-status'); if(el){el.textContent='✅ '+saved.broker+' ('+saved.mode+')';el.style.color='var(--gr)';}
-    }
-  }catch(e){}
+  // Broker restore is called AFTER login sets UID - see restoreBrokerSession()
 });
 
 // ── RISK ──────────────────────────────────────────
@@ -3360,6 +3360,32 @@ function fixReferralDB(){
       toast('Fix failed: '+(r&&r.error||err),'error');
     }
   });
+}
+
+
+function restoreBrokerSession(){
+  try{
+    var uid = window.UID||'demo';
+    // Try user-specific key first
+    var saved = JSON.parse(localStorage.getItem('trd_broker_'+uid)||'null');
+    // Fallback to old generic key
+    if(!saved) saved = JSON.parse(localStorage.getItem('trd_broker')||'null');
+    
+    if(saved && saved.time && Date.now()-saved.time < 86400000){
+      var statusEl  = $('broker-status');
+      var resultEl  = $('broker-result');
+      var brokerSel = $('broker-select');
+      var keyEl     = $('broker-key');
+      
+      if(statusEl){statusEl.textContent='✅ '+saved.broker+' Connected ('+saved.mode+')';statusEl.style.color='var(--gr)';}
+      if(resultEl){
+        resultEl.style.display='block';
+        resultEl.innerHTML='<b style="color:var(--gr)">'+saved.broker+'</b> connected in <b style="color:var(--bl)">'+saved.mode+' MODE</b><br><span style="font-size:9px;color:var(--mu)">Restored from last session</span>';
+      }
+      if(brokerSel) brokerSel.value=saved.broker||'ZERODHA';
+      if(keyEl) keyEl.value='**** **** '+saved.key;  // Show masked key
+    }
+  }catch(e){}
 }
 
 // ── API BASE URL ──────────────────────────────────

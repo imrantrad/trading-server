@@ -3869,6 +3869,7 @@ def _ref_conn():
     c.execute("""CREATE TABLE IF NOT EXISTS referral_uses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT NOT NULL,
+        code_owner_id TEXT DEFAULT '',
         new_user_id TEXT,
         new_user_email TEXT,
         bonus_paid REAL DEFAULT 0,
@@ -3905,7 +3906,11 @@ def _ref_conn():
         pass
     
     # Migrate uses table columns
-    for col2, defn2 in [("bonus_paid","REAL DEFAULT 0"),("discount_given","REAL DEFAULT 0")]:
+    for col2, defn2 in [
+        ("bonus_paid",    "REAL DEFAULT 0"),
+        ("discount_given","REAL DEFAULT 0"),
+        ("code_owner_id", "TEXT DEFAULT ''"),
+    ]:
         try:
             c.execute(f"ALTER TABLE referral_uses ADD COLUMN {col2} {defn2}")
             c.commit()
@@ -4081,11 +4086,13 @@ def apply_referral(payload: dict):
         discount_amt = row.get("discount_amount") or 0
 
         # Record the use
+        # Add code_owner_id for compatibility with existing DB schema
+        owner_id_val = row.get("owner_user_id","")
         c.execute(
             """INSERT INTO referral_uses
-               (code,new_user_id,new_user_email,bonus_paid,discount_given)
-               VALUES (?,?,?,?,?)""",
-            (code, new_user_id, new_user_email, bonus_amt, discount_amt)
+               (code,new_user_id,new_user_email,bonus_paid,discount_given,code_owner_id)
+               VALUES (?,?,?,?,?,?)""",
+            (code, new_user_id, new_user_email, bonus_amt, discount_amt, owner_id_val)
         )
         # Update code stats
         c.execute(
