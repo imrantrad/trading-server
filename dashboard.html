@@ -2625,38 +2625,116 @@ function loadAdminReferral(){adminLoadCodes();}
 
 // ── REFERRAL (User) ───────────────────────────────
 function loadMyReferral(){
-  req('/referral/my/'+(UID||'demo'),'GET',null,function(err,d){
-    var code=(d&&d.code)||'—';
-    st('my-ref-code',code);
-    var stats=$('ref-my-stats'); if(!stats) return;
-    stats.innerHTML='<div class="sbox"><div class="sval" style="color:var(--gr)">'+(d&&d.uses_count||0)+'</div><div class="slbl">USES</div></div>'
-      +'<div class="sbox"><div class="sval" style="color:var(--am)">₹'+(d&&d.total_bonus_paid||0)+'</div><div class="slbl">BONUS EARNED</div></div>';
+  var uid = window.UID||'demo';
+  req('/referral/my/'+uid,'GET',null,function(err,d){
+    if(err||!d){ 
+      st('my-ref-code','—');
+      return;
+    }
+
+    var code = d.code||'—';
+    var codeEl = $('my-ref-code');
+    if(codeEl){
+      codeEl.textContent = code;
+      if(code!=='—'){
+        codeEl.style.color='var(--gr)';
+        codeEl.style.letterSpacing='4px';
+      }
+    }
+
+    // Stats
+    var stats=$('ref-my-stats'); 
+    if(stats){
+      var uses    = d.uses_count||0;
+      var bonus   = d.total_bonus_paid||0;
+      var disc    = d.total_discount_given||0;
+      var perUse  = 'Bonus/use: ₹'+(d.bonus_amount||200);
+      stats.innerHTML = 
+        '<div class="sbox"><div class="sval" style="color:var(--bl)">'+(uses)+'</div><div class="slbl">USES</div></div>'
+        +'<div class="sbox"><div class="sval" style="color:var(--am)">₹'+bonus+'</div><div class="slbl">BONUS EARNED</div></div>'
+        +'<div class="sbox"><div class="sval" style="font-size:12px;color:var(--p0)">₹'+(d.bonus_amount||200)+'</div><div class="slbl">PER USE</div></div>'
+        +'<div class="sbox"><div class="sval" style="font-size:12px;color:var(--gr)">₹'+(d.discount_amount||100)+'</div><div class="slbl">REFERREE DISCOUNT</div></div>';
+    }
+
+    // Show share section
+    if(code!=='—'){
+      var shareMsg = 'Join TRD v12.3 — India\'s institutional trading platform!\nUse my code: '+code+' to get ₹'+(d.discount_amount||100)+' discount on signup!';
+      window._myRefCode = code;
+      window._myRefShare = shareMsg;
+    }
   });
 }
 
 function copyMyCode(){
-  var code=$('my-ref-code').textContent;
-  if(!code||code==='—'){toast('No code assigned. Contact admin.','warn');return;}
-  if(navigator.clipboard) navigator.clipboard.writeText(code).then(function(){toast('Copied: '+code,'success');});
+  var code = window._myRefCode || ($('my-ref-code')||{}).textContent || '';
+  if(!code||code==='—'){toast('Loading your code...','info'); loadMyReferral(); return;}
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(code).then(function(){
+      toast('Copied: '+code,'success');
+      // Flash animation
+      var el=$('my-ref-code');
+      if(el){ el.style.background='rgba(0,255,136,.15)'; setTimeout(function(){el.style.background='';},600); }
+    });
+  } else {
+    var ta=document.createElement('textarea');
+    ta.value=code; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast('Copied: '+code,'success');
+  }
 }
 
 function shareMyCode(){
-  var code=$('my-ref-code').textContent;
-  if(!code||code==='—') return;
-  var text='Join TRD v12.3!\nUse my referral code: '+code;
-  if(navigator.share) navigator.share({title:'TRD Referral',text:text});
-  else copyMyCode();
+  var code = window._myRefCode || ($('my-ref-code')||{}).textContent || '';
+  if(!code||code==='—'){ loadMyReferral(); return; }
+  var text = window._myRefShare || ('Join TRD v12.3!\nUse my referral code: '+code+' to get discount on signup!');
+  if(navigator.share){
+    navigator.share({title:'TRD Referral Code', text:text, url:'https://trd.ai'})
+      .catch(function(){ copyMyCode(); });
+  } else {
+    copyMyCode();
+  }
 }
 
 function applyRefCode(){
-  var code=gv('apply-ref-code').trim();
-  var msg=$('apply-ref-msg');
-  if(!code){toast('Enter referral code','warn');return;}
-  req('/referral/validate/'+code,'GET',null,function(err,d){
-    if(err||!d||!d.valid){if(msg){msg.style.display='block';msg.style.color='var(--rd)';msg.textContent='Invalid code';}return;}
-    req('/referral/apply','POST',{code:code,new_user_id:UID},function(e2,r){
-      if(msg){msg.style.display='block';msg.style.color='var(--gr)';msg.textContent='Applied! Discount: ₹'+(r&&r.discount_applied||0);}
-      toast('Referral applied!','success');
+  var code = (gv('apply-ref-code')||'').trim().toUpperCase();
+  var msg  = $('apply-ref-msg');
+  if(!code){ toast('Enter referral code','warn'); return; }
+
+  if(msg){ msg.style.display='none'; }
+  
+  // First validate
+  req('/referral/validate/'+code,'GET',null,function(err,dv){
+    if(err||!dv||!dv.valid){
+      if(msg){ msg.style.display='block'; msg.style.color='var(--rd)';
+        msg.innerHTML='❌ '+(dv&&dv.message||'Invalid or expired code'); }
+      return;
+    }
+
+    // Show preview before applying
+    if(msg){ 
+      msg.style.display='block'; msg.style.color='var(--am)';
+      msg.innerHTML='✅ Valid code! Discount: <b>₹'+dv.discount_amount+'</b> — Applying...';
+    }
+
+    // Apply
+    req('/referral/apply','POST',{
+      code:code, new_user_id:window.UID||'demo',
+      new_user_email: window.UEMAIL||''
+    },function(e2,r){
+      if(e2||!r||r.error){
+        if(msg){ msg.style.display='block'; msg.style.color='var(--rd)'; msg.textContent='❌ '+(r&&r.error||'Apply failed'); }
+        return;
+      }
+      var disc = r.discount_applied||dv.discount_amount||0;
+      var bon  = r.bonus_credited||0;
+      if(msg){
+        msg.style.display='block'; msg.style.color='var(--gr)';
+        msg.innerHTML = '🎉 Applied!<br>'
+          +'<b style="font-size:14px">₹'+disc+'</b> discount credited to your account!<br>'
+          +'<span style="font-size:9px;color:var(--mu)">Owner earns ₹'+bon+' bonus</span>';
+      }
+      toast('🎉 Code applied! ₹'+disc+' discount!','success');
+      sv('apply-ref-code','');  // Clear input
     });
   });
 }

@@ -4055,44 +4055,122 @@ def validate_referral(code: str):
 # User: Apply referral code at signup
 @app.post("/referral/apply")
 def apply_referral(payload: dict):
-    code = payload.get("code","")
-    new_user_id = payload.get("new_user_id","")
+    code         = payload.get("code","").strip().upper()
+    new_user_id  = payload.get("new_user_id","")
     new_user_email = payload.get("new_user_email","")
+    if not code: return {"error": "Code required"}
+
     from datetime import datetime
-    with _ref_conn() as c:
-        row = c.execute("SELECT * FROM referral_codes WHERE code=? AND is_active=1", (code,)).fetchone()
+    try:
+        c = _ref_conn()
+        row = c.execute(
+            "SELECT * FROM referral_codes WHERE code=? AND is_active=1", (code,)
+        ).fetchone()
+
         if not row:
-            return {"error": "Invalid code"}
+            c.close()
+            return {"error": "Invalid or inactive code"}
+
         row = dict(row)
-        if row["expires_at"] and row["expires_at"] < datetime.now().isoformat():
+        if row.get("expires_at") and row["expires_at"] < datetime.now().isoformat():
+            c.close()
             return {"error": "Code expired"}
-        # Record use
-        c.execute("""INSERT INTO referral_uses (code,new_user_id,new_user_email,bonus_paid,discount_given)
-            VALUES (?,?,?,?,?)""", (code, new_user_id, new_user_email, row["bonus_amount"], row["discount_amount"]))
-        # Update stats
-        c.execute("""UPDATE referral_codes SET 
-            uses_count=uses_count+1,
-            total_bonus_paid=total_bonus_paid+?,
-            total_discount_given=total_discount_given+?
-            WHERE code=?""", (row["bonus_amount"], row["discount_amount"], code))
-    return {"success": True, "discount_applied": row["discount_amount"],
-            "bonus_credited": row["bonus_amount"], "owner_id": row["owner_user_id"]}
+
+        # Ensure amounts are non-null
+        bonus_amt    = row.get("bonus_amount")    or 0
+        discount_amt = row.get("discount_amount") or 0
+
+        # Record the use
+        c.execute(
+            """INSERT INTO referral_uses
+               (code,new_user_id,new_user_email,bonus_paid,discount_given)
+               VALUES (?,?,?,?,?)""",
+            (code, new_user_id, new_user_email, bonus_amt, discount_amt)
+        )
+        # Update code stats
+        c.execute(
+            """UPDATE referral_codes SET
+               uses_count           = uses_count + 1,
+               total_bonus_paid     = COALESCE(total_bonus_paid,0) + ?,
+               total_discount_given = COALESCE(total_discount_given,0) + ?
+               WHERE code = ?""",
+            (bonus_amt, discount_amt, code)
+        )
+        c.commit()
+        c.close()
+
+        # Credit bonus to owner in user DB
+        if bonus_amt > 0 and row.get("owner_user_id") and USER_SYSTEM:
+            try:
+                with user_db.conn() as uc:
+                    uc.execute(
+                        "UPDATE users SET capital = capital + ? WHERE id=?",
+                        (bonus_amt, row["owner_user_id"])
+                    )
+            except Exception:
+                pass
+
+        return {
+            "success":          True,
+            "code":             code,
+            "discount_applied": discount_amt,
+            "bonus_credited":   bonus_amt,
+            "owner_id":         row.get("owner_user_id",""),
+            "message":          f"Applied! You get ₹{discount_amt} discount. Owner earns ₹{bonus_amt} bonus."
+        }
+    except Exception as e:
+        return {"error": str(e), "success": False}
 
 
 @app.get("/referral/my/{user_id}")
 def get_my_referral(user_id: str):
-    """Get user's own referral code and stats"""
+    """Get user referral code — auto-creates if user has none"""
     try:
-        with _ref_conn() as c:
-            row = c.execute(
-                "SELECT * FROM referral_codes WHERE owner_user_id=? OR owner_email=? ORDER BY created_at DESC LIMIT 1",
-                (user_id, user_id)
-            ).fetchone()
+        c = _ref_conn()
+        row = c.execute(
+            "SELECT * FROM referral_codes WHERE owner_user_id=? OR owner_email=? ORDER BY created_at DESC LIMIT 1",
+            (user_id, user_id)
+        ).fetchone()
+
         if not row:
-            return {"error": "No referral code assigned", "code": None}
-        return dict(row)
+            # Auto-generate a referral code for this user
+            new_code  = _gen_code()
+            user_email = ""
+            if USER_SYSTEM:
+                try:
+                    with user_db.conn() as uc:
+                        urow = uc.execute("SELECT email FROM users WHERE id=?", (user_id,)).fetchone()
+                        if urow: user_email = urow["email"] or ""
+                except Exception:
+                    pass
+
+            from datetime import datetime, timedelta
+            expires = (datetime.now() + timedelta(days=365)).isoformat()
+            c.execute("""INSERT INTO referral_codes
+                (code,owner_user_id,owner_email,bonus_amount,discount_amount,
+                 validity_months,expires_at,is_active,uses_count,total_bonus_paid,total_discount_given)
+                VALUES (?,?,?,?,?,?,?,1,0,0,0)""",
+                (new_code, user_id, user_email, 200, 100, 12, expires))
+            c.commit()
+            row = c.execute(
+                "SELECT * FROM referral_codes WHERE code=?", (new_code,)
+            ).fetchone()
+
+        c.close()
+        d = dict(row)
+        return {
+            "code":               d.get("code",""),
+            "uses_count":         d.get("uses_count", 0) or 0,
+            "total_bonus_paid":   d.get("total_bonus_paid", 0) or 0,
+            "total_discount_given": d.get("total_discount_given", 0) or 0,
+            "bonus_amount":       d.get("bonus_amount", 200),
+            "discount_amount":    d.get("discount_amount", 100),
+            "expires_at":         d.get("expires_at",""),
+            "is_active":          d.get("is_active", 1),
+            "owner_user_id":      d.get("owner_user_id", user_id),
+        }
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "code": None}
 
 
 # ══════════════════════════════════════════════════════════
