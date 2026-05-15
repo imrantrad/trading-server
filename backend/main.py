@@ -149,7 +149,7 @@ INSTRUMENTS={"nifty 50":"NIFTY","nifty50":"NIFTY","nifty":"NIFTY","nf":"NIFTY","
     "reliance":"RELIANCE","tcs":"TCS","hdfc":"HDFCBANK","infosys":"INFY","icici":"ICICIBANK",
     "usdinr":"USDINR","crude":"CRUDEOIL","gold":"GOLD",
 }
-LOT_SIZES={"NIFTY":65,"BANKNIFTY":30,"FINNIFTY":60,"MIDCPNIFTY":120,"SENSEX":10,"NIFTYNXT50":25}
+LOT_SIZES={"NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,"MIDCPNIFTY":75,"SENSEX":10,"NIFTYNXT50":25}
 BUY_WORDS=["buy","long","bullish","call buy","entry","enter","accumulate","kharido","le lo","lelo","lo","खरीदो","badhega","upar"]
 SELL_WORDS=["sell","short","bearish","put buy","exit","close","square off","becho","bech","niklo","nikal","बेचो","girega","neeche"]
 OPTION_TYPES={"call":"CE","ce":"CE","कॉल":"CE","put":"PE","pe":"PE","पुट":"PE"}
@@ -1003,7 +1003,7 @@ def expiry_cal(): return reporter.expiry_calendar()
 @app.get("/margin/calculate")
 def calc_margin(instrument: str="NIFTY", quantity: int=1,
                 position_type: str="OPTIONS", price: float=100):
-    lot_size = {"NIFTY":65,"BANKNIFTY":30,"FINNIFTY":60,"MIDCPNIFTY":120}.get(instrument,50)
+    lot_size = {"NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,"MIDCPNIFTY":120}.get(instrument,50)
     lots_val = quantity*lot_size
     span = {"NIFTY":1.0,"BANKNIFTY":1.2,"FINNIFTY":0.8}.get(instrument,1.0)
     if position_type=="OPTIONS":
@@ -4703,18 +4703,39 @@ def paper_regime():
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.get("/quant/option_chain/{instrument}")
-def api_option_chain(instrument: str, dte: int = 7, trade_date: str = ""):
-    """SPEC 3: Full historical option chain reconstruction (cached 60s)"""
+def api_option_chain(instrument: str, dte: int = 7, trade_date: str = "",
+                     user_id: str = "", live_spot: float = 0):
+    """Option chain — uses live broker spot when connected"""
     from datetime import date as _d
     d_obj = _d.fromisoformat(trade_date) if trade_date else _d.today()
-    ck = f"chain:{instrument}:{dte}:{d_obj.isoformat()}"
+    
+    # Get live spot from broker if connected
+    spot_override = float(live_spot) if live_spot else 0
+    if not spot_override and user_id and user_id in _angel_sessions:
+        s = _angel_sessions.get(user_id, {})
+        if time.time() < s.get("expires", 0):
+            try:
+                import sys as _s, os as _o
+                _s.path.insert(0, _o.path.dirname(_o.path.dirname(__file__)))
+                from brokers.angel_one import get_live_quote
+                q = get_live_quote(s["api_key"], s["jwt_token"], instrument)
+                if q and q.get("ltp") and q["ltp"] > 0:
+                    spot_override = q["ltp"]
+            except Exception:
+                pass
+    
+    # Cache key includes spot for accuracy
+    spot_key = str(int(spot_override)) if spot_override else "sim"
+    ck = f"chain:{instrument}:{dte}:{d_obj.isoformat()}:{spot_key}"
     cached = cache.get(ck)
     if cached: return cached
+    
     try:
         import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
         from backtest.quant_engines import reconstruct_option_chain
-        result = reconstruct_option_chain(instrument, d_obj, dte)
-        cache.set(ck, result, 60)
+        result = reconstruct_option_chain(instrument, d_obj, dte,
+                                          spot_override=spot_override)
+        cache.set(ck, result, 30)   # 30s cache
         return result
     except Exception as e:
         return {"error": str(e)}
@@ -5013,15 +5034,24 @@ def market_live_prices(user_id: str = ""):
     
     prev_nifty = round(nifty * 0.9982, 2)  # Yesterday ~0.18% lower
     
+    finnifty_price  = round(nifty * 0.97,   2)  # FINNIFTY ~same range as NIFTY
+    midcp_price     = round(nifty * 0.5575, 2)  # MIDCPNIFTY ~13,200 at NIFTY 23,700
+    sensex_price    = round(nifty * 3.32,   2)  # SENSEX ~78,000
+    prev_change     = round(nifty - prev_nifty, 2)
+    prev_pct        = round(prev_change / max(prev_nifty,1) * 100, 2)
+    
     result = {
-        "nifty":     {"price": nifty,  "change": round(nifty-prev_nifty,2), "pct": round((nifty-prev_nifty)/prev_nifty*100,2)},
-        "banknifty": {"price": bnifty, "change": round(bnifty-prev_nifty*2.185,2), "pct": round((nifty-prev_nifty)/prev_nifty*100,2)},
-        "finnifty":  {"price": round(nifty*1.27,2), "change":0, "pct":0},
-        "india_vix": {"price": vix,   "change":0, "pct":0},
-        "NIFTY":     nifty,
-        "BANKNIFTY": bnifty,
-        "INDIA_VIX": vix,
-        "timestamp": now_ist.strftime("%H:%M:%S IST")
+        "nifty":      {"price": nifty,        "change": prev_change, "pct": prev_pct},
+        "banknifty":  {"price": bnifty,       "change": round(bnifty - prev_nifty*2.185, 2), "pct": prev_pct},
+        "finnifty":   {"price": finnifty_price,"change": 0, "pct": 0},
+        "midcpnifty": {"price": midcp_price,  "change": 0, "pct": 0},
+        "sensex":     {"price": sensex_price, "change": 0, "pct": 0},
+        "india_vix":  {"price": vix,          "change": 0, "pct": 0},
+        "NIFTY":     nifty, "BANKNIFTY": bnifty,
+        "INDIA_VIX": vix,  "FINNIFTY": finnifty_price,
+        "MIDCPNIFTY":midcp_price, "SENSEX": sensex_price,
+        "timestamp": now_ist.strftime("%H:%M:%S IST"),
+        "source": "SIMULATION",
     }
     cache.set("market:live", result, 30)
     return result
@@ -5039,7 +5069,7 @@ def broker_place_order(payload: dict):
     price    = float(payload.get("price",0))
     order_type = payload.get("order_type","MARKET")
     
-    lot_sizes = {"NIFTY":65,"BANKNIFTY":30,"FINNIFTY":60,"MIDCPNIFTY":120,"NIFTYNXT50":25,"SENSEX":10}
+    lot_sizes = {"NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,"MIDCPNIFTY":75,"NIFTYNXT50":25,"SENSEX":10}
     qty = lots * lot_sizes.get(inst, 65)
     
     # Check if LIVE broker connected (future: integrate real broker SDK)

@@ -223,10 +223,10 @@ input:focus,select:focus{border-color:var(--bl)}
       <div>
         <div class="lbl">INSTRUMENT</div>
         <select id="t-inst" onchange="updateOrderEntry()">
-          <option value="NIFTY">NIFTY (Lot:65)</option>
+          <option value="NIFTY">NIFTY (Lot:75)</option>
           <option value="BANKNIFTY">BANKNIFTY (Lot:30)</option>
-          <option value="FINNIFTY">FINNIFTY (Lot:60)</option>
-          <option value="MIDCPNIFTY">MIDCPNIFTY (Lot:120)</option>
+          <option value="FINNIFTY">FINNIFTY (Lot:40)</option>
+          <option value="MIDCPNIFTY">MIDCPNIFTY (Lot:75)</option>
           <option value="NIFTYNXT50">NIFTYNXT50 (Lot:25)</option>
           <option value="SENSEX">SENSEX (Lot:10)</option>
         </select>
@@ -1421,7 +1421,7 @@ window.addEventListener('load', function(){
 
 // ── ORDER ENTRY ───────────────────────────────────
 var _optionType = 'CE';
-var LOT_SIZES = {NIFTY:65,BANKNIFTY:30,FINNIFTY:60,MIDCPNIFTY:120,NIFTYNXT50:25,SENSEX:10};
+var LOT_SIZES = {NIFTY:75,BANKNIFTY:30,FINNIFTY:40,MIDCPNIFTY:75,NIFTYNXT50:25,SENSEX:10};
 
 function setOptionType(type){
   _optionType = type;
@@ -2192,7 +2192,8 @@ function loadChain(){
   });
 }
 function _loadChainWithSpot(inst, dte){
-  req('/quant/option_chain/'+inst+'?dte='+dte,'GET',null,function(err,d){
+  var uid4=window.UID||''; var lspot=window._spotPrice||0;
+  req('/quant/option_chain/'+inst+'?dte='+dte+'&user_id='+uid4+'&live_spot='+lspot,'GET',null,function(err,d){
     if(err||!d){toast('Chain load failed','error');return;}
     st('chain-spot','₹'+(d.spot||0).toLocaleString('en-IN'));
     st('chain-pcr',d.pcr||'—');
@@ -3276,8 +3277,8 @@ function loadMarketPrices(force){
     var nifty = (d.nifty&&d.nifty.price)||d.NIFTY||23700;
     var bnifty= (d.banknifty&&d.banknifty.price)||d.BANKNIFTY||51800;
     var vix   = (d.india_vix&&d.india_vix.price)||d.INDIA_VIX||14.5;
-    var finn  = nifty*1.27;
-    var midcp = nifty*0.95;
+    var finn  = nifty*0.97;   // FINNIFTY ~ same range as NIFTY
+    var midcp = (window._mktData&&window._mktData.midcpnifty&&window._mktData.midcpnifty.price)||Math.round(nifty*0.558);  // MIDCPNIFTY ~13,200
     var sensex= nifty*3.32;  // ~78,700 at Nifty 23700
     
     var nChg  = (d.nifty&&d.nifty.change)||0;
@@ -3291,8 +3292,11 @@ function loadMarketPrices(force){
     var vixEl=$('t-vix'); if(vixEl){vixEl.textContent=vix.toFixed(2);vixEl.style.color=vix>18?'var(--rd)':vix>14?'var(--am)':'var(--gr)';}
     var vixChg=$('t-vix-chg'); if(vixChg){vixChg.style.color='var(--am)'; vixChg.textContent=vix>18?'HIGH':vix>12?'NORMAL':'LOW';}
     
+    var finn2  = (d.finnifty&&d.finnifty.price)  || finn;
+    var midcp2 = (d.midcpnifty&&d.midcpnifty.price) || midcp;
+    var sensex2= (d.sensex&&d.sensex.price)    || sensex;
     var st=function(id,v){var e=document.getElementById(id);if(e){e.textContent='₹'+Math.round(v).toLocaleString('en-IN');e.style.color=nChg>=0?'var(--gr)':'var(--rd)';}};
-    st('t-finnifty',finn); st('t-midcp',midcp); st('t-sensex',sensex);
+    st('t-finnifty',finn2); st('t-midcp',midcp2); st('t-sensex',sensex2);
     
     window._spotPrice = nifty;
     
