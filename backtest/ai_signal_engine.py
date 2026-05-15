@@ -211,21 +211,30 @@ class AISignalEngine:
             else "SHORT_STRADDLE"
         )
         
-        if bull_score >= 2.0 and bull_score > bear_score * 1.3:
+        if bull_score >= 1.4 and bull_score > bear_score * 1.2:
             signal      = "BUY"
             option_type = "CE"
-            confidence  = min(92, round(50 + bull_score * 8 + rng.uniform(0,5), 1))
+            confidence  = min(92, round(50 + bull_score * 10 + rng.uniform(0,8), 1))
             reasons     = [r for _,_,r in bull_signals[:3]]
-        elif bear_score >= 2.0 and bear_score > bull_score * 1.3:
+        elif bear_score >= 1.4 and bear_score > bull_score * 1.2:
             signal      = "SELL"
             option_type = "PE"
-            confidence  = min(92, round(50 + bear_score * 8 + rng.uniform(0,5), 1))
+            confidence  = min(92, round(50 + bear_score * 10 + rng.uniform(0,8), 1))
             reasons     = [r for _,_,r in bear_signals[:3]]
         else:
-            signal      = "WAIT"
-            option_type = "CE"
-            confidence  = round(30 + rng.uniform(0,20), 1)
-            reasons     = ["Mixed signals — wait for clearer direction"]
+            # Weak signal - still show but with lower confidence
+            if bull_score > bear_score:
+                signal, option_type = "BUY", "CE"
+                confidence = min(65, round(40 + bull_score*8 + rng.uniform(0,5), 1))
+                reasons = [r for _,_,r in bull_signals[:2]] or ["Weak bullish setup — use small size"]
+            elif bear_score > bull_score:
+                signal, option_type = "SELL", "PE"
+                confidence = min(65, round(40 + bear_score*8 + rng.uniform(0,5), 1))
+                reasons = [r for _,_,r in bear_signals[:2]] or ["Weak bearish setup — use small size"]
+            else:
+                signal, option_type = "WAIT", "CE"
+                confidence = round(25 + rng.uniform(0,15), 1)
+                reasons = ["Mixed signals — wait for clearer direction"]
         
         # ── Calculate trade levels ─────────────────────────────────
         lot_steps = {"NIFTY":50,"BANKNIFTY":100,"FINNIFTY":50,"MIDCPNIFTY":25,"SENSEX":100}
