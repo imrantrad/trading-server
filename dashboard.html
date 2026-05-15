@@ -3560,28 +3560,41 @@ function fixReferralDB(){
 
 
 function restoreBrokerSession(){
-  try{
-    var uid = window.UID||'demo';
-    // Try user-specific key first
-    var saved = JSON.parse(localStorage.getItem('trd_broker_'+uid)||'null');
-    // Fallback to old generic key
-    if(!saved) saved = JSON.parse(localStorage.getItem('trd_broker')||'null');
-    
-    if(saved && saved.time && Date.now()-saved.time < 86400000){
-      var statusEl  = $('broker-status');
-      var resultEl  = $('broker-result');
-      var brokerSel = $('broker-select');
-      var keyEl     = $('broker-key');
-      
-      if(statusEl){statusEl.textContent='✅ '+saved.broker+' Connected ('+saved.mode+')';statusEl.style.color='var(--gr)';}
+  var uid = window.UID||'demo';
+  // Check server-side session status
+  req('/broker/angel/status/'+uid,'GET',null,function(err,d){
+    var statusEl=$('broker-status'), resultEl=$('broker-result');
+    if(d&&d.connected&&d.mode==='LIVE'){
+      if(statusEl){statusEl.textContent='🔴 LIVE';statusEl.style.color='var(--am)';}
       if(resultEl){
         resultEl.style.display='block';
-        resultEl.innerHTML='<b style="color:var(--gr)">'+saved.broker+'</b> connected in <b style="color:var(--bl)">'+saved.mode+' MODE</b><br><span style="font-size:9px;color:var(--mu)">Restored from last session</span>';
+        resultEl.innerHTML='<b style="color:var(--am)">ANGEL ONE LIVE</b> ✅<br>'
+          +'<span style="color:var(--gr)">Session active — '+d.expires_in+'</span><br>'
+          +'<span style="font-size:8px;color:var(--rd)">⚠️ Real money trading active</span>';
+        resultEl.style.borderColor='rgba(245,158,11,.4)';
       }
-      if(brokerSel) brokerSel.value=saved.broker||'ZERODHA';
-      if(keyEl) keyEl.value='**** **** '+saved.key;  // Show masked key
+      window._brokerLive=true;
+      // Start live price polling immediately
+      startLivePrices();
+    } else {
+      // Session expired — try localStorage
+      try{
+        var saved=JSON.parse(localStorage.getItem('trd_broker_'+uid)||'null');
+        if(saved&&saved.mode==='LIVE'){
+          if(statusEl){statusEl.textContent='⚡ Re-enter TOTP';statusEl.style.color='var(--am)';}
+          if(resultEl){
+            resultEl.style.display='block';
+            resultEl.innerHTML='<b style="color:var(--am)">'+saved.broker+'</b> session expired after restart<br>'
+              +'<span style="font-size:9px;color:var(--mu)">Re-enter TOTP to restore LIVE data</span><br>'
+              +'<button onclick="show('prof');setTimeout(function(){$(\'totp-help-box\').style.display=\'block\';},200)" '
+              +'style="font-size:9px;margin-top:4px;padding:3px 10px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--am);border-radius:6px;cursor:pointer">🔑 Re-enter TOTP</button>';
+          }
+        } else if(saved){
+          if(statusEl){statusEl.textContent='📄 '+saved.broker+' (PAPER)';statusEl.style.color='var(--bl)';}
+        }
+      }catch(e){}
     }
-  }catch(e){}
+  });
 }
 
 
@@ -3674,7 +3687,7 @@ function connectBrokerPaper(){
 }
 
 function startLivePrices(){
-  if(!window._angelLive) return;
+  if(!window._angelLive && !window._brokerLive) return;
   var uid=window.UID||'demo';
   req('/broker/angel/prices/'+uid,'GET',null,function(err,d){
     if(!err&&d&&d.NIFTY){

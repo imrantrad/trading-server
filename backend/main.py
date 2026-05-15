@@ -4965,6 +4965,27 @@ def admin_clear_old_referral():
 def market_live_prices(user_id: str = ""):
     """Live market prices — uses broker if connected, else simulation"""
     # Try broker live prices first (if user connected)
+    # Try to restore session from DB if not in memory
+    if user_id and user_id not in _angel_sessions and USER_SYSTEM:
+        try:
+            with user_db.conn() as _uc:
+                _ur = _uc.execute(
+                    "SELECT api_key, broker_key_hint FROM users WHERE id=? AND broker_name='ANGEL_ONE'",
+                    (user_id,)
+                ).fetchone()
+            if _ur and _ur["broker_key_hint"] and "|" in _ur["broker_key_hint"]:
+                _parts = _ur["broker_key_hint"].split("|")
+                if len(_parts) >= 3:
+                    _cc, _jwt, _exp = _parts[0], _parts[1], int(_parts[2])
+                    if time.time() < _exp and _jwt and len(_jwt) > 20:
+                        _angel_sessions[user_id] = {
+                            "api_key":     _ur["api_key"] or _parts[0],
+                            "jwt_token":   _jwt,
+                            "client_code": _cc,
+                            "expires":     _exp,
+                        }
+        except Exception: pass
+    
     if user_id and user_id in _angel_sessions:
         s = _angel_sessions[user_id]
         if time.time() < s.get("expires", 0):
@@ -5015,7 +5036,7 @@ def market_live_prices(user_id: str = ""):
     bnifty = round(nifty * 2.2717, 2)  # Real BN/N ratio
     
     # VIX between 12-18 in normal markets
-    vix = round(12 + (h % 600) / 100, 2)
+    vix = round(17.5 + (h % 600) / 100, 2)
     
     # Intraday movement (based on current hour IST)
     from datetime import datetime, timezone, timedelta
@@ -5625,12 +5646,14 @@ def angel_login(payload: dict):
             _angel_sessions[user_id] = session
             store_session(user_id, session)
             
-            # Update broker mode to LIVE
+            # Persist session to DB for restart survival
             if USER_SYSTEM and user_id:
                 try:
                     user_db.update_user(user_id, {
-                        "broker_name": "ANGEL_ONE",
-                        "broker_mode": "LIVE"
+                        "broker_name":  "ANGEL_ONE",
+                        "broker_mode":  "LIVE",
+                        "api_key":      api_key,
+                        "broker_key_hint": f"{client_code}|{result['jwt_token']}|{int(time.time()+7*3600)}"
                     })
                 except Exception: pass
             
@@ -5735,10 +5758,28 @@ def angel_portfolio(user_id: str):
 
 @app.get("/broker/angel/status/{user_id}")
 def angel_session_status(user_id: str):
-    """Check if Angel One session is active"""
+    """Check if Angel One session is active — auto-restores from DB"""
+    # Trigger auto-restore via market/live logic
+    if user_id not in _angel_sessions and USER_SYSTEM:
+        try:
+            with user_db.conn() as _uc:
+                _ur = _uc.execute(
+                    "SELECT api_key, broker_key_hint FROM users WHERE id=? AND broker_name='ANGEL_ONE'",
+                    (user_id,)
+                ).fetchone()
+            if _ur and _ur.get("broker_key_hint") and "|" in (_ur["broker_key_hint"] or ""):
+                _parts = _ur["broker_key_hint"].split("|")
+                if len(_parts) >= 3:
+                    _cc, _jwt, _exp = _parts[0], _parts[1], int(_parts[2])
+                    if time.time() < _exp and len(_jwt) > 20:
+                        _angel_sessions[user_id] = {
+                            "api_key": _ur["api_key"] or "", "jwt_token": _jwt,
+                            "client_code": _cc, "expires": _exp,
+                        }
+        except Exception: pass
     session = _angel_sessions.get(user_id)
     if not session:
-        return {"connected": False, "mode": "NONE", "message": "Not connected"}
+        return {"connected": False, "mode": "NONE", "message": "Not connected — re-enter TOTP"}
     if time.time() > session.get("expires", 0):
         return {"connected": False, "mode": "EXPIRED", "message": "Session expired — re-login"}
     remaining = int((session.get("expires",0) - time.time()) / 60)
