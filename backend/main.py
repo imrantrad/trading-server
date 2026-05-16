@@ -5071,8 +5071,10 @@ def market_live_prices(user_id: str = ""):
                 logging.warning(f"Angel One fetch failed for {user_id}: {_e}")
                 pass
 
-    cached = cache.get("market:live")
-    if cached: return cached
+    # Only use SIM cache when no user_id (don't return SIM to user with broker)
+    if not user_id:
+        cached = cache.get("market:live")
+        if cached: return cached
     from datetime import date
     import hashlib, math
     
@@ -5133,7 +5135,9 @@ def market_live_prices(user_id: str = ""):
         "timestamp":  now_ist.strftime("%H:%M:%S IST"),
         "source":     "SIMULATION (Angel One not connected)",
     }
-    cache.set("market:live", result, 30)
+    # Only cache under "market:live" when called without user_id
+    if not user_id:
+        cache.set("market:live", result, 30)
     return result
 
 

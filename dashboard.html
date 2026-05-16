@@ -3273,10 +3273,13 @@ function loadCalcSpot(){
 
 // ── MARKET PRICES (all 6 instruments) ─────────────
 function loadMarketPrices(force){
-  if(force){  // Bust cache first
-    req('/cache/market','DELETE',null,function(){}); 
+  var uid = window.UID || '';
+  if(force){
+    req('/cache/market','DELETE',null,function(){});
   }
-  req('/market/live?user_id='+(window.UID||''),'GET',null,function(err,d){
+  // Add cache buster to URL to prevent stale data
+  var url = '/market/live?user_id='+encodeURIComponent(uid)+'&_t='+Date.now();
+  req(url,'GET',null,function(err,d){
     if(err||!d) return;
     window._mktData = d;
     
@@ -3311,7 +3314,14 @@ function loadMarketPrices(force){
     var bClr  = bChg >= 0 ? 'var(--gr)' : 'var(--rd)';
     // Show data source badge
     var srcEl=$('mkt-source-badge');
-    if(srcEl){srcEl.textContent=d.source==='ANGEL_ONE_LIVE'?'🔴 LIVE':'📊 SIM';srcEl.style.color=d.source==='ANGEL_ONE_LIVE'?'var(--am)':'var(--mu)';}
+    if(srcEl){
+      var isLive = d.source && d.source.indexOf('ANGEL_ONE')>=0;
+      srcEl.textContent = isLive ? '🔴 LIVE' : '📊 SIM';
+      srcEl.style.color = isLive ? 'var(--am)' : 'var(--mu)';
+      srcEl.style.fontWeight = isLive ? '900' : '700';
+      // Update window flag for auto-refresh interval
+      window._brokerLive = isLive;
+    }
     
     setPriceEl('t-nifty', 't-nifty-chg', nifty, nChg, nPct);
     setPriceEl('t-bnifty','t-bnifty-chg',bnifty,bChg, bPct);
