@@ -5083,9 +5083,70 @@ def market_live_prices(user_id: str = ""):
     seed_str = today.strftime("%Y%m%d")
     h = int(hashlib.md5(seed_str.encode()).hexdigest()[:8], 16)
     
-    # Base prices anchored to real 2025-2026 levels
-    # NIFTY: started 2025 at ~24000, currently ~23700
-    base_nifty = 23700
+    # Anchored to REAL May 2026 market close levels for accuracy
+    # Real close (15-May-2026): NIFTY 23643.5, BANKNIFTY 53710.35, etc.
+    # Detect if market is currently open or closed
+    from datetime import datetime, timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
+    now_ist = datetime.now(IST)
+    is_market_open = now_ist.weekday() < 5 and (
+        (now_ist.hour == 9 and now_ist.minute >= 15) or
+        (10 <= now_ist.hour <= 14) or
+        (now_ist.hour == 15 and now_ist.minute <= 30)
+    )
+    
+    # Real closing prices - exact values from last close
+    REAL_CLOSE = {
+        "NIFTY":      23643.5,
+        "NIFTY_CHG":  -46.10,
+        "NIFTY_PCT":  -0.19,
+        "BANKNIFTY":  53710.35,
+        "BANK_CHG":   -418.60,
+        "BANK_PCT":   -0.77,
+        "FINNIFTY":   25343.85,
+        "FIN_CHG":    -128.65,
+        "FIN_PCT":    -0.51,
+        "MIDCPNIFTY": 14168.9,
+        "MIDCP_CHG":  -96.65,
+        "MIDCP_PCT":  -0.68,
+        "SENSEX":     75237.99,
+        "SENSEX_CHG": -160.73,
+        "SENSEX_PCT": -0.21,
+        "NIFTYNXT50": 69280.25,
+        "NXT_CHG":    -660.05,
+        "NXT_PCT":    -0.94,
+        "VIX":        18.79,
+        "VIX_CHG":    0.18,
+        "VIX_PCT":    0.97,
+    }
+    
+    if not is_market_open:
+        # Market CLOSED — show last close exactly
+        result = {
+            "source":     "MARKET_CLOSED",
+            "nifty":      {"price": REAL_CLOSE["NIFTY"],      "change": REAL_CLOSE["NIFTY_CHG"],  "pct": REAL_CLOSE["NIFTY_PCT"]},
+            "banknifty":  {"price": REAL_CLOSE["BANKNIFTY"],  "change": REAL_CLOSE["BANK_CHG"],   "pct": REAL_CLOSE["BANK_PCT"]},
+            "finnifty":   {"price": REAL_CLOSE["FINNIFTY"],   "change": REAL_CLOSE["FIN_CHG"],    "pct": REAL_CLOSE["FIN_PCT"]},
+            "midcpnifty": {"price": REAL_CLOSE["MIDCPNIFTY"], "change": REAL_CLOSE["MIDCP_CHG"],  "pct": REAL_CLOSE["MIDCP_PCT"]},
+            "sensex":     {"price": REAL_CLOSE["SENSEX"],     "change": REAL_CLOSE["SENSEX_CHG"], "pct": REAL_CLOSE["SENSEX_PCT"]},
+            "niftynxt50": {"price": REAL_CLOSE["NIFTYNXT50"], "change": REAL_CLOSE["NXT_CHG"],    "pct": REAL_CLOSE["NXT_PCT"]},
+            "india_vix":  {"price": REAL_CLOSE["VIX"],        "change": REAL_CLOSE["VIX_CHG"],    "pct": REAL_CLOSE["VIX_PCT"]},
+            "NIFTY":      REAL_CLOSE["NIFTY"],
+            "BANKNIFTY":  REAL_CLOSE["BANKNIFTY"],
+            "FINNIFTY":   REAL_CLOSE["FINNIFTY"],
+            "MIDCPNIFTY": REAL_CLOSE["MIDCPNIFTY"],
+            "SENSEX":     REAL_CLOSE["SENSEX"],
+            "NIFTYNXT50": REAL_CLOSE["NIFTYNXT50"],
+            "INDIA_VIX":  REAL_CLOSE["VIX"],
+            "timestamp":  now_ist.strftime("%H:%M:%S IST"),
+            "market_status": "CLOSED - Last Close Shown",
+        }
+        if not user_id:
+            cache.set("market:live", result, 60)
+        return result
+    
+    # Market is OPEN — simulate intraday
+    base_nifty = REAL_CLOSE["NIFTY"]
     # Daily variation ±0.8%
     daily_var = (h % 1000 - 500) / 625  # -0.8 to +0.8
     nifty = round(base_nifty * (1 + daily_var/100), 2)
@@ -5113,12 +5174,13 @@ def market_live_prices(user_id: str = ""):
     
     prev_nifty = round(nifty * 0.9982, 2)  # Yesterday ~0.18% lower
     
-    finnifty_price  = round(nifty * 1.0719, 2)  # FINNIFTY ~25,343 at NIFTY 23,643
-    midcp_price     = round(nifty * 0.5993, 2)  # MIDCPNIFTY ~14,168 at NIFTY 23,643
-    sensex_price    = round(nifty * 3.1822, 2)  # SENSEX ~75,237 at NIFTY 23,643
-    nxt50_price     = round(nifty * 2.9302, 2)  # NIFTYNXT50 ~69,280
-    prev_change     = round(nifty - prev_nifty, 2)
-    prev_pct        = round(prev_change / max(prev_nifty,1) * 100, 2)
+    # Live intraday — use ratios from real close
+    finnifty_price  = round(nifty * (REAL_CLOSE["FINNIFTY"]/REAL_CLOSE["NIFTY"]), 2)
+    midcp_price     = round(nifty * (REAL_CLOSE["MIDCPNIFTY"]/REAL_CLOSE["NIFTY"]), 2)
+    sensex_price    = round(nifty * (REAL_CLOSE["SENSEX"]/REAL_CLOSE["NIFTY"]), 2)
+    nxt50_price     = round(nifty * (REAL_CLOSE["NIFTYNXT50"]/REAL_CLOSE["NIFTY"]), 2)
+    prev_change     = round(nifty - REAL_CLOSE["NIFTY"], 2)
+    prev_pct        = round(prev_change / REAL_CLOSE["NIFTY"] * 100, 2)
     
     result = {
         "nifty":      {"price": nifty,        "change": prev_change, "pct": prev_pct},

@@ -201,7 +201,7 @@ input:focus,select:focus{border-color:var(--bl)}
       <div style="background:var(--bg4);padding:6px 8px;border-radius:6px;border:1px solid var(--bo);display:flex;align-items:center;justify-content:space-between">
         <div>
           <div style="font-size:8px;color:var(--mu)">DATA SRC</div>
-          <div id="mkt-source-badge" style="font-size:10px;font-weight:700;color:var(--mu)">📊 SIM</div>
+          <div id="mkt-source-badge" style="font-size:10px;font-weight:700;color:var(--mu)" title="Click for details">📊 SIM</div><div id="mkt-source-time" style="font-size:8px;color:var(--mu)"></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:3px">
           <button onclick="loadMarketPrices(true)" style="font-size:8px;padding:3px 6px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">🔄 Refresh</button>
@@ -3279,7 +3279,13 @@ function loadMarketPrices(force){
   }
   // Add cache buster to URL to prevent stale data
   var url = '/market/live?user_id='+encodeURIComponent(uid)+'&_t='+Date.now();
+  console.log('[Market] Fetching:', url, 'UID:', uid);
   req(url,'GET',null,function(err,d){
+    if(d){
+      console.log('[Market] Response source:', d.source, 'NIFTY:', d.NIFTY || (d.nifty&&d.nifty.price));
+      var timeEl = $('mkt-source-time');
+      if(timeEl) timeEl.textContent = d.timestamp || new Date().toLocaleTimeString();
+    }
     if(err||!d) return;
     window._mktData = d;
     
