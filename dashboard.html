@@ -199,9 +199,14 @@ input:focus,select:focus{border-color:var(--bl)}
         <div id="t-nxt50" style="font-size:11px;font-weight:700;color:var(--tx)">—</div>
       </div>
       <div style="background:var(--bg4);padding:6px 8px;border-radius:6px;border:1px solid var(--bo);display:flex;align-items:center;justify-content:space-between">
-        <div><div style="font-size:8px;color:var(--mu)">DATA SRC</div>
-        <div id="mkt-source-badge" style="font-size:10px;font-weight:700;color:var(--mu)">📊 SIM</div></div>
-        <button onclick="loadMarketPrices(true)" style="font-size:9px;padding:4px 8px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:6px;cursor:pointer">🔄</button>
+        <div>
+          <div style="font-size:8px;color:var(--mu)">DATA SRC</div>
+          <div id="mkt-source-badge" style="font-size:10px;font-weight:700;color:var(--mu)">📊 SIM</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <button onclick="loadMarketPrices(true)" style="font-size:8px;padding:3px 6px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">🔄 Refresh</button>
+          <button onclick="goLive()" style="font-size:8px;padding:3px 6px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--am);border-radius:4px;cursor:pointer">🔴 Go LIVE</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3296,10 +3301,13 @@ function loadMarketPrices(force){
     var nxt50  = (d.niftynxt50&&d.niftynxt50.price)||d.NIFTYNXT50||(nifty*2.9302);
     window._mktData = d;  // store full data
     
-    var nChg  = (d.nifty&&d.nifty.change!=null&&d.nifty.change)||0;
-    var nPct  = (d.nifty&&d.nifty.pct!=null&&d.nifty.pct)||0;
-    var bChg  = (d.banknifty&&d.banknifty.change!=null&&d.banknifty.change)||0;
-    var bPct  = (d.banknifty&&d.banknifty.pct!=null&&d.banknifty.pct)||0;
+    var nChg  = (d.nifty&&d.nifty.change!=null) ? d.nifty.change : 0;
+    var nPct  = (d.nifty&&d.nifty.pct!=null)    ? d.nifty.pct    : 0;
+    var bChg  = (d.banknifty&&d.banknifty.change!=null) ? d.banknifty.change : 0;
+    var bPct  = (d.banknifty&&d.banknifty.pct!=null)    ? d.banknifty.pct    : 0;
+    // Color based on actual direction
+    var nClr  = nChg >= 0 ? 'var(--gr)' : 'var(--rd)';
+    var bClr  = bChg >= 0 ? 'var(--gr)' : 'var(--rd)';
     // Show data source badge
     var srcEl=$('mkt-source-badge');
     if(srcEl){srcEl.textContent=d.source==='ANGEL_ONE_LIVE'?'🔴 LIVE':'📊 SIM';srcEl.style.color=d.source==='ANGEL_ONE_LIVE'?'var(--am)':'var(--mu)';}
@@ -3307,8 +3315,8 @@ function loadMarketPrices(force){
     setPriceEl('t-nifty', 't-nifty-chg', nifty, nChg, nPct);
     setPriceEl('t-bnifty','t-bnifty-chg',bnifty,bChg, bPct);
     
-    var vixEl=$('t-vix'); if(vixEl){vixEl.textContent=vix.toFixed(2);vixEl.style.color=vix>18?'var(--rd)':vix>14?'var(--am)':'var(--gr)';}
-    var vixChg=$('t-vix-chg'); if(vixChg){vixChg.style.color='var(--am)'; vixChg.textContent=vix>18?'HIGH':vix>12?'NORMAL':'LOW';}
+    var vixEl=$('t-vix'); if(vixEl){vixEl.textContent=vix.toFixed(2);vixEl.style.color=vix>22?'var(--rd)':vix>20?'var(--rd)':vix>17?'var(--am)':vix>12?'var(--gr)':'var(--bl)';}
+    var vixChg=$('t-vix-chg'); if(vixChg){vixChg.style.color='var(--am)'; vixChg.textContent=vix>22?'EXTREME':vix>20?'HIGH':vix>17?'ELEVATED':vix>12?'NORMAL':'LOW';}
     
     var finn2  = (d.finnifty&&d.finnifty.price)  || finn;
     var midcp2 = (d.midcpnifty&&d.midcpnifty.price) || midcp;
@@ -3466,11 +3474,15 @@ document.addEventListener('click',function(e){
   if(modal&&e.target===modal) modal.style.display='none';
 });
 
-// Auto-refresh prices every 60s
-setInterval(function(){
-  var active=document.querySelector('.pnl.active');
-  if(active) loadMarketPrices();
-},60000);
+// Auto-refresh prices — 5s if LIVE, 30s if SIM
+function _autoRefreshPrices(){
+  var badge=$('mkt-source-badge');
+  var isLive = badge && badge.textContent.includes('LIVE');
+  var interval = isLive ? 5000 : 30000;
+  loadMarketPrices(false);
+  setTimeout(_autoRefreshPrices, interval);
+}
+setTimeout(_autoRefreshPrices, 3000);
 
 
 // ── FORGOT PASSWORD ────────────────────────────────
@@ -3786,6 +3798,19 @@ function reenterTOTP(){
     var h=$('totp-help-box'); if(h) h.style.display='block';
     var t=$('ao-totp'); if(t){ t.focus(); t.value=''; }
   },300);
+}
+
+
+function goLive(){
+  // Quick broker reconnect flow
+  show('prof');
+  setTimeout(function(){
+    var brokerSec = $('broker-select');
+    if(brokerSec) brokerSec.value='ANGEL';
+    onBrokerChange('ANGEL');
+    var totp=$('ao-totp'); if(totp){totp.focus();}
+    toast('Enter your TOTP from Authenticator app → CONNECT','info');
+  },400);
 }
 
 // ── API BASE URL ──────────────────────────────────
