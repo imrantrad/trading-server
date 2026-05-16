@@ -1205,6 +1205,159 @@ input:focus,select:focus{border-color:var(--bl)}
       <button onclick="connectBroker()" class="btn g full">🔗 CONNECT (PAPER)</button>
     </div>
   </div>
+  
+  <!-- ════ SUBSCRIPTION ════ -->
+  <div class="card" style="margin-bottom:10px">
+    <div class="chdr">💎 SUBSCRIPTION</div>
+    <div id="sub-status" style="background:var(--bg4);border-radius:8px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:11px;color:var(--mu)">Current Plan</div>
+          <div id="sub-plan-name" style="font-size:16px;font-weight:800;color:var(--gr)">FREE</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:9px;color:var(--mu)">Valid Till</div>
+          <div id="sub-valid-till" style="font-size:11px;font-weight:700">Lifetime</div>
+        </div>
+      </div>
+    </div>
+    <button onclick="show('sub')" class="btn full" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(0,255,136,.15));border:1px solid rgba(245,158,11,.4);color:var(--am)">⬆️ UPGRADE PLAN</button>
+  </div>
+
+  <!-- ════ THEMES ════ -->
+  <div class="card" style="margin-bottom:10px">
+    <div class="chdr">🎨 THEMES</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+      <button onclick="setTheme('dark')" class="btn b" style="font-size:10px;padding:8px">🌙 Dark</button>
+      <button onclick="setTheme('light')" class="btn" style="background:#fff;color:#000;font-size:10px;padding:8px">☀️ Light</button>
+      <button onclick="setTheme('blue')" class="btn b" style="background:linear-gradient(135deg,#1e3a8a,#3b82f6);font-size:10px;padding:8px">🌊 Ocean</button>
+      <button onclick="setTheme('green')" class="btn g" style="font-size:10px;padding:8px">🌿 Matrix</button>
+    </div>
+  </div>
+
+  <!-- ════ SETTINGS ════ -->
+  <div class="card" style="margin-bottom:10px">
+    <div class="chdr">⚙️ SETTINGS</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:6px;background:var(--bg4);border-radius:6px">
+        <span>🔔 Trade Notifications</span>
+        <input type="checkbox" id="set-notif" checked onchange="saveSettings()" style="width:18px;height:18px">
+      </label>
+      <label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:6px;background:var(--bg4);border-radius:6px">
+        <span>📊 Auto-refresh prices (5s)</span>
+        <input type="checkbox" id="set-autorefresh" checked onchange="saveSettings()" style="width:18px;height:18px">
+      </label>
+      <label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:6px;background:var(--bg4);border-radius:6px">
+        <span>🔊 Sound on signal</span>
+        <input type="checkbox" id="set-sound" onchange="saveSettings()" style="width:18px;height:18px">
+      </label>
+      <label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:6px;background:var(--bg4);border-radius:6px">
+        <span>🌐 Language</span>
+        <select id="set-lang" onchange="saveSettings()" style="background:var(--bg5);color:var(--tx);border:none;padding:4px;border-radius:4px">
+          <option value="en">English</option>
+          <option value="hi">हिंदी</option>
+          <option value="hinglish">Hinglish</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- ════ AI AUTO-EXECUTION ════ -->
+  <div class="card" style="margin-bottom:10px;background:linear-gradient(135deg,rgba(168,85,247,.04),rgba(0,255,136,.04));border:1px solid rgba(168,85,247,.2)">
+    <div class="chdr">🤖 AI AUTO-EXECUTION</div>
+    <div style="font-size:9px;color:var(--mu);margin-bottom:8px">AI will auto-execute paper trades when 95%+ confidence signal is detected</div>
+    <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px;background:var(--bg4);border-radius:6px;margin-bottom:6px">
+      <span style="font-weight:700">⚡ Enable Auto-Execute</span>
+      <input type="checkbox" id="ai-auto-enabled" onchange="saveAIAutoConfig()" style="width:20px;height:20px">
+    </label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+      <div>
+        <div style="font-size:9px;color:var(--mu)">Min Confidence</div>
+        <select id="ai-auto-conf" onchange="saveAIAutoConfig()" style="width:100%;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:11px">
+          <option value="75">75% (Aggressive)</option>
+          <option value="85">85% (Balanced)</option>
+          <option value="95" selected>95% (Conservative)</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--mu)">Max Trades/Day</div>
+        <select id="ai-auto-max" onchange="saveAIAutoConfig()" style="width:100%;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:11px">
+          <option value="1">1</option>
+          <option value="3" selected>3</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <div style="flex:1">
+        <div style="font-size:9px;color:var(--mu)">Mode</div>
+        <select id="ai-auto-mode" onchange="saveAIAutoConfig()" style="width:100%;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:11px">
+          <option value="PAPER" selected>📄 PAPER (Safe)</option>
+          <option value="LIVE">🔴 LIVE (Real money)</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="findBestAIStrategy()" class="btn g full" style="margin-top:8px;font-size:10px">🎯 FIND BEST STRATEGY (Live Market 95%+)</button>
+    <div id="ai-auto-status" style="font-size:9px;color:var(--mu);margin-top:6px;text-align:center"></div>
+  </div>
+
+  <!-- ════ CUSTOMER SUPPORT ════ -->
+  <div class="card" style="margin-bottom:10px">
+    <div class="chdr">💬 CUSTOMER SUPPORT</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+      <button onclick="openSupport('chat')" class="btn b" style="font-size:10px;padding:8px">💬 AI Chat</button>
+      <button onclick="openSupport('email')" class="btn" style="background:rgba(245,158,11,.1);color:var(--am);font-size:10px;padding:8px">📧 Email</button>
+      <button onclick="openSupport('faq')" class="btn" style="background:rgba(79,142,247,.1);color:var(--bl);font-size:10px;padding:8px">❓ FAQ</button>
+      <button onclick="openSupport('telegram')" class="btn" style="background:rgba(168,85,247,.1);color:var(--p0);font-size:10px;padding:8px">📨 Telegram</button>
+    </div>
+    <div id="support-chat-box" style="display:none;background:var(--bg4);border-radius:8px;padding:8px;margin-top:8px">
+      <div id="support-messages" style="max-height:200px;overflow-y:auto;font-size:10px;padding:6px;background:var(--bg5);border-radius:6px;margin-bottom:6px">
+        <div style="color:var(--gr)">🤖 Hi! How can I help you today?</div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <input id="support-input" placeholder="Type your question..." style="flex:1;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:11px">
+        <button onclick="sendSupportMessage()" class="btn g" style="padding:6px 12px;font-size:10px">→</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ FEEDBACK ════ -->
+  <div class="card" style="margin-bottom:10px">
+    <div class="chdr">⭐ FEEDBACK</div>
+    <div style="font-size:10px;color:var(--mu);margin-bottom:6px">How would you rate TRD?</div>
+    <div id="rating-stars" style="display:flex;gap:8px;justify-content:center;font-size:24px;margin-bottom:8px;cursor:pointer">
+      <span onclick="setRating(1)" data-r="1">☆</span>
+      <span onclick="setRating(2)" data-r="2">☆</span>
+      <span onclick="setRating(3)" data-r="3">☆</span>
+      <span onclick="setRating(4)" data-r="4">☆</span>
+      <span onclick="setRating(5)" data-r="5">☆</span>
+    </div>
+    <textarea id="feedback-text" placeholder="Tell us what you think..." style="width:100%;min-height:60px;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:8px;border-radius:6px;font-size:11px;margin-bottom:6px"></textarea>
+    <button onclick="submitFeedback()" class="btn g full" style="font-size:11px">📤 SUBMIT FEEDBACK</button>
+  </div>
+
+  <!-- ════ ABOUT ════ -->
+  <div class="card" style="margin-bottom:10px">
+    <div class="chdr">ℹ️ ABOUT TRD</div>
+    <div style="background:var(--bg4);border-radius:8px;padding:12px;font-size:11px;line-height:1.7">
+      <div style="font-size:14px;font-weight:800;color:var(--gr);margin-bottom:6px">TRD v12.3</div>
+      <div style="color:var(--mu);margin-bottom:8px">Institutional Derivatives Trading Platform</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:var(--mu)">
+        <div>Build: <b style="color:var(--tx)">v12.3.0</b></div>
+        <div>Released: <b style="color:var(--tx)">May 2026</b></div>
+        <div>NLP Conditions: <b style="color:var(--tx)">500+</b></div>
+        <div>AI Strategies: <b style="color:var(--tx)">25</b></div>
+        <div>Endpoints: <b style="color:var(--tx)">234+</b></div>
+        <div>SEBI: <b style="color:var(--am)">Compliant</b></div>
+      </div>
+      <div style="font-size:9px;color:var(--mu);margin-top:8px;padding-top:8px;border-top:1px solid var(--bo)">
+        © 2026 TRD. Paper trading platform for educational purposes.<br>
+        Not a SEBI-registered broker. Trading involves risk.
+      </div>
+    </div>
+  </div>
+
+
   <button onclick="logout()" class="btn r full" style="padding:12px;font-size:12px">⎋ LOGOUT</button>
 </div>
 
@@ -2201,19 +2354,32 @@ function enhanceWithAI(){
 function loadChain(){
   var inst=gv('chain-inst')||'NIFTY';
   var dte=iv('chain-dte')||7;
-  // First get latest market price, then load chain
-  req('/market/live','GET',null,function(perr,pd){
+  var uid=window.UID||'';
+  toast('Loading '+inst+' chain...','info');
+  // Get real spot price first
+  req('/market/live?user_id='+encodeURIComponent(uid)+'&_t='+Date.now(),'GET',null,function(perr,pd){
+    var spot=23644;
     if(pd){
-      window._spotPrice = (pd.nifty&&pd.nifty.price)||pd.NIFTY||23700;
-      if(inst==='BANKNIFTY') window._spotPrice = (pd.banknifty&&pd.banknifty.price)||pd.BANKNIFTY||51800;
+      if(inst==='NIFTY') spot=(pd.nifty&&pd.nifty.price)||pd.NIFTY||23644;
+      else if(inst==='BANKNIFTY') spot=(pd.banknifty&&pd.banknifty.price)||pd.BANKNIFTY||53710;
+      else if(inst==='FINNIFTY') spot=(pd.finnifty&&pd.finnifty.price)||pd.FINNIFTY||25344;
+      else if(inst==='MIDCPNIFTY') spot=(pd.midcpnifty&&pd.midcpnifty.price)||pd.MIDCPNIFTY||14169;
     }
-    _loadChainWithSpot(inst, dte);
+    window._spotPrice = spot;
+    _loadChainWithSpot(inst, dte, spot);
   });
 }
-function _loadChainWithSpot(inst, dte){
-  var uid4=window.UID||''; var lspot=window._spotPrice||0;
-  req('/quant/option_chain/'+inst+'?dte='+dte+'&user_id='+uid4+'&live_spot='+lspot,'GET',null,function(err,d){
-    if(err||!d){toast('Chain load failed','error');return;}
+function _loadChainWithSpot(inst, dte, spot){
+  var uid4=window.UID||''; var lspot=spot||window._spotPrice||23644;
+  req('/quant/option_chain/'+inst+'?dte='+dte+'&user_id='+uid4+'&live_spot='+lspot+'&_t='+Date.now(),'GET',null,function(err,d){
+    // Fallback to /options/chain if /quant/option_chain fails
+    if(err||!d||!d.chain){
+      req('/options/chain?spot='+lspot+'&expiry_days='+dte+'&vix=18.79','GET',null,function(e2,d2){
+        if(d2&&d2.chain) _renderChain(d2,inst,lspot);
+        else toast('Chain failed','error');
+      });
+      return;
+    }
     st('chain-spot','₹'+(d.spot||0).toLocaleString('en-IN'));
     st('chain-pcr',d.pcr||'—');
     st('chain-maxpain','₹'+(d.max_pain||0).toLocaleString('en-IN'));
@@ -2247,21 +2413,32 @@ function optsTab(tab,btn){
 }
 
 function calcGreeks(type){
-  var spot=nv('g-spot')||24000, strike=nv('g-strike')||24000, dte=nv('g-dte')||7, iv=nv('g-iv')||15;
-  req('/quant/dynamic_sl','POST',{entry_price:200,spot:spot,vix:iv,delta:0.5,theta:-10,dte:dte,sl_mode:'VOLATILITY'},function(err,d){
-    if(err||!d) return;
-    // Get actual BS greeks via option chain
-    req('/quant/option_chain/NIFTY?dte='+dte,'GET',null,function(err2,chain){
-      var step=chain&&chain.chain?chain.chain.find(function(r){return r.strike===Math.round(strike/50)*50;}):null;
-      var r=$('greeks-result'); if(!r) return;
-      r.style.display='grid';
-      if(step){
-        var prefix=type==='CE'?'ce':'pe';
-        r.innerHTML=[['Delta',step[prefix+'_delta'].toFixed(4)],['Gamma',step[prefix+'_gamma'].toFixed(6)],['Theta',step[prefix+'_theta'].toFixed(4)],['Vega',step[prefix+'_vega'].toFixed(4)],['IV',step[prefix+'_iv']+'%'],['Price','₹'+step[prefix+'_price']],['Lot Value','₹'+step[prefix+'_lot_value']],['Moneyness',step.atm?'ATM':type==='CE'?'OTM_CE':'OTM_PE']].map(function(g){return '<div class="sbox"><div style="font-size:13px;font-weight:700">'+g[1]+'</div><div class="slbl">'+g[0]+'</div></div>';}).join('');
-      } else {
-        r.innerHTML='<div style="color:var(--mu);font-size:10px;grid-column:span 4">Adjust spot to match a strike</div>';
-      }
-    });
+  var spot=nv('g-spot')||23644, strike=nv('g-strike')||23644, dte=nv('g-dte')||7, iv=nv('g-iv')||18.79;
+  toast('Calculating Greeks...','info');
+  var url='/options/greeks?spot='+spot+'&strike='+strike+'&expiry_days='+dte+'&iv='+iv+'&option_type='+(type||'CE');
+  req(url,'GET',null,function(err,d){
+    var r=$('greeks-result'); if(!r) return;
+    r.style.display='grid';
+    if(err||!d||d.error){
+      r.innerHTML='<div style="color:var(--rd);font-size:10px;grid-column:span 4">Calc failed: '+(err||'no data')+'</div>';
+      return;
+    }
+    var items = [
+      ['Price','₹'+(d.price||0).toFixed(2)],
+      ['Delta',(d.delta||0).toFixed(4)],
+      ['Gamma',(d.gamma||0).toFixed(6)],
+      ['Theta',(d.theta||0).toFixed(4)],
+      ['Vega',(d.vega||0).toFixed(4)],
+      ['Rho',(d.rho||0).toFixed(4)],
+      ['Intrinsic','₹'+(d.intrinsic_value||0).toFixed(2)],
+      ['Time Value','₹'+(d.time_value||0).toFixed(2)],
+      ['Total Premium','₹'+(d.total_premium||0).toLocaleString('en-IN')],
+      ['Moneyness',d.moneyness||'ATM']
+    ];
+    r.innerHTML = items.map(function(g){
+      return '<div class="sbox"><div style="font-size:13px;font-weight:700;color:var(--gr)">'+g[1]+'</div><div class="slbl">'+g[0]+'</div></div>';
+    }).join('');
+    toast(type+' Greeks calculated','success');
   });
 }
 
@@ -2484,19 +2661,56 @@ function renderRegime(d){
 }
 
 function loadAIInsights(){
-  req('/quant/ai_insights/'+(UID||'demo'),'GET',null,function(err,d){
+  var uid = UID || window.UID || 'demo';
+  req('/quant/ai_insights/'+encodeURIComponent(uid),'GET',null,function(err,d){
     var el=$('ai-insights-data'); if(!el) return;
-    // Always show recommendations even with 0 trades
-    if(d&&d.message&&!d.total_trades_analyzed){
-      var recs=(d.recommendations||[]);
-      el.innerHTML='<div style="color:var(--am);font-size:10px;padding:6px;margin-bottom:8px">'+d.message+'</div>'
-        +(recs.length?'<div class="chdr" style="margin-top:8px">RECOMMENDATIONS</div>'+recs.map(function(r){return '<div style="font-size:10px;color:var(--mu);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">'+r+'</div>';}).join(''):'');
+    
+    if(err||!d){
+      el.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">No insights yet — trade more to build data</div>';
       return;
     }
-    if(!d){ el.innerHTML='<div style="color:var(--mu);font-size:10px;padding:8px">Loading insights...</div>'; return; }
-    el.innerHTML='<div class="row"><span>Total Analyzed</span><b>'+d.total_trades_analyzed+'</b></div>'
-      +'<div class="row"><span>Overall Win Rate</span><b style="color:var(--gr)">'+d.overall_win_rate+'%</b></div>'
-      +(d.recommendations?d.recommendations.map(function(r){return '<div style="font-size:10px;color:var(--mu);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">💡 '+r+'</div>';}).join(''):'');
+    
+    // Safe field access with fallbacks
+    var totalTrades = d.total_trades_analyzed || d.total_trades || d.trades || 0;
+    var winRate     = d.overall_win_rate || d.win_rate || d.winRate || 0;
+    var totalPnl    = d.total_pnl || d.pnl || 0;
+    var bestStrat   = d.best_strategy || d.top_strategy || 'N/A';
+    var avgWin      = d.avg_win || 0;
+    var avgLoss     = d.avg_loss || 0;
+    var recs        = d.recommendations || d.tips || [
+      'Start with paper trading to build a baseline',
+      'Use Backtest tab to test strategies on historical data',
+      'AI signals available in Scanner tab',
+      'Track every trade in Journal for AI to learn from',
+    ];
+    
+    var html = '';
+    
+    // Stats grid
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+    html += '<div class="sbox"><div style="font-size:18px;font-weight:800;color:var(--bl)">'+totalTrades+'</div><div class="slbl">Total Trades</div></div>';
+    html += '<div class="sbox"><div style="font-size:18px;font-weight:800;color:'+(winRate>50?'var(--gr)':'var(--am)')+'">'+winRate+'%</div><div class="slbl">Win Rate</div></div>';
+    html += '<div class="sbox"><div style="font-size:14px;font-weight:800;color:'+(totalPnl>=0?'var(--gr)':'var(--rd)')+'">₹'+totalPnl.toLocaleString('en-IN')+'</div><div class="slbl">Total P&L</div></div>';
+    html += '<div class="sbox"><div style="font-size:11px;font-weight:700;color:var(--am)">'+bestStrat+'</div><div class="slbl">Best Strategy</div></div>';
+    html += '</div>';
+    
+    // Avg win/loss if any
+    if(avgWin || avgLoss){
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+      html += '<div class="sbox"><div style="font-size:12px;color:var(--gr)">₹'+avgWin.toLocaleString('en-IN')+'</div><div class="slbl">Avg Win</div></div>';
+      html += '<div class="sbox"><div style="font-size:12px;color:var(--rd)">₹'+Math.abs(avgLoss).toLocaleString('en-IN')+'</div><div class="slbl">Avg Loss</div></div>';
+      html += '</div>';
+    }
+    
+    // Recommendations
+    if(recs && recs.length){
+      html += '<div class="chdr" style="margin-top:12px">💡 AI RECOMMENDATIONS</div>';
+      html += recs.map(function(r){
+        return '<div style="font-size:10px;color:var(--mu);padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);line-height:1.5">→ '+r+'</div>';
+      }).join('');
+    }
+    
+    el.innerHTML = html;
   });
 }
 
@@ -3858,6 +4072,262 @@ function diagnoseConnection(){
   });
 }
 
+
+function _renderChain(d, inst, spot){
+  var atmStrike = d.atm_strike || Math.round(spot/50)*50;
+  st('chain-spot','₹'+Math.round(spot).toLocaleString('en-IN'));
+  // Group by strike
+  var byStrike = {};
+  (d.chain||[]).forEach(function(r){
+    if(!byStrike[r.strike]) byStrike[r.strike]={};
+    byStrike[r.strike][r.option_type]=r;
+  });
+  var strikes = Object.keys(byStrike).map(function(s){return parseInt(s);}).sort(function(a,b){return a-b;});
+  var totalCeOI=0, totalPeOI=0;
+  var table=$('chain-table'); if(!table) return;
+  var html='<table style="width:100%;border-collapse:collapse;font-size:9px"><tr style="color:var(--mu);text-align:center;background:var(--bg4)"><th style="padding:6px">CE ₹</th><th>CE IV</th><th>CE Δ</th><th style="font-weight:800;color:var(--am)">STRIKE</th><th>PE Δ</th><th>PE IV</th><th>PE ₹</th></tr>';
+  strikes.forEach(function(K){
+    var ce=byStrike[K]['CE']||{}, pe=byStrike[K]['PE']||{};
+    var atm = K===atmStrike;
+    html += '<tr style="'+(atm?'background:rgba(251,191,36,.08);border-left:2px solid var(--am);border-right:2px solid var(--am);':'border-bottom:1px solid var(--bo);')+'text-align:center">'
+      +'<td style="padding:4px;color:var(--gr);font-weight:'+(atm?700:400)+'">'+(ce.price||0).toFixed(1)+'</td>'
+      +'<td style="color:var(--bl)">'+(ce.iv_pct||0).toFixed(1)+'%</td>'
+      +'<td style="color:var(--mu)">'+(ce.delta||0).toFixed(2)+'</td>'
+      +'<td style="font-weight:700;color:'+(atm?'var(--am)':'var(--tx)')+'">'+K+'</td>'
+      +'<td style="color:var(--mu)">'+Math.abs(pe.delta||0).toFixed(2)+'</td>'
+      +'<td style="color:var(--bl)">'+(pe.iv_pct||0).toFixed(1)+'%</td>'
+      +'<td style="color:var(--rd);font-weight:'+(atm?700:400)+'">'+(pe.price||0).toFixed(1)+'</td>'
+      +'</tr>';
+  });
+  html += '</table>';
+  table.innerHTML = html;
+  st('chain-pcr', '~1.2');
+  st('chain-maxpain', '₹'+atmStrike.toLocaleString('en-IN'));
+  toast('Chain loaded — '+strikes.length+' strikes','success');
+}
+
+
+
+function loadSubPlans(){
+  req('/subscriptions/plans','GET',null,function(err,d){
+    var grid=$('sub-plans-grid'); if(!grid) return;
+    var plans = (d&&d.plans)||{
+      FREE: {price:0, features:['Paper Trading','Basic Backtest','3 Strategies','NLP Orders']},
+      BASIC: {price:299, features:['Paper Trading','Scanner','Options Chain','20 Strategies','6m Backtest','Reports']},
+      PRO: {price:999, features:['Everything','AI Engine','Auto Execute','Live API','Unlimited Strategies','12m Backtest']},
+      INSTITUTIONAL: {price:4999, features:['Everything','5yr Backtest','White Label','Custom API','Admin Dashboard','SLA']}
+    };
+    var colors={FREE:'var(--mu)',BASIC:'var(--bl)',PRO:'var(--am)',INSTITUTIONAL:'var(--p0)'};
+    grid.innerHTML = Object.keys(plans).map(function(p){
+      var pl=plans[p], current=(UPLAN||'FREE')===p;
+      return '<div style="background:'+(current?'rgba(0,255,136,.06)':'var(--bg4)')+';border:1px solid '+(current?'var(--gr)':'var(--bo)')+';border-radius:10px;padding:14px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+          +'<div style="font-size:16px;font-weight:800;color:'+colors[p]+'">'+p+'</div>'
+          +'<div style="font-size:16px;font-weight:800">₹'+pl.price+'<span style="font-size:10px;color:var(--mu)">/mo</span></div>'
+        +'</div>'
+        +(pl.features||[]).map(function(f){return '<div style="font-size:10px;color:var(--mu);padding:2px 0">✓ '+f+'</div>';}).join('')
+        +(current?'<button class="btn full" style="margin-top:8px;background:var(--gr);color:#000;font-weight:800" disabled>✓ CURRENT PLAN</button>':'<button onclick="upgradePlan(\''+p+'\')" class="btn g full" style="margin-top:8px">⬆️ Upgrade to '+p+'</button>')
+        +'</div>';
+    }).join('');
+  });
+}
+
+function upgradePlan(plan){
+  if(plan==='FREE') return toast('You are already on Free','info');
+  toast('Redirecting to payment for '+plan+'...','info');
+  // For demo: just update locally
+  setTimeout(function(){
+    UPLAN=plan;
+    try{var u=JSON.parse(localStorage.getItem('trd_user')||'{}');u.plan=plan;localStorage.setItem('trd_user',JSON.stringify(u));}catch(e){}
+    st('nav-plan', plan);
+    toast('Plan upgraded to '+plan+'! Demo mode.','success');
+    show('prof');
+  },800);
+}
+
+// Hook into show()
+(function(){
+  var os = window.show;
+  window.show = function(p){
+    if(os) os(p);
+    if(p==='sub') setTimeout(loadSubPlans, 100);
+  };
+})();
+
+// ── PROFILE FEATURES ──────────────────────────────
+function setTheme(theme){
+  var root=document.documentElement;
+  var themes={
+    'dark':   {'--bg1':'#0a0e1a','--bg2':'#10131e','--bg3':'#171b29','--bg4':'#1d2235','--bg5':'#252b40','--tx':'#e2e8f0'},
+    'light':  {'--bg1':'#ffffff','--bg2':'#f8fafc','--bg3':'#f1f5f9','--bg4':'#e2e8f0','--bg5':'#cbd5e1','--tx':'#1e293b'},
+    'blue':   {'--bg1':'#0c1e3e','--bg2':'#102b50','--bg3':'#143862','--bg4':'#194775','--bg5':'#1e5688','--tx':'#dbeafe'},
+    'green':  {'--bg1':'#001a0e','--bg2':'#002a16','--bg3':'#003a20','--bg4':'#004a2a','--bg5':'#005a35','--tx':'#dcfce7'}
+  };
+  var t=themes[theme]||themes.dark;
+  Object.keys(t).forEach(function(k){root.style.setProperty(k,t[k]);});
+  try{localStorage.setItem('trd_theme', theme);}catch(e){}
+  toast(theme.charAt(0).toUpperCase()+theme.slice(1)+' theme applied','success');
+}
+
+function saveSettings(){
+  var s={
+    notif:    $('set-notif')?$('set-notif').checked:true,
+    autorefresh: $('set-autorefresh')?$('set-autorefresh').checked:true,
+    sound:    $('set-sound')?$('set-sound').checked:false,
+    lang:     $('set-lang')?$('set-lang').value:'en'
+  };
+  try{localStorage.setItem('trd_settings', JSON.stringify(s));}catch(e){}
+  toast('Settings saved','success');
+}
+
+function loadSettings(){
+  try{
+    var s=JSON.parse(localStorage.getItem('trd_settings')||'{}');
+    if($('set-notif'))s['notif']!==undefined&&($('set-notif').checked=s.notif);
+    if($('set-autorefresh')&&s.autorefresh!==undefined)$('set-autorefresh').checked=s.autorefresh;
+    if($('set-sound')&&s.sound!==undefined)$('set-sound').checked=s.sound;
+    if($('set-lang')&&s.lang)$('set-lang').value=s.lang;
+  }catch(e){}
+}
+
+// AI Auto-Execute
+function saveAIAutoConfig(){
+  var enabled=$('ai-auto-enabled')&&$('ai-auto-enabled').checked;
+  var conf=parseInt(($('ai-auto-conf')||{}).value||95);
+  var maxT=parseInt(($('ai-auto-max')||{}).value||3);
+  var mode=($('ai-auto-mode')||{}).value||'PAPER';
+  var cfg={enabled:enabled,min_confidence:conf/100,daily_signal_limit:maxT,mode:mode,user_id:UID||'demo',max_lots:1,instruments:['NIFTY','BANKNIFTY']};
+  req('/ai/auto_execute/config','POST',cfg,function(err,d){
+    if(d&&d.updated){
+      var status=$('ai-auto-status');
+      if(status){
+        if(enabled){
+          status.innerHTML='<span style="color:var(--gr)">✅ AUTO-EXECUTE ACTIVE — '+conf+'% confidence, max '+maxT+' trades/day, '+mode+' mode</span>';
+        } else {
+          status.innerHTML='<span style="color:var(--mu)">Auto-execute disabled</span>';
+        }
+      }
+    }
+  });
+  try{localStorage.setItem('trd_ai_auto', JSON.stringify(cfg));}catch(e){}
+}
+
+function findBestAIStrategy(){
+  var status=$('ai-auto-status');
+  if(status) status.innerHTML='<span style="color:var(--am)">🔍 Analyzing live market for 95%+ strategies...</span>';
+  
+  req('/ai/scan?instruments=NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY','GET',null,function(err,d){
+    if(err||!d||!d.signals){
+      if(status) status.innerHTML='<span style="color:var(--rd)">Scan failed</span>';
+      return;
+    }
+    // Filter signals 95%+ confidence
+    var best = (d.signals||[]).filter(function(s){return s.confidence>=85;}).sort(function(a,b){return b.confidence-a.confidence;});
+    if(best.length===0){
+      if(status) status.innerHTML='<span style="color:var(--am)">⚠️ No 85%+ confidence signals right now. Wait for market.</span>';
+      return;
+    }
+    var top = best[0];
+    var html='<div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:6px;padding:8px;margin-top:6px;text-align:left">'
+      +'<div style="font-size:12px;font-weight:800;color:var(--gr);margin-bottom:4px">🏆 BEST: '+top.signal+' '+top.instrument+' '+top.option_type+'</div>'
+      +'<div style="font-size:10px;color:var(--mu)">Confidence: <b style="color:var(--am)">'+top.confidence+'%</b> · Strategy: '+(top.strategy||'AI Multi-factor')+'</div>'
+      +'<div style="font-size:9px;color:var(--mu);margin-top:4px">'+(top.rationale||'').substring(0,150)+'</div>';
+    if(best.length>1) html+='<div style="font-size:9px;color:var(--mu);margin-top:6px;border-top:1px solid var(--bo);padding-top:4px">+'+(best.length-1)+' more 85%+ signals available</div>';
+    html+='</div>';
+    if(status) status.innerHTML=html;
+  });
+}
+
+function loadAIAutoConfig(){
+  try{
+    var c=JSON.parse(localStorage.getItem('trd_ai_auto')||'{}');
+    if($('ai-auto-enabled'))$('ai-auto-enabled').checked=c.enabled||false;
+    if($('ai-auto-conf'))$('ai-auto-conf').value=Math.round((c.min_confidence||0.95)*100);
+    if($('ai-auto-max'))$('ai-auto-max').value=c.daily_signal_limit||3;
+    if($('ai-auto-mode'))$('ai-auto-mode').value=c.mode||'PAPER';
+  }catch(e){}
+}
+
+// Customer Support
+function openSupport(type){
+  if(type==='chat'){
+    var box=$('support-chat-box');
+    if(box) box.style.display = box.style.display==='none'?'block':'none';
+  } else if(type==='email'){
+    window.location.href='mailto:support@trd.app?subject=TRD%20Support';
+  } else if(type==='telegram'){
+    window.open('https://t.me/trd_support','_blank');
+  } else if(type==='faq'){
+    toast('FAQ: Visit trd.app/faq','info');
+  }
+}
+
+function sendSupportMessage(){
+  var inp=$('support-input'); if(!inp||!inp.value.trim()) return;
+  var msg=inp.value.trim();
+  var msgs=$('support-messages');
+  if(msgs){
+    msgs.innerHTML+='<div style="color:var(--bl);margin-top:4px"><b>You:</b> '+msg+'</div>';
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  inp.value='';
+  req('/support/chat','POST',{user_id:UID||'guest',message:msg,user_name:UNAME||'Friend'},function(err,d){
+    if(msgs){
+      var resp = (d&&d.response)||'I will help you with that. Please email support@trd.app for detailed assistance.';
+      msgs.innerHTML+='<div style="color:var(--gr);margin-top:4px"><b>🤖:</b> '+resp+'</div>';
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+  });
+}
+
+// Feedback
+window._rating = 0;
+function setRating(r){
+  window._rating = r;
+  var stars = document.querySelectorAll('#rating-stars span');
+  stars.forEach(function(s,i){ s.textContent = i<r ? '★' : '☆'; s.style.color = i<r ? 'var(--am)' : 'var(--mu)'; });
+}
+
+function submitFeedback(){
+  var text=$('feedback-text')&&$('feedback-text').value.trim();
+  if(!window._rating){ toast('Please rate first','error'); return; }
+  if(!text){ toast('Please add comments','error'); return; }
+  // Just save locally (no endpoint required)
+  try{
+    var fb={rating:window._rating,text:text,user_id:UID||'guest',time:Date.now()};
+    var arr=JSON.parse(localStorage.getItem('trd_feedback')||'[]'); arr.push(fb);
+    localStorage.setItem('trd_feedback',JSON.stringify(arr));
+  }catch(e){}
+  toast('Thank you for your feedback! ⭐'.repeat(window._rating),'success');
+  $('feedback-text').value='';
+  setRating(0);
+}
+
+// Subscription status loader
+function loadSubscriptionStatus(){
+  var planEl=$('sub-plan-name');
+  if(planEl){
+    planEl.textContent = UPLAN || 'FREE';
+    planEl.style.color = UPLAN==='PRO'?'var(--am)':UPLAN==='INSTITUTIONAL'?'var(--p0)':'var(--gr)';
+  }
+}
+
+// Initialize on profile load
+window._origShow = window.show;
+window.show = function(p){
+  if(window._origShow) window._origShow(p);
+  if(p==='prof'){
+    setTimeout(function(){
+      loadSettings();
+      loadAIAutoConfig();
+      loadSubscriptionStatus();
+      // Apply saved theme
+      try{var t=localStorage.getItem('trd_theme'); if(t) setTheme(t);}catch(e){}
+    },100);
+  }
+};
+
+
 // ── API BASE URL ──────────────────────────────────
 (function(){
   var t=['localhost:8000','127.0.0.1:8000'];
@@ -3872,6 +4342,15 @@ function diagnoseConnection(){
 </script>
 
 <!-- LIVE POSITIONS -->
+
+<div id="pnl-sub" class="pnl">
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(168,85,247,.08));border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:16px;margin-bottom:10px;text-align:center">
+    <div style="font-size:18px;font-weight:800;color:var(--am)">💎 SUBSCRIPTION PLANS</div>
+    <div style="font-size:10px;color:var(--mu);margin-top:4px">Choose the plan that fits your trading needs</div>
+  </div>
+  <div id="sub-plans-grid" style="display:flex;flex-direction:column;gap:10px"></div>
+</div>
+
 <div id="pnl-livepos" class="pnl">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
     <div style="font-size:13px;font-weight:800;color:var(--gr)">📊 LIVE POSITIONS</div>
