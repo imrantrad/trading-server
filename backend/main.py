@@ -4997,22 +4997,63 @@ def market_live_prices(user_id: str = ""):
                 _sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
                 from brokers.angel_one import get_all_live_prices
                 prices = get_all_live_prices(s["api_key"], s["jwt_token"])
-                if prices and prices.get("NIFTY"):
-                    nifty  = prices["NIFTY"]
-                    bnifty = prices.get("BANKNIFTY", nifty * 2.2717)
+                
+                # Handle BOTH dict and float formats from Angel One
+                def _xp(sym):
+                    """Extract price - handles dict {price,change,pct} or float"""
+                    d = prices.get(sym)
+                    if isinstance(d, dict):
+                        return d.get("price", 0), d.get("change", 0), d.get("pct", 0)
+                    if d is not None:
+                        return float(d), 0, 0
+                    return 0, 0, 0
+                
+                nifty_p, nifty_chg, nifty_pct = _xp("NIFTY")
+                
+                if nifty_p > 0:
+                    bn_p,bn_c,bn_pp = _xp("BANKNIFTY")
+                    fn_p,fn_c,fn_pp = _xp("FINNIFTY")
+                    mcp_p,mcp_c,mcp_pp = _xp("MIDCPNIFTY")
+                    snx_p,snx_c,snx_pp = _xp("SENSEX")
+                    nxt_p,nxt_c,nxt_pp = _xp("NIFTYNXT50")
+                    vix_p,_,_       = _xp("INDIA_VIX")
+                    if not vix_p:    vix_p = 18.5
+                    
+                    # Use real prices, fall back to ratios for missing
+                    if bn_p <= 0:   bn_p = round(nifty_p * 2.2717, 2)
+                    if fn_p <= 0:   fn_p = round(nifty_p * 1.0719, 2)
+                    if mcp_p <= 0:  mcp_p = round(nifty_p * 0.5993, 2)
+                    if snx_p <= 0:  snx_p = round(nifty_p * 3.1822, 2)
+                    if nxt_p <= 0:  nxt_p = round(nifty_p * 2.9302, 2)
+                    
                     result = {
-                        "source":    "ANGEL_ONE_LIVE",
-                        "nifty":     {"price": nifty,  "change": 0, "pct": 0},
-                        "banknifty": {"price": bnifty, "change": 0, "pct": 0},
-                        "finnifty":  {"price": round(nifty*1.27,2), "change":0,"pct":0},
-                        "india_vix": {"price": prices.get("VIX",14.5)},
-                        "NIFTY":     nifty, "BANKNIFTY": bnifty, "INDIA_VIX": prices.get("VIX",14.5),
-                        "timestamp": datetime.now().strftime("%H:%M:%S IST"),
+                        "source":     "ANGEL_ONE_LIVE",
+                        "nifty":      {"price": nifty_p, "change": nifty_chg, "pct": nifty_pct},
+                        "banknifty":  {"price": bn_p,    "change": bn_c,      "pct": bn_pp},
+                        "finnifty":   {"price": fn_p,    "change": fn_c,      "pct": fn_pp},
+                        "midcpnifty": {"price": mcp_p,   "change": mcp_c,     "pct": mcp_pp},
+                        "sensex":     {"price": snx_p,   "change": snx_c,     "pct": snx_pp},
+                        "niftynxt50": {"price": nxt_p,   "change": nxt_c,     "pct": nxt_pp},
+                        "india_vix":  {"price": vix_p,   "change": 0,         "pct": 0},
+                        "NIFTY":      nifty_p,
+                        "BANKNIFTY":  bn_p,
+                        "FINNIFTY":   fn_p,
+                        "MIDCPNIFTY": mcp_p,
+                        "SENSEX":     snx_p,
+                        "NIFTYNXT50": nxt_p,
+                        "INDIA_VIX":  vix_p,
+                        "timestamp":  datetime.now(IST).strftime("%H:%M:%S IST"),
                     }
-                    cache.set(broker_cache_key, result, 5)  # 5s cache for live
-                    cache.set("market:live", result, 5)     # also update main cache
+                    cache.set(broker_cache_key, result, 5)
+                    cache.set("market:live", result, 5)
                     return result
-            except Exception:
+                else:
+                    # Angel One returned empty/zero — log and fall through
+                    import logging
+                    logging.warning(f"Angel One returned empty prices for {user_id}: {prices}")
+            except Exception as _e:
+                import logging
+                logging.warning(f"Angel One fetch failed for {user_id}: {_e}")
                 pass
 
     cached = cache.get("market:live")
@@ -5845,6 +5886,75 @@ def bust_market_cache():
         if key.startswith("broker_live:") or key.startswith("market:"):
             cache.delete(key)
     return {"cleared": True, "message": "Market cache cleared — next request will fetch fresh data"}
+
+
+@app.get("/broker/angel/diagnose/{user_id}")
+def angel_diagnose(user_id: str):
+    """Full diagnostic of Angel One connection — shows exactly what's happening"""
+    diag = {"user_id": user_id, "checks": []}
+    
+    # Check 1: In-memory session
+    in_mem = user_id in _angel_sessions
+    diag["checks"].append({"step": "1. Session in memory", "status": "✅" if in_mem else "❌", "value": str(in_mem)})
+    
+    # Check 2: DB session
+    db_session = None
+    if USER_SYSTEM:
+        try:
+            with user_db.conn() as _uc:
+                _ur = _uc.execute(
+                    "SELECT api_key, broker_name, broker_mode, broker_key_hint FROM users WHERE id=?",
+                    (user_id,)
+                ).fetchone()
+            if _ur:
+                db_session = dict(_ur) if hasattr(_ur,'keys') else {k:_ur[k] for k in _ur.keys()}
+                diag["checks"].append({"step": "2. DB broker record", "status": "✅",
+                                      "value": f"name={db_session.get('broker_name')} mode={db_session.get('broker_mode')}"})
+                hint = db_session.get("broker_key_hint","")
+                if hint and "|" in hint:
+                    parts = hint.split("|")
+                    if len(parts) >= 3:
+                        exp = int(parts[2])
+                        valid = time.time() < exp
+                        mins_left = int((exp - time.time())/60) if valid else 0
+                        diag["checks"].append({
+                            "step": "3. JWT token validity",
+                            "status": "✅" if valid else "❌",
+                            "value": f"valid={valid} mins_remaining={mins_left} jwt_len={len(parts[1])}"
+                        })
+            else:
+                diag["checks"].append({"step": "2. DB broker record", "status": "❌", "value": "User not found"})
+        except Exception as e:
+            diag["checks"].append({"step": "2. DB lookup", "status": "❌", "value": str(e)[:100]})
+    
+    # Check 3: Try to fetch live prices
+    if in_mem:
+        s = _angel_sessions[user_id]
+        try:
+            import sys as _sys, os as _os
+            _sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
+            from brokers.angel_one import get_all_live_prices, get_live_quote
+            
+            # Try single quote first
+            q = get_live_quote(s["api_key"], s["jwt_token"], "NIFTY")
+            diag["checks"].append({
+                "step": "4. Test NIFTY quote",
+                "status": "✅" if q.get("ltp") else "❌",
+                "value": f"ltp={q.get('ltp',0)} error={q.get('error','none')}"
+            })
+            
+            # Try batch
+            prices = get_all_live_prices(s["api_key"], s["jwt_token"])
+            diag["checks"].append({
+                "step": "5. Batch fetch all indices",
+                "status": "✅" if prices else "❌",
+                "value": f"indices={list(prices.keys())} sample={prices.get('NIFTY','none')}"
+            })
+        except Exception as e:
+            diag["checks"].append({"step": "4. Live fetch", "status": "❌", "value": str(e)[:150]})
+    
+    diag["recommendation"] = "Re-connect Angel One via Profile if checks show ❌"
+    return diag
 
 
 @app.post("/ml/scan_all")

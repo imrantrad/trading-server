@@ -206,6 +206,7 @@ input:focus,select:focus{border-color:var(--bl)}
         <div style="display:flex;flex-direction:column;gap:3px">
           <button onclick="loadMarketPrices(true)" style="font-size:8px;padding:3px 6px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--bl);border-radius:4px;cursor:pointer">🔄 Refresh</button>
           <button onclick="goLive()" style="font-size:8px;padding:3px 6px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--am);border-radius:4px;cursor:pointer">🔴 Go LIVE</button>
+          <button onclick="diagnoseConnection()" style="font-size:8px;padding:3px 6px;background:rgba(255,255,255,.05);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">🩺 Diagnose</button>
         </div>
       </div>
     </div>
@@ -3811,6 +3812,34 @@ function goLive(){
     var totp=$('ao-totp'); if(totp){totp.focus();}
     toast('Enter your TOTP from Authenticator app → CONNECT','info');
   },400);
+}
+
+
+function diagnoseConnection(){
+  var uid=window.UID||'demo';
+  toast('Running diagnostic...','info');
+  req('/broker/angel/diagnose/'+uid,'GET',null,function(err,d){
+    if(err||!d){ toast('Diagnose failed','error'); return; }
+    var msg='ANGEL ONE DIAGNOSTIC:\n\n';
+    (d.checks||[]).forEach(function(c){
+      msg += c.status+' '+c.step+': '+c.value+'\n';
+    });
+    msg += '\n→ '+(d.recommendation||'');
+    alert(msg);
+    
+    // Show on screen too
+    var resultEl=$('broker-result');
+    if(resultEl){
+      resultEl.style.display='block';
+      var html='<div style="text-align:left;font-size:9px;line-height:1.7">'
+        +'<div style="font-weight:700;color:var(--am);margin-bottom:6px">🩺 DIAGNOSTIC RESULTS</div>';
+      (d.checks||[]).forEach(function(c){
+        html += '<div style="padding:2px 0">'+c.status+' <b>'+c.step+'</b><br><span style="color:var(--mu);font-size:8px;margin-left:14px">'+c.value+'</span></div>';
+      });
+      html += '<div style="margin-top:8px;color:var(--bl);font-size:9px">'+(d.recommendation||'')+'</div></div>';
+      resultEl.innerHTML=html;
+    }
+  });
 }
 
 // ── API BASE URL ──────────────────────────────────
