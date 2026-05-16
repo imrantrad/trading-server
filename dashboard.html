@@ -1047,44 +1047,182 @@ input:focus,select:focus{border-color:var(--bl)}
 <!-- JOURNAL -->
 <div id="pnl-jnl" class="pnl">
   <div class="card">
-    <div class="chdr" style="display:flex;justify-content:space-between">
-      📓 TRADE JOURNAL
-      <button onclick="addJournalEntry()" class="btn g" style="font-size:9px;padding:3px 10px">+ ADD</button>
+    <div class="chdr" style="display:flex;justify-content:space-between;align-items:center">
+      📓 INSTITUTIONAL TRADE JOURNAL
+      <span style="font-size:9px;color:var(--mu);font-weight:400">For self-learning + AI feedback</span>
     </div>
-    <textarea id="jnl-input" rows="3" placeholder="Trade notes, observations..." style="font-size:11px;margin-bottom:8px;resize:none"></textarea>
-    <button onclick="saveJournalEntry()" class="btn b full" style="margin-bottom:10px">💾 SAVE ENTRY</button>
+    
+    <div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:10px">
+      <div class="g2" style="margin-bottom:6px">
+        <div><div class="lbl">INSTRUMENT</div><select id="jnl-inst" style="font-size:10px"><option>NIFTY</option><option>BANKNIFTY</option><option>FINNIFTY</option><option>MIDCPNIFTY</option><option>SENSEX</option></select></div>
+        <div><div class="lbl">TRADE TYPE</div><select id="jnl-type" style="font-size:10px"><option>BUY CE</option><option>BUY PE</option><option>SELL CE</option><option>SELL PE</option><option>SPREAD</option></select></div>
+        <div><div class="lbl">P&L ₹</div><input id="jnl-pnl" type="number" placeholder="±0" style="font-size:10px"></div>
+        <div><div class="lbl">RATING /10</div><input id="jnl-rating" type="number" min="1" max="10" value="7" style="font-size:10px"></div>
+      </div>
+      
+      <div class="lbl">EMOTION</div>
+      <div id="emotion-pills" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">
+        <span onclick="selectEmotion(this,'CALM')" class="emot-pill" style="padding:3px 10px;background:var(--bg5);border-radius:12px;font-size:9px;cursor:pointer;border:1px solid var(--bo)">😌 Calm</span>
+        <span onclick="selectEmotion(this,'CONFIDENT')" class="emot-pill" style="padding:3px 10px;background:var(--bg5);border-radius:12px;font-size:9px;cursor:pointer;border:1px solid var(--bo)">💪 Confident</span>
+        <span onclick="selectEmotion(this,'FEAR')" class="emot-pill" style="padding:3px 10px;background:var(--bg5);border-radius:12px;font-size:9px;cursor:pointer;border:1px solid var(--bo)">😨 Fear</span>
+        <span onclick="selectEmotion(this,'GREED')" class="emot-pill" style="padding:3px 10px;background:var(--bg5);border-radius:12px;font-size:9px;cursor:pointer;border:1px solid var(--bo)">🤑 Greed</span>
+        <span onclick="selectEmotion(this,'REVENGE')" class="emot-pill" style="padding:3px 10px;background:var(--bg5);border-radius:12px;font-size:9px;cursor:pointer;border:1px solid var(--bo)">😤 Revenge</span>
+        <span onclick="selectEmotion(this,'BORED')" class="emot-pill" style="padding:3px 10px;background:var(--bg5);border-radius:12px;font-size:9px;cursor:pointer;border:1px solid var(--bo)">🥱 Bored</span>
+      </div>
+      
+      <div class="lbl">SETUP (What did you see?)</div>
+      <textarea id="jnl-setup" rows="2" placeholder="e.g., NIFTY broke 23700, RSI oversold, volume spike..." style="font-size:11px;margin-bottom:6px;resize:none"></textarea>
+      
+      <div class="lbl">MISTAKES (Be honest)</div>
+      <textarea id="jnl-mistakes" rows="2" placeholder="e.g., Didn't follow SL, traded with revenge, no plan..." style="font-size:11px;margin-bottom:6px;resize:none"></textarea>
+      
+      <div class="lbl">LESSON LEARNED</div>
+      <textarea id="jnl-lessons" rows="2" placeholder="e.g., Always wait for confirmation, stick to plan..." style="font-size:11px;margin-bottom:6px;resize:none"></textarea>
+      
+      <button onclick="saveJournalEntry()" class="btn g full" style="font-size:11px;padding:10px">💾 SAVE & ANALYZE</button>
+    </div>
+    
+    <div class="chdr" style="font-size:11px">📖 RECENT ENTRIES</div>
     <div id="jnl-list"><div style="color:var(--mu);font-size:10px;padding:8px;text-align:center">No entries yet</div></div>
   </div>
-</div>
-
-<!-- REPORTS -->
-<div id="pnl-rep" class="pnl">
+  
+  <!-- Behavioral Stats -->
   <div class="card">
-    <div class="chdr">📊 PERFORMANCE REPORTS</div>
-    <button onclick="loadReports()" class="btn b full" style="margin-bottom:8px">GENERATE REPORT</button>
-    <div id="rep-data"><div style="color:var(--mu);font-size:10px;padding:8px;text-align:center">Click to generate</div></div>
+    <div class="chdr">📊 BEHAVIORAL ANALYTICS</div>
+    <div id="jnl-stats" style="font-size:10px"><div style="color:var(--mu);padding:8px;text-align:center">Log entries to see patterns</div></div>
   </div>
 </div>
 
-<!-- CALC -->
+<div id="pnl-rep" class="pnl">
+  <div style="background:linear-gradient(135deg,rgba(0,255,136,.06),rgba(79,142,247,.06));border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:14px;margin-bottom:10px;text-align:center">
+    <div style="font-size:16px;font-weight:800;color:var(--gr)">📊 REPORTS & ANALYTICS</div>
+    <div style="font-size:9px;color:var(--mu);margin-top:2px">Performance · Trades · Tax · Compliance</div>
+  </div>
+  
+  <div style="display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--bo);margin-bottom:12px">
+    <button class="tpill active" onclick="repTab('perf',this)">📈 PERFORMANCE</button>
+    <button class="tpill" onclick="repTab('daily',this)">📅 DAILY</button>
+    <button class="tpill" onclick="repTab('weekly',this)">📊 WEEKLY</button>
+    <button class="tpill" onclick="repTab('tax',this)">💰 TAX (P&L)</button>
+    <button class="tpill" onclick="repTab('export',this)">📥 EXPORT</button>
+  </div>
+  
+  <div id="rep-perf" class="card">
+    <div id="reports-content"><div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">Loading reports...</div></div>
+  </div>
+  
+  <div id="rep-daily" class="card" style="display:none">
+    <div class="chdr">📅 DAILY REPORT</div>
+    <div id="daily-content"><div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">Loading...</div></div>
+  </div>
+  
+  <div id="rep-weekly" class="card" style="display:none">
+    <div class="chdr">📊 WEEKLY REPORT</div>
+    <div id="weekly-content"><div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">Loading...</div></div>
+  </div>
+  
+  <div id="rep-tax" class="card" style="display:none">
+    <div class="chdr">💰 TAX REPORT (For ITR)</div>
+    <div style="background:var(--bg4);padding:10px;border-radius:6px;margin-bottom:8px;font-size:10px;line-height:1.7">
+      <div style="font-weight:700;color:var(--am);margin-bottom:4px">🇮🇳 Indian F&O Tax (FY 2025-26)</div>
+      <div>Speculative income (Intraday): Taxed at slab rate</div>
+      <div>Non-speculative (F&O): Business income, advance tax applicable</div>
+      <div>STT, GST, brokerage: Deductible expenses</div>
+    </div>
+    <div id="tax-summary" style="font-size:11px">
+      <div class="row"><span>Total Realized P&L</span><b id="tax-pnl">₹0</b></div>
+      <div class="row"><span>STT Paid</span><b id="tax-stt">₹0</b></div>
+      <div class="row"><span>Brokerage</span><b id="tax-brokerage">₹0</b></div>
+      <div class="row"><span>Net Profit</span><b id="tax-net" style="color:var(--gr)">₹0</b></div>
+    </div>
+    <button onclick="loadTaxReport()" class="btn g full" style="margin-top:8px;font-size:10px">🔄 CALCULATE</button>
+  </div>
+  
+  <div id="rep-export" class="card" style="display:none">
+    <div class="chdr">📥 EXPORT TRADES</div>
+    <button onclick="exportTrades('csv')" class="btn b full" style="margin-bottom:6px;font-size:10px">📄 EXPORT TO CSV</button>
+    <button onclick="exportTrades('json')" class="btn full" style="margin-bottom:6px;font-size:10px">{ } EXPORT TO JSON</button>
+    <button onclick="exportTrades('pdf')" class="btn full" style="background:rgba(245,158,11,.1);color:var(--am);font-size:10px">📕 EXPORT TO PDF (Tax Filing)</button>
+  </div>
+</div>
+
 <div id="pnl-calc" class="pnl">
-  <div class="card">
-    <div class="chdr">🧮 OPTIONS CALCULATOR</div>
+  <div style="display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--bo);margin-bottom:12px">
+    <button class="tpill active" onclick="calcTab('opt',this)">🧮 OPTIONS</button>
+    <button class="tpill" onclick="calcTab('margin',this)">💰 MARGIN</button>
+    <button class="tpill" onclick="calcTab('size',this)">📏 POSITION SIZE</button>
+    <button class="tpill" onclick="calcTab('rr',this)">⚖️ R:R</button>
+    <button class="tpill" onclick="calcTab('comp',this)">📈 COMPOUND</button>
+  </div>
+
+  <div id="calc-opt" class="card">
+    <div class="chdr">🧮 OPTIONS CALCULATOR (Black-Scholes)</div>
     <div class="g2" style="margin-bottom:8px">
-      <div><div class="lbl">SPOT</div><input id="calc-spot" type="number" value="24000"></div>
-      <div><div class="lbl">STRIKE</div><input id="calc-strike" type="number" value="24000"></div>
+      <div><div class="lbl">SPOT</div><input id="calc-spot" type="number" value="23644"></div>
+      <div><div class="lbl">STRIKE</div><input id="calc-strike" type="number" value="23650"></div>
       <div><div class="lbl">DTE</div><input id="calc-dte" type="number" value="7"></div>
-      <div><div class="lbl">IV %</div><input id="calc-iv" type="number" value="15"></div>
+      <div><div class="lbl">IV %</div><input id="calc-iv" type="number" value="18.79"></div>
       <div><div class="lbl">RATE %</div><input id="calc-rate" type="number" value="6.5"></div>
       <div><div class="lbl">TYPE</div><select id="calc-type" style="font-size:10px"><option value="CE">Call CE</option><option value="PE">Put PE</option></select></div>
     </div>
-    <button onclick="loadCalcSpot()" class="btn g" style="margin-bottom:8px;flex:1;padding:9px;font-size:10px">📡 LIVE SPOT</button>
-      <button onclick="runCalc()" class="btn b full" style="margin-bottom:8px;padding:10px;margin-top:4px">CALCULATE</button>
+    <div style="display:flex;gap:4px;margin-bottom:8px">
+      <button onclick="loadCalcSpot()" class="btn g" style="flex:1;padding:8px;font-size:10px">📡 LIVE SPOT</button>
+      <button onclick="runCalc()" class="btn b" style="flex:2;padding:8px;font-size:10px">CALCULATE</button>
+    </div>
     <div id="calc-result" style="display:none"></div>
+  </div>
+
+  <div id="calc-margin" class="card" style="display:none">
+    <div class="chdr">💰 MARGIN CALCULATOR</div>
+    <div class="g2" style="margin-bottom:8px">
+      <div><div class="lbl">INSTRUMENT</div><select id="mc-inst" style="font-size:10px"><option value="NIFTY">NIFTY</option><option value="BANKNIFTY">BANKNIFTY</option><option value="FINNIFTY">FINNIFTY</option><option value="MIDCPNIFTY">MIDCPNIFTY</option></select></div>
+      <div><div class="lbl">TYPE</div><select id="mc-type" style="font-size:10px"><option value="OPTIONS">Options Buy</option><option value="FUTURES">Futures</option><option value="EQ">Equity</option></select></div>
+      <div><div class="lbl">QUANTITY (lots)</div><input id="mc-qty" type="number" value="1"></div>
+      <div><div class="lbl">PREMIUM/PRICE</div><input id="mc-price" type="number" value="100"></div>
+    </div>
+    <button onclick="calcMargin()" class="btn b full" style="font-size:10px;padding:10px">CALCULATE MARGIN</button>
+    <div id="margin-result" style="margin-top:8px;display:none"></div>
+  </div>
+
+  <div id="calc-size" class="card" style="display:none">
+    <div class="chdr">📏 POSITION SIZE CALCULATOR (Kelly)</div>
+    <div class="g2" style="margin-bottom:8px">
+      <div><div class="lbl">CAPITAL ₹</div><input id="ps-cap" type="number" value="500000"></div>
+      <div><div class="lbl">RISK PER TRADE %</div><input id="ps-risk" type="number" value="1" step="0.5"></div>
+      <div><div class="lbl">SL POINTS</div><input id="ps-sl" type="number" value="80"></div>
+      <div><div class="lbl">LOT SIZE</div><input id="ps-lot" type="number" value="75"></div>
+      <div><div class="lbl">WIN RATE %</div><input id="ps-wr" type="number" value="55"></div>
+      <div><div class="lbl">R:R Ratio</div><input id="ps-rr" type="number" value="2" step="0.5"></div>
+    </div>
+    <button onclick="calcPositionSize()" class="btn g full" style="font-size:10px;padding:10px">CALCULATE OPTIMAL SIZE</button>
+    <div id="size-result" style="margin-top:8px;display:none"></div>
+  </div>
+
+  <div id="calc-rr" class="card" style="display:none">
+    <div class="chdr">⚖️ RISK:REWARD CALCULATOR</div>
+    <div class="g2" style="margin-bottom:8px">
+      <div><div class="lbl">ENTRY ₹</div><input id="rr-entry" type="number" value="200"></div>
+      <div><div class="lbl">STOP LOSS ₹</div><input id="rr-sl" type="number" value="160"></div>
+      <div><div class="lbl">TARGET ₹</div><input id="rr-tgt" type="number" value="280"></div>
+      <div><div class="lbl">LOTS</div><input id="rr-lots" type="number" value="1"></div>
+    </div>
+    <button onclick="calcRR()" class="btn b full" style="font-size:10px;padding:10px">CALCULATE R:R</button>
+    <div id="rr-result" style="margin-top:8px;display:none"></div>
+  </div>
+
+  <div id="calc-comp" class="card" style="display:none">
+    <div class="chdr">📈 COMPOUND GROWTH CALCULATOR</div>
+    <div class="g2" style="margin-bottom:8px">
+      <div><div class="lbl">CAPITAL ₹</div><input id="cp-cap" type="number" value="500000"></div>
+      <div><div class="lbl">MONTHLY %</div><input id="cp-rate" type="number" value="5" step="0.5"></div>
+      <div><div class="lbl">MONTHS</div><input id="cp-months" type="number" value="12"></div>
+      <div><div class="lbl">WITHDRAW %</div><input id="cp-wd" type="number" value="0" step="5"></div>
+    </div>
+    <button onclick="calcCompound()" class="btn g full" style="font-size:10px;padding:10px">PROJECT GROWTH</button>
+    <div id="comp-result" style="margin-top:8px;display:none"></div>
   </div>
 </div>
 
-<!-- REFERRAL (User page) -->
 <div id="pnl-ref" class="pnl">
   <div style="background:linear-gradient(135deg,rgba(0,255,136,.08),rgba(79,142,247,.08));border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:16px;margin-bottom:10px;text-align:center">
     <div style="font-size:24px;margin-bottom:6px">🎁</div>
@@ -1424,24 +1562,379 @@ function show(name, btn){
   }
   // Auto-load panel data
   var loaders = {
-    'trade':   function(){ updateOrderEntry(); loadPositions(); setTimeout(function(){ loadMarketPrices(); },300); },
+    'trade':   function(){ updateOrderEntry(); loadPositions(); refreshInstDashboard(); setTimeout(function(){ loadMarketPrices(); },300); },
     'paper':   function(){ loadPaperPortfolio(); loadRegimeDisplay(); },
-    'bt':      function(){},
+    'bt':      function(){ loadBacktestStrategies(); },
+    'risk':    function(){ loadRiskReport(); calcRisk(); },
     'strats':  function(){ loadBuiltin(); },
     'ai':      function(){ loadAIStrategies('all'); },
     'admin':   function(){ adminTab('dash', $('at-dash')); },
     'opts':    function(){ loadChain(); },
     'ref':     function(){ loadMyReferral(); },
-    'prof':    function(){ loadProfile(); },
+    'prof':    function(){ loadProfile(); setTimeout(function(){loadSettings();loadAIAutoConfig();loadSubscriptionStatus();},150); },
     'legal':   function(){ showLegal('tos'); },
-    'scan':    function(){ loadEventCalendar(); },
-    'rep':     function(){},
+    'scan':    function(){ loadEventCalendar(); scanSignals(); },
+    'rep':     function(){ loadReports(); },
     'jnl':     function(){ loadJournal(); },
     'livepos': function(){ loadLivePositions(); },
+    'calc':    function(){},
+    'sub':     function(){ loadSubPlans(); },
   };
   if(loaders[name]) setTimeout(loaders[name], 100);
   try{ localStorage.setItem('trd_tab', name); }catch(e){}
 }
+
+
+function loadBacktestStrategies(){
+  // Pre-populate strategy dropdown
+  var sel = $('bt-strategy');
+  if(sel && sel.options.length < 5){
+    req('/backtest/strategies/all','GET',null,function(err,d){
+      if(d&&d.all){
+        sel.innerHTML = d.all.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');
+      }
+    });
+  }
+}
+
+function loadRiskReport(){
+  var uid = window.UID || 'demo';
+  req('/risk/monitor/'+uid,'GET',null,function(err,d){
+    if(err||!d) return;
+    var elements = {
+      'risk-exposure':   '₹'+(d.total_exposure||0).toLocaleString('en-IN'),
+      'risk-margin':     '₹'+(d.total_margin||0).toLocaleString('en-IN'),
+      'risk-level':      d.risk_level||'LOW',
+      'risk-positions':  d.open_positions||0,
+      'risk-var':        '₹'+(d.var_1d_95||0).toLocaleString('en-IN'),
+      'risk-delta':      (d.net_greeks&&d.net_greeks.delta)||0,
+    };
+    Object.keys(elements).forEach(function(id){
+      var el = $(id); if(el) el.textContent = elements[id];
+    });
+  });
+}
+
+function loadReports(){
+  var container = $('reports-content') || document.querySelector('#pnl-rep .card');
+  if(!container) return;
+  // Load multiple reports
+  Promise.all([
+    new Promise(function(r){req('/reports/daily','GET',null,function(e,d){r(d||{});});}),
+    new Promise(function(r){req('/reports/weekly','GET',null,function(e,d){r(d||{});});}),
+    new Promise(function(r){req('/reports/performance','GET',null,function(e,d){r(d||{});});}),
+  ]).then(function(results){
+    var daily=results[0], weekly=results[1], perf=results[2];
+    var html='<div class="chdr">📊 PERFORMANCE REPORT</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+    html+='<div class="sbox"><div style="font-size:14px;font-weight:800;color:'+((perf.net_pnl||0)>=0?'var(--gr)':'var(--rd)')+'">₹'+((perf.net_pnl||0)).toLocaleString('en-IN')+'</div><div class="slbl">Net P&L</div></div>';
+    html+='<div class="sbox"><div style="font-size:14px;font-weight:800;color:var(--bl)">'+(perf.win_rate||0)+'%</div><div class="slbl">Win Rate</div></div>';
+    html+='<div class="sbox"><div style="font-size:14px;font-weight:800">'+(perf.total_trades||0)+'</div><div class="slbl">Total Trades</div></div>';
+    html+='<div class="sbox"><div style="font-size:14px;font-weight:800;color:var(--am)">'+(perf.sharpe_ratio||0).toFixed(2)+'</div><div class="slbl">Sharpe</div></div>';
+    html+='</div>';
+    html+='<div class="chdr">📅 DAILY</div>';
+    html+='<div style="background:var(--bg4);padding:8px;border-radius:6px;font-size:10px;margin-bottom:8px">Today PnL: <b>₹'+((daily.total_pnl||0)).toLocaleString('en-IN')+'</b> · Trades: '+(daily.trades||0)+'</div>';
+    html+='<div class="chdr">📈 WEEKLY</div>';
+    html+='<div style="background:var(--bg4);padding:8px;border-radius:6px;font-size:10px">Weekly PnL: <b>₹'+((weekly.total_pnl||0)).toLocaleString('en-IN')+'</b> · Best Day: '+(weekly.best_day||'—')+'</div>';
+    container.innerHTML = html;
+  }).catch(function(){
+    container.innerHTML='<div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">Reports loading...</div>';
+  });
+}
+
+
+
+function repTab(t, btn){
+  document.querySelectorAll('#pnl-rep .tpill').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  ['perf','daily','weekly','tax','export'].forEach(function(s){
+    var el=$('rep-'+s); if(el) el.style.display = s===t?'block':'none';
+  });
+  if(t==='daily') loadDaily();
+  else if(t==='weekly') loadWeekly();
+  else if(t==='tax') loadTaxReport();
+}
+
+function loadDaily(){
+  req('/reports/daily','GET',null,function(err,d){
+    var el=$('daily-content'); if(!el) return;
+    if(!d){el.innerHTML='<div style="color:var(--mu);font-size:10px;padding:8px">No data</div>';return;}
+    el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="sbox"><div style="font-size:14px;font-weight:800;color:'+((d.total_pnl||0)>=0?'var(--gr)':'var(--rd)')+'">₹'+(d.total_pnl||0).toLocaleString('en-IN')+'</div><div class="slbl">Today P&L</div></div><div class="sbox"><div style="font-size:14px;font-weight:800">'+(d.trades||0)+'</div><div class="slbl">Trades</div></div></div>';
+  });
+}
+
+function loadWeekly(){
+  req('/reports/weekly','GET',null,function(err,d){
+    var el=$('weekly-content'); if(!el) return;
+    if(!d){el.innerHTML='<div style="color:var(--mu);font-size:10px;padding:8px">No data</div>';return;}
+    el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="sbox"><div style="font-size:14px;font-weight:800;color:'+((d.total_pnl||0)>=0?'var(--gr)':'var(--rd)')+'">₹'+(d.total_pnl||0).toLocaleString('en-IN')+'</div><div class="slbl">Week P&L</div></div><div class="sbox"><div style="font-size:14px;font-weight:800">'+(d.total_trades||0)+'</div><div class="slbl">Trades</div></div></div>';
+  });
+}
+
+function loadTaxReport(){
+  req('/reports/performance','GET',null,function(err,d){
+    if(!d) return;
+    var pnl = d.net_pnl || 0;
+    var stt = Math.abs(pnl * 0.0025);  // STT estimate
+    var brk = Math.abs(pnl * 0.0003);   // Brokerage estimate
+    var net = pnl - stt - brk;
+    st('tax-pnl', '₹'+pnl.toLocaleString('en-IN'));
+    st('tax-stt', '₹'+stt.toFixed(2));
+    st('tax-brokerage', '₹'+brk.toFixed(2));
+    var netEl = $('tax-net');
+    if(netEl){
+      netEl.textContent = '₹'+net.toLocaleString('en-IN');
+      netEl.style.color = net>=0?'var(--gr)':'var(--rd)';
+    }
+  });
+}
+
+function exportTrades(format){
+  toast('Exporting trades as '+format.toUpperCase()+'...','info');
+  if(format==='csv'){
+    window.location.href = '/paper/v2/export_csv';
+  } else {
+    req('/trades','GET',null,function(err,d){
+      if(!d){toast('No trades to export','error');return;}
+      var content = format==='json' ? JSON.stringify(d.trades||[],null,2) : 'PDF generation requires server-side library';
+      var blob = new Blob([content], {type: format==='json'?'application/json':'text/plain'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'trades.'+format;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('Exported '+(d.trades||[]).length+' trades','success');
+    });
+  }
+}
+
+
+
+function calcTab(t, btn){
+  document.querySelectorAll('#pnl-calc .tpill').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  ['opt','margin','size','rr','comp'].forEach(function(s){
+    var el=$('calc-'+s); if(el) el.style.display = s===t?'block':'none';
+  });
+}
+
+function calcMargin(){
+  var inst=gv('mc-inst')||'NIFTY';
+  var type=gv('mc-type')||'OPTIONS';
+  var qty=nv('mc-qty')||1;
+  var price=nv('mc-price')||100;
+  req('/margin/calculate?instrument='+inst+'&quantity='+qty+'&position_type='+type+'&price='+price,'GET',null,function(err,d){
+    var el=$('margin-result'); if(!el) return;
+    el.style.display='block';
+    if(err||!d){el.innerHTML='<div style="color:var(--rd);font-size:10px">Calc failed</div>';return;}
+    el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">'
+      +'<div class="sbox"><div style="color:var(--am);font-weight:800">₹'+(d.margin_required||0).toLocaleString('en-IN')+'</div><div class="slbl">Margin Required</div></div>'
+      +'<div class="sbox"><div style="color:var(--bl);font-weight:800">'+(d.margin_pct||0)+'%</div><div class="slbl">Margin %</div></div>'
+      +'<div class="sbox"><div style="color:var(--gr);font-weight:800">₹'+(d.total_lots_value||0).toLocaleString('en-IN')+'</div><div class="slbl">Lot Value</div></div>'
+      +'<div class="sbox"><div style="font-weight:800">'+(d.max_lots_with_5L||0)+'</div><div class="slbl">Max Lots (₹5L)</div></div>'
+      +'</div>';
+  });
+}
+
+function calcPositionSize(){
+  var cap=nv('ps-cap')||500000, risk=nv('ps-risk')||1, sl=nv('ps-sl')||80, lot=nv('ps-lot')||75;
+  var wr=(nv('ps-wr')||55)/100, rr=nv('ps-rr')||2;
+  var riskRs = cap * risk / 100;
+  var lotsFixed = Math.floor(riskRs / (sl * lot));
+  // Kelly Criterion
+  var kelly = wr - (1-wr)/rr;
+  var lotsKelly = Math.floor(cap * kelly * 0.5 / (sl * lot * 2)); // Half-Kelly for safety
+  var el=$('size-result'); if(!el) return;
+  el.style.display='block';
+  el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">'
+    +'<div class="sbox"><div style="color:var(--gr);font-weight:800;font-size:18px">'+Math.max(1,lotsFixed)+'</div><div class="slbl">Fixed % Method</div></div>'
+    +'<div class="sbox"><div style="color:var(--am);font-weight:800;font-size:18px">'+Math.max(1,lotsKelly)+'</div><div class="slbl">Half-Kelly (Safer)</div></div>'
+    +'<div class="sbox"><div style="color:var(--bl)">₹'+riskRs.toLocaleString('en-IN')+'</div><div class="slbl">Risk Capital</div></div>'
+    +'<div class="sbox"><div style="color:var(--mu)">'+(kelly*100).toFixed(1)+'%</div><div class="slbl">Kelly %</div></div>'
+    +'</div>'
+    +'<div style="font-size:9px;color:var(--mu);margin-top:8px;line-height:1.5">→ Fixed: Risk '+risk+'% per trade = ₹'+riskRs.toLocaleString('en-IN')+' = '+lotsFixed+' lots<br>→ Kelly: Mathematical optimal = '+(kelly*100).toFixed(1)+'% (use Half-Kelly for safety)</div>';
+}
+
+function calcRR(){
+  var entry=nv('rr-entry')||200, sl=nv('rr-sl')||160, tgt=nv('rr-tgt')||280, lots=nv('rr-lots')||1;
+  var lotSize=75;
+  var riskPts=Math.abs(entry-sl), rewardPts=Math.abs(tgt-entry);
+  var rrRatio = rewardPts/riskPts;
+  var riskRs = riskPts*lots*lotSize, rewardRs = rewardPts*lots*lotSize;
+  var minWR = riskPts/(riskPts+rewardPts)*100;
+  var expectancy = (0.5*rewardRs) - (0.5*riskRs);
+  var el=$('rr-result'); if(!el) return;
+  el.style.display='block';
+  el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">'
+    +'<div class="sbox"><div style="color:var(--am);font-weight:800">1:'+rrRatio.toFixed(2)+'</div><div class="slbl">R:R Ratio</div></div>'
+    +'<div class="sbox"><div style="color:'+(rrRatio>=2?'var(--gr)':'var(--rd)')+'">'+(rrRatio>=2?'GOOD':'POOR')+'</div><div class="slbl">Trade Quality</div></div>'
+    +'<div class="sbox"><div style="color:var(--rd);font-weight:800">₹'+riskRs.toLocaleString('en-IN')+'</div><div class="slbl">Risk</div></div>'
+    +'<div class="sbox"><div style="color:var(--gr);font-weight:800">₹'+rewardRs.toLocaleString('en-IN')+'</div><div class="slbl">Reward</div></div>'
+    +'<div class="sbox"><div style="color:var(--bl);font-weight:800">'+minWR.toFixed(1)+'%</div><div class="slbl">Min Win Rate</div></div>'
+    +'<div class="sbox"><div style="color:'+(expectancy>0?'var(--gr)':'var(--rd)')+'">₹'+expectancy.toLocaleString('en-IN')+'</div><div class="slbl">Expectancy (50% WR)</div></div>'
+    +'</div>';
+}
+
+function calcCompound(){
+  var cap=nv('cp-cap')||500000, rate=(nv('cp-rate')||5)/100, months=nv('cp-months')||12;
+  var wd=(nv('cp-wd')||0)/100;
+  var rows=[]; var balance=cap; var totalWd=0;
+  for(var i=1;i<=months;i++){
+    var earned = balance * rate;
+    var withdrawn = earned * wd;
+    totalWd += withdrawn;
+    balance = balance + earned - withdrawn;
+    rows.push({m:i,bal:balance,earn:earned,wd:withdrawn});
+  }
+  var totalReturn = ((balance-cap)/cap)*100;
+  var el=$('comp-result'); if(!el) return;
+  el.style.display='block';
+  var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;margin-bottom:8px">'
+    +'<div class="sbox"><div style="color:var(--gr);font-weight:800;font-size:16px">₹'+Math.round(balance).toLocaleString('en-IN')+'</div><div class="slbl">Final Balance</div></div>'
+    +'<div class="sbox"><div style="color:var(--am);font-weight:800;font-size:16px">'+totalReturn.toFixed(0)+'%</div><div class="slbl">Total Return</div></div>'
+    +'<div class="sbox"><div style="color:var(--bl)">₹'+Math.round(totalWd).toLocaleString('en-IN')+'</div><div class="slbl">Total Withdrawn</div></div>'
+    +'<div class="sbox"><div>'+Math.round(balance/cap*100)+'%</div><div class="slbl">x'+(balance/cap).toFixed(1)+' Capital</div></div>'
+    +'</div>';
+  html+='<div style="max-height:200px;overflow-y:auto;font-size:9px">';
+  html+='<div style="display:grid;grid-template-columns:1fr 2fr 2fr 2fr;gap:4px;font-weight:700;color:var(--mu);padding:4px;background:var(--bg4)"><div>M</div><div>Balance</div><div>Earned</div><div>Withdrew</div></div>';
+  rows.forEach(function(r){
+    html+='<div style="display:grid;grid-template-columns:1fr 2fr 2fr 2fr;gap:4px;padding:3px 4px;border-bottom:1px solid rgba(255,255,255,.03)"><div>'+r.m+'</div><div style="color:var(--gr)">₹'+Math.round(r.bal).toLocaleString('en-IN')+'</div><div>₹'+Math.round(r.earn).toLocaleString('en-IN')+'</div><div style="color:var(--mu)">₹'+Math.round(r.wd).toLocaleString('en-IN')+'</div></div>';
+  });
+  html+='</div>';
+  el.innerHTML = html;
+}
+
+
+
+window._selectedEmotion = 'CALM';
+function selectEmotion(el, emo){
+  document.querySelectorAll('.emot-pill').forEach(function(p){
+    p.style.background='var(--bg5)';
+    p.style.borderColor='var(--bo)';
+    p.style.color='inherit';
+  });
+  el.style.background='rgba(0,255,136,.15)';
+  el.style.borderColor='var(--gr)';
+  el.style.color='var(--gr)';
+  window._selectedEmotion = emo;
+}
+
+function saveJournalEntry(){
+  var entry = {
+    user_id: window.UID || 'demo',
+    instrument: gv('jnl-inst')||'NIFTY',
+    action: gv('jnl-type')||'',
+    pnl: nv('jnl-pnl')||0,
+    rating: nv('jnl-rating')||7,
+    emotion: window._selectedEmotion || 'CALM',
+    notes: gv('jnl-setup')||'',
+    mistakes: gv('jnl-mistakes')||'',
+    lessons: gv('jnl-lessons')||'',
+  };
+  
+  if(!entry.notes && !entry.lessons){
+    toast('Please add setup or lessons','error');
+    return;
+  }
+  
+  req('/journal/add','POST',entry,function(err,d){
+    if(err){toast('Save failed','error');return;}
+    toast('Journal entry saved! AI will learn from this.','success');
+    // Clear form
+    ['jnl-setup','jnl-mistakes','jnl-lessons','jnl-pnl'].forEach(function(id){
+      var el=$(id); if(el) el.value='';
+    });
+    setTimeout(loadJournal, 500);
+  });
+}
+
+function loadJournal(){
+  var uid = window.UID || 'demo';
+  req('/journal/'+uid+'?limit=10','GET',null,function(err,d){
+    var listEl=$('jnl-list'), statsEl=$('jnl-stats');
+    var entries = (d&&d.entries)||(d&&d.journal)||[];
+    
+    if(entries.length===0){
+      if(listEl) listEl.innerHTML='<div style="color:var(--mu);font-size:10px;padding:8px;text-align:center">No entries yet — log your first trade!</div>';
+      if(statsEl) statsEl.innerHTML='<div style="color:var(--mu);padding:8px;text-align:center">Log entries to see patterns</div>';
+      return;
+    }
+    
+    if(listEl){
+      listEl.innerHTML = entries.map(function(e){
+        var pnl = parseFloat(e.pnl||0);
+        var emoIcon = {CALM:'😌',CONFIDENT:'💪',FEAR:'😨',GREED:'🤑',REVENGE:'😤',BORED:'🥱'}[e.emotion]||'😐';
+        return '<div style="background:var(--bg4);padding:8px;border-radius:6px;margin-bottom:6px;border-left:3px solid '+(pnl>=0?'var(--gr)':'var(--rd)')+'">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+          +'<div style="font-size:11px;font-weight:700">'+emoIcon+' '+e.instrument+' '+(e.action||'')+'</div>'
+          +'<div style="font-size:11px;font-weight:800;color:'+(pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+pnl.toLocaleString('en-IN')+'</div>'
+          +'</div>'
+          +(e.notes?'<div style="font-size:9px;color:var(--mu);margin-bottom:2px"><b>Setup:</b> '+e.notes+'</div>':'')
+          +(e.mistakes?'<div style="font-size:9px;color:var(--rd);margin-bottom:2px"><b>❌ Mistake:</b> '+e.mistakes+'</div>':'')
+          +(e.lessons?'<div style="font-size:9px;color:var(--gr);margin-bottom:2px"><b>💡 Lesson:</b> '+e.lessons+'</div>':'')
+          +'<div style="font-size:8px;color:var(--mu);margin-top:4px">Rating: '+(e.rating||'-')+'/10</div>'
+          +'</div>';
+      }).join('');
+    }
+    
+    // Behavioral stats
+    if(statsEl){
+      var totalPnl = entries.reduce(function(a,e){return a+parseFloat(e.pnl||0);},0);
+      var emoCount = {};
+      entries.forEach(function(e){var k=e.emotion||'?'; emoCount[k]=(emoCount[k]||0)+1;});
+      var worstEmo = Object.keys(emoCount).reduce(function(a,b){return entries.filter(function(e){return e.emotion===a&&parseFloat(e.pnl)<0;}).length > entries.filter(function(e){return e.emotion===b&&parseFloat(e.pnl)<0;}).length?a:b;}, 'CALM');
+      var stats = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px">'
+        +'<div class="sbox"><div style="font-size:13px;font-weight:800;color:'+(totalPnl>=0?'var(--gr)':'var(--rd)')+'">₹'+totalPnl.toLocaleString('en-IN')+'</div><div class="slbl">Total P&L</div></div>'
+        +'<div class="sbox"><div style="font-size:13px;font-weight:800">'+entries.length+'</div><div class="slbl">Entries</div></div>'
+        +'<div class="sbox"><div style="font-size:11px;color:var(--rd);font-weight:700">'+worstEmo+'</div><div class="slbl">Worst Emotion</div></div>'
+        +'<div class="sbox"><div style="font-size:11px;color:var(--gr);font-weight:700">'+(entries.filter(function(e){return parseFloat(e.pnl)>0;}).length)+'/'+entries.length+'</div><div class="slbl">Winning</div></div>'
+        +'</div>';
+      statsEl.innerHTML = stats;
+    }
+  });
+}
+
+
+
+function refreshInstDashboard(){
+  var uid = window.UID || 'demo';
+  // Show widget after login
+  var w = $('inst-dashboard');
+  if(w) w.style.display = uid !== 'demo' ? 'block' : 'block';
+  
+  // Risk monitor
+  req('/risk/monitor/'+uid,'GET',null,function(err,d){
+    if(!d) return;
+    st('id-positions', d.open_positions||0);
+    st('id-exposure', (d.exposure_pct||0).toFixed(1)+'%');
+    st('id-var', '₹'+(d.var_1d_95||0).toLocaleString('en-IN'));
+    
+    var alerts=[];
+    if((d.exposure_pct||0) > 60) alerts.push('⚠️ Exposure '+d.exposure_pct.toFixed(0)+'% — high risk');
+    if((d.open_positions||0) > 4) alerts.push('⚠️ '+d.open_positions+' positions open');
+    if(alerts.length){
+      var ae = $('inst-alerts'); if(ae) ae.innerHTML = alerts.join(' · ');
+    }
+  });
+  
+  // Today P&L
+  req('/paper/v3/portfolio/'+uid,'GET',null,function(err,d){
+    if(d){
+      var pnl = d.total_pnl || 0;
+      var el = $('id-pnl');
+      if(el){
+        el.textContent = '₹'+pnl.toLocaleString('en-IN');
+        el.style.color = pnl>=0 ? 'var(--gr)' : 'var(--rd)';
+      }
+    }
+  });
+}
+
+// Auto-refresh every 30s on Trade tab
+setInterval(function(){
+  if(document.querySelector('#pnl-trade.active')) refreshInstDashboard();
+}, 30000);
+
 
 // ── CLOCK ─────────────────────────────────────────
 function startClock(){
