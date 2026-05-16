@@ -775,6 +775,7 @@ input:focus,select:focus{border-color:var(--bl)}
     <button class="tpill" onclick="aiTab('strategies',this)">🧬 STRATEGIES</button>
     <button class="tpill" onclick="aiTab('regime',this)">📊 REGIME</button>
     <button class="tpill" onclick="aiTab('insights',this)">🧠 INSIGHTS</button>
+    <button class="tpill" onclick="aiTab('autoexec',this)">⚡ AUTO-EXEC</button>
   </div>
 
   <!-- SIGNALS -->
@@ -817,6 +818,47 @@ input:focus,select:focus{border-color:var(--bl)}
       <div class="chdr">🧠 AI LEARNING INSIGHTS</div>
       <div id="ai-insights-data"><div style="color:var(--mu);padding:16px;text-align:center;font-size:10px">Loading insights...</div></div>
     </div>
+  </div>
+
+  <!-- AUTO-EXEC -->
+  <div id="ai-autoexec" style="display:none">
+    <div class="card" style="margin-bottom:10px;background:linear-gradient(135deg,rgba(168,85,247,.04),rgba(0,255,136,.04));border:1px solid rgba(168,85,247,.2)">
+    <div class="chdr">⚡ AI AUTO-EXECUTION</div>
+    <div style="font-size:9px;color:var(--mu);margin-bottom:8px">AI will auto-execute paper trades when 95%+ confidence signal is detected</div>
+    <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px;background:var(--bg4);border-radius:6px;margin-bottom:6px">
+      <span style="font-weight:700">⚡ Enable Auto-Execute</span>
+      <input type="checkbox" id="ai-auto-enabled" onchange="saveAIAutoConfig()" style="width:20px;height:20px">
+    </label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+      <div>
+        <div style="font-size:9px;color:var(--mu)">Min Confidence</div>
+        <select id="ai-auto-conf" onchange="saveAIAutoConfig()" style="width:100%;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:11px">
+          <option value="75">75% (Aggressive)</option>
+          <option value="85">85% (Balanced)</option>
+          <option value="95" selected>95% (Conservative)</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--mu)">Max Trades/Day</div>
+        <select id="ai-auto-max" onchange="saveAIAutoConfig()" style="width:100%;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:11px">
+          <option value="1">1</option>
+          <option value="3" selected>3</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <div style="flex:1">
+        <div style="font-size:9px;color:var(--mu)">Mode</div>
+        <select id="ai-auto-mode" onchange="saveAIAutoConfig()" style="width:100%;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:11px">
+          <option value="PAPER" selected>📄 PAPER (Safe)</option>
+          <option value="LIVE">🔴 LIVE (Real money)</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="findBestAIStrategy()" class="btn g full" style="margin-top:8px;font-size:10px">🎯 FIND BEST STRATEGY (Live Market 95%+)</button>
+    <div id="ai-auto-status" style="font-size:9px;color:var(--mu);margin-top:6px;text-align:center"></div>
+  </div>
   </div>
 </div>
 
@@ -1263,43 +1305,7 @@ input:focus,select:focus{border-color:var(--bl)}
   </div>
 
   <!-- ════ AI AUTO-EXECUTION ════ -->
-  <div class="card" style="margin-bottom:10px;background:linear-gradient(135deg,rgba(168,85,247,.04),rgba(0,255,136,.04));border:1px solid rgba(168,85,247,.2)">
-    <div class="chdr">🤖 AI AUTO-EXECUTION</div>
-    <div style="font-size:9px;color:var(--mu);margin-bottom:8px">AI will auto-execute paper trades when 95%+ confidence signal is detected</div>
-    <label style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px;background:var(--bg4);border-radius:6px;margin-bottom:6px">
-      <span style="font-weight:700">⚡ Enable Auto-Execute</span>
-      <input type="checkbox" id="ai-auto-enabled" onchange="saveAIAutoConfig()" style="width:20px;height:20px">
-    </label>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
-      <div>
-        <div style="font-size:9px;color:var(--mu)">Min Confidence</div>
-        <select id="ai-auto-conf" onchange="saveAIAutoConfig()" style="width:100%;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:11px">
-          <option value="75">75% (Aggressive)</option>
-          <option value="85">85% (Balanced)</option>
-          <option value="95" selected>95% (Conservative)</option>
-        </select>
-      </div>
-      <div>
-        <div style="font-size:9px;color:var(--mu)">Max Trades/Day</div>
-        <select id="ai-auto-max" onchange="saveAIAutoConfig()" style="width:100%;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:11px">
-          <option value="1">1</option>
-          <option value="3" selected>3</option>
-          <option value="5">5</option>
-        </select>
-      </div>
-    </div>
-    <div style="display:flex;gap:6px">
-      <div style="flex:1">
-        <div style="font-size:9px;color:var(--mu)">Mode</div>
-        <select id="ai-auto-mode" onchange="saveAIAutoConfig()" style="width:100%;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:11px">
-          <option value="PAPER" selected>📄 PAPER (Safe)</option>
-          <option value="LIVE">🔴 LIVE (Real money)</option>
-        </select>
-      </div>
-    </div>
-    <button onclick="findBestAIStrategy()" class="btn g full" style="margin-top:8px;font-size:10px">🎯 FIND BEST STRATEGY (Live Market 95%+)</button>
-    <div id="ai-auto-status" style="font-size:9px;color:var(--mu);margin-top:6px;text-align:center"></div>
-  </div>
+  
 
   <!-- ════ CUSTOMER SUPPORT ════ -->
   <div class="card" style="margin-bottom:10px">
@@ -2553,17 +2559,20 @@ function drawPayoff(){
 }
 
 // ── AI ENGINE ─────────────────────────────────────
-function aiTab(tab,btn){
-  ['signals','strategies','regime','insights'].forEach(function(t){
-    var el=$('ai-'+t); if(el) el.style.display=t===tab?'block':'none';
-  });
+function aiTab(t,btn){
   document.querySelectorAll('#pnl-ai .tpill').forEach(function(b){b.classList.remove('active');});
   if(btn) btn.classList.add('active');
-  if(tab==='strategies') loadAIStrategies('all');
-  if(tab==='regime') loadRegime();
-  if(tab==='insights') loadAIInsights();
+  ['signals','strategies','regime','insights','autoexec'].forEach(function(s){
+    var el=$('ai-'+s); if(el) el.style.display = s===t?'block':'none';
+  });
+  if(t==='strategies') loadStrategies();
+  else if(t==='regime') loadRegime();
+  else if(t==='insights') loadAIInsights();
+  else if(t==='autoexec'){
+    loadAIAutoConfig();
+    setTimeout(findBestAIStrategy, 500);
+  }
 }
-
 function scanSignals(){
   var list=$('ai-signal-list'); if(!list) return;
   list.innerHTML='<div style="color:var(--am);padding:12px;text-align:center;font-size:10px">Scanning...</div>';
@@ -4106,8 +4115,6 @@ function _renderChain(d, inst, spot){
   toast('Chain loaded — '+strikes.length+' strikes','success');
 }
 
-
-
 function loadSubPlans(){
   req('/subscriptions/plans','GET',null,function(err,d){
     var grid=$('sub-plans-grid'); if(!grid) return;
@@ -4214,28 +4221,75 @@ function saveAIAutoConfig(){
 
 function findBestAIStrategy(){
   var status=$('ai-auto-status');
-  if(status) status.innerHTML='<span style="color:var(--am)">🔍 Analyzing live market for 95%+ strategies...</span>';
+  var uid=window.UID||'demo';
+  if(status) status.innerHTML='<span style="color:var(--am)">🔍 Scanning for 90%+ confluence signals (8-factor validation)...</span>';
   
-  req('/ai/scan?instruments=NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY','GET',null,function(err,d){
-    if(err||!d||!d.signals){
+  // Use institutional 90%+ confluence endpoint
+  req('/quant/scan_90plus?user_id='+encodeURIComponent(uid),'GET',null,function(err,d){
+    if(err||!d){
       if(status) status.innerHTML='<span style="color:var(--rd)">Scan failed</span>';
       return;
     }
-    // Filter signals 95%+ confidence
-    var best = (d.signals||[]).filter(function(s){return s.confidence>=85;}).sort(function(a,b){return b.confidence-a.confidence;});
-    if(best.length===0){
-      if(status) status.innerHTML='<span style="color:var(--am)">⚠️ No 85%+ confidence signals right now. Wait for market.</span>';
+    
+    var qualifying = d.qualifying_signals||[];
+    var regime = d.regime||'UNKNOWN';
+    
+    if(qualifying.length===0){
+      if(status) status.innerHTML='<div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:6px;padding:8px;margin-top:6px">'
+        +'<div style="font-size:11px;color:var(--am);font-weight:700">⚠️ No 90%+ confluence signals right now</div>'
+        +'<div style="font-size:9px;color:var(--mu);margin-top:4px">Regime: '+regime+' · Next scan in 60s</div>'
+        +'<div style="font-size:9px;color:var(--mu);margin-top:4px">Required: 5+ factors confluence + Sharpe>1.5 + WR>55% + Drawdown<15%</div>'
+        +'</div>';
       return;
     }
-    var top = best[0];
-    var html='<div style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:6px;padding:8px;margin-top:6px;text-align:left">'
-      +'<div style="font-size:12px;font-weight:800;color:var(--gr);margin-bottom:4px">🏆 BEST: '+top.signal+' '+top.instrument+' '+top.option_type+'</div>'
-      +'<div style="font-size:10px;color:var(--mu)">Confidence: <b style="color:var(--am)">'+top.confidence+'%</b> · Strategy: '+(top.strategy||'AI Multi-factor')+'</div>'
-      +'<div style="font-size:9px;color:var(--mu);margin-top:4px">'+(top.rationale||'').substring(0,150)+'</div>';
-    if(best.length>1) html+='<div style="font-size:9px;color:var(--mu);margin-top:6px;border-top:1px solid var(--bo);padding-top:4px">+'+(best.length-1)+' more 85%+ signals available</div>';
+    
+    // Show all qualifying signals with full validation breakdown
+    var html='<div style="background:linear-gradient(135deg,rgba(0,255,136,.08),rgba(168,85,247,.04));border:1px solid rgba(0,255,136,.4);border-radius:8px;padding:10px;margin-top:6px;text-align:left">';
+    html+='<div style="font-size:11px;font-weight:800;color:var(--gr);margin-bottom:6px">✅ '+qualifying.length+' INSTITUTIONAL-GRADE SIGNAL'+(qualifying.length>1?'S':'')+'</div>';
+    
+    qualifying.forEach(function(q,i){
+      var sig=q.signal||{}; var val=q.validation||{};
+      html+='<div style="background:var(--bg4);border-radius:6px;padding:8px;margin-bottom:6px;border-left:3px solid var(--gr)">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+      html+='<div style="font-size:12px;font-weight:800">'+sig.signal+' '+q.instrument+' '+(sig.option_type||'CE')+'</div>';
+      html+='<div style="font-size:14px;font-weight:900;color:var(--am)">'+val.confidence+'%</div>';
+      html+='</div>';
+      html+='<div style="font-size:9px;color:var(--mu);margin-bottom:4px">Confluences: <b>'+val.factors_met+'/'+val.factors_required+'</b> · Regime: '+(d.regime||'')+'</div>';
+      // Show top 3 factors
+      var factors = (val.confluences||[]).slice(0,3);
+      if(factors.length){
+        html+='<div style="font-size:8px;color:var(--mu);line-height:1.4">';
+        factors.forEach(function(f){
+          html+='✓ '+f.name+' ('+Math.round(f.score*100)+'%) ';
+        });
+        html+='</div>';
+      }
+      html+='<button onclick="autoExecuteSignal(\''+q.instrument+'\',\''+sig.signal+'\',\''+(sig.option_type||'CE')+'\','+val.confidence+')" class="btn g full" style="margin-top:6px;font-size:9px;padding:4px">⚡ AUTO-EXECUTE '+sig.signal+' '+q.instrument+'</button>';
+      html+='</div>';
+    });
+    
+    html+='<div style="font-size:8px;color:var(--mu);margin-top:6px;border-top:1px solid var(--bo);padding-top:4px">Auto-refresh: '+(d.next_scan_in||'60s')+' · Timestamp: '+(d.timestamp||'')+'</div>';
     html+='</div>';
+    
     if(status) status.innerHTML=html;
   });
+}
+
+function autoExecuteSignal(instrument, signal, optionType, confidence){
+  var cfg = JSON.parse(localStorage.getItem('trd_ai_auto')||'{}');
+  var mode = cfg.mode || 'PAPER';
+  
+  if(confirm('AUTO-EXECUTE\n\n'+signal+' '+instrument+' '+optionType+' at '+confidence+'% confidence\nMode: '+mode+'\n\nProceed?')){
+    // Trigger via auto-execute endpoint
+    req('/ai/auto_execute/trigger/'+instrument+'?user_id='+(window.UID||'demo'),'POST',{},function(err,d){
+      if(d&&d.executed){
+        toast('✅ Executed '+signal+' '+instrument+' (Paper)','success');
+        setTimeout(findBestAIStrategy, 1000);
+      } else {
+        toast('Execute: '+(d&&d.reason||'Failed'),'error');
+      }
+    });
+  }
 }
 
 function loadAIAutoConfig(){
