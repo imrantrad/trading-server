@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.4.2">
+  <meta name="version" content="12.4.3">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -3492,7 +3492,7 @@ function adminLoadUsers(){
       return '<div style="background:var(--bg4);padding:8px;border-radius:6px;margin-bottom:6px;border-left:3px solid '+(u.is_active?'var(--gr)':'var(--rd)')+'">'
         +'<div style="display:flex;justify-content:space-between;align-items:center">'
         +'<div><div style="font-size:11px;font-weight:700">'+(u.full_name||u.username||'?')+'</div>'
-        +'<div style="font-size:9px;color:var(--mu)">'+u.id+' · '+u.email+'</div></div>'
+        +'<div style="font-size:9px;color:var(--mu)">'+(u.id||u.user_id||'?')+' · '+(u.email||'no-email')+'</div></div>'
         +'<div style="text-align:right"><div style="font-size:10px;font-weight:700;color:'+planColor+'">'+(u.subscription_plan||'FREE')+'</div>'
         +'<div style="font-size:8px;color:var(--mu)">'+(u.is_active?'Active':'Suspended')+'</div></div></div>'
         +'<div style="display:flex;gap:4px;margin-top:6px">'
@@ -3514,17 +3514,65 @@ function adminSearchUsers(){
 }
 
 function adminCreateUser(){
-  var email = prompt('Enter user email:');
-  if(!email) return;
-  var name = prompt('Enter full name:') || email.split('@')[0];
-  var password = prompt('Set password (or leave blank for auto):') || 'TempPass123';
+  showAddUserModal();
+}
+
+function showAddUserModal(){
+  var modal = document.createElement('div');
+  modal.id = 'add-user-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);overflow-y:auto';
+  modal.onclick = function(e){if(e.target===modal)document.body.removeChild(modal);};
   
-  req('/admin/users/add','POST',{email:email,full_name:name,password:password,capital:500000},function(err,d){
-    if(d&&d.success){
-      toast('User created: '+(d.user_id||''),'success');
+  modal.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--bo);border-radius:12px;padding:20px;max-width:480px;width:100%;max-height:95vh;overflow-y:auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+    +'<div style="font-size:14px;font-weight:800;color:var(--gr)">➕ ADD NEW USER</div>'
+    +'<button onclick="document.body.removeChild(document.getElementById(\'add-user-modal\'))" style="background:none;border:none;color:var(--mu);font-size:24px;cursor:pointer">×</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><div class="lbl">FULL NAME *</div><input id="au-full-name" placeholder="John Doe" style="font-size:10px"></div>'
+    +'<div><div class="lbl">USERNAME *</div><input id="au-username" placeholder="johndoe" style="font-size:10px"></div>'
+    +'<div style="grid-column:span 2"><div class="lbl">EMAIL *</div><input id="au-email" type="email" placeholder="user@example.com" style="font-size:10px"></div>'
+    +'<div><div class="lbl">MOBILE</div><input id="au-mobile" placeholder="9999999999" style="font-size:10px"></div>'
+    +'<div><div class="lbl">PASSWORD *</div><input id="au-password" type="password" placeholder="min 6 chars" style="font-size:10px"></div>'
+    +'<div><div class="lbl">CAPITAL ₹</div><input id="au-capital" type="number" value="500000" style="font-size:10px"></div>'
+    +'<div><div class="lbl">PLAN</div><select id="au-plan" style="font-size:10px"><option value="FREE" selected>FREE</option><option>BASIC</option><option>PRO</option><option>INSTITUTIONAL</option></select></div>'
+    +'<div style="grid-column:span 2"><div class="lbl">PAN CARD</div><input id="au-pan" placeholder="ABCDE1234F" style="font-size:10px"></div>'
+    +'<div><div class="lbl">CITY</div><input id="au-city" placeholder="Mumbai" style="font-size:10px"></div>'
+    +'<div><div class="lbl">STATE</div><input id="au-state" placeholder="Maharashtra" style="font-size:10px"></div>'
+    +'</div>'
+    +'<button onclick="submitNewUser()" class="btn g full" style="margin-top:12px;font-size:11px;padding:10px;font-weight:800">➕ CREATE USER</button>'
+    +'</div>';
+  
+  document.body.appendChild(modal);
+}
+
+function submitNewUser(){
+  var data = {
+    full_name: gv('au-full-name'),
+    username:  gv('au-username'),
+    email:     gv('au-email'),
+    mobile:    gv('au-mobile'),
+    password:  gv('au-password'),
+    capital:   nv('au-capital') || 500000,
+    subscription_plan: gv('au-plan') || 'FREE',
+    pan_card:  gv('au-pan'),
+    city:      gv('au-city'),
+    state:     gv('au-state'),
+  };
+  
+  if(!data.full_name || !data.email || !data.password){
+    toast('Full Name, Email, Password are required','error');
+    return;
+  }
+  
+  toast('Creating user...','info');
+  req('/admin/users/add','POST',data,function(err,d){
+    if(d&&(d.success||d.user_id||d.id)){
+      toast('✅ User created: '+(d.user_id||d.id||data.email),'success');
+      var m = $('add-user-modal'); if(m) document.body.removeChild(m);
       setTimeout(adminLoadUsers, 500);
     } else {
-      toast('Failed: '+(err||'unknown'),'error');
+      toast('Failed: '+((d&&d.error)||err||'unknown'),'error');
     }
   });
 }
@@ -3532,6 +3580,7 @@ function adminCreateUser(){
 function adminEditUser(uid){
   // Load current user data
   req('/users/profile/'+uid,'GET',null,function(err,u){
+    if(!u) u = {}; u.id = u.id || uid; u.user_id = u.user_id || uid;
     if(err||!u){toast('Failed to load user','error');return;}
     showEditUserModal(u);
   });
@@ -3545,7 +3594,7 @@ function showEditUserModal(u){
   
   modal.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--bo);border-radius:12px;padding:20px;max-width:480px;width:100%;max-height:95vh;overflow-y:auto">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
-    +'<div style="font-size:14px;font-weight:800;color:var(--am)">✏️ EDIT USER: '+u.id+'</div>'
+    +'<div style="font-size:14px;font-weight:800;color:var(--am)">✏️ EDIT USER: '+(u.id||u.user_id||'?')+'</div>'
     +'<button onclick="document.body.removeChild(document.getElementById(\'edit-user-modal\'))" style="background:none;border:none;color:var(--mu);font-size:24px;cursor:pointer">×</button>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
@@ -5185,13 +5234,13 @@ function _renderChain(d, inst, spot){
     var ce=byStrike[K]['CE']||{}, pe=byStrike[K]['PE']||{};
     var atm = K===atmStrike;
     h += '<tr style="'+(atm?'background:rgba(251,191,36,.08);border-left:2px solid var(--am);border-right:2px solid var(--am);':'border-bottom:1px solid var(--bo);')+'text-align:center">'
-      +'<td onclick="showPayoff(\''+inst+'\','+K+',\'CE\','+(ce.price||0)+','+spot+')" style="padding:4px;color:var(--gr);font-weight:'+(atm?700:400)+';cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:rgba(0,255,136,.3)">'+(ce.price||0).toFixed(1)+'</td>'
+      +'<td onclick="showOptionChart(\''+inst+'\','+K+',\'CE\','+(ce.price||0)+')" style="padding:4px;color:var(--gr);font-weight:'+(atm?700:400)+';cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:rgba(0,255,136,.3)">'+(ce.price||0).toFixed(1)+'</td>'
       +'<td style="color:var(--bl)">'+(ce.iv_pct||0).toFixed(1)+'%</td>'
       +'<td style="color:var(--mu)">'+(ce.delta||0).toFixed(2)+'</td>'
       +'<td style="font-weight:700;color:'+(atm?'var(--am)':'var(--tx)')+'">'+K+'</td>'
       +'<td style="color:var(--mu)">'+Math.abs(pe.delta||0).toFixed(2)+'</td>'
       +'<td style="color:var(--bl)">'+(pe.iv_pct||0).toFixed(1)+'%</td>'
-      +'<td onclick="showPayoff(\''+inst+'\','+K+',\'PE\','+(pe.price||0)+','+spot+')" style="color:var(--rd);font-weight:'+(atm?700:400)+';cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:rgba(220,38,38,.3)">'+(pe.price||0).toFixed(1)+'</td>'
+      +'<td onclick="showOptionChart(\''+inst+'\','+K+',\'PE\','+(pe.price||0)+')" style="color:var(--rd);font-weight:'+(atm?700:400)+';cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:rgba(220,38,38,.3)">'+(pe.price||0).toFixed(1)+'</td>'
       +'</tr>';
   });
   h += '</table>';
@@ -5427,7 +5476,9 @@ function nlpParse(){
   var text = ($('nlp-input')||{}).value || '';
   if(!text.trim()){toast('Enter NLP order','error');return;}
   
-  req('/nlp/parse_advanced','POST',{text:text},function(err,d){
+  // Use parse_strategy for complex multi-line, parse_advanced for simple
+var endpoint = text.length > 200 || text.includes('STRATEGY') || text.includes('IF ') ? '/nlp/parse_strategy' : '/nlp/parse_advanced';
+req(endpoint,'POST',{text:text},function(err,d){
     var result = $('nlp-result');
     if(!result) return;
     result.style.display='block';
@@ -5581,6 +5632,141 @@ function loadPaperPositionsOnly(){
   });
 }
 
+
+
+function showOptionChart(instrument, strike, optionType, currentPrice){
+  var modal = document.createElement('div');
+  modal.id = 'option-chart-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:10001;display:flex;align-items:center;justify-content:center;padding:8px;backdrop-filter:blur(6px);overflow-y:auto';
+  modal.onclick = function(e){if(e.target===modal)document.body.removeChild(modal);};
+  
+  var tfs = ['1s','3s','5s','10s','30s','1m','3m','5m','10m','15m','30m','1h','3h','1d'];
+  var tfButtons = tfs.map(function(tf){
+    return '<button onclick="loadOptChart(\''+instrument+'\','+strike+',\''+optionType+'\',\''+tf+'\')" id="tf-btn-'+tf+'" class="tf-pill" style="padding:4px 8px;background:var(--bg5);border:1px solid var(--bo);color:var(--tx);font-size:9px;border-radius:4px;cursor:pointer;margin:2px">'+tf+'</button>';
+  }).join('');
+  
+  modal.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--bo);border-radius:12px;padding:14px;max-width:540px;width:100%;max-height:95vh;overflow-y:auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+    +'<div><div style="font-size:13px;font-weight:800;color:'+(optionType==='CE'?'var(--gr)':'var(--rd)')+'">📊 '+instrument+' '+strike+' '+optionType+'</div>'
+    +'<div style="font-size:9px;color:var(--mu)">Current: ₹'+currentPrice.toFixed(2)+'</div></div>'
+    +'<button onclick="document.body.removeChild(document.getElementById(\'option-chart-modal\'))" style="background:none;border:none;color:var(--mu);font-size:24px;cursor:pointer">×</button>'
+    +'</div>'
+    +'<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid var(--bo);padding-bottom:6px">'
+    +'<div style="font-size:9px;color:var(--mu);margin-right:6px;padding-top:4px">⏰ Timeframe:</div>'
+    +tfButtons
+    +'</div>'
+    +'<div id="opt-chart-loading" style="text-align:center;padding:30px;color:var(--mu);font-size:11px">Loading chart...</div>'
+    +'<canvas id="opt-chart-canvas" width="500" height="280" style="display:none;background:var(--bg4);border-radius:6px;width:100%"></canvas>'
+    +'<div id="opt-chart-stats" style="display:none;margin-top:8px;font-size:9px;color:var(--mu)"></div>'
+    +'<div style="display:flex;gap:6px;margin-top:10px">'
+    +'<button onclick="showPayoffFromChart(\''+instrument+'\','+strike+',\''+optionType+'\','+currentPrice+')" class="btn b" style="flex:1;font-size:10px;padding:8px">💹 PAYOFF</button>'
+    +'<button onclick="quickTradeFromChain(\''+instrument+'\','+strike+',\''+optionType+'\','+currentPrice+',\'BUY\',\'PAPER\')" class="btn g" style="flex:1;font-size:10px;padding:8px">📄 PAPER</button>'
+    +'<button onclick="quickTradeFromChain(\''+instrument+'\','+strike+',\''+optionType+'\','+currentPrice+',\'BUY\',\'LIVE\')" class="btn" style="flex:1;font-size:10px;padding:8px;background:var(--am);color:#000;font-weight:800">🔴 LIVE</button>'
+    +'</div>'
+    +'</div>';
+  
+  document.body.appendChild(modal);
+  loadOptChart(instrument, strike, optionType, '5m');
+}
+
+function loadOptChart(instrument, strike, optionType, tf){
+  // Update active timeframe button
+  document.querySelectorAll('.tf-pill').forEach(function(b){
+    b.style.background = 'var(--bg5)';
+    b.style.color = 'var(--tx)';
+    b.style.fontWeight = '400';
+  });
+  var btn = $('tf-btn-'+tf);
+  if(btn){btn.style.background = 'var(--am)'; btn.style.color='#000'; btn.style.fontWeight='700';}
+  
+  $('opt-chart-loading').style.display = 'block';
+  $('opt-chart-canvas').style.display = 'none';
+  $('opt-chart-stats').style.display = 'none';
+  
+  req('/chart/option_price/'+instrument+'/'+strike+'/'+optionType+'?timeframe='+tf+'&points=80','GET',null,function(err,d){
+    if(err||!d||!d.candles){
+      $('opt-chart-loading').textContent = 'Chart failed to load';
+      return;
+    }
+    drawOptChart(d.candles);
+    
+    // Show stats
+    var prices = d.candles.map(function(c){return c.close;});
+    var high = Math.max.apply(null, d.candles.map(function(c){return c.high;}));
+    var low  = Math.min.apply(null, d.candles.map(function(c){return c.low;}));
+    var open = d.candles[0].open;
+    var close = d.candles[d.candles.length-1].close;
+    var change = close - open;
+    var pct = (change/open*100).toFixed(2);
+    var color = change >= 0 ? 'var(--gr)' : 'var(--rd)';
+    
+    $('opt-chart-stats').innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:9px">'
+      +'<div><div style="color:var(--mu)">OPEN</div><b>₹'+open.toFixed(2)+'</b></div>'
+      +'<div><div style="color:var(--mu)">HIGH</div><b style="color:var(--gr)">₹'+high.toFixed(2)+'</b></div>'
+      +'<div><div style="color:var(--mu)">LOW</div><b style="color:var(--rd)">₹'+low.toFixed(2)+'</b></div>'
+      +'<div><div style="color:var(--mu)">CHANGE</div><b style="color:'+color+'">'+(change>=0?'+':'')+change.toFixed(2)+' ('+(change>=0?'+':'')+pct+'%)</b></div>'
+      +'</div>';
+    $('opt-chart-stats').style.display = 'block';
+  });
+}
+
+function drawOptChart(candles){
+  var canvas = $('opt-chart-canvas');
+  if(!canvas || !candles.length) return;
+  $('opt-chart-loading').style.display = 'none';
+  canvas.style.display = 'block';
+  
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  
+  // Get price range
+  var allPrices = [];
+  candles.forEach(function(c){allPrices.push(c.high, c.low);});
+  var maxP = Math.max.apply(null, allPrices);
+  var minP = Math.min.apply(null, allPrices);
+  var range = maxP - minP || 1;
+  var padding = range * 0.1;
+  maxP += padding; minP -= padding; range = maxP - minP;
+  
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for(var g=0;g<5;g++){
+    var y = (g/4)*H;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '8px monospace';
+    ctx.fillText('₹'+(maxP-(g/4)*range).toFixed(1), 4, y+10);
+  }
+  
+  // Draw candles
+  var candleW = Math.max(2, W / candles.length - 1);
+  candles.forEach(function(c, i){
+    var x = i * (W / candles.length) + (W / candles.length) / 2;
+    var openY  = H - ((c.open - minP) / range) * H;
+    var closeY = H - ((c.close - minP) / range) * H;
+    var highY  = H - ((c.high - minP) / range) * H;
+    var lowY   = H - ((c.low - minP) / range) * H;
+    
+    var bullish = c.close >= c.open;
+    ctx.strokeStyle = bullish ? '#00ff88' : '#ef4444';
+    ctx.fillStyle = bullish ? '#00ff88' : '#ef4444';
+    
+    // Wick
+    ctx.beginPath();
+    ctx.moveTo(x, highY); ctx.lineTo(x, lowY); ctx.stroke();
+    
+    // Body
+    var bodyH = Math.abs(closeY - openY) || 1;
+    ctx.fillRect(x - candleW/2, Math.min(openY, closeY), candleW, bodyH);
+  });
+}
+
+function showPayoffFromChart(inst, strike, type, premium){
+  var m = $('option-chart-modal'); if(m) document.body.removeChild(m);
+  showPayoff(inst, strike, type, premium, 23643.5);
+}
 
 // ── PROFILE FEATURES ──────────────────────────────
 function setTheme(theme){

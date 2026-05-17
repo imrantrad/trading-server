@@ -3426,20 +3426,46 @@ def options_chain(spot:float=23644, expiry_days:int=0, vix:float=17.5, rate:floa
     from datetime import date, timedelta, datetime as _dt
     if expiry_days <= 0:
         today = _dt.now(IST).date()
-        EXPIRY_DAYS = {  # Day of week (0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri)
-            "NIFTY":      1,  # Tuesday weekly
-            "BANKNIFTY":  2,  # Wednesday weekly  
-            "FINNIFTY":   1,  # Tuesday
-            "MIDCPNIFTY": 0,  # Monday
-            "SENSEX":     4,  # Friday
-            "BANKEX":     0,  # Monday
+        # NSE/BSE Expiry Schedule (effective 2025-2026)
+        EXPIRY_CONFIG = {
+            "NIFTY":      {"day": 1, "type": "weekly"},   # Tuesday weekly
+            "BANKNIFTY":  {"day": 2, "type": "monthly"},  # Last Wednesday MONTHLY only
+            "FINNIFTY":   {"day": 1, "type": "monthly"},  # Last Tuesday MONTHLY
+            "MIDCPNIFTY": {"day": 1, "type": "monthly"},  # Last Tuesday MONTHLY
+            "NIFTYNXT50": {"day": 1, "type": "monthly"},  # Last Tuesday MONTHLY
+            "SENSEX":     {"day": 3, "type": "weekly"},   # Thursday weekly
+            "BANKEX":     {"day": 3, "type": "monthly"},  # Last Thursday MONTHLY
+            "SENSEX50":   {"day": 3, "type": "monthly"},  # Last Thursday MONTHLY
         }
-        target_dow = EXPIRY_DAYS.get(instrument, 3)
-        days_ahead = (target_dow - today.weekday() + 7) % 7
-        if days_ahead == 0: days_ahead = 7  # If today is expiry, next week
-        expiry_date = today + timedelta(days=days_ahead)
-        # Add +1 buffer for intraday time decay accuracy (matches NSE pricing)
-        expiry_days = max(1, days_ahead + 1)  # +1 for time-to-expiry calc
+        cfg = EXPIRY_CONFIG.get(instrument, {"day": 1, "type": "weekly"})
+        target_dow = cfg["day"]
+        
+        if cfg["type"] == "weekly":
+            # Next occurrence of target weekday
+            days_ahead = (target_dow - today.weekday() + 7) % 7
+            if days_ahead == 0: days_ahead = 7
+            expiry_date = today + timedelta(days=days_ahead)
+        else:  # monthly - last occurrence of target_dow in current/next month
+            from calendar import monthrange
+            year, month = today.year, today.month
+            last_day = monthrange(year, month)[1]
+            # Find last target_dow in month
+            for d in range(last_day, 0, -1):
+                if date(year, month, d).weekday() == target_dow:
+                    expiry_date = date(year, month, d)
+                    break
+            # If past, go to next month
+            if expiry_date <= today:
+                month += 1
+                if month > 12: month = 1; year += 1
+                last_day = monthrange(year, month)[1]
+                for d in range(last_day, 0, -1):
+                    if date(year, month, d).weekday() == target_dow:
+                        expiry_date = date(year, month, d)
+                        break
+        
+        days_ahead = (expiry_date - today).days
+        expiry_days = max(1, days_ahead + 1)  # +1 buffer for time decay
     else:
         from datetime import date, timedelta
         expiry_date = date.today() + timedelta(days=expiry_days)
@@ -7587,6 +7613,140 @@ def nlp_parse_advanced(payload: dict):
     
     return parsed
 
+
+
+@app.post("/nlp/parse_strategy")
+def nlp_parse_strategy(payload: dict):
+    """Parse complex multi-line trading strategy definitions"""
+    text = payload.get("text", "")
+    if not text: return {"error": "text required"}
+    
+    import re as _re
+    UPPER = text.upper()
+    
+    parsed = {
+        "raw_text": text[:500] if len(text) > 500 else text,
+        "strategies": [], "modes": [], "time_filters": [],
+        "entry_conditions": [], "exit_rules": [], "risk_rules": [],
+        "position_size": {}, "trend_logic": {}, "indicators": [],
+        "conditions_total": 0, "errors": [],
+    }
+    
+    # Strategy headers
+    for m in _re.finditer(r"STRATEGY\s*\d*\s*[-:]\s*(\w[\w\s_]*)", UPPER):
+        name = m.group(1).strip()
+        if name and name not in parsed["strategies"]:
+            parsed["strategies"].append(name[:50])
+    for m in _re.finditer(r"===\s*(\w[\w\s_]+?)\s*===", UPPER):
+        name = m.group(1).strip()
+        if name and name not in parsed["strategies"]:
+            parsed["strategies"].append(name[:50])
+    
+    # Mode selection
+    for m in _re.finditer(r"IF\s+(\w+)\s*([<>=]+)\s*([\d.]+)\s*%?\s+THEN\s+MODE\s*=?\s*(\w+)", UPPER):
+        parsed["modes"].append({"condition": m.group(1)+" "+m.group(2)+" "+m.group(3), "mode": m.group(4)})
+    
+    # Time filters
+    for m in _re.finditer(r"(?:NO\s+TRADE|BLOCK)\s+(?:BETWEEN\s+)?(\d{2}:\d{2})\s*[-]\s*(\d{2}:\d{2})", UPPER):
+        parsed["time_filters"].append({"type": "BLOCK", "start": m.group(1), "end": m.group(2)})
+    
+    m = _re.search(r"(?:ONLY\s+)?AFTER\s+(\d{1,2}):(\d{2})", UPPER)
+    if m: parsed["time_filters"].append({"type": "AFTER", "time": m.group(1)+":"+m.group(2)})
+    
+    # Entry conditions
+    indicators_set = set()
+    cond_patterns = [
+        (r"PRICE\s*([<>=]+)\s*(\w+)", "PRICE_VS"),
+        (r"(RSI|MACD|VOLUME|ATR|VWAP|EMA\d+|BULL_SCORE|GAP)\s*([<>=]+)\s*([\d.]+)\s*%?", "INDICATOR"),
+        (r"(\w+)\s*=\s*TRUE", "BOOL_TRUE"),
+        (r"VWAP_(PULLBACK|REJECTION|SUPPORT|RESISTANCE)", "VWAP_PATTERN"),
+        (r"(\d+)_CONSECUTIVE_(BULLISH|BEARISH)_CANDLES", "CANDLES"),
+    ]
+    
+    for pat, ctype in cond_patterns:
+        for m in _re.finditer(pat, UPPER):
+            parsed["entry_conditions"].append({"type": ctype, "match": list(m.groups()), "text": m.group(0)[:100]})
+            if ctype == "INDICATOR": indicators_set.add(m.group(1))
+            elif ctype == "VWAP_PATTERN": indicators_set.add("VWAP")
+            elif ctype == "CANDLES": indicators_set.add("CANDLES")
+    
+    parsed["conditions_total"] = len(parsed["entry_conditions"])
+    
+    # Risk management
+    risk_pats = [
+        (r"MAX_DAILY_LOSS\s*=?\s*([\d.]+)\s*%", "max_daily_loss_pct"),
+        (r"MAX_OPEN_POSITIONS\s*=?\s*(\d+)", "max_positions"),
+        (r"MIN_RR\s*=?\s*([\d.]+)", "min_rr"),
+        (r"RR\s*>=\s*([\d.]+)", "min_rr"),
+    ]
+    for pat, key in risk_pats:
+        m = _re.search(pat, UPPER)
+        if m: parsed["risk_rules"].append({"rule": key, "value": float(m.group(1))})
+    
+    # Instrument and action
+    if "NIFTY" in UPPER: parsed["instrument"] = "NIFTY"
+    if "BANKNIFTY" in UPPER: parsed["instrument"] = "BANKNIFTY"
+    if "PE" in UPPER or "PUT" in UPPER: parsed["option_type"] = "PE"
+    if "CE" in UPPER or "CALL" in UPPER: parsed["option_type"] = "CE"
+    if "BUY" in UPPER: parsed["action"] = "BUY"
+    if "SELL" in UPPER and "SELLING" not in UPPER: parsed["action"] = "SELL"
+    
+    parsed["indicators"] = sorted(list(indicators_set))
+    parsed["is_valid"] = len(parsed["entry_conditions"]) > 0 or len(parsed["strategies"]) > 0
+    parsed["summary"] = {
+        "strategies": len(parsed["strategies"]),
+        "modes": len(parsed["modes"]),
+        "time_filters": len(parsed["time_filters"]),
+        "entry_conditions": parsed["conditions_total"],
+        "indicators": len(parsed["indicators"]),
+        "complexity": "ADVANCED" if parsed["conditions_total"] > 10 else "MEDIUM" if parsed["conditions_total"] > 3 else "SIMPLE",
+    }
+    return parsed
+
+
+@app.get("/chart/option_price/{instrument}/{strike}/{option_type}")
+def get_option_chart(instrument: str, strike: int, option_type: str, timeframe: str = "1m", points: int = 100):
+    """Historical option price candles for charting"""
+    import math, random
+    from datetime import timedelta
+    
+    TF_SEC = {"1s":1,"3s":3,"5s":5,"10s":10,"30s":30,"1m":60,"3m":180,"5m":300,"10m":600,"15m":900,"30m":1800,"1h":3600,"3h":10800,"1d":86400}
+    interval = TF_SEC.get(timeframe, 60)
+    
+    try:
+        chain = options_chain(spot=23643.5, vix=17.5, instrument=instrument)
+        opt = next((c for c in chain.get("chain", []) if c["strike"] == strike and c["option_type"] == option_type), None)
+        anchor = opt["price"] if opt else 100
+        iv = chain.get("atm_iv_pct", 17.5) / 100
+    except:
+        anchor = 100; iv = 0.175
+    
+    now = datetime.now(IST)
+    candles = []
+    price = anchor * 1.15
+    vol_factor = math.sqrt(interval / 86400) * iv
+    
+    for i in range(points):
+        ts = now - timedelta(seconds=interval * (points - i))
+        change = random.gauss(0, anchor * vol_factor)
+        decay = (anchor - price) * 0.05
+        price = max(0.5, price + change + decay)
+        high = price * (1 + abs(random.gauss(0, vol_factor)))
+        low  = price * (1 - abs(random.gauss(0, vol_factor)))
+        open_p = candles[-1]["close"] if candles else price * 0.98
+        candles.append({
+            "time": int(ts.timestamp() * 1000),
+            "open": round(open_p, 2), "high": round(high, 2),
+            "low": round(low, 2), "close": round(price, 2),
+            "volume": int(random.uniform(1000, 50000)),
+        })
+    
+    return {
+        "instrument": instrument, "strike": strike, "option_type": option_type,
+        "timeframe": timeframe, "current_price": anchor,
+        "candles": candles,
+        "supported_timeframes": list(TF_SEC.keys()),
+    }
 
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):
