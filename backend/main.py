@@ -52,7 +52,7 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.3.9"
+_APP_VERSION = "12.4.0"
 _BUILD_DATE = "2026-05-17"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
@@ -3420,19 +3420,73 @@ def options_greeks(spot:float=24000, strike:float=24000, expiry_days:int=7, iv:f
     return g
 
 @app.get("/options/chain")
-def options_chain(spot:float=24000, expiry_days:int=7, vix:float=15.0, rate:float=6.5):
-    sigma = vix/100; T = expiry_days/365; r = rate/100
-    atm = round(spot/50)*50
+def options_chain(spot:float=23644, expiry_days:int=7, vix:float=18.79, rate:float=6.5, instrument:str="NIFTY"):
+    """Options chain with REALISTIC IV skew (matches IV Surface)"""
+    base_iv = vix / 100
+    T = expiry_days / 365
+    r = rate / 100
+    
+    # Step based on instrument
+    STEP = {"NIFTY":50,"BANKNIFTY":100,"FINNIFTY":50,"MIDCPNIFTY":50,"SENSEX":100}
+    step = STEP.get(instrument, 50)
+    atm = round(spot/step) * step
+    
+    # Lot size
+    LOTS = {"NIFTY":65,"BANKNIFTY":30,"FINNIFTY":60,"MIDCPNIFTY":120,"SENSEX":20,"BANKEX":30,"NIFTYNXT50":25,"SENSEX50":70}
+    lot_size = LOTS.get(instrument, 65)
+    
     chain = []
-    for i in range(-5, 6):
-        K = atm + i*50
-        for otype in ["CE","PE"]:
+    # 12 strikes each side for full visibility
+    for i in range(-12, 13):
+        K = atm + i*step
+        if K <= 0: continue
+        
+        moneyness = (K - spot) / spot
+        
+        # Realistic IV skew (same as IV Surface)
+        if moneyness < 0:
+            # OTM PUT: high IV (crash protection demand)
+            skew_adj = abs(moneyness) * 800
+        else:
+            # OTM CALL: lower IV
+            skew_adj = -moneyness * 400
+        smile_adj = moneyness**2 * 1500
+        
+        sigma = base_iv * (1 + (skew_adj + smile_adj) / 100)
+        sigma = max(0.08, min(0.80, sigma))
+        strike_iv_pct = round(sigma * 100, 2)
+        
+        for otype in ["CE", "PE"]:
             g = _calc_greeks(spot, K, T, r, sigma, otype)
-            g.update({"strike":K,"option_type":otype,"expiry_days":expiry_days,"iv_pct":round(vix,2),"lot_size":50,"total_premium":round(g["price"]*50,2),"oi":0,"volume":0})
+            g.update({
+                "strike":        K,
+                "option_type":   otype,
+                "expiry_days":   expiry_days,
+                "iv_pct":        strike_iv_pct,
+                "lot_size":      lot_size,
+                "total_premium": round(g["price"] * lot_size, 2),
+                "oi":            0,
+                "volume":        0,
+                "moneyness":     "ATM" if K == atm else ("OTM_PUT" if K < spot else "OTM_CALL"),
+            })
             chain.append(g)
+    
     atm_ce = next((x for x in chain if x["strike"]==atm and x["option_type"]=="CE"), {})
     atm_pe = next((x for x in chain if x["strike"]==atm and x["option_type"]=="PE"), {})
-    return {"spot":spot,"atm_strike":atm,"expiry_days":expiry_days,"vix":vix,"atm_ce":atm_ce,"atm_pe":atm_pe,"chain":chain,"count":len(chain)}
+    
+    return {
+        "spot":         spot,
+        "instrument":   instrument,
+        "atm_strike":   atm,
+        "expiry_days":  expiry_days,
+        "vix":          vix,
+        "lot_size":     lot_size,
+        "atm_iv_pct":   round(base_iv * 100, 2),
+        "atm_ce":       atm_ce,
+        "atm_pe":       atm_pe,
+        "chain":        chain,
+        "count":        len(chain),
+    }
 
 @app.get("/options/iv")
 def implied_vol(market_price:float=100, spot:float=24000, strike:float=24000, expiry_days:int=7, option_type:str="CE"):

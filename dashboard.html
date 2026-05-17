@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.3.9">
+  <meta name="version" content="12.4.0">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -1515,7 +1515,7 @@ input:focus,select:focus{border-color:var(--bl)}
       <div style="font-size:14px;font-weight:800;color:var(--gr);margin-bottom:6px">TRD v12.3</div>
       <div style="color:var(--mu);margin-bottom:8px">Institutional Derivatives Trading Platform</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:var(--mu)">
-        <div>Build: <b style="color:var(--tx)">v12.3.6</b></div>
+        <div>Build: <b style="color:var(--tx)">v12.4.0</b></div>
         <div>Released: <b style="color:var(--tx)">May 2026</b></div>
         <div>NLP Conditions: <b style="color:var(--tx)">500+</b></div>
         <div>AI Strategies: <b style="color:var(--tx)">25</b></div>
@@ -2976,7 +2976,7 @@ function _loadChainWithSpot(inst, dte, spot){
   req('/quant/option_chain/'+inst+'?dte='+dte+'&user_id='+uid4+'&live_spot='+lspot+'&_t='+Date.now(),'GET',null,function(err,d){
     // Fallback to /options/chain if /quant/option_chain fails
     if(err||!d||!d.chain){
-      req('/options/chain?spot='+lspot+'&expiry_days='+dte+'&vix=18.79','GET',null,function(e2,d2){
+      req('/options/chain?spot='+lspot+'&expiry_days='+dte+'&vix=18.79&instrument='+inst,'GET',null,function(e2,d2){
         if(d2&&d2.chain) _renderChain(d2,inst,lspot);
         else toast('Chain failed','error');
       });

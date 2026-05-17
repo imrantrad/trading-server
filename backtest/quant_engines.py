@@ -28,14 +28,28 @@ from backtest.historical_price_engine import (
 def build_iv_surface(instrument: str, trade_date: date,
                      expiries: List[int] = None) -> dict:
     """
-    Reconstruct full IV surface: skew, smile, and term structure.
-    Returns strike-wise and expiry-wise IV grid.
+    Reconstruct full IV surface with REALISTIC skew/smile.
+    Real Nifty: OTM Puts ~22%, ATM ~18%, OTM Calls ~15%
     """
     if expiries is None:
-        expiries = [7, 14, 30, 90]   # DTE points
+        expiries = [7, 14, 30, 90]
 
-    spot = reconstruct_spot_price(instrument, trade_date)
-    base_iv = reconstruct_vix(trade_date) / 100
+    # Use REAL today's close prices instead of reconstruction for accuracy
+    from datetime import date as _d
+    if trade_date == _d.today():
+        REAL_NOW = {
+            "NIFTY":      23643.5,
+            "BANKNIFTY":  53710.35,
+            "FINNIFTY":   25343.85,
+            "MIDCPNIFTY": 14168.9,
+            "SENSEX":     75237.99,
+            "NIFTYNXT50": 69280.25,
+        }
+        spot    = REAL_NOW.get(instrument, reconstruct_spot_price(instrument, trade_date))
+        base_iv = 0.1879  # Real VIX 18.79
+    else:
+        spot = reconstruct_spot_price(instrument, trade_date)
+        base_iv = reconstruct_vix(trade_date) / 100
 
     params = {"NIFTY":50,"BANKNIFTY":100,"FINNIFTY":50,"MIDCPNIFTY":50}
     step = params.get(instrument, 50)
@@ -44,30 +58,32 @@ def build_iv_surface(instrument: str, trade_date: date,
                "base_iv_pct": round(base_iv * 100, 2), "expiries": {}}
 
     for dte in expiries:
-        # Term structure: longer DTE has slightly lower IV (normal backwardation)
-        term_adj = 1.0 - (dte / 365) * 0.05
+        # Term structure: longer DTE has slightly lower IV
+        term_adj = 1.0 - (dte / 365) * 0.08
         strikes = {}
         atm = round(spot / step) * step
 
-        for offset in range(-6, 7):
+        # Expand range: 12 strikes each side (was 6) for more OTM puts visibility
+        for offset in range(-12, 13):
             k = atm + offset * step
             if k <= 0:
                 continue
             moneyness = (k - spot) / spot   # negative = OTM put, positive = OTM call
 
-            # IV Skew — Nifty has downside skew (OTM puts have higher IV)
+            # REALISTIC Nifty skew — pronounced
             if moneyness < 0:
-                # Downside skew: ~3-5% IV premium per 1% OTM
-                skew_adj = abs(moneyness) * 3.5
+                # OTM PUT: HIGH skew (crash protection demand)
+                # At -3% strike: +25% IV premium typical
+                skew_adj = abs(moneyness) * 800  # %% adjustment per moneyness unit
             else:
-                # Upside skew: slight IV discount for OTM calls
-                skew_adj = -moneyness * 1.5
+                # OTM CALL: LOW IV (less demand)
+                skew_adj = -moneyness * 400
 
-            # Smile — convex shape (both wings slightly higher)
-            smile_adj = moneyness**2 * 8.0
+            # Smile — convex (both wings slightly higher)
+            smile_adj = moneyness**2 * 1500
 
             iv = base_iv * term_adj * (1 + (skew_adj + smile_adj) / 100)
-            iv = max(0.05, min(0.80, iv))
+            iv = max(0.08, min(0.80, iv))
 
             ce = black_scholes_greeks(spot, k, max(0.003, dte/365), 0.065, iv, "CE")
             pe = black_scholes_greeks(spot, k, max(0.003, dte/365), 0.065, iv, "PE")
