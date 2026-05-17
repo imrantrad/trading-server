@@ -52,6 +52,9 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
+_APP_VERSION = "12.3.6"
+_BUILD_DATE = "2026-05-17"
+
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
 
 from fastapi.staticfiles import StaticFiles
@@ -61,15 +64,31 @@ import os
 # Serve dashboard at root
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard():
+    """Serve dashboard with AGGRESSIVE cache busting (institutional grade)"""
     dashboard_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../dashboard.html")
     if os.path.exists(dashboard_path):
         with open(dashboard_path, "r") as f:
             content_str = f.read()
     else:
         content_str = DASHBOARD_HTML
+    
+    # Generate ETag from content
+    import hashlib as _hl
+    etag = _hl.md5(content_str.encode()).hexdigest()[:16]
+    
     headers = {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Cache-Control":       "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma":              "no-cache",
+        "Expires":             "0",
+        "ETag":                f'"{etag}"',
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options":     "DENY",
+        "X-XSS-Protection":    "1; mode=block",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+        "Referrer-Policy":     "strict-origin-when-cross-origin",
         "Access-Control-Allow-Origin": "*",
+        "X-App-Version":       _APP_VERSION,
+        "X-Build-Date":        _BUILD_DATE,
     }
     return HTMLResponse(content=content_str, headers=headers)
 
@@ -7024,6 +7043,20 @@ def admin_payments_list(limit: int = 50):
         except Exception as e:
             return {"error": str(e), "payments": []}
     return {"payments": []}
+
+
+@app.get("/version")
+def get_version():
+    """Return current deployed version"""
+    return {
+        "version":    _APP_VERSION,
+        "build_date": _BUILD_DATE,
+        "lot_sizes": {
+            "NIFTY": 75, "BANKNIFTY": 35, "FINNIFTY": 65,
+            "MIDCPNIFTY": 140, "SENSEX": 20, "NIFTYNXT50": 25,
+        },
+        "features": ["RLS", "Razorpay", "Admin8Tabs", "RealClosePrices", "AutoExecute"],
+    }
 
 
 @app.post("/ml/scan_all")

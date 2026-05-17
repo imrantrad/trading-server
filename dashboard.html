@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="version" content="12.3.6">
+  <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#060608">
@@ -1488,7 +1493,7 @@ input:focus,select:focus{border-color:var(--bl)}
       <div style="font-size:14px;font-weight:800;color:var(--gr);margin-bottom:6px">TRD v12.3</div>
       <div style="color:var(--mu);margin-bottom:8px">Institutional Derivatives Trading Platform</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:var(--mu)">
-        <div>Build: <b style="color:var(--tx)">v12.3.0</b></div>
+        <div>Build: <b style="color:var(--tx)">v12.3.6</b></div>
         <div>Released: <b style="color:var(--tx)">May 2026</b></div>
         <div>NLP Conditions: <b style="color:var(--tx)">500+</b></div>
         <div>AI Strategies: <b style="color:var(--tx)">25</b></div>
@@ -1496,7 +1501,7 @@ input:focus,select:focus{border-color:var(--bl)}
         <div>SEBI: <b style="color:var(--am)">Compliant</b></div>
       </div>
       <div style="font-size:9px;color:var(--mu);margin-top:8px;padding-top:8px;border-top:1px solid var(--bo)">
-        © 2026 TRD. Paper trading platform for educational purposes.<br>
+        <button onclick="checkServerVersion()" class="btn b full" style="font-size:10px;padding:8px;margin-bottom:8px">🔄 CHECK FOR UPDATES</button><div id="version-check-result" style="font-size:9px;color:var(--mu);margin-bottom:8px"></div>© 2026 TRD. Paper trading platform for educational purposes.<br>
         Not a SEBI-registered broker. Trading involves risk.
       </div>
     </div>
@@ -1935,6 +1940,58 @@ function refreshInstDashboard(){
 setInterval(function(){
   if(document.querySelector('#pnl-trade.active')) refreshInstDashboard();
 }, 30000);
+
+
+
+function checkServerVersion(){
+  var res = $('version-check-result');
+  if(res) res.innerHTML='<span style="color:var(--am)">Checking...</span>';
+  req('/version?_t='+Date.now(),'GET',null,function(err,d){
+    if(err||!d){
+      if(res) res.innerHTML='<span style="color:var(--rd)">Server unreachable</span>';
+      return;
+    }
+    var clientVer = document.querySelector('meta[name=version]') && document.querySelector('meta[name=version]').content;
+    var serverVer = d.version || 'unknown';
+    var match = clientVer === serverVer;
+    if(res){
+      if(match){
+        res.innerHTML = '<span style="color:var(--gr)">✅ Up-to-date — v'+serverVer+' (build '+d.build_date+')</span>'
+          +'<div style="font-size:8px;color:var(--mu);margin-top:4px">Lot sizes: NIFTY=' + d.lot_sizes.NIFTY + ', BANKNIFTY=' + d.lot_sizes.BANKNIFTY + ', FINNIFTY=' + d.lot_sizes.FINNIFTY + ', MIDCPNIFTY=' + d.lot_sizes.MIDCPNIFTY + ', SENSEX=' + d.lot_sizes.SENSEX + '</div>'
+          +'<div style="font-size:8px;color:var(--gr)">Features: ' + (d.features||[]).join(', ') + '</div>';
+      } else {
+        res.innerHTML = '<span style="color:var(--am)">⚠️ Update available! Client v'+clientVer+' · Server v'+serverVer+'</span>'
+          +'<button onclick="hardReload()" style="display:block;margin-top:6px;padding:6px 12px;background:var(--am);color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer">🔄 RELOAD NOW</button>';
+      }
+    }
+  });
+}
+
+function hardReload(){
+  // Force browser to bypass cache
+  if('caches' in window){
+    caches.keys().then(function(names){names.forEach(function(n){caches.delete(n);});});
+  }
+  window.location.reload(true);
+}
+
+// Auto-check on page load
+setTimeout(function(){
+  req('/version?_t='+Date.now(),'GET',null,function(err,d){
+    if(d&&d.version){
+      var clientVer = document.querySelector('meta[name=version]') && document.querySelector('meta[name=version]').content;
+      if(clientVer && d.version !== clientVer){
+        toast('⚠️ Server has newer version (v'+d.version+'). Reload to update.','warning');
+      }
+      // Update version badge
+      var badge = $('nav-version'); 
+      if(badge){
+        badge.textContent = 'v' + d.version;
+        badge.title = 'Build ' + (d.build_date||'');
+      }
+    }
+  });
+}, 2000);
 
 
 // ── CLOCK ─────────────────────────────────────────
