@@ -52,7 +52,7 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.3.8"
+_APP_VERSION = "12.3.9"
 _BUILD_DATE = "2026-05-17"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
@@ -7057,6 +7057,85 @@ def get_version():
         },
         "features": ["RLS", "Razorpay", "Admin8Tabs", "RealClosePrices", "AutoExecute"],
     }
+
+
+@app.post("/admin/referral/allot_to_user")
+def admin_allot_referral_to_user(payload: dict):
+    """Admin: Allot a specific referral code to a user (grants benefit)"""
+    user_id = payload.get("user_id", "")
+    ref_code = payload.get("ref_code", "")
+    admin_id = payload.get("admin_id", "admin")
+    
+    if not user_id or not ref_code:
+        return {"error": "user_id and ref_code required"}
+    
+    try:
+        # Get referral details
+        import sqlite3
+        conn = sqlite3.connect("database/referral.db")
+        conn.row_factory = sqlite3.Row
+        
+        # Ensure tables exist
+        try:
+            conn.execute("""CREATE TABLE IF NOT EXISTS referral_codes (
+                code TEXT PRIMARY KEY, bonus_amount INTEGER DEFAULT 0,
+                plan TEXT DEFAULT 'PRO', validity_months INTEGER DEFAULT 1,
+                owner_email TEXT, is_active INTEGER DEFAULT 1,
+                uses_count INTEGER DEFAULT 0, created_at TEXT)""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS referral_uses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT, user_id TEXT,
+                applied_at TEXT, bonus_amount INTEGER, plan TEXT, 
+                code_owner_id TEXT, status TEXT DEFAULT 'ACTIVE')""")
+        except: pass
+        
+        # Find code
+        code_row = conn.execute("SELECT * FROM referral_codes WHERE code=?", (ref_code,)).fetchone()
+        if not code_row:
+            conn.close()
+            return {"error": f"Referral code {ref_code} not found"}
+        
+        # Check if user already has it
+        existing = conn.execute("SELECT id FROM referral_uses WHERE user_id=? AND code=?",
+                                (user_id, ref_code)).fetchone()
+        if existing:
+            conn.close()
+            return {"error": f"User already used code {ref_code}"}
+        
+        # Apply
+        from datetime import datetime as _dt, timedelta as _td
+        bonus = code_row["bonus_amount"] or 0
+        plan = code_row["plan"] or "PRO"
+        validity = code_row["validity_months"] or 1
+        
+        conn.execute("""INSERT INTO referral_uses 
+            (code, user_id, applied_at, bonus_amount, plan, code_owner_id, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE')""",
+            (ref_code, user_id, _dt.now().isoformat(), bonus, plan, "ADMIN_ALLOT"))
+        conn.execute("UPDATE referral_codes SET uses_count = uses_count + 1 WHERE code=?", (ref_code,))
+        conn.commit()
+        conn.close()
+        
+        # Also update user plan
+        if USER_SYSTEM:
+            try:
+                expires = (_dt.now() + _td(days=30*validity)).isoformat()
+                with user_db.conn() as uc:
+                    uc.execute("UPDATE users SET subscription_plan=?, subscription_expires_at=?, capital = capital + ? WHERE id=?",
+                              (plan, expires, bonus, user_id))
+                    uc.commit()
+            except Exception: pass
+        
+        audit_log(admin_id, "ADMIN_ALLOT_REFERRAL", {
+            "target_user": user_id, "code": ref_code, "bonus": bonus, "plan": plan
+        })
+        
+        return {
+            "success": True, "user_id": user_id, "code": ref_code,
+            "bonus_amount": bonus, "plan": plan, "validity_months": validity,
+            "message": f"Code {ref_code} allotted to {user_id}",
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @app.post("/ml/scan_all")

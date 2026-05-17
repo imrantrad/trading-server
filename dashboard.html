@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.3.8">
+  <meta name="version" content="12.3.9">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -952,22 +952,39 @@ input:focus,select:focus{border-color:var(--bl)}
     <div id="adm-payments-list" style="font-size:10px"><div style="color:var(--mu);padding:8px;text-align:center">Click refresh to load</div></div>
   </div>
   
-  <!-- REFERRAL (existing) -->
+  <!-- REFERRAL -->
   <div id="adm-referral" class="card" style="display:none">
     <div class="chdr">🎁 REFERRAL CODES</div>
+    
+    <!-- Create new code -->
     <div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:8px">
+      <div class="chdr" style="font-size:10px;color:var(--am)">CREATE NEW CODE</div>
       <div class="g2">
         <div><div class="lbl">CODE</div><input id="ref-code" placeholder="e.g., LAUNCH50" style="font-size:10px"></div>
         <div><div class="lbl">BONUS ₹</div><input id="ref-bonus" type="number" value="500" style="font-size:10px"></div>
-        <div><div class="lbl">PLAN</div><select id="ref-plan" style="font-size:10px"><option>PRO</option><option>BASIC</option></select></div>
+        <div><div class="lbl">PLAN</div><select id="ref-plan" style="font-size:10px"><option>PRO</option><option>BASIC</option><option>INSTITUTIONAL</option></select></div>
         <div><div class="lbl">VALIDITY (mo)</div><input id="ref-validity" type="number" value="1" style="font-size:10px"></div>
       </div>
       <button onclick="adminCreateCode()" class="btn g full" style="font-size:10px;padding:8px;margin-top:6px">CREATE CODE</button>
-      <button onclick="fixReferralDB()" class="btn full" style="font-size:9px;padding:4px;margin-top:6px;background:rgba(245,158,11,.1);color:var(--am)">🛠️ FIX DB SCHEMA</button>
     </div>
+    
+    <!-- Allot to user -->
+    <div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.2);padding:10px;border-radius:8px;margin-bottom:8px">
+      <div class="chdr" style="font-size:10px;color:var(--p0)">📌 ALLOT CODE TO USER</div>
+      <div class="g2">
+        <div><div class="lbl">USER ID</div><input id="allot-user-id" placeholder="USR..." style="font-size:10px"></div>
+        <div><div class="lbl">REFERRAL CODE</div><input id="allot-ref-code" placeholder="LAUNCH50" style="font-size:10px"></div>
+      </div>
+      <button onclick="adminAllotReferralToUser()" class="btn full" style="background:var(--p0);color:#fff;font-size:10px;padding:8px;margin-top:6px;font-weight:700">📌 ALLOT REFERRAL TO USER</button>
+      <div style="font-size:8px;color:var(--mu);margin-top:4px;line-height:1.5">Use to grant a referral benefit directly to a specific user (e.g., for support, promotion, or compensation).</div>
+    </div>
+    
+    <button onclick="fixReferralDB()" class="btn full" style="font-size:9px;padding:4px;margin-bottom:6px;background:rgba(245,158,11,.1);color:var(--am)">🛠️ FIX DB SCHEMA</button>
+    
+    <!-- Active codes list -->
+    <div class="chdr" style="margin-top:8px">🎯 ACTIVE CODES</div>
     <div id="adm-ref-list" style="font-size:10px"></div>
   </div>
-  
   <!-- ANALYTICS -->
   <div id="adm-analytics" class="card" style="display:none">
     <div class="chdr">📈 PERFORMANCE ANALYTICS</div>
@@ -2115,7 +2132,10 @@ function loginSuccess(d){
   UNAME = d.full_name || d.username || 'Trader';
   UCAP  = d.capital  || 500000;
   UPLAN = d.plan     || d.subscription_plan || 'FREE';
-  try{ localStorage.setItem('trd_user', JSON.stringify(d)); }catch(e){}
+  try{ 
+    d._saved_at = Date.now();  // Track session age
+    localStorage.setItem('trd_user', JSON.stringify(d)); 
+  }catch(e){}
   // Update UI
   st('nav-plan', UPLAN);
   var lo = $('login-overlay');
@@ -2144,12 +2164,32 @@ function logout(){
   toast('Logged out','info');
 }
 
-// Auto-login from localStorage
+// Auto-login from localStorage — persistent until logout
 window.addEventListener('load', function(){
   try{
     var saved = JSON.parse(localStorage.getItem('trd_user')||'null');
-    if(saved && saved.user_id){ loginSuccess(saved); return; }
-  }catch(e){}
+    if(saved && saved.user_id){
+      // Check session age — keep for 30 days max
+      var savedAt = saved._saved_at || 0;
+      var ageMs = Date.now() - savedAt;
+      var ageDays = ageMs / (1000*60*60*24);
+      
+      if(ageDays < 30 || !savedAt){
+        // Valid session — auto-login
+        loginSuccess(saved);
+        // Refresh timestamp
+        saved._saved_at = Date.now();
+        localStorage.setItem('trd_user', JSON.stringify(saved));
+        return;
+      } else {
+        // Expired — clear
+        localStorage.removeItem('trd_user');
+        toast('Session expired after 30 days. Please login again.','info');
+      }
+    }
+  }catch(e){
+    console.error('Auto-login failed:', e);
+  }
   var lo=$('login-overlay'); if(lo) lo.style.display='flex';
 });
 
@@ -4887,35 +4927,130 @@ function diagnoseConnection(){
 function _renderChain(d, inst, spot){
   var atmStrike = d.atm_strike || Math.round(spot/50)*50;
   st('chain-spot','₹'+Math.round(spot).toLocaleString('en-IN'));
-  // Group by strike
   var byStrike = {};
   (d.chain||[]).forEach(function(r){
     if(!byStrike[r.strike]) byStrike[r.strike]={};
     byStrike[r.strike][r.option_type]=r;
   });
   var strikes = Object.keys(byStrike).map(function(s){return parseInt(s);}).sort(function(a,b){return a-b;});
-  var totalCeOI=0, totalPeOI=0;
   var table=$('chain-table'); if(!table) return;
-  var html='<table style="width:100%;border-collapse:collapse;font-size:9px"><tr style="color:var(--mu);text-align:center;background:var(--bg4)"><th style="padding:6px">CE ₹</th><th>CE IV</th><th>CE Δ</th><th style="font-weight:800;color:var(--am)">STRIKE</th><th>PE Δ</th><th>PE IV</th><th>PE ₹</th></tr>';
+  var h='<div style="font-size:9px;color:var(--mu);text-align:center;margin-bottom:4px;padding:4px;background:rgba(168,85,247,.06);border-radius:4px">💡 Tap any CE/PE price to see payoff graph</div>';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:9px"><tr style="color:var(--mu);text-align:center;background:var(--bg4)"><th style="padding:6px">CE ₹</th><th>CE IV</th><th>CE Δ</th><th style="font-weight:800;color:var(--am)">STRIKE</th><th>PE Δ</th><th>PE IV</th><th>PE ₹</th></tr>';
   strikes.forEach(function(K){
     var ce=byStrike[K]['CE']||{}, pe=byStrike[K]['PE']||{};
     var atm = K===atmStrike;
-    html += '<tr style="'+(atm?'background:rgba(251,191,36,.08);border-left:2px solid var(--am);border-right:2px solid var(--am);':'border-bottom:1px solid var(--bo);')+'text-align:center">'
-      +'<td style="padding:4px;color:var(--gr);font-weight:'+(atm?700:400)+'">'+(ce.price||0).toFixed(1)+'</td>'
+    h += '<tr style="'+(atm?'background:rgba(251,191,36,.08);border-left:2px solid var(--am);border-right:2px solid var(--am);':'border-bottom:1px solid var(--bo);')+'text-align:center">'
+      +'<td onclick="showPayoff(\''+inst+'\','+K+',\'CE\','+(ce.price||0)+','+spot+')" style="padding:4px;color:var(--gr);font-weight:'+(atm?700:400)+';cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:rgba(0,255,136,.3)">'+(ce.price||0).toFixed(1)+'</td>'
       +'<td style="color:var(--bl)">'+(ce.iv_pct||0).toFixed(1)+'%</td>'
       +'<td style="color:var(--mu)">'+(ce.delta||0).toFixed(2)+'</td>'
       +'<td style="font-weight:700;color:'+(atm?'var(--am)':'var(--tx)')+'">'+K+'</td>'
       +'<td style="color:var(--mu)">'+Math.abs(pe.delta||0).toFixed(2)+'</td>'
       +'<td style="color:var(--bl)">'+(pe.iv_pct||0).toFixed(1)+'%</td>'
-      +'<td style="color:var(--rd);font-weight:'+(atm?700:400)+'">'+(pe.price||0).toFixed(1)+'</td>'
+      +'<td onclick="showPayoff(\''+inst+'\','+K+',\'PE\','+(pe.price||0)+','+spot+')" style="color:var(--rd);font-weight:'+(atm?700:400)+';cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:rgba(220,38,38,.3)">'+(pe.price||0).toFixed(1)+'</td>'
       +'</tr>';
   });
-  html += '</table>';
-  table.innerHTML = html;
+  h += '</table>';
+  table.innerHTML = h;
   st('chain-pcr', '~1.2');
   st('chain-maxpain', '₹'+atmStrike.toLocaleString('en-IN'));
-  toast('Chain loaded — '+strikes.length+' strikes','success');
+  toast('Chain loaded — tap CE/PE prices for payoff','success');
 }
+
+// Show payoff graph in modal
+function showPayoff(instrument, strike, optionType, premium, spot){
+  var lotSize = (LOT_SIZES || {})[instrument] || 65;
+  
+  // Calculate payoff at different spot levels
+  var range = strike * 0.10;  // ±10% range
+  var step = range / 25;
+  var points = [];
+  for(var s = strike - range; s <= strike + range; s += step){
+    var pnl;
+    if(optionType === 'CE'){
+      // Buy CE: max(spot - strike, 0) - premium
+      pnl = (Math.max(s - strike, 0) - premium) * lotSize;
+    } else {
+      // Buy PE: max(strike - spot, 0) - premium
+      pnl = (Math.max(strike - s, 0) - premium) * lotSize;
+    }
+    points.push({spot: Math.round(s), pnl: Math.round(pnl)});
+  }
+  
+  // Build SVG chart
+  var minPnl = Math.min.apply(null, points.map(function(p){return p.pnl;}));
+  var maxPnl = Math.max.apply(null, points.map(function(p){return p.pnl;}));
+  var range_pnl = maxPnl - minPnl || 1;
+  var width = 300, height = 200;
+  
+  var pathData = points.map(function(p, i){
+    var x = (i / (points.length - 1)) * width;
+    var y = height - ((p.pnl - minPnl) / range_pnl) * height;
+    return (i === 0 ? 'M' : 'L') + x + ',' + y;
+  }).join(' ');
+  
+  // Zero line
+  var zeroY = height - ((0 - minPnl) / range_pnl) * height;
+  
+  // Strike line
+  var strikeX = ((strike - points[0].spot) / (points[points.length-1].spot - points[0].spot)) * width;
+  var spotX = ((spot - points[0].spot) / (points[points.length-1].spot - points[0].spot)) * width;
+  
+  // Calculate breakeven, max profit, max loss
+  var breakeven = optionType === 'CE' ? strike + premium : strike - premium;
+  var maxProfit = optionType === 'CE' ? 'Unlimited' : '₹' + ((strike - premium) * lotSize).toLocaleString('en-IN');
+  var maxLoss = '₹' + (premium * lotSize).toLocaleString('en-IN');
+  
+  var modal = document.createElement('div');
+  modal.id = 'payoff-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)';
+  modal.onclick = function(e){ if(e.target === modal) document.body.removeChild(modal); };
+  
+  modal.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--bo);border-radius:12px;padding:16px;max-width:340px;width:100%;max-height:90vh;overflow-y:auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    +'<div><div style="font-size:14px;font-weight:800;color:'+(optionType==='CE'?'var(--gr)':'var(--rd)')+'">BUY '+instrument+' '+strike+' '+optionType+'</div>'
+    +'<div style="font-size:9px;color:var(--mu)">Premium ₹'+premium.toFixed(1)+' × '+lotSize+' = ₹'+(premium*lotSize).toLocaleString('en-IN')+'</div></div>'
+    +'<button onclick="document.body.removeChild(document.getElementById(\'payoff-modal\'))" style="background:none;border:none;color:var(--mu);font-size:24px;cursor:pointer;padding:0">×</button>'
+    +'</div>'
+    +'<svg viewBox="0 0 '+width+' '+height+'" style="width:100%;height:auto;background:var(--bg4);border-radius:6px">'
+    +'<line x1="0" y1="'+zeroY+'" x2="'+width+'" y2="'+zeroY+'" stroke="var(--bo)" stroke-dasharray="2,2"/>'
+    +'<line x1="'+strikeX+'" y1="0" x2="'+strikeX+'" y2="'+height+'" stroke="rgba(245,158,11,.4)" stroke-dasharray="3,3"/>'
+    +'<line x1="'+spotX+'" y1="0" x2="'+spotX+'" y2="'+height+'" stroke="rgba(79,142,247,.6)"/>'
+    +'<path d="'+pathData+'" fill="none" stroke="'+(optionType==='CE'?'var(--gr)':'var(--rd)')+'" stroke-width="2"/>'
+    +'<text x="'+strikeX+'" y="12" fill="var(--am)" font-size="9" text-anchor="middle">K=' + strike + '</text>'
+    +'<text x="'+spotX+'" y="'+(height-4)+'" fill="var(--bl)" font-size="9" text-anchor="middle">Spot=' + Math.round(spot) + '</text>'
+    +'</svg>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;font-size:10px">'
+    +'<div class="sbox"><div style="color:var(--am);font-weight:800">₹'+Math.round(breakeven).toLocaleString('en-IN')+'</div><div class="slbl">Breakeven</div></div>'
+    +'<div class="sbox"><div style="color:var(--gr);font-weight:800">'+maxProfit+'</div><div class="slbl">Max Profit</div></div>'
+    +'<div class="sbox"><div style="color:var(--rd);font-weight:800">'+maxLoss+'</div><div class="slbl">Max Loss</div></div>'
+    +'<div class="sbox"><div style="font-weight:800">'+(optionType==='CE'?'Bullish':'Bearish')+'</div><div class="slbl">View</div></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;margin-top:10px">'
+    +'<button onclick="document.body.removeChild(document.getElementById(\'payoff-modal\'));quickTradeFromChain(\''+instrument+'\','+strike+',\''+optionType+'\','+premium+',\'BUY\',\'PAPER\')" class="btn g" style="flex:1;font-size:10px;padding:8px">📄 PAPER</button>'
+    +'<button onclick="document.body.removeChild(document.getElementById(\'payoff-modal\'));quickTradeFromChain(\''+instrument+'\','+strike+',\''+optionType+'\','+premium+',\'BUY\',\'LIVE\')" class="btn" style="flex:1;font-size:10px;padding:8px;background:var(--am);color:#000;font-weight:800">🔴 LIVE</button>'
+    +'</div>'
+    +'</div>';
+  
+  document.body.appendChild(modal);
+}
+
+function quickTradeFromChain(inst, strike, type, premium, action, mode){
+  // Pre-fill trade form and switch to trade tab
+  show('trade');
+  setTimeout(function(){
+    var instEl = $('tr-inst'); if(instEl) instEl.value = inst;
+    var strikeEl = $('tr-strike'); if(strikeEl) strikeEl.value = strike;
+    var premEl = $('tr-premium'); if(premEl) premEl.value = premium;
+    // Set option type buttons
+    var ceBtn = document.querySelector('.opt-type-ce'); 
+    var peBtn = document.querySelector('.opt-type-pe');
+    if(type === 'CE' && ceBtn) ceBtn.click();
+    if(type === 'PE' && peBtn) peBtn.click();
+    toast('Pre-filled '+action+' '+inst+' '+strike+' '+type+' for '+mode+' execution','success');
+  },300);
+}
+
+
 
 function loadSubPlans(){
   req('/subscriptions/plans','GET',null,function(err,d){
@@ -4962,6 +5097,65 @@ function upgradePlan(plan){
     if(p==='sub') setTimeout(loadSubPlans, 100);
   };
 })();
+
+
+function adminAllotReferralToUser(){
+  var uid = gv('allot-user-id');
+  var code = gv('allot-ref-code');
+  
+  if(!uid || !code){
+    toast('Both User ID and Code required','error');
+    return;
+  }
+  
+  if(!confirm('Allot referral code '+code+' to user '+uid+'?')) return;
+  
+  req('/admin/referral/allot_to_user','POST',{
+    user_id: uid,
+    ref_code: code,
+    admin_id: 'admin'
+  },function(err,d){
+    if(d&&d.success){
+      toast('✅ Code '+code+' allotted to '+uid+' (₹'+d.bonus_amount+' bonus, '+d.plan+' plan)','success');
+      $('allot-user-id').value = '';
+      $('allot-ref-code').value = '';
+      setTimeout(loadAdminReferral, 500);
+    } else {
+      toast('Failed: '+((d&&d.error)||err),'error');
+    }
+  });
+}
+
+function loadAdminReferral(){
+  req('/admin/referral/list','GET',null,function(err,d){
+    var el = $('adm-ref-list'); if(!el) return;
+    var codes = (d&&d.codes) || [];
+    if(!codes.length){
+      el.innerHTML='<div style="color:var(--mu);padding:8px;text-align:center">No codes yet — create one above</div>';
+      return;
+    }
+    el.innerHTML = codes.map(function(c){
+      return '<div style="background:var(--bg4);padding:8px;border-radius:6px;margin-bottom:6px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+        +'<div><b style="color:var(--am)">'+c.code+'</b> · ₹'+(c.bonus_amount||0)+' bonus</div>'
+        +'<div style="font-size:9px;color:var(--gr)">'+(c.uses_count||0)+' uses</div></div>'
+        +'<div style="font-size:9px;color:var(--mu)">Plan: '+(c.plan||'PRO')+' · Validity: '+(c.validity_months||1)+'mo · '+(c.is_active?'<span style="color:var(--gr)">Active</span>':'<span style="color:var(--rd)">Inactive</span>')+'</div>'
+        +'<div style="display:flex;gap:4px;margin-top:6px">'
+        +'<button onclick="quickAllotRef(\''+c.code+'\')" class="btn" style="flex:1;font-size:9px;padding:4px;background:var(--p0);color:#fff">📌 Allot</button>'
+        +'<button onclick="if(confirm(\'Deactivate this code?\')) req(\'/admin/referral/deactivate\',\'POST\',{code:\''+c.code+'\'},function(){toast(\'Deactivated\');loadAdminReferral();})" class="btn" style="flex:1;font-size:9px;padding:4px;background:rgba(220,38,38,.1);color:var(--rd)">Deactivate</button>'
+        +'</div></div>';
+    }).join('');
+  });
+}
+
+function quickAllotRef(code){
+  var uid = prompt('Enter User ID to allot code "'+code+'":');
+  if(!uid) return;
+  $('allot-ref-code').value = code;
+  $('allot-user-id').value = uid;
+  adminAllotReferralToUser();
+}
+
 
 // ── PROFILE FEATURES ──────────────────────────────
 function setTheme(theme){
