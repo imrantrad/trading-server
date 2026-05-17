@@ -89,8 +89,8 @@ def black_scholes_greeks(S: float, K: float, T: float, r: float,
     }
 
 LOT_SIZES = {
-    "NIFTY": 65, "BANKNIFTY": 30, "FINNIFTY": 60,
-    "MIDCPNIFTY": 120, "SENSEX": 10,
+    "NIFTY": 65, "BANKNIFTY": 35, "FINNIFTY": 60,
+    "MIDCPNIFTY": 120, "SENSEX": 20,
     "NIFTYNXT50": 25,
 }
 

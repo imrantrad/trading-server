@@ -115,7 +115,7 @@ class PaperTradingEngine:
             return {"status": "REJECTED", "reason": "Max open positions reached"}
 
         instrument = order.get("instrument", "NIFTY")
-        lot_size = {"NIFTY":50,"BANKNIFTY":15,"FINNIFTY":40,"MIDCPNIFTY":75,"SENSEX":10}.get(instrument, 50)
+        lot_size = {"NIFTY":50,"BANKNIFTY":15,"FINNIFTY":65,"MIDCPNIFTY":140,"SENSEX":20}.get(instrument, 50)
         quantity = order.get("quantity", 1)
         entry_price = order.get("entry_price", 0) + self.slippage
 

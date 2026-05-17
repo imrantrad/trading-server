@@ -286,8 +286,8 @@ class AISignalEngine:
         # NSE F&O Lot Sizes (as of 2025-2026)
         lot_sizes = {
             # Indices
-            "NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,
-            "MIDCPNIFTY":75,"SENSEX":10,"NIFTYNXT50":25,
+            "NIFTY":75,"BANKNIFTY":35,"FINNIFTY":65,
+            "MIDCPNIFTY":140,"SENSEX":20,"NIFTYNXT50":25,
             # F&O Stocks
             "RELIANCE":250,"TCS":175,"INFOSYS":300,
             "HDFC":550,"SBI":1500,"ICICI":1375,

@@ -149,7 +149,7 @@ INSTRUMENTS={"nifty 50":"NIFTY","nifty50":"NIFTY","nifty":"NIFTY","nf":"NIFTY","
     "reliance":"RELIANCE","tcs":"TCS","hdfc":"HDFCBANK","infosys":"INFY","icici":"ICICIBANK",
     "usdinr":"USDINR","crude":"CRUDEOIL","gold":"GOLD",
 }
-LOT_SIZES={"NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,"MIDCPNIFTY":75,"SENSEX":10,"NIFTYNXT50":25}
+LOT_SIZES={"NIFTY":75,"BANKNIFTY":35,"FINNIFTY":65,"MIDCPNIFTY":140,"SENSEX":20,"NIFTYNXT50":25}
 BUY_WORDS=["buy","long","bullish","call buy","entry","enter","accumulate","kharido","le lo","lelo","lo","खरीदो","badhega","upar"]
 SELL_WORDS=["sell","short","bearish","put buy","exit","close","square off","becho","bech","niklo","nikal","बेचो","girega","neeche"]
 OPTION_TYPES={"call":"CE","ce":"CE","कॉल":"CE","put":"PE","pe":"PE","पुट":"PE"}
@@ -1010,7 +1010,7 @@ def expiry_cal(): return reporter.expiry_calendar()
 @app.get("/margin/calculate")
 def calc_margin(instrument: str="NIFTY", quantity: int=1,
                 position_type: str="OPTIONS", price: float=100):
-    lot_size = {"NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,"MIDCPNIFTY":120}.get(instrument,50)
+    lot_size = {"NIFTY":75,"BANKNIFTY":35,"FINNIFTY":65,"MIDCPNIFTY":120}.get(instrument,50)
     lots_val = quantity*lot_size
     span = {"NIFTY":1.0,"BANKNIFTY":1.2,"FINNIFTY":0.8}.get(instrument,1.0)
     if position_type=="OPTIONS":
@@ -5222,7 +5222,7 @@ def broker_place_order(payload: dict):
     price    = float(payload.get("price",0))
     order_type = payload.get("order_type","MARKET")
     
-    lot_sizes = {"NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,"MIDCPNIFTY":75,"NIFTYNXT50":25,"SENSEX":10}
+    lot_sizes = {"NIFTY":75,"BANKNIFTY":35,"FINNIFTY":65,"MIDCPNIFTY":140,"NIFTYNXT50":25,"SENSEX":20}
     qty = lots * lot_sizes.get(inst, 65)
     
     # Check if LIVE broker connected (future: integrate real broker SDK)
@@ -5647,9 +5647,13 @@ def global_market_data(asset_class: str):
     
     MARKETS = {
         "india_eq": {
-            "NIFTY":      {"price": 23700, "change": 180, "pct": 0.76, "currency": "INR"},
-            "BANKNIFTY":  {"price": 51800, "change": 420, "pct": 0.82, "currency": "INR"},
-            "SENSEX":     {"price": 78200, "change": 610, "pct": 0.79, "currency": "INR"},
+            "NIFTY":       {"price": 23643.5,  "change": -46.10,  "pct": -0.19, "currency": "INR"},
+            "BANKNIFTY":   {"price": 53710.35, "change": -418.60, "pct": -0.77, "currency": "INR"},
+            "FINNIFTY":    {"price": 25343.85, "change": -128.65, "pct": -0.51, "currency": "INR"},
+            "MIDCPNIFTY":  {"price": 14168.9,  "change": -96.65,  "pct": -0.68, "currency": "INR"},
+            "SENSEX":      {"price": 75237.99, "change": -160.73, "pct": -0.21, "currency": "INR"},
+            "NIFTYNXT50":  {"price": 69280.25, "change": -660.05, "pct": -0.94, "currency": "INR"},
+            "INDIA_VIX":   {"price": 18.79,    "change": 0.18,    "pct": 0.97,  "currency": "%"},
         },
         "us_eq": {
             "SPX":   {"price": 5890+seed%200,  "change": 12,  "pct": 0.20, "currency": "USD"},
@@ -6248,7 +6252,7 @@ def pre_trade_risk_check(payload: dict):
     risk = risk_monitor(user_id) if user_id else {}
     
     # Lot size validation
-    LOTS = {"NIFTY":75,"BANKNIFTY":30,"FINNIFTY":40,"MIDCPNIFTY":75,"SENSEX":10}
+    LOTS = {"NIFTY":75,"BANKNIFTY":35,"FINNIFTY":65,"MIDCPNIFTY":140,"SENSEX":20}
     lot_size = LOTS.get(instrument, 75)
     trade_value = entry * lot_size * lots
     

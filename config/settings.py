@@ -16,8 +16,8 @@ CAPITAL = 500000               # Starting capital
 
 # Lot Sizes
 LOT_SIZES = {
-    "NIFTY": 50, "BANKNIFTY": 15, "FINNIFTY": 40,
-    "MIDCPNIFTY": 75, "SENSEX": 10,
+    "NIFTY": 50, "BANKNIFTY": 15, "FINNIFTY": 65,
+    "MIDCPNIFTY": 140, "SENSEX": 20,
 }
 
 # Broker APIs (fill before live trading)

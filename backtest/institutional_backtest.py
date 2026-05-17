@@ -12,8 +12,8 @@ from dataclasses import dataclass, field
 # ══════════════════════════════════════════════════════════════════════════════
 
 LOT_SIZES = {
-    "NIFTY": 65, "BANKNIFTY": 30, "FINNIFTY": 60,
-    "MIDCPNIFTY": 120, "SENSEX": 10,
+    "NIFTY": 65, "BANKNIFTY": 35, "FINNIFTY": 60,
+    "MIDCPNIFTY": 120, "SENSEX": 20,
     "NIFTYNXT50": 25,
 }
 
@@ -25,7 +25,7 @@ BROKERAGE = {
 
 INSTRUMENT_PARAMS = {
     "NIFTY":      {"spot_base": 24000, "avg_premium_atm": 180, "lot_size": 75,  "bid_ask_spread": 0.5, "tick_size": 0.05},
-    "BANKNIFTY":  {"spot_base": 52000, "avg_premium_atm": 350, "lot_size": 30,  "bid_ask_spread": 1.0, "tick_size": 0.05},
+    "BANKNIFTY":  {"spot_base": 52000, "avg_premium_atm": 350, "lot_size": 35,  "bid_ask_spread": 1.0, "tick_size": 0.05},
     "FINNIFTY":   {"spot_base": 23000, "avg_premium_atm": 150, "lot_size": 65,  "bid_ask_spread": 0.8, "tick_size": 0.05},
     "MIDCPNIFTY": {"spot_base": 12000, "avg_premium_atm": 100, "lot_size": 150, "bid_ask_spread": 1.5, "tick_size": 0.05},
 }

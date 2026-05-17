@@ -241,11 +241,11 @@ input:focus,select:focus{border-color:var(--bl)}
         <div class="lbl">INSTRUMENT</div>
         <select id="t-inst" onchange="updateOrderEntry()">
           <option value="NIFTY">NIFTY (Lot:75)</option>
-          <option value="BANKNIFTY">BANKNIFTY (Lot:30)</option>
-          <option value="FINNIFTY">FINNIFTY (Lot:40)</option>
-          <option value="MIDCPNIFTY">MIDCPNIFTY (Lot:75)</option>
+          <option value="BANKNIFTY">BANKNIFTY (Lot:35)</option>
+          <option value="FINNIFTY">FINNIFTY (Lot:65)</option>
+          <option value="MIDCPNIFTY">MIDCPNIFTY (Lot:140)</option>
           <option value="NIFTYNXT50">NIFTYNXT50 (Lot:25)</option>
-          <option value="SENSEX">SENSEX (Lot:10)</option>
+          <option value="SENSEX">SENSEX (Lot:20)</option>
         </select>
       </div>
       <div>
@@ -2093,7 +2093,7 @@ window.addEventListener('load', function(){
 
 // ── ORDER ENTRY ───────────────────────────────────
 var _optionType = 'CE';
-var LOT_SIZES = {NIFTY:75,BANKNIFTY:30,FINNIFTY:40,MIDCPNIFTY:75,NIFTYNXT50:25,SENSEX:10};
+var LOT_SIZES = {NIFTY:75,BANKNIFTY:35,FINNIFTY:65,MIDCPNIFTY:140,SENSEX:20,NIFTYNXT50:25,RELIANCE:250,TCS:175,SBI:1500,HDFC:550,ICICI:1375};
 
 function setOptionType(type){
   _optionType = type;
