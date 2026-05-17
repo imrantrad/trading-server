@@ -52,7 +52,7 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.4.1"
+_APP_VERSION = "12.4.2"
 _BUILD_DATE = "2026-05-17"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
@@ -3420,8 +3420,30 @@ def options_greeks(spot:float=24000, strike:float=24000, expiry_days:int=7, iv:f
     return g
 
 @app.get("/options/chain")
-def options_chain(spot:float=23644, expiry_days:int=7, vix:float=18.79, rate:float=6.5, instrument:str="NIFTY"):
-    """Options chain with REALISTIC IV skew (matches IV Surface)"""
+def options_chain(spot:float=23644, expiry_days:int=0, vix:float=17.5, rate:float=6.5, instrument:str="NIFTY"):
+    """Options chain with REALISTIC pricing matching NSE/BSE live data"""
+    # Auto-calculate DTE based on instrument's next expiry
+    from datetime import date, timedelta, datetime as _dt
+    if expiry_days <= 0:
+        today = _dt.now(IST).date()
+        EXPIRY_DAYS = {  # Day of week (0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri)
+            "NIFTY":      1,  # Tuesday weekly
+            "BANKNIFTY":  2,  # Wednesday weekly  
+            "FINNIFTY":   1,  # Tuesday
+            "MIDCPNIFTY": 0,  # Monday
+            "SENSEX":     4,  # Friday
+            "BANKEX":     0,  # Monday
+        }
+        target_dow = EXPIRY_DAYS.get(instrument, 3)
+        days_ahead = (target_dow - today.weekday() + 7) % 7
+        if days_ahead == 0: days_ahead = 7  # If today is expiry, next week
+        expiry_date = today + timedelta(days=days_ahead)
+        # Add +1 buffer for intraday time decay accuracy (matches NSE pricing)
+        expiry_days = max(1, days_ahead + 1)  # +1 for time-to-expiry calc
+    else:
+        from datetime import date, timedelta
+        expiry_date = date.today() + timedelta(days=expiry_days)
+    
     base_iv = vix / 100
     T = expiry_days / 365
     r = rate / 100
@@ -3479,6 +3501,8 @@ def options_chain(spot:float=23644, expiry_days:int=7, vix:float=18.79, rate:flo
         "instrument":   instrument,
         "atm_strike":   atm,
         "expiry_days":  expiry_days,
+        "expiry_date":  str(expiry_date) if 'expiry_date' in dir() else "",
+        "expiry_label": expiry_date.strftime("%a, %d %b %Y") if 'expiry_date' in dir() else "",
         "vix":          vix,
         "lot_size":     lot_size,
         "atm_iv_pct":   round(base_iv * 100, 2),

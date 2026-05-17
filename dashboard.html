@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.4.1">
+  <meta name="version" content="12.4.2">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -339,17 +339,25 @@ input:focus,select:focus{border-color:var(--bl)}
 
   <!-- NLP Order Entry -->
   <div class="card">
-    <div class="chdr" style="display:flex;justify-content:space-between">NLP ORDER <span style="font-size:9px;color:var(--bl);cursor:pointer" onclick="document.getElementById('nlp-order-help').style.display=document.getElementById('nlp-order-help').style.display==='none'?'block':'none'">?</span></div>
-    <div id="nlp-order-help" style="display:none;background:var(--bg4);border-radius:6px;padding:8px;font-size:9px;color:var(--mu);margin-bottom:8px;line-height:1.7">
-      Type: "BUY NIFTY CE 1 LOT SL 80 TARGET 160"<br>
-      Or: "SELL BANKNIFTY PE 24000 2 LOT SL 150"
+    <div class="chdr" style="display:flex;justify-content:space-between;align-items:center">
+      🤖 NLP ORDER PARSER
+      <span style="font-size:9px;color:var(--bl);cursor:pointer" onclick="document.getElementById('nlp-help').style.display = document.getElementById('nlp-help').style.display === 'none' ? 'block' : 'none'">ℹ️ Help</span>
     </div>
-    <textarea id="nlp-input" rows="2" placeholder="BUY NIFTY CE 1 LOT SL 80 TARGET 160..." style="font-size:11px;resize:none;margin-bottom:8px"></textarea>
-    <div id="nlp-parsed-display" style="display:none;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:6px;padding:8px;font-size:10px;margin-bottom:8px;line-height:1.8"></div>
-    <div class="g2">
-      <button onclick="parseNLPOrder()" class="btn b">🔍 PARSE</button>
-      <button onclick="executeNLPOrder()" class="btn g">⚡ EXECUTE</button>
+    
+    <div id="nlp-help" style="display:none;background:rgba(79,142,247,.06);border:1px solid rgba(79,142,247,.2);padding:8px;border-radius:6px;margin-bottom:8px;font-size:9px;line-height:1.7">
+      <b style="color:var(--bl)">📋 Examples:</b><br>
+      • Buy NIFTY 23650 CE 1 lot<br>
+      • Sell BANKNIFTY 53700 PE when RSI > 70<br>
+      • Buy NIFTY 23800 CE when MACD bullish AND volume spike<br>
+      • Sell FINNIFTY 25400 PE if price above VWAP after 9:30<br><br>
+      <b style="color:var(--am)">Supported:</b> BUY/SELL · CE/PE · Conditions (RSI/MACD/EMA/VWAP/VIX/BB) · Logic (AND/OR/NOT) · Time filters
     </div>
+    
+    <textarea id="nlp-input" placeholder="Type natural language order with conditions...&#10;e.g., Buy NIFTY 23650 CE 1 lot when RSI > 60 AND volume spike AND price above VWAP" style="width:100%;min-height:80px;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:8px;border-radius:6px;font-size:11px;margin-bottom:8px;resize:vertical;font-family:monospace"></textarea>
+    
+    <button onclick="nlpParse()" class="btn b full" style="padding:10px;font-size:11px;font-weight:800">🔍 PARSE & ANALYZE</button>
+    
+    <div id="nlp-result" style="display:none;margin-top:10px"></div>
   </div>
 
   <!-- Open Positions -->
@@ -740,6 +748,9 @@ input:focus,select:focus{border-color:var(--bl)}
         <div>Spot: <b id="chain-spot" style="color:var(--bl)">—</b></div>
         <div>PCR: <b id="chain-pcr" style="color:var(--am)">—</b></div>
         <div>Max Pain: <b id="chain-maxpain" style="color:var(--p0)">—</b></div>
+        <div style="grid-column:span 2;background:rgba(245,158,11,.06);padding:6px;border-radius:6px;margin-top:6px;text-align:center">
+          📅 Expiry: <b id="chain-expiry" style="color:var(--am)">Loading...</b> · ATM IV: <b id="chain-atm-iv" style="color:var(--bl)">--</b>
+        </div>
       </div>
       <button onclick="loadChain()" class="btn b full" style="margin-bottom:8px;font-size:10px">🔄 LOAD CHAIN</button>
     </div>
@@ -1687,8 +1698,8 @@ function show(name, btn){
   }
   // Auto-load panel data
   var loaders = {
-    'trade':   function(){ updateOrderEntry(); loadPositions(); refreshInstDashboard(); setTimeout(function(){ loadMarketPrices(); },300); },
-    'paper':   function(){ loadPaperPortfolio(); loadRegimeDisplay(); },
+    'trade':   function(){ updateOrderEntry(); loadLivePositionsOnly(); refreshInstDashboard(); setTimeout(function(){ loadMarketPrices(); },300); },
+    'paper':   function(){ loadPaperPositionsOnly(); loadRegimeDisplay(); },
     'bt':      function(){ loadBacktestStrategies(); },
     'risk':    function(){ loadRiskReport(); calcRisk(); },
     'strats':  function(){ loadBuiltin(); },
@@ -3567,22 +3578,40 @@ function saveEditedUser(uid){
     username:   gv('ed-username'),
     email:      gv('ed-email'),
     mobile:     gv('ed-mobile'),
-    capital:    nv('ed-capital'),
-    subscription_plan: gv('ed-plan'),
-    is_active:  parseInt(gv('ed-status')),
+    capital:    nv('ed-capital') || 500000,
+    subscription_plan: gv('ed-plan') || 'FREE',
+    is_active:  parseInt(gv('ed-status')||'1'),
     pan_card:   gv('ed-pan'),
     city:       gv('ed-city'),
     state:      gv('ed-state'),
     admin_id:   'admin',
   };
   
+  // Remove empty strings (don't overwrite with blank)
+  Object.keys(updates).forEach(function(k){
+    if(updates[k] === '' || updates[k] === null) delete updates[k];
+  });
+  
+  toast('Saving user updates...','info');
+  
   req('/admin/users/'+uid+'/full_edit','PUT',updates,function(err,d){
     if(d&&d.success){
-      toast('✅ User updated: '+(d.updated||[]).length+' fields','success');
+      toast('✅ User updated: '+(d.updated||[]).join(', '),'success');
       var m = $('edit-user-modal'); if(m) document.body.removeChild(m);
-      adminLoadUsers();
+      setTimeout(adminLoadUsers, 300);
+    } else if(d&&d.error){
+      toast('Failed: '+d.error,'error');
     } else {
-      toast('Failed: '+((d&&d.error)||err||'unknown'),'error');
+      // Fallback: try old endpoint
+      req('/admin/users/'+uid,'PUT',updates,function(e2,d2){
+        if(d2&&d2.success){
+          toast('✅ Updated (legacy endpoint)','success');
+          var m = $('edit-user-modal'); if(m) document.body.removeChild(m);
+          setTimeout(adminLoadUsers, 300);
+        } else {
+          toast('Save failed - check network','error');
+        }
+      });
     }
   });
 }
@@ -5134,6 +5163,15 @@ function diagnoseConnection(){
 function _renderChain(d, inst, spot){
   var atmStrike = d.atm_strike || Math.round(spot/50)*50;
   st('chain-spot','₹'+Math.round(spot).toLocaleString('en-IN'));
+  // Show expiry info
+  var expEl = $('chain-expiry');
+  if(expEl){
+    expEl.textContent = (d.expiry_label||'Weekly') + ' (' + (d.expiry_days||7) + ' DTE)';
+  }
+  var ivEl = $('chain-atm-iv');
+  if(ivEl){
+    ivEl.textContent = (d.atm_iv_pct||18) + '%';
+  }
   var byStrike = {};
   (d.chain||[]).forEach(function(r){
     if(!byStrike[r.strike]) byStrike[r.strike]={};
@@ -5381,6 +5419,166 @@ function saveBankConfig(){
     bank_account_no: gv('bank-acc-no'),
     bank_ifsc: gv('bank-ifsc')
   },function(){toast('Bank config saved','success');});
+}
+
+
+
+function nlpParse(){
+  var text = ($('nlp-input')||{}).value || '';
+  if(!text.trim()){toast('Enter NLP order','error');return;}
+  
+  req('/nlp/parse_advanced','POST',{text:text},function(err,d){
+    var result = $('nlp-result');
+    if(!result) return;
+    result.style.display='block';
+    
+    if(err||!d){
+      result.innerHTML='<div style="color:var(--rd);padding:8px">Parse failed</div>';
+      return;
+    }
+    
+    var statusColor = d.is_valid ? 'var(--gr)' : 'var(--rd)';
+    var statusIcon  = d.is_valid ? '✅' : '⚠️';
+    
+    var html='<div style="background:'+(d.is_valid?'rgba(0,255,136,.08)':'rgba(220,38,38,.08)')+';border:1px solid '+statusColor+';border-radius:8px;padding:10px;font-size:11px">';
+    
+    // Status
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+      +'<span style="color:'+statusColor+';font-weight:800">'+statusIcon+' '+(d.is_valid?'PARSED':'INVALID')+'</span>'
+      +'<span style="font-size:9px;color:var(--mu)">'+text.length+' chars</span>'
+      +'</div>';
+    
+    // Interpretation
+    if(d.interpretation){
+      html += '<div style="background:var(--bg4);padding:8px;border-radius:6px;margin-bottom:8px;font-size:10px;line-height:1.6">'
+        +'<div style="font-size:9px;color:var(--am);font-weight:700;margin-bottom:4px">🎯 ACTION TO EXECUTE:</div>'
+        +'<div style="color:var(--gr);font-family:monospace">'+d.interpretation+'</div>'
+        +'</div>';
+    }
+    
+    // Action details grid
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">';
+    html += '<div class="sbox" style="padding:6px;text-align:left"><div style="font-size:9px;color:var(--mu)">ACTION</div><div style="color:'+(d.action==='BUY'?'var(--gr)':'var(--rd)')+';font-weight:700">'+(d.action||'—')+'</div></div>';
+    html += '<div class="sbox" style="padding:6px;text-align:left"><div style="font-size:9px;color:var(--mu)">INSTRUMENT</div><div style="font-weight:700">'+(d.instrument||'—')+'</div></div>';
+    html += '<div class="sbox" style="padding:6px;text-align:left"><div style="font-size:9px;color:var(--mu)">STRIKE</div><div style="font-weight:700">'+(d.strike||'—')+'</div></div>';
+    html += '<div class="sbox" style="padding:6px;text-align:left"><div style="font-size:9px;color:var(--mu)">TYPE × LOTS</div><div style="font-weight:700">'+(d.option_type||'?')+' × '+(d.lots||1)+'</div></div>';
+    html += '</div>';
+    
+    // Conditions
+    if(d.conditions && d.conditions.length){
+      html += '<div style="margin-bottom:6px"><div style="font-size:9px;color:var(--am);font-weight:700;margin-bottom:4px">📋 CONDITIONS DETECTED ('+d.conditions.length+')</div>';
+      d.conditions.forEach(function(c){
+        html += '<div style="font-size:10px;padding:4px 6px;background:var(--bg5);border-radius:4px;margin-bottom:3px;border-left:2px solid var(--bl)">'
+          +'<b style="color:var(--bl)">'+c.indicator+'</b>: '
+          +'<span style="color:var(--mu);font-family:monospace">'+JSON.stringify(c.match)+'</span>'
+          +'</div>';
+      });
+      html += '</div>';
+    }
+    
+    // Logic
+    if(d.logic && d.logic.length){
+      html += '<div style="margin-bottom:6px"><div style="font-size:9px;color:var(--p0);font-weight:700;margin-bottom:4px">🔗 LOGIC OPERATORS</div>'
+        +'<div>'+d.logic.map(function(l){return '<span style="display:inline-block;padding:2px 8px;background:rgba(168,85,247,.15);color:var(--p0);border-radius:4px;font-size:9px;font-weight:700;margin-right:4px">'+l+'</span>';}).join('')+'</div></div>';
+    }
+    
+    // Indicators
+    if(d.indicators && d.indicators.length){
+      html += '<div style="margin-bottom:6px"><div style="font-size:9px;color:var(--gr);font-weight:700;margin-bottom:4px">📊 INDICATORS</div>'
+        +'<div>'+d.indicators.map(function(i){return '<span style="display:inline-block;padding:2px 8px;background:rgba(0,255,136,.1);color:var(--gr);border-radius:4px;font-size:9px;font-weight:700;margin-right:4px">'+i+'</span>';}).join('')+'</div></div>';
+    }
+    
+    // Time filters
+    if(d.time_filters && d.time_filters.length){
+      html += '<div style="margin-bottom:6px"><div style="font-size:9px;color:var(--am);font-weight:700;margin-bottom:4px">⏰ TIME FILTERS</div>'
+        +d.time_filters.map(function(t){return '<div style="font-size:10px;color:var(--am)">→ '+t.type+': '+JSON.stringify(t.value)+'</div>';}).join('')+'</div>';
+    }
+    
+    // Errors
+    if(d.errors && d.errors.length){
+      html += '<div style="background:rgba(220,38,38,.08);padding:6px;border-radius:4px;margin-top:6px"><div style="color:var(--rd);font-weight:700;font-size:9px;margin-bottom:2px">⚠️ ERRORS</div>'
+        +d.errors.map(function(e){return '<div style="font-size:9px;color:var(--rd)">→ '+e+'</div>';}).join('')+'</div>';
+    }
+    
+    // Execute button if valid
+    if(d.is_valid){
+      html += '<button onclick="nlpExecute()" class="btn g full" style="margin-top:8px;font-size:11px;padding:10px;font-weight:800">⚡ EXECUTE THIS ORDER</button>';
+      window._nlpParsed = d;
+    }
+    
+    html += '</div>';
+    result.innerHTML = html;
+  });
+}
+
+function nlpExecute(){
+  var p = window._nlpParsed;
+  if(!p){toast('Parse first','error');return;}
+  if(!p.is_valid){toast('Parsed order invalid','error');return;}
+  
+  // Pre-fill trade form
+  show('trade');
+  setTimeout(function(){
+    if($('tr-inst')) $('tr-inst').value = p.instrument;
+    if($('tr-strike')) $('tr-strike').value = p.strike;
+    if($('tr-lots')) $('tr-lots').value = p.lots;
+    var btn = document.querySelector('.opt-type-'+p.option_type.toLowerCase());
+    if(btn) btn.click();
+    toast('Pre-filled '+p.action+' '+p.instrument+' '+p.strike+' '+p.option_type,'success');
+  },300);
+}
+
+
+
+function loadLivePositionsOnly(){
+  var uid = window.UID || 'demo';
+  // Only show LIVE positions from broker (not paper)
+  if(window._brokerLive || window._angelLive){
+    req('/broker/angel/portfolio/'+uid,'GET',null,function(err,d){
+      var listEl = $('positions-list') || $('trade-positions');
+      if(!listEl) return;
+      var positions = (d&&d.positions) || [];
+      if(!positions.length){
+        listEl.innerHTML = '<div style="color:var(--mu);font-size:10px;padding:8px;text-align:center">📊 No LIVE positions. Broker connected: <b style="color:var(--gr)">YES</b></div>';
+        return;
+      }
+      listEl.innerHTML = positions.map(function(p){
+        return '<div style="background:var(--bg4);padding:8px;border-radius:6px;margin-bottom:4px;border-left:3px solid '+(p.pnl>=0?'var(--gr)':'var(--rd)')+'">'
+          +'<div style="display:flex;justify-content:space-between"><b>'+(p.tradingsymbol||'')+'</b><span style="color:'+(p.pnl>=0?'var(--gr)':'var(--rd)')+'">₹'+(p.pnl||0).toLocaleString('en-IN')+'</span></div>'
+          +'<div style="font-size:9px;color:var(--mu)">Qty: '+(p.netqty||0)+' · Avg: ₹'+(p.avgnetprice||0)+'</div>'
+          +'</div>';
+      }).join('');
+    });
+  } else {
+    var listEl = $('positions-list') || $('trade-positions');
+    if(listEl){
+      listEl.innerHTML = '<div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);padding:10px;border-radius:6px;text-align:center">'
+        +'<div style="color:var(--am);font-weight:700;font-size:11px">⚠️ Broker not connected</div>'
+        +'<div style="font-size:9px;color:var(--mu);margin-top:4px">Connect Angel One/Dhan in Profile to see LIVE positions</div>'
+        +'<button onclick="show(\'prof\')" class="btn g" style="margin-top:6px;font-size:9px;padding:4px 12px">Go to Profile</button>'
+        +'</div>';
+    }
+  }
+}
+
+function loadPaperPositionsOnly(){
+  var uid = window.UID || 'demo';
+  req('/paper/v3/portfolio/'+uid,'GET',null,function(err,d){
+    var listEl = $('paper-positions-list') || $('paper-positions') || $('pp-list');
+    if(!listEl) return;
+    var positions = (d&&d.positions) || [];
+    if(!positions.length){
+      listEl.innerHTML='<div style="color:var(--mu);font-size:10px;padding:12px;text-align:center">📄 No paper positions yet. Place a paper trade!</div>';
+      return;
+    }
+    listEl.innerHTML = positions.map(function(p){
+      return '<div style="background:var(--bg4);padding:8px;border-radius:6px;margin-bottom:4px;border-left:3px solid '+((p.pnl||0)>=0?'var(--gr)':'var(--rd)')+'">'
+        +'<div style="display:flex;justify-content:space-between"><b>'+(p.instrument||'')+' '+(p.strike||'')+' '+(p.option_type||'')+'</b><span style="color:'+((p.pnl||0)>=0?'var(--gr)':'var(--rd)')+'">₹'+((p.pnl||0)).toLocaleString('en-IN')+'</span></div>'
+        +'<div style="font-size:9px;color:var(--mu)">Lots: '+(p.lots||0)+' · Entry: ₹'+(p.entry_price||0)+' · Current: ₹'+(p.current_price||0)+'</div>'
+        +'<button onclick="closePaperPos(\''+p.pos_id+'\')" class="btn" style="font-size:9px;padding:4px 8px;background:rgba(220,38,38,.1);color:var(--rd);margin-top:4px">✂️ CLOSE</button>'
+        +'</div>';
+    }).join('');
+  });
 }
 
 
