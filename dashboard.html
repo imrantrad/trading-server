@@ -864,130 +864,131 @@ input:focus,select:focus{border-color:var(--bl)}
 
 
 <div id="pnl-admin" class="pnl">
-  <div style="background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(79,142,247,.08));border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:12px;margin-bottom:10px">
-    <div style="font-size:13px;font-weight:800;color:var(--p0)">🛡️ ADMIN CONTROL CENTER</div>
-    <div style="font-size:9px;color:var(--mu);margin-top:2px">TRD v12.3 — Full Access</div>
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(0,255,136,.04));border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px;margin-bottom:10px">
+    <div style="font-size:14px;font-weight:800;color:var(--am)">⚙️ ADMIN CONTROL PANEL</div>
+    <div style="font-size:9px;color:var(--mu)">Institutional system management · RLS enforced</div>
   </div>
-
-  <!-- Admin Tab Strip -->
+  
   <div style="display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--bo);margin-bottom:12px">
-    <button class="adm-tab active" id="at-dash"     onclick="adminTab('dash',this)">📊 DASHBOARD</button>
-    <button class="adm-tab"        id="at-users"    onclick="adminTab('users',this)">👥 USERS</button>
-    <button class="adm-tab"        id="at-referral" onclick="adminTab('referral',this)">🎁 REFERRAL</button>
-    <button class="adm-tab"        id="at-analytics" onclick="adminTab('analytics',this)">📈 ANALYTICS</button>
-    <button class="adm-tab"        id="at-sys"      onclick="adminTab('sys',this)">🖥️ SYSTEM</button>
+    <button id="at-dash" class="tpill active" onclick="adminTab('dash',this)">📊 DASHBOARD</button>
+    <button class="tpill" onclick="adminTab('users',this)">👥 USERS</button>
+    <button class="tpill" onclick="adminTab('subs',this)">💎 SUBSCRIPTIONS</button>
+    <button class="tpill" onclick="adminTab('payments',this)">💳 PAYMENTS</button>
+    <button class="tpill" onclick="adminTab('referral',this)">🎁 REFERRAL</button>
+    <button class="tpill" onclick="adminTab('analytics',this)">📈 ANALYTICS</button>
+    <button class="tpill" onclick="adminTab('sys',this)">⚙️ SYSTEM</button>
+    <button class="tpill" onclick="adminTab('audit',this)">🔒 AUDIT</button>
   </div>
-  <style>
-  .adm-tab{flex-shrink:0;padding:8px 12px;font-size:9px;font-weight:700;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer}
-  .adm-tab.active{color:var(--p0);border-bottom-color:var(--p0);background:rgba(168,85,247,.06)}
-  </style>
 
   <!-- DASHBOARD -->
-  <div id="adm-dash">
-    <div class="g2" style="margin-bottom:8px">
-      <div class="sbox"><div id="adm-total-users" class="sval" style="color:var(--bl)">—</div><div class="slbl">TOTAL USERS</div></div>
-      <div class="sbox"><div id="adm-active-users" class="sval" style="color:var(--gr)">—</div><div class="slbl">ACTIVE</div></div>
-      <div class="sbox"><div id="adm-free-users" class="sval" style="color:var(--mu)">—</div><div class="slbl">FREE</div></div>
-      <div class="sbox"><div id="adm-total-cap" class="sval" style="color:var(--am)">—</div><div class="slbl">TOTAL CAPITAL</div></div>
+  <div id="adm-dash" class="card">
+    <div class="chdr">📊 COMPREHENSIVE STATS</div>
+    <div id="adm-stats-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px">
+      <div class="sbox"><div id="adm-tot-users" style="font-size:18px;font-weight:800;color:var(--bl)">0</div><div class="slbl">Total Users</div></div>
+      <div class="sbox"><div id="adm-active" style="font-size:18px;font-weight:800;color:var(--gr)">0</div><div class="slbl">Active Today</div></div>
+      <div class="sbox"><div id="adm-revenue" style="font-size:14px;font-weight:800;color:var(--am)">₹0</div><div class="slbl">MTD Revenue</div></div>
+      <div class="sbox"><div id="adm-trades" style="font-size:18px;font-weight:800">0</div><div class="slbl">Trades Today</div></div>
     </div>
-    <div class="card">
-      <div class="chdr">RECENT ACTIVITY</div>
-      <div id="adm-activity"><div style="color:var(--mu);font-size:10px;padding:8px">Loading...</div></div>
-    </div>
+    <div class="chdr" style="margin-top:8px">PLAN DISTRIBUTION</div>
+    <div id="adm-plan-dist" style="font-size:10px"></div>
+    <div class="chdr" style="margin-top:12px">BROKER USAGE (Aggregate · No PII)</div>
+    <div id="adm-broker-dist" style="font-size:10px"></div>
   </div>
-
+  
   <!-- USERS -->
-  <div id="adm-users" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-size:11px;font-weight:700">All Users</div>
-      <button onclick="showAddUser()" class="btn g" style="font-size:9px;padding:4px 10px">+ ADD USER</button>
+  <div id="adm-users" class="card" style="display:none">
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <input id="adm-user-search" placeholder="🔍 Search by name/email/ID" style="flex:1;background:var(--bg5);color:var(--tx);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:10px" oninput="adminSearchUsers()">
+      <button onclick="adminCreateUser()" class="btn g" style="font-size:9px;padding:6px 12px">+ ADD USER</button>
     </div>
-    <input id="user-search" placeholder="Search users..." style="margin-bottom:8px;font-size:10px" oninput="filterUsers(this.value)">
-    <div id="adm-user-list" style="max-height:400px;overflow-y:auto"></div>
-    <!-- Add/Edit User Form -->
-    <div id="adm-user-form" style="display:none">
-      <div class="card" style="border-color:rgba(79,142,247,.3)">
-        <div class="chdr" style="color:var(--bl)">USER DETAILS</div>
-        <input type="hidden" id="uf-id">
-        <div class="g2" style="margin-bottom:8px">
-          <div><div class="lbl">FULL NAME</div><input id="uf-name" placeholder="Full Name"></div>
-          <div><div class="lbl">USERNAME</div><input id="uf-user" placeholder="username"></div>
-        </div>
-        <div class="g2" style="margin-bottom:8px">
-          <div><div class="lbl">EMAIL</div><input id="uf-email" placeholder="email@example.com" type="email"></div>
-          <div><div class="lbl">PLAN</div>
-            <select id="uf-plan" style="font-size:10px">
-              <option value="FREE">FREE</option><option value="BASIC">BASIC</option>
-              <option value="PRO">PRO</option><option value="INSTITUTIONAL">INSTITUTIONAL</option>
-            </select>
-          </div>
-        </div>
-        <div style="margin-bottom:10px"><div class="lbl">CAPITAL ₹</div><input id="uf-cap" type="number" value="500000"></div>
-        <div class="g2">
-          <button onclick="saveUser()" class="btn g">💾 SAVE</button>
-          <button onclick="document.getElementById('adm-user-form').style.display='none'" class="btn r">✕ CANCEL</button>
-        </div>
-        <div id="uf-msg" style="display:none;font-size:10px;margin-top:8px"></div>
-      </div>
-    </div>
+    <div id="adm-users-list"><div style="color:var(--mu);font-size:10px;padding:12px;text-align:center">Loading users...</div></div>
   </div>
-
-  <!-- REFERRAL — DIRECT SIBLING, NO NESTING -->
-  <div id="adm-referral" style="display:none">
-    <div class="g2" style="margin-bottom:8px">
-      <div class="sbox"><div id="ref-total-codes" class="sval" style="color:var(--gr)">0</div><div class="slbl">CODES</div></div>
-      <div class="sbox"><div id="ref-total-uses" class="sval" style="color:var(--bl)">0</div><div class="slbl">USES</div></div>
-      <div class="sbox"><div id="ref-total-bonus" class="sval" style="font-size:14px;color:var(--am)">₹0</div><div class="slbl">BONUS</div></div>
-      <div class="sbox"><div id="ref-total-disc" class="sval" style="font-size:14px;color:var(--p0)">₹0</div><div class="slbl">DISCOUNTS</div></div>
-    </div>
-    <div class="card" style="border-color:rgba(0,255,136,.25);margin-bottom:8px">
-      <div class="chdr" style="color:var(--gr)">🎁 GENERATE REFERRAL CODE</div>
-      <div class="lbl" style="margin-bottom:4px">USER EMAIL OR ID *</div>
-      <input id="ref-owner-id" placeholder="admin@trd.com or USR123..." style="margin-bottom:8px">
-      <div class="g3" style="margin-bottom:10px">
-        <div><div class="lbl">BONUS ₹</div><input id="ref-bonus" type="number" value="500"></div>
-        <div><div class="lbl">DISCOUNT ₹</div><input id="ref-discount" type="number" value="200"></div>
-        <div><div class="lbl">MONTHS</div><input id="ref-validity" type="number" value="1" min="1"></div>
+  
+  <!-- SUBSCRIPTIONS -->
+  <div id="adm-subs" class="card" style="display:none">
+    <div class="chdr">💎 ALLOT SUBSCRIPTION (Manual)</div>
+    <div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:8px">
+      <div class="g2" style="margin-bottom:6px">
+        <div><div class="lbl">USER ID</div><input id="sub-user-id" placeholder="USR..." style="font-size:10px"></div>
+        <div><div class="lbl">PLAN</div><select id="sub-plan" style="font-size:10px">
+          <option value="BASIC">BASIC (₹299/mo)</option>
+          <option value="PRO" selected>PRO (₹999/mo)</option>
+          <option value="INSTITUTIONAL">INSTITUTIONAL (₹4999/mo)</option>
+          <option value="PRO_ANNUAL">PRO ANNUAL (₹9999/yr)</option>
+        </select></div>
+        <div><div class="lbl">DURATION (Days)</div><input id="sub-days" type="number" value="30" style="font-size:10px"></div>
+        <div><div class="lbl">PAYMENT REF</div><input id="sub-ref" placeholder="Razorpay/Manual" style="font-size:10px"></div>
       </div>
-      <button id="ref-gen-btn" onclick="adminCreateCode()" class="btn g full" style="padding:10px;font-size:12px;font-weight:700">🎁 GENERATE CODE</button>
-      <div id="ref-created-result" style="display:none;margin-top:10px;padding:12px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:8px;text-align:center"></div>
+      <button onclick="adminAllotPlan()" class="btn g full" style="font-size:10px;padding:8px">✅ ALLOT PLAN</button>
     </div>
-    <div class="card">
-      <div class="chdr" style="display:flex;justify-content:space-between">
-        📋 ALL CODES
-        <button onclick="adminLoadCodes()" style="font-size:9px;padding:3px 10px;background:var(--bg4);border:1px solid var(--bo);color:var(--mu);border-radius:4px;cursor:pointer">🔄 REFRESH</button> <button onclick="clearOldCodes()" style="font-size:9px;padding:3px 10px;background:rgba(255,51,85,.1);border:1px solid rgba(255,51,85,.3);color:var(--rd);border-radius:4px;cursor:pointer">🗑️ CLEAR OLD</button>
-      </div>
-      <div id="ref-codes-list"><div style="color:var(--mu);padding:12px;text-align:center;font-size:10px">Click REFRESH to load</div></div>
-    </div>
+    <div class="chdr">💼 ACTIVE SUBSCRIPTIONS</div>
+    <div id="adm-active-subs" style="font-size:10px"></div>
   </div>
-
+  
+  <!-- PAYMENTS -->
+  <div id="adm-payments" class="card" style="display:none">
+    <div class="chdr">💳 PAYMENT GATEWAY (Razorpay)</div>
+    <div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:8px">
+      <div class="lbl">RAZORPAY KEY ID</div>
+      <input id="rzp-key-id" placeholder="rzp_live_xxxxx" style="font-size:10px;margin-bottom:6px">
+      <div class="lbl">RAZORPAY KEY SECRET</div>
+      <input id="rzp-key-secret" type="password" placeholder="(stored encrypted)" style="font-size:10px;margin-bottom:6px">
+      <div class="lbl">WEBHOOK SECRET</div>
+      <input id="rzp-webhook" type="password" placeholder="webhook signing secret" style="font-size:10px;margin-bottom:6px">
+      <button onclick="saveRazorpayConfig()" class="btn b full" style="font-size:10px;padding:8px">💾 SAVE CONFIG</button>
+    </div>
+    <div class="chdr" style="margin-top:12px">📜 PAYMENT HISTORY</div>
+    <button onclick="loadPaymentHistory()" class="btn full" style="font-size:9px;padding:6px;margin-bottom:6px">🔄 REFRESH</button>
+    <div id="adm-payments-list" style="font-size:10px"><div style="color:var(--mu);padding:8px;text-align:center">Click refresh to load</div></div>
+  </div>
+  
+  <!-- REFERRAL (existing) -->
+  <div id="adm-referral" class="card" style="display:none">
+    <div class="chdr">🎁 REFERRAL CODES</div>
+    <div style="background:var(--bg4);padding:10px;border-radius:8px;margin-bottom:8px">
+      <div class="g2">
+        <div><div class="lbl">CODE</div><input id="ref-code" placeholder="e.g., LAUNCH50" style="font-size:10px"></div>
+        <div><div class="lbl">BONUS ₹</div><input id="ref-bonus" type="number" value="500" style="font-size:10px"></div>
+        <div><div class="lbl">PLAN</div><select id="ref-plan" style="font-size:10px"><option>PRO</option><option>BASIC</option></select></div>
+        <div><div class="lbl">VALIDITY (mo)</div><input id="ref-validity" type="number" value="1" style="font-size:10px"></div>
+      </div>
+      <button onclick="adminCreateCode()" class="btn g full" style="font-size:10px;padding:8px;margin-top:6px">CREATE CODE</button>
+      <button onclick="fixReferralDB()" class="btn full" style="font-size:9px;padding:4px;margin-top:6px;background:rgba(245,158,11,.1);color:var(--am)">🛠️ FIX DB SCHEMA</button>
+    </div>
+    <div id="adm-ref-list" style="font-size:10px"></div>
+  </div>
+  
   <!-- ANALYTICS -->
-  <div id="adm-analytics" style="display:none">
-    <div class="card">
-      <div class="chdr">PLATFORM ANALYTICS</div>
-      <div id="adm-analytics-data"><div style="color:var(--mu);font-size:10px;padding:8px">Loading...</div></div>
+  <div id="adm-analytics" class="card" style="display:none">
+    <div class="chdr">📈 PERFORMANCE ANALYTICS</div>
+    <div id="adm-analytics-data" style="font-size:10px">
+      <div style="color:var(--mu);padding:12px;text-align:center">Loading...</div>
     </div>
   </div>
-
+  
   <!-- SYSTEM -->
-  <div id="adm-sys" style="display:none">
-    <div class="card">
-      <div class="chdr">SYSTEM STATUS</div>
-      <div class="row"><span>API Server</span><span class="tag g">RUNNING</span></div>
-      <div class="row"><span>Database</span><span class="tag g">ONLINE</span></div>
-      <div class="row"><span>Paper Engine</span><span class="tag g">ACTIVE</span></div>
-      <div class="row"><span>Backtest Engine</span><span class="tag g">READY</span></div>
-      <div class="row"><span>AI Engine</span><span class="tag g">ACTIVE</span></div>
+  <div id="adm-sys" class="card" style="display:none">
+    <div class="chdr">⚙️ SYSTEM CONTROLS</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+      <button onclick="adminTrigger('migrate')" class="btn full" style="font-size:10px;padding:8px;background:rgba(245,158,11,.1);color:var(--am)">🗄️ RUN DB MIGRATION</button>
+      <button onclick="adminTrigger('integrity')" class="btn b full" style="font-size:10px;padding:8px">✅ DB INTEGRITY CHECK</button>
+      <button onclick="adminTrigger('cache_clear')" class="btn full" style="font-size:10px;padding:8px;background:rgba(79,142,247,.1);color:var(--bl)">🧹 CLEAR CACHE</button>
+      <button onclick="adminTrigger('broker_summary')" class="btn full" style="font-size:10px;padding:8px;background:rgba(168,85,247,.1);color:var(--p0)">🔐 BROKER SUMMARY (No PII)</button>
     </div>
-    <div class="g2">
-      <div class="sbox"><div id="sys-uptime" class="sval" style="font-size:14px;color:var(--gr)">—</div><div class="slbl">UPTIME</div></div>
-      <div class="sbox"><div id="sys-users" class="sval" style="font-size:14px;color:var(--bl)">—</div><div class="slbl">USERS</div></div>
+    <div id="adm-sys-output" style="font-size:9px;color:var(--mu);background:var(--bg4);padding:8px;border-radius:6px;min-height:60px;font-family:monospace">System logs will appear here</div>
+  </div>
+  
+  <!-- AUDIT -->
+  <div id="adm-audit" class="card" style="display:none">
+    <div class="chdr">🔒 SECURITY AUDIT LOG</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <input id="audit-user-filter" placeholder="Filter by user_id" style="flex:1;font-size:10px">
+      <button onclick="loadAuditLog()" class="btn b" style="font-size:9px;padding:6px 12px">🔍</button>
     </div>
+    <div id="adm-audit-list" style="font-size:9px;font-family:monospace;background:var(--bg4);padding:8px;border-radius:6px;max-height:400px;overflow-y:auto"></div>
   </div>
 </div>
 
-
-<!-- RISK -->
 <div id="pnl-risk" class="pnl">
   <div class="card">
     <div class="chdr" style="color:var(--rd)">⚠️ RISK DASHBOARD</div>
@@ -3217,25 +3218,271 @@ function loadAIInsights(){
 }
 
 // ── ADMIN ─────────────────────────────────────────
-function adminTab(tab, btn){
-  // Hide all panels
-  ['dash','users','referral','analytics','sys'].forEach(function(t){
-    var el=$('adm-'+t); if(el) el.style.display='none';
-    var b=$('at-'+t); if(b) b.classList.remove('active');
-  });
-  // Show target
-  var target=$('adm-'+tab);
-  if(target) target.style.display='block';
-  // Highlight button
+// ══════════════════════════════════════════════════════
+// ADMIN PANEL — COMPREHENSIVE CONTROLS  
+// ══════════════════════════════════════════════════════
+function adminTab(t, btn){
+  document.querySelectorAll('#pnl-admin .tpill').forEach(function(b){b.classList.remove('active');});
   if(btn) btn.classList.add('active');
-  else { var b=$('at-'+tab); if(b) b.classList.add('active'); }
-  // Load data
-  if(tab==='dash')      loadAdminDash();
-  if(tab==='users')     loadAdminUsers();
-  if(tab==='referral')  setTimeout(adminLoadCodes, 150);
-  if(tab==='sys')       loadSysStatus();
-  if(tab==='analytics') loadAdminAnalytics();
+  ['dash','users','subs','payments','referral','analytics','sys','audit'].forEach(function(s){
+    var el=$('adm-'+s); if(el) el.style.display = s===t?'block':'none';
+  });
+  if(t==='dash') adminLoadDashboard();
+  else if(t==='users') adminLoadUsers();
+  else if(t==='subs') adminLoadActiveSubs();
+  else if(t==='payments') loadPaymentHistory();
+  else if(t==='referral') loadAdminReferral();
+  else if(t==='analytics') adminLoadAnalytics();
+  else if(t==='sys') {}
+  else if(t==='audit') loadAuditLog();
 }
+
+function adminLoadDashboard(){
+  req('/admin/stats/comprehensive','GET',null,function(err,d){
+    if(!d) return;
+    st('adm-tot-users', d.users && d.users.total || 0);
+    st('adm-active', d.users && d.users.active_today || 0);
+    st('adm-revenue', '₹' + (d.revenue && d.revenue.this_month || 0).toLocaleString('en-IN'));
+    st('adm-trades', d.trades && d.trades.today || 0);
+    
+    // Plan distribution
+    var planEl = $('adm-plan-dist');
+    if(planEl && d.users && d.users.by_plan){
+      var planHtml = '';
+      Object.keys(d.users.by_plan).forEach(function(p){
+        var color = p==='PRO'?'var(--am)':p==='INSTITUTIONAL'?'var(--p0)':p==='BASIC'?'var(--bl)':'var(--mu)';
+        planHtml += '<div class="row"><span style="color:'+color+'">'+p+'</span><b>'+d.users.by_plan[p]+' users</b></div>';
+      });
+      planEl.innerHTML = planHtml || '<div style="color:var(--mu);padding:6px">No data</div>';
+    }
+    
+    // Broker usage
+    var brEl = $('adm-broker-dist');
+    req('/admin/broker/connections_summary','GET',null,function(e2,d2){
+      if(brEl && d2){
+        var brHtml = '<div class="row"><span>Active Sessions</span><b style="color:var(--gr)">'+d2.active_sessions+'</b></div>';
+        brHtml += '<div class="row"><span>Persistent Connections</span><b>'+d2.persistent_users+'</b></div>';
+        brHtml += '<div style="font-size:8px;color:var(--mu);margin-top:4px;font-style:italic">'+(d2.note||'')+'</div>';
+        brEl.innerHTML = brHtml;
+      }
+    });
+  });
+}
+
+function adminLoadUsers(){
+  req('/admin/users','GET',null,function(err,d){
+    var list = $('adm-users-list'); if(!list) return;
+    var users = d && d.users || [];
+    if(!users.length){
+      list.innerHTML = '<div style="color:var(--mu);padding:12px;text-align:center;font-size:10px">No users</div>';
+      return;
+    }
+    list.innerHTML = users.map(function(u){
+      var planColor = u.subscription_plan==='PRO'?'var(--am)':u.subscription_plan==='INSTITUTIONAL'?'var(--p0)':'var(--gr)';
+      return '<div style="background:var(--bg4);padding:8px;border-radius:6px;margin-bottom:6px;border-left:3px solid '+(u.is_active?'var(--gr)':'var(--rd)')+'">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<div><div style="font-size:11px;font-weight:700">'+(u.full_name||u.username||'?')+'</div>'
+        +'<div style="font-size:9px;color:var(--mu)">'+u.id+' · '+u.email+'</div></div>'
+        +'<div style="text-align:right"><div style="font-size:10px;font-weight:700;color:'+planColor+'">'+(u.subscription_plan||'FREE')+'</div>'
+        +'<div style="font-size:8px;color:var(--mu)">'+(u.is_active?'Active':'Suspended')+'</div></div></div>'
+        +'<div style="display:flex;gap:4px;margin-top:6px">'
+        +'<button onclick="adminEditUser(\''+u.id+'\')" class="btn b" style="flex:1;font-size:8px;padding:3px">EDIT</button>'
+        +'<button onclick="adminAllotForUser(\''+u.id+'\')" class="btn g" style="flex:1;font-size:8px;padding:3px">ALLOT</button>'
+        +(u.is_active?'<button onclick="adminSuspend(\''+u.id+'\')" class="btn" style="flex:1;font-size:8px;padding:3px;background:rgba(220,38,38,.1);color:var(--rd)">SUSPEND</button>':'<button onclick="adminReactivate(\''+u.id+'\')" class="btn g" style="flex:1;font-size:8px;padding:3px">REACTIVATE</button>')
+        +'</div></div>';
+    }).join('');
+  });
+}
+
+function adminSearchUsers(){
+  var q = ($('adm-user-search')||{}).value || '';
+  var items = document.querySelectorAll('#adm-users-list > div');
+  items.forEach(function(item){
+    var text = item.textContent.toLowerCase();
+    item.style.display = !q || text.indexOf(q.toLowerCase()) >= 0 ? 'block' : 'none';
+  });
+}
+
+function adminCreateUser(){
+  var email = prompt('Enter user email:');
+  if(!email) return;
+  var name = prompt('Enter full name:') || email.split('@')[0];
+  var password = prompt('Set password (or leave blank for auto):') || 'TempPass123';
+  
+  req('/admin/users/add','POST',{email:email,full_name:name,password:password,capital:500000},function(err,d){
+    if(d&&d.success){
+      toast('User created: '+(d.user_id||''),'success');
+      setTimeout(adminLoadUsers, 500);
+    } else {
+      toast('Failed: '+(err||'unknown'),'error');
+    }
+  });
+}
+
+function adminEditUser(uid){
+  toast('Loading user...','info');
+  // Simple inline edit
+  var newCap = prompt('New capital ₹:', '500000');
+  if(!newCap) return;
+  req('/admin/users/'+uid,'PUT',{capital:parseInt(newCap)},function(err,d){
+    if(d&&d.success){toast('Updated','success');adminLoadUsers();}
+    else toast('Failed','error');
+  });
+}
+
+function adminAllotForUser(uid){
+  $('sub-user-id').value = uid;
+  adminTab('subs', document.querySelector('#pnl-admin .tpill:nth-child(3)'));
+}
+
+function adminAllotPlan(){
+  var uid  = gv('sub-user-id');
+  var plan = gv('sub-plan')||'PRO';
+  var days = nv('sub-days')||30;
+  var ref  = gv('sub-ref')||'ADMIN_MANUAL';
+  
+  if(!uid){toast('Enter user ID','error');return;}
+  
+  req('/admin/users/'+uid+'/allot_plan','POST',{
+    plan: plan, duration_days: days, payment_ref: ref, admin_id: 'admin'
+  },function(err,d){
+    if(d&&d.success){
+      toast('✅ '+plan+' allotted to '+uid+' for '+days+' days','success');
+      $('sub-user-id').value='';
+      $('sub-ref').value='';
+      setTimeout(adminLoadActiveSubs, 500);
+    } else {
+      toast('Failed: '+((d&&d.error)||err),'error');
+    }
+  });
+}
+
+function adminLoadActiveSubs(){
+  req('/admin/users','GET',null,function(err,d){
+    var users = (d&&d.users)||[];
+    var active = users.filter(function(u){return u.subscription_plan && u.subscription_plan !== 'FREE';});
+    var el = $('adm-active-subs');
+    if(!el) return;
+    if(!active.length){
+      el.innerHTML='<div style="color:var(--mu);padding:8px;text-align:center">No paid subscribers yet</div>';
+      return;
+    }
+    el.innerHTML = active.map(function(u){
+      return '<div style="background:var(--bg4);padding:6px;border-radius:6px;margin-bottom:4px;display:flex;justify-content:space-between"><div>'+(u.full_name||u.id)+' · '+u.email+'</div><div style="color:var(--am);font-weight:700">'+u.subscription_plan+'</div></div>';
+    }).join('');
+  });
+}
+
+function adminSuspend(uid){
+  if(!confirm('Suspend user '+uid+'? They cannot login.')) return;
+  var reason = prompt('Reason for suspension:') || 'Admin action';
+  req('/admin/users/'+uid+'/suspend','POST',{reason:reason,admin_id:'admin'},function(err,d){
+    if(d&&d.success){toast('User suspended','success');adminLoadUsers();}
+    else toast('Failed','error');
+  });
+}
+
+function adminReactivate(uid){
+  req('/admin/users/'+uid+'/reactivate','POST',{admin_id:'admin'},function(err,d){
+    if(d&&d.success){toast('User reactivated','success');adminLoadUsers();}
+    else toast('Failed','error');
+  });
+}
+
+function saveRazorpayConfig(){
+  var keyId = gv('rzp-key-id');
+  var keySec = gv('rzp-key-secret');
+  var webhook = gv('rzp-webhook');
+  
+  if(!keyId){toast('Key ID required','error');return;}
+  
+  req('/admin/payment_config','POST',{
+    razorpay_key_id: keyId,
+    razorpay_key_secret: keySec,
+    razorpay_webhook_secret: webhook
+  },function(err,d){
+    if(d){
+      toast('Razorpay config saved (encrypted)','success');
+      $('rzp-key-secret').value='';
+      $('rzp-webhook').value='';
+    } else {
+      toast('Failed','error');
+    }
+  });
+}
+
+function loadPaymentHistory(){
+  req('/admin/payments/list','GET',null,function(err,d){
+    var el = $('adm-payments-list');
+    var payments = (d&&d.payments)||[];
+    if(!payments.length){
+      el.innerHTML='<div style="color:var(--mu);padding:12px;text-align:center">No payments yet</div>';
+      return;
+    }
+    el.innerHTML = payments.map(function(p){
+      return '<div style="background:var(--bg4);padding:6px;border-radius:6px;margin-bottom:4px;font-size:10px">'
+        +'<div style="display:flex;justify-content:space-between"><b>'+p.plan+'</b><span style="color:var(--gr)">₹'+p.amount+'</span></div>'
+        +'<div style="font-size:8px;color:var(--mu)">'+p.user_id+' · '+(p.created_at||'')+'</div>'
+        +'</div>';
+    }).join('');
+  });
+}
+
+function adminLoadAnalytics(){
+  req('/admin/referral/analytics','GET',null,function(err,d){
+    var el = $('adm-analytics-data'); if(!el) return;
+    if(!d){el.innerHTML='<div style="color:var(--mu);padding:8px">No data</div>';return;}
+    el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+      +'<div class="sbox"><div style="font-size:14px;font-weight:800;color:var(--bl)">'+(d.total_codes||0)+'</div><div class="slbl">Total Codes</div></div>'
+      +'<div class="sbox"><div style="font-size:14px;font-weight:800;color:var(--gr)">'+(d.total_uses||0)+'</div><div class="slbl">Total Uses</div></div>'
+      +'<div class="sbox"><div style="font-size:14px;font-weight:800;color:var(--am)">₹'+(d.total_revenue||0).toLocaleString('en-IN')+'</div><div class="slbl">Revenue</div></div>'
+      +'<div class="sbox"><div style="font-size:14px;font-weight:800">₹'+(d.bonus_paid||0).toLocaleString('en-IN')+'</div><div class="slbl">Bonus Paid</div></div>'
+      +'</div>';
+  });
+}
+
+function adminTrigger(action){
+  var out = $('adm-sys-output');
+  if(out) out.textContent = 'Running '+action+'...';
+  
+  var endpoints = {
+    'migrate':     {url:'/admin/db/migrate', method:'GET'},
+    'integrity':   {url:'/admin/db/integrity', method:'GET'},
+    'cache_clear': {url:'/cache/market', method:'DELETE'},
+    'broker_summary': {url:'/admin/broker/connections_summary', method:'GET'},
+  };
+  
+  var conf = endpoints[action];
+  if(!conf){if(out)out.textContent='Unknown action';return;}
+  
+  req(conf.url, conf.method, null, function(err,d){
+    if(out){
+      out.textContent = JSON.stringify(d||{error:err},null,2);
+    }
+    toast(action+' completed','success');
+  });
+}
+
+function loadAuditLog(){
+  var filter = gv('audit-user-filter')||'';
+  var url = filter ? '/admin/security/audit_summary/'+filter : '/admin/security/audit_summary/all';
+  req(url,'GET',null,function(err,d){
+    var el = $('adm-audit-list'); if(!el) return;
+    var logs = (d&&d.logs)||[];
+    if(!logs.length){
+      el.innerHTML='<div style="color:var(--mu);padding:12px;text-align:center">No audit logs</div>';
+      return;
+    }
+    el.innerHTML = logs.map(function(l){
+      return '<div style="border-bottom:1px solid var(--bo);padding:4px 0">'
+        +'<div style="color:var(--am)">'+l.timestamp+'</div>'
+        +'<div><b>'+l.action+'</b> · '+(l.user_id||'system')+'</div>'
+        +(l.details?'<div style="color:var(--mu);font-size:8px">'+l.details+'</div>':'')
+        +'</div>';
+    }).join('');
+  });
+}
+
 
 function loadAdminDash(){
   req('/admin/users','GET',null,function(err,d){

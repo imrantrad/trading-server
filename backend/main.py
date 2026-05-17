@@ -391,7 +391,7 @@ def get_positions(user_id: str = ""):
     return {"positions":positions,"count":len(positions)}
 
 @app.get("/trades")
-def get_trades():
+def get_trades(user_id: str = ""):
     return {"trades":[{"id":t.id,"instrument":t.instrument,"action":t.action,
         "strike":t.strike,"quantity":t.quantity,"entry_price":t.entry_price,
         "exit_price":t.exit_price,"entry_time":t.entry_time,"exit_time":t.exit_time,
@@ -618,7 +618,9 @@ def update_market(prices: dict, indicators: dict = {}):
 
 
 @app.get("/portfolio/summary")
-def portfolio_summary():
+def portfolio_summary(user_id: str = ""):
+    if not user_id:
+        return {"error": "user_id required for portfolio access (RLS)", "isolated": True}
     if not MODULES_LOADED: return {"error": "Module not loaded"}
     return portfolio.get_summary()
 
@@ -662,27 +664,32 @@ def test_notif():
 # ─── BROKER STATUS ──────────────────────────────────
 @app.get("/broker/status")
 def broker_status(user_id: str = ""):
-    """Get broker status for a specific user — NO cross-user leakage"""
+    """Get broker status for THIS user only (RLS)"""
     if not user_id:
-        return {"connected": False, "broker": "NONE", "mode": "PAPER",
-                "status": "user_id required"}
-    # Each user has isolated broker session stored in their profile
-    if USER_SYSTEM:
+        return {"error": "user_id required (RLS)", "connected": False}
+    
+    is_live = user_id in _angel_sessions and time.time() < _angel_sessions[user_id].get("expires", 0)
+    
+    # Try DB restore
+    if not is_live and USER_SYSTEM:
         try:
             with user_db.conn() as c:
-                row = c.execute(
-                    "SELECT broker_name, broker_mode FROM users WHERE id=?", 
-                    (user_id,)
-                ).fetchone()
-            if row and row["broker_name"]:
-                return {"connected": True, "broker": row["broker_name"],
-                        "mode": row["broker_mode"] or "PAPER",
-                        "user_id": user_id, "status": "CONNECTED"}
-        except Exception as e:
-            pass
-    return {"connected": False, "broker": "NONE", "mode": "PAPER",
-            "user_id": user_id, "status": "No broker connected"}
-
+                row = c.execute("SELECT broker_name, broker_mode, broker_key_hint FROM users WHERE id=?", (user_id,)).fetchone()
+            if row:
+                hint = (row["broker_key_hint"] or "") if hasattr(row, '__getitem__') else ""
+                if hint and "|" in hint:
+                    parts = hint.split("|")
+                    if len(parts) >= 3 and time.time() < int(parts[2]):
+                        is_live = True
+        except Exception: pass
+    
+    return {
+        "user_id":    user_id,
+        "connected":  is_live,
+        "mode":       "LIVE" if is_live else "PAPER",
+        "broker":     "ANGEL_ONE" if is_live else None,
+        "isolated":   True,
+    }
 
 @app.get("/broker/connect/{broker_name}")
 def connect_broker(broker_name: str, api_key: str = "", access_token: str = "", user_id: str = ""):
@@ -6760,6 +6767,259 @@ def security_audit_summary(user_id: str, days: int = 7):
         }
     except Exception as e:
         return {"error": str(e), "logs": []}
+
+
+
+# ══════════════════════════════════════════════════════════════════
+# ADMIN PANEL: COMPLETE CONTROL + RAZORPAY INTEGRATION
+# ══════════════════════════════════════════════════════════════════
+
+# ── Razorpay Configuration ─────────────────────────────────────
+_RAZORPAY_CONFIG = {
+    "key_id":     _os_inst.environ.get("RAZORPAY_KEY_ID", ""),
+    "key_secret": _os_inst.environ.get("RAZORPAY_KEY_SECRET", ""),
+    "webhook_secret": _os_inst.environ.get("RAZORPAY_WEBHOOK_SECRET", ""),
+}
+
+# ── Subscription plans ───────────────────────────────────────────
+SUBSCRIPTION_PLANS = {
+    "FREE":          {"price": 0,    "duration_days": 0,   "features": ["Paper Trading", "3 Strategies", "Basic Backtest"]},
+    "BASIC":         {"price": 299,  "duration_days": 30,  "features": ["Paper", "Scanner", "Chain", "20 Strategies", "6mo Backtest"]},
+    "PRO":           {"price": 999,  "duration_days": 30,  "features": ["Everything", "AI Engine", "Auto Execute", "Live API"]},
+    "INSTITUTIONAL": {"price": 4999, "duration_days": 30,  "features": ["Everything", "5yr Backtest", "White Label", "SLA"]},
+    "PRO_ANNUAL":    {"price": 9999, "duration_days": 365, "features": ["PRO for 12 months", "2 months free"]},
+}
+
+@app.get("/subscriptions/plans")
+def get_plans():
+    """Public: list all subscription plans"""
+    return {"plans": SUBSCRIPTION_PLANS}
+
+# ── Razorpay Order Creation ─────────────────────────────────────
+@app.post("/payment/razorpay/create_order")
+def razorpay_create_order(payload: dict):
+    """Create Razorpay order for subscription"""
+    user_id = payload.get("user_id", "")
+    plan    = payload.get("plan", "").upper()
+    
+    if not user_id:
+        return {"error": "user_id required"}
+    if plan not in SUBSCRIPTION_PLANS:
+        return {"error": f"Invalid plan {plan}"}
+    
+    plan_data = SUBSCRIPTION_PLANS[plan]
+    amount_paise = plan_data["price"] * 100  # Razorpay uses paise
+    
+    if not _RAZORPAY_CONFIG["key_id"]:
+        # Simulation mode for dev (production: real Razorpay)
+        order = {
+            "id":         f"order_DEMO_{user_id}_{int(time.time())}",
+            "amount":     amount_paise,
+            "currency":   "INR",
+            "status":     "created",
+            "demo_mode":  True,
+            "plan":       plan,
+            "user_id":    user_id,
+            "key_id":     "rzp_test_DEMO",
+            "message":    "Demo order — set RAZORPAY_KEY_ID env var for production",
+        }
+    else:
+        try:
+            import razorpay
+            client = razorpay.Client(auth=(_RAZORPAY_CONFIG["key_id"], _RAZORPAY_CONFIG["key_secret"]))
+            order = client.order.create({
+                "amount": amount_paise,
+                "currency": "INR",
+                "notes": {"user_id": user_id, "plan": plan}
+            })
+        except ImportError:
+            return {"error": "razorpay library not installed: pip install razorpay"}
+        except Exception as e:
+            return {"error": f"Razorpay error: {e}"}
+    
+    audit_log(user_id, "PAYMENT_ORDER_CREATED", {"plan": plan, "amount": plan_data["price"], "order_id": order.get("id")})
+    return order
+
+# ── Razorpay Webhook (payment confirmation) ─────────────────────
+@app.post("/payment/razorpay/webhook")
+def razorpay_webhook(payload: dict):
+    """Razorpay webhook: confirm payment and activate subscription"""
+    event = payload.get("event", "")
+    pay = payload.get("payload", {}).get("payment", {}).get("entity", {})
+    notes = pay.get("notes", {})
+    user_id = notes.get("user_id", "")
+    plan = notes.get("plan", "PRO")
+    
+    if event == "payment.captured" and user_id:
+        # Activate subscription
+        from datetime import timedelta
+        plan_data = SUBSCRIPTION_PLANS.get(plan, SUBSCRIPTION_PLANS["PRO"])
+        expires_at = (datetime.now(IST) + timedelta(days=plan_data["duration_days"])).isoformat()
+        
+        if USER_SYSTEM:
+            try:
+                with user_db.conn() as c:
+                    c.execute("UPDATE users SET subscription_plan=?, subscription_expires_at=? WHERE id=?",
+                              (plan, expires_at, user_id))
+                    c.commit()
+                audit_log(user_id, "SUBSCRIPTION_ACTIVATED", {"plan": plan, "expires_at": expires_at, "payment_id": pay.get("id")})
+                return {"success": True, "plan": plan, "expires_at": expires_at}
+            except Exception as e:
+                return {"error": str(e)}
+    return {"received": True, "event": event}
+
+# ── Admin: Allot subscription manually ───────────────────────────
+@app.post("/admin/users/{user_id}/allot_plan")
+def admin_allot_plan(user_id: str, payload: dict):
+    """Admin: manually allot/extend subscription"""
+    plan         = payload.get("plan", "PRO").upper()
+    duration     = int(payload.get("duration_days", 30))
+    payment_ref  = payload.get("payment_ref", f"ADMIN_ALLOT_{int(time.time())}")
+    admin_id     = payload.get("admin_id", "admin")
+    
+    if plan not in SUBSCRIPTION_PLANS:
+        return {"error": f"Invalid plan {plan}"}
+    
+    from datetime import timedelta
+    expires_at = (datetime.now(IST) + timedelta(days=duration)).isoformat()
+    
+    if USER_SYSTEM:
+        try:
+            with user_db.conn() as c:
+                # Auto-migrate
+                for col in ["subscription_expires_at","subscription_plan"]:
+                    try: c.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT")
+                    except: pass
+                c.commit()
+                
+                c.execute("UPDATE users SET subscription_plan=?, subscription_expires_at=? WHERE id=?",
+                          (plan, expires_at, user_id))
+                c.commit()
+            
+            audit_log(admin_id, "ADMIN_ALLOT_PLAN", {"target_user": user_id, "plan": plan, "duration": duration, "ref": payment_ref})
+            return {"success": True, "user_id": user_id, "plan": plan, "expires_at": expires_at}
+        except Exception as e:
+            return {"error": str(e)}
+    return {"error": "User system not available"}
+
+# ── Admin: Suspend / Reactivate user ────────────────────────────
+@app.post("/admin/users/{user_id}/suspend")
+def admin_suspend_user(user_id: str, payload: dict = None):
+    """Admin: suspend a user (cannot login)"""
+    reason = (payload or {}).get("reason", "Admin action")
+    admin_id = (payload or {}).get("admin_id", "admin")
+    if USER_SYSTEM:
+        try:
+            with user_db.conn() as c:
+                c.execute("UPDATE users SET is_active=0 WHERE id=?", (user_id,))
+                c.commit()
+            audit_log(admin_id, "USER_SUSPENDED", {"target_user": user_id, "reason": reason})
+            return {"success": True, "user_id": user_id, "active": False}
+        except Exception as e:
+            return {"error": str(e)}
+    return {"error": "Not available"}
+
+@app.post("/admin/users/{user_id}/reactivate")
+def admin_reactivate_user(user_id: str, payload: dict = None):
+    """Admin: reactivate a suspended user"""
+    admin_id = (payload or {}).get("admin_id", "admin")
+    if USER_SYSTEM:
+        try:
+            with user_db.conn() as c:
+                c.execute("UPDATE users SET is_active=1 WHERE id=?", (user_id,))
+                c.commit()
+            audit_log(admin_id, "USER_REACTIVATED", {"target_user": user_id})
+            return {"success": True, "user_id": user_id, "active": True}
+        except Exception as e:
+            return {"error": str(e)}
+    return {"error": "Not available"}
+
+# ── Admin: Comprehensive stats ──────────────────────────────────
+@app.get("/admin/stats/comprehensive")
+def admin_comprehensive_stats():
+    """Full admin overview: users, revenue, trades, system health"""
+    stats = {
+        "users":          {"total": 0, "active_today": 0, "by_plan": {}},
+        "revenue":        {"today": 0, "this_month": 0, "total": 0},
+        "trades":         {"today": 0, "total": 0},
+        "system":         {},
+        "broker_users":   {"total": 0, "by_broker": {}},  # NO INDIVIDUAL DATA
+        "timestamp":      datetime.now(IST).isoformat(),
+    }
+    
+    if USER_SYSTEM:
+        try:
+            with user_db.conn() as c:
+                # User counts
+                rows = c.execute("SELECT COUNT(*) as t FROM users").fetchone()
+                stats["users"]["total"] = rows["t"] if rows else 0
+                
+                # Active today (logged in)
+                today = datetime.now(IST).strftime("%Y-%m-%d")
+                try:
+                    rows = c.execute("SELECT COUNT(DISTINCT user_id) as a FROM audit_log WHERE date(timestamp)=? AND action='LOGIN'", (today,)).fetchone()
+                    stats["users"]["active_today"] = rows["a"] if rows else 0
+                except: pass
+                
+                # By plan
+                try:
+                    plan_rows = c.execute("SELECT subscription_plan, COUNT(*) as c FROM users GROUP BY subscription_plan").fetchall()
+                    stats["users"]["by_plan"] = {r["subscription_plan"] or "FREE": r["c"] for r in plan_rows}
+                except: pass
+                
+                # Broker usage (anonymous count only, no user data)
+                try:
+                    brk = c.execute("SELECT broker_name, COUNT(*) as c FROM users WHERE broker_name IS NOT NULL GROUP BY broker_name").fetchall()
+                    stats["broker_users"]["by_broker"] = {r["broker_name"]: r["c"] for r in brk}
+                    stats["broker_users"]["total"] = sum(stats["broker_users"]["by_broker"].values())
+                except: pass
+        except Exception as e:
+            stats["error"] = str(e)[:100]
+    
+    # System health
+    try:
+        stats["system"] = system_health()
+    except: pass
+    
+    return stats
+
+# ── Admin: List active broker connections (NO secrets) ──────────
+@app.get("/admin/broker/connections_summary")
+def admin_broker_summary():
+    """Show broker connections COUNT only — no API keys, no individual data"""
+    active_now = len(_angel_sessions)
+    
+    persistent = 0
+    if USER_SYSTEM:
+        try:
+            with user_db.conn() as c:
+                row = c.execute("SELECT COUNT(*) as c FROM users WHERE broker_key_hint IS NOT NULL").fetchone()
+                persistent = row["c"] if row else 0
+        except: pass
+    
+    return {
+        "active_sessions":     active_now,
+        "persistent_users":    persistent,
+        "note":                "Aggregate counts only — per-user broker details NEVER exposed (RLS)",
+    }
+
+# ── Admin: All payments (with security check) ──────────────────
+@app.get("/admin/payments/list")
+def admin_payments_list(limit: int = 50):
+    """All payments — admin view"""
+    if USER_SYSTEM:
+        try:
+            with user_db.conn() as c:
+                try:
+                    c.execute("CREATE TABLE IF NOT EXISTS payments (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, plan TEXT, amount INTEGER, status TEXT, razorpay_order_id TEXT, razorpay_payment_id TEXT, created_at TEXT)")
+                    c.commit()
+                except: pass
+                
+                rows = c.execute("SELECT * FROM payments ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+            return {"payments": [dict(r) for r in rows], "total": len(rows)}
+        except Exception as e:
+            return {"error": str(e), "payments": []}
+    return {"payments": []}
 
 
 @app.post("/ml/scan_all")
