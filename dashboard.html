@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.3.7">
+  <meta name="version" content="12.3.8">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -54,6 +54,11 @@ input:focus,select:focus{border-color:var(--bl)}
 </style>
 </head>
 <body>
+<!-- Update Available Banner -->
+<div id="update-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,var(--am),#dc2626);color:#000;font-weight:800;font-size:11px;padding:8px;text-align:center;z-index:9999;cursor:pointer" onclick="hardReload()">
+  ⚠️ NEW VERSION AVAILABLE — Tap here to update (or pull-to-refresh)
+</div>
+
 <div id="toast-wrap"></div>
 
 <div id="login-overlay" style="position:fixed;inset:0;background:rgba(6,6,8,.97);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px">
@@ -1077,7 +1082,7 @@ input:focus,select:focus{border-color:var(--bl)}
       </div>
       
       <div class="lbl">SETUP (What did you see?)</div>
-      <textarea id="jnl-setup" rows="2" placeholder="e.g., NIFTY broke 23700, RSI oversold, volume spike..." style="font-size:11px;margin-bottom:6px;resize:none"></textarea>
+      <textarea id="jnl-setup" rows="2" placeholder="e.g., NIFTY broke 23644, RSI oversold, volume spike..." style="font-size:11px;margin-bottom:6px;resize:none"></textarea>
       
       <div class="lbl">MISTAKES (Be honest)</div>
       <textarea id="jnl-mistakes" rows="2" placeholder="e.g., Didn't follow SL, traded with revenge, no plan..." style="font-size:11px;margin-bottom:6px;resize:none"></textarea>
@@ -4276,7 +4281,7 @@ function loadCalcSpot(){
     var inst = document.getElementById('calc-inst') ? document.getElementById('calc-inst').value : 'NIFTY';
     var spotMap = {
       NIFTY:     (d.nifty&&d.nifty.price)||d.NIFTY||23700,
-      BANKNIFTY: (d.banknifty&&d.banknifty.price)||d.BANKNIFTY||51800,
+      BANKNIFTY: (d.banknifty&&d.banknifty.price)||d.BANKNIFTY||53710,
       FINNIFTY:  (d.finnifty&&d.finnifty.price)||23000,
     };
     var spot = spotMap[inst]||spotMap.NIFTY;

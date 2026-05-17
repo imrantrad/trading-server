@@ -62,8 +62,8 @@ def generate_ohlcv(instrument, days=30):
     """Generate realistic OHLCV for technical analysis"""
     base_prices = {
         # Indices (approx May 2026)
-        "NIFTY":23700,"BANKNIFTY":51800,"FINNIFTY":23000,
-        "MIDCPNIFTY":13200,"SENSEX":78000,"NIFTYNXT50":67000,
+        "NIFTY":23643.5,"BANKNIFTY":53710.35,"FINNIFTY":25343.85,
+        "MIDCPNIFTY":14168.9,"SENSEX":75237.99,"NIFTYNXT50":69280.25,
         # F&O Stocks (approx prices)
         "RELIANCE":2950,"TCS":3850,"INFOSYS":1920,"HDFC":1680,
         "SBI":820,"ICICI":1290,"ITC":480,"LT":3600,

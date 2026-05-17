@@ -52,7 +52,7 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.3.7"
+_APP_VERSION = "12.3.8"
 _BUILD_DATE = "2026-05-17"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
@@ -5648,7 +5648,7 @@ def v2_market_prices():
     """v2 — extended market prices with more instruments"""
     base = market_live_prices()
     base["version"] = "v2"
-    base["sensex"]  = {"price": round((base.get("NIFTY",23700))*3.32, 2)}  # Sensex/Nifty ratio ~3.3
+    base["sensex"]  = {"price": round((base.get("NIFTY",23644))*3.32, 2)}  # Sensex/Nifty ratio ~3.3
     return base
 
 # ══════════════════════════════════════════════════════════════════
