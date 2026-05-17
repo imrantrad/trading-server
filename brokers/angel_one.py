@@ -206,7 +206,7 @@ def place_order(api_key: str, jwt_token: str,
                 price: float = 0, sl: float = 0, target: float = 0) -> dict:
     """Place a real order via Angel One"""
     
-    LOT_SIZES = {"NIFTY":75,"BANKNIFTY":35,"FINNIFTY":65,"MIDCPNIFTY":140,"SENSEX":20}
+    LOT_SIZES = {"NIFTY": 65,"BANKNIFTY": 30,"FINNIFTY": 60,"MIDCPNIFTY": 120,"SENSEX":20}
     # Note: Using SmartAPI lot sizes (may differ from NSE)
     lot_size = LOT_SIZES.get(instrument, 75)
     qty = lots * lot_size

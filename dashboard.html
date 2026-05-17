@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.3.6">
+  <meta name="version" content="12.3.7">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -245,10 +245,10 @@ input:focus,select:focus{border-color:var(--bl)}
       <div>
         <div class="lbl">INSTRUMENT</div>
         <select id="t-inst" onchange="updateOrderEntry()">
-          <option value="NIFTY">NIFTY (Lot:75)</option>
-          <option value="BANKNIFTY">BANKNIFTY (Lot:35)</option>
-          <option value="FINNIFTY">FINNIFTY (Lot:65)</option>
-          <option value="MIDCPNIFTY">MIDCPNIFTY (Lot:140)</option>
+          <option value="NIFTY">NIFTY (Lot:65)</option>
+          <option value="BANKNIFTY">BANKNIFTY (Lot:30)</option>
+          <option value="FINNIFTY">FINNIFTY (Lot:60)</option>
+          <option value="MIDCPNIFTY">MIDCPNIFTY (Lot:120)</option>
           <option value="NIFTYNXT50">NIFTYNXT50 (Lot:25)</option>
           <option value="SENSEX">SENSEX (Lot:20)</option>
         </select>
@@ -2150,7 +2150,7 @@ window.addEventListener('load', function(){
 
 // ── ORDER ENTRY ───────────────────────────────────
 var _optionType = 'CE';
-var LOT_SIZES = {NIFTY:75,BANKNIFTY:35,FINNIFTY:65,MIDCPNIFTY:140,SENSEX:20,NIFTYNXT50:25,RELIANCE:250,TCS:175,SBI:1500,HDFC:550,ICICI:1375};
+var LOT_SIZES = {NIFTY:65,BANKNIFTY:30,FINNIFTY:60,MIDCPNIFTY:120,NIFTYNXT50:25,SENSEX:20,BANKEX:30,SENSEX50:70,RELIANCE:250,TCS:175,SBI:1500,HDFC:550,ICICI:1375,INFY:300,ITC:1600,HDFCBANK:550};
 
 function setOptionType(type){
   _optionType = type;

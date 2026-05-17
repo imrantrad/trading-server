@@ -52,7 +52,7 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.3.6"
+_APP_VERSION = "12.3.7"
 _BUILD_DATE = "2026-05-17"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
@@ -168,7 +168,7 @@ INSTRUMENTS={"nifty 50":"NIFTY","nifty50":"NIFTY","nifty":"NIFTY","nf":"NIFTY","
     "reliance":"RELIANCE","tcs":"TCS","hdfc":"HDFCBANK","infosys":"INFY","icici":"ICICIBANK",
     "usdinr":"USDINR","crude":"CRUDEOIL","gold":"GOLD",
 }
-LOT_SIZES={"NIFTY":75,"BANKNIFTY":35,"FINNIFTY":65,"MIDCPNIFTY":140,"SENSEX":20,"NIFTYNXT50":25}
+LOT_SIZES={"NIFTY": 65,"BANKNIFTY": 30,"FINNIFTY": 60,"MIDCPNIFTY": 120,"SENSEX":20,"NIFTYNXT50":25}
 BUY_WORDS=["buy","long","bullish","call buy","entry","enter","accumulate","kharido","le lo","lelo","lo","खरीदो","badhega","upar"]
 SELL_WORDS=["sell","short","bearish","put buy","exit","close","square off","becho","bech","niklo","nikal","बेचो","girega","neeche"]
 OPTION_TYPES={"call":"CE","ce":"CE","कॉल":"CE","put":"PE","pe":"PE","पुट":"PE"}
@@ -1029,7 +1029,7 @@ def expiry_cal(): return reporter.expiry_calendar()
 @app.get("/margin/calculate")
 def calc_margin(instrument: str="NIFTY", quantity: int=1,
                 position_type: str="OPTIONS", price: float=100):
-    lot_size = {"NIFTY":75,"BANKNIFTY":35,"FINNIFTY":65,"MIDCPNIFTY":120}.get(instrument,50)
+    lot_size = {"NIFTY": 65,"BANKNIFTY": 30,"FINNIFTY": 60,"MIDCPNIFTY":120}.get(instrument,50)
     lots_val = quantity*lot_size
     span = {"NIFTY":1.0,"BANKNIFTY":1.2,"FINNIFTY":0.8}.get(instrument,1.0)
     if position_type=="OPTIONS":
@@ -5241,7 +5241,7 @@ def broker_place_order(payload: dict):
     price    = float(payload.get("price",0))
     order_type = payload.get("order_type","MARKET")
     
-    lot_sizes = {"NIFTY":75,"BANKNIFTY":35,"FINNIFTY":65,"MIDCPNIFTY":140,"NIFTYNXT50":25,"SENSEX":20}
+    lot_sizes = {"NIFTY": 65,"BANKNIFTY": 30,"FINNIFTY": 60,"MIDCPNIFTY": 120,"NIFTYNXT50":25,"SENSEX":20}
     qty = lots * lot_sizes.get(inst, 65)
     
     # Check if LIVE broker connected (future: integrate real broker SDK)
@@ -6271,7 +6271,7 @@ def pre_trade_risk_check(payload: dict):
     risk = risk_monitor(user_id) if user_id else {}
     
     # Lot size validation
-    LOTS = {"NIFTY":75,"BANKNIFTY":35,"FINNIFTY":65,"MIDCPNIFTY":140,"SENSEX":20}
+    LOTS = {"NIFTY": 65,"BANKNIFTY": 30,"FINNIFTY": 60,"MIDCPNIFTY": 120,"SENSEX":20}
     lot_size = LOTS.get(instrument, 75)
     trade_value = entry * lot_size * lots
     
@@ -7052,8 +7052,8 @@ def get_version():
         "version":    _APP_VERSION,
         "build_date": _BUILD_DATE,
         "lot_sizes": {
-            "NIFTY": 75, "BANKNIFTY": 35, "FINNIFTY": 65,
-            "MIDCPNIFTY": 140, "SENSEX": 20, "NIFTYNXT50": 25,
+            "NIFTY": 65, "BANKNIFTY": 30, "FINNIFTY": 60,
+            "MIDCPNIFTY": 120, "SENSEX": 20, "NIFTYNXT50": 25,
         },
         "features": ["RLS", "Razorpay", "Admin8Tabs", "RealClosePrices", "AutoExecute"],
     }
