@@ -5769,7 +5769,7 @@ function showOptionChart(instrument, strike, optionType, currentPrice){
     +tfButtons
     +'</div>'
     +'<div id="opt-chart-loading" style="text-align:center;padding:30px;color:var(--mu);font-size:11px">Loading chart...</div>'
-    +'<canvas id="opt-chart-canvas" width="500" height="280" style="display:none;background:var(--bg4);border-radius:6px;width:100%"></canvas>'
+    +'<canvas id="opt-chart-canvas" width="500" height="380" style="display:none;background:var(--bg4);border-radius:6px;width:100%;cursor:crosshair"></canvas>'
     +'<div id="opt-chart-stats" style="display:none;margin-top:8px;font-size:9px;color:var(--mu)"></div>'
     +'<div style="display:flex;gap:6px;margin-top:10px">'
     +'<button onclick="showPayoffFromChart(\''+instrument+'\','+strike+',\''+optionType+'\','+currentPrice+')" class="btn b" style="flex:1;font-size:10px;padding:8px">💹 PAYOFF</button>'
@@ -5829,51 +5829,297 @@ function drawOptChart(candles){
   $('opt-chart-loading').style.display = 'none';
   canvas.style.display = 'block';
   
+  // Higher resolution canvas
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  
   var ctx = canvas.getContext('2d');
-  var W = canvas.width, H = canvas.height;
+  ctx.scale(dpr, dpr);
+  var W = rect.width, H = rect.height;
+  
+  // Layout: 70% price, 15% volume, 15% RSI
+  var priceH = H * 0.70;
+  var volH = H * 0.12;
+  var rsiH = H * 0.18;
+  
   ctx.clearRect(0, 0, W, H);
   
-  // Get price range
-  var allPrices = [];
-  candles.forEach(function(c){allPrices.push(c.high, c.low);});
-  var maxP = Math.max.apply(null, allPrices);
-  var minP = Math.min.apply(null, allPrices);
-  var range = maxP - minP || 1;
-  var padding = range * 0.1;
-  maxP += padding; minP -= padding; range = maxP - minP;
+  // Calculate indicators
+  var closes = candles.map(function(c){return c.close;});
+  var volumes = candles.map(function(c){return c.volume;});
+  var ema = function(period){
+    var k = 2/(period+1); var out = [closes[0]];
+    for(var i=1; i<closes.length; i++) out.push(closes[i]*k + out[i-1]*(1-k));
+    return out;
+  };
+  var sma = function(arr, period){
+    var out = [];
+    for(var i=0; i<arr.length; i++){
+      if(i<period-1){ out.push(null); continue; }
+      var sum=0;
+      for(var j=0; j<period; j++) sum += arr[i-j];
+      out.push(sum/period);
+    }
+    return out;
+  };
   
-  // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  ctx.lineWidth = 1;
-  for(var g=0;g<5;g++){
-    var y = (g/4)*H;
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '8px monospace';
-    ctx.fillText('₹'+(maxP-(g/4)*range).toFixed(1), 4, y+10);
+  var ema9 = ema(9), ema21 = ema(21);
+  var sma20 = sma(closes, 20);
+  
+  // Bollinger Bands (20 period, 2 stdev)
+  var bbUpper = [], bbLower = [];
+  for(var i=0; i<closes.length; i++){
+    if(i<19){bbUpper.push(null); bbLower.push(null); continue;}
+    var slice = closes.slice(i-19, i+1);
+    var mean = slice.reduce(function(a,b){return a+b;},0)/20;
+    var sqDiff = slice.map(function(v){return Math.pow(v-mean,2);}).reduce(function(a,b){return a+b;},0)/20;
+    var sd = Math.sqrt(sqDiff);
+    bbUpper.push(mean + 2*sd);
+    bbLower.push(mean - 2*sd);
   }
   
-  // Draw candles
-  var candleW = Math.max(2, W / candles.length - 1);
+  // VWAP
+  var cumVP = 0, cumV = 0;
+  var vwap = candles.map(function(c){
+    var typical = (c.high+c.low+c.close)/3;
+    cumVP += typical*c.volume; cumV += c.volume;
+    return cumVP/cumV;
+  });
+  
+  // RSI (14)
+  var rsi = [];
+  var gains = [], losses = [];
+  for(var i=1; i<closes.length; i++){
+    var change = closes[i]-closes[i-1];
+    gains.push(Math.max(0, change));
+    losses.push(Math.max(0, -change));
+  }
+  for(var i=0; i<closes.length; i++){
+    if(i<14){ rsi.push(null); continue; }
+    var avgG = gains.slice(i-14, i).reduce(function(a,b){return a+b;},0)/14;
+    var avgL = losses.slice(i-14, i).reduce(function(a,b){return a+b;},0)/14;
+    if(avgL===0){ rsi.push(100); continue; }
+    var rs = avgG/avgL;
+    rsi.push(100 - 100/(1+rs));
+  }
+  
+  // Price range (include indicators)
+  var allP = [];
+  candles.forEach(function(c){allP.push(c.high, c.low);});
+  bbUpper.forEach(function(v){if(v!==null) allP.push(v);});
+  bbLower.forEach(function(v){if(v!==null) allP.push(v);});
+  var maxP = Math.max.apply(null, allP);
+  var minP = Math.min.apply(null, allP);
+  var range = maxP - minP || 1;
+  var padding = range * 0.05;
+  maxP += padding; minP -= padding; range = maxP - minP;
+  
+  var maxV = Math.max.apply(null, volumes);
+  var candleW = Math.max(1.5, W / candles.length - 1);
+  
+  // ── PRICE PANEL GRID ────────────────
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for(var g=0;g<6;g++){
+    var y = (g/5)*priceH;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('₹'+(maxP-(g/5)*range).toFixed(1), 4, y+10);
+  }
+  
+  // ── DRAW BOLLINGER BANDS ────────────
+  ctx.strokeStyle = 'rgba(168,85,247,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3,3]);
+  // Upper band
+  ctx.beginPath();
+  var started = false;
+  bbUpper.forEach(function(v, i){
+    if(v===null) return;
+    var x = i * (W/candles.length) + (W/candles.length)/2;
+    var y = priceH - ((v - minP)/range) * priceH;
+    if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // Lower band
+  ctx.beginPath();
+  started = false;
+  bbLower.forEach(function(v, i){
+    if(v===null) return;
+    var x = i * (W/candles.length) + (W/candles.length)/2;
+    var y = priceH - ((v - minP)/range) * priceH;
+    if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // ── DRAW CANDLES ────────────────────
   candles.forEach(function(c, i){
-    var x = i * (W / candles.length) + (W / candles.length) / 2;
-    var openY  = H - ((c.open - minP) / range) * H;
-    var closeY = H - ((c.close - minP) / range) * H;
-    var highY  = H - ((c.high - minP) / range) * H;
-    var lowY   = H - ((c.low - minP) / range) * H;
+    var x = i * (W/candles.length) + (W/candles.length)/2;
+    var openY = priceH - ((c.open - minP)/range) * priceH;
+    var closeY = priceH - ((c.close - minP)/range) * priceH;
+    var highY = priceH - ((c.high - minP)/range) * priceH;
+    var lowY = priceH - ((c.low - minP)/range) * priceH;
     
     var bullish = c.close >= c.open;
     ctx.strokeStyle = bullish ? '#00ff88' : '#ef4444';
     ctx.fillStyle = bullish ? '#00ff88' : '#ef4444';
+    ctx.lineWidth = 1;
     
     // Wick
     ctx.beginPath();
-    ctx.moveTo(x, highY); ctx.lineTo(x, lowY); ctx.stroke();
+    ctx.moveTo(x, highY); ctx.lineTo(x, lowY);
+    ctx.stroke();
     
     // Body
-    var bodyH = Math.abs(closeY - openY) || 1;
+    var bodyH = Math.max(1, Math.abs(closeY - openY));
     ctx.fillRect(x - candleW/2, Math.min(openY, closeY), candleW, bodyH);
   });
+  
+  // ── EMA 9 LINE ──────────────────────
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ema9.forEach(function(v, i){
+    var x = i * (W/candles.length) + (W/candles.length)/2;
+    var y = priceH - ((v - minP)/range) * priceH;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  
+  // ── EMA 21 LINE ─────────────────────
+  ctx.strokeStyle = '#4f8ef7';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ema21.forEach(function(v, i){
+    var x = i * (W/candles.length) + (W/candles.length)/2;
+    var y = priceH - ((v - minP)/range) * priceH;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  
+  // ── VWAP LINE ───────────────────────
+  ctx.strokeStyle = '#a855f7';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  vwap.forEach(function(v, i){
+    var x = i * (W/candles.length) + (W/candles.length)/2;
+    var y = priceH - ((v - minP)/range) * priceH;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  
+  // ── VOLUME PANEL ────────────────────
+  var volY = priceH + 4;
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.beginPath(); ctx.moveTo(0, volY); ctx.lineTo(W, volY); ctx.stroke();
+  
+  candles.forEach(function(c, i){
+    var x = i * (W/candles.length) + (W/candles.length)/2;
+    var h = (c.volume / maxV) * (volH-6);
+    var bullish = c.close >= c.open;
+    ctx.fillStyle = bullish ? 'rgba(0,255,136,0.4)' : 'rgba(239,68,68,0.4)';
+    ctx.fillRect(x - candleW/2, volY + volH - h, candleW, h);
+  });
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '8px monospace';
+  ctx.fillText('VOL', 4, volY+12);
+  
+  // ── RSI PANEL ───────────────────────
+  var rsiY = priceH + volH + 6;
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.beginPath(); ctx.moveTo(0, rsiY); ctx.lineTo(W, rsiY); ctx.stroke();
+  
+  // RSI 70/30 levels
+  ctx.strokeStyle = 'rgba(239,68,68,0.3)';
+  ctx.setLineDash([2,2]);
+  ctx.beginPath();
+  ctx.moveTo(0, rsiY + rsiH*0.3); ctx.lineTo(W, rsiY + rsiH*0.3);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,255,136,0.3)';
+  ctx.beginPath();
+  ctx.moveTo(0, rsiY + rsiH*0.7); ctx.lineTo(W, rsiY + rsiH*0.7);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // RSI line
+  ctx.strokeStyle = '#ec4899';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  var started = false;
+  rsi.forEach(function(v, i){
+    if(v===null) return;
+    var x = i * (W/candles.length) + (W/candles.length)/2;
+    var y = rsiY + (1 - v/100) * rsiH;
+    if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  
+  // Latest RSI value
+  var lastRsi = rsi.filter(function(r){return r!==null;}).pop();
+  ctx.fillStyle = '#ec4899';
+  ctx.font = 'bold 9px monospace';
+  ctx.fillText('RSI(14): ' + (lastRsi||0).toFixed(1), 4, rsiY+12);
+  
+  // ── LEGEND ────────────────────────
+  ctx.font = '9px monospace';
+  var legendY = 8;
+  ctx.fillStyle = '#fbbf24'; ctx.fillText('━ EMA9', W-220, legendY);
+  ctx.fillStyle = '#4f8ef7'; ctx.fillText('━ EMA21', W-160, legendY);
+  ctx.fillStyle = '#a855f7'; ctx.fillText('━ VWAP', W-100, legendY);
+  ctx.fillStyle = 'rgba(168,85,247,0.6)'; ctx.fillText('--- BB', W-40, legendY);
+  
+  // Latest indicator values
+  var lastClose = closes[closes.length-1];
+  var lastEma9 = ema9[ema9.length-1];
+  var lastVwap = vwap[vwap.length-1];
+  var lastBbU = bbUpper[bbUpper.length-1];
+  var lastBbL = bbLower[bbLower.length-1];
+  
+  // Crosshair on mousemove
+  canvas.onmousemove = function(e){
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var my = e.clientY - rect.top;
+    var i = Math.floor(mx / (W/candles.length));
+    if(i < 0 || i >= candles.length) return;
+    
+    // Redraw chart then overlay crosshair
+    drawOptChart(candles);  // Could be expensive — for now keep simple
+    
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.setLineDash([2,2]);
+    ctx.beginPath();
+    ctx.moveTo(mx, 0); ctx.lineTo(mx, priceH);
+    ctx.moveTo(0, my); ctx.lineTo(W, my);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Show OHLC info
+    var c = candles[i];
+    if(c){
+      var tip = $('chart-tooltip');
+      if(!tip){
+        tip = document.createElement('div');
+        tip.id = 'chart-tooltip';
+        tip.style.cssText = 'position:absolute;background:rgba(0,0,0,.9);border:1px solid var(--bo);padding:6px;border-radius:6px;font-size:9px;color:#fff;pointer-events:none;z-index:10002;font-family:monospace';
+        canvas.parentElement.appendChild(tip);
+      }
+      tip.innerHTML = 'O: ₹'+c.open.toFixed(2)+'<br>H: ₹'+c.high.toFixed(2)+'<br>L: ₹'+c.low.toFixed(2)+'<br>C: ₹'+c.close.toFixed(2)+'<br>V: '+c.volume.toLocaleString();
+      tip.style.left = Math.min(rect.width-100, mx+10)+'px';
+      tip.style.top = Math.max(0, my-50)+'px';
+      tip.style.display = 'block';
+    }
+  };
+  
+  canvas.onmouseleave = function(){
+    var tip = $('chart-tooltip');
+    if(tip) tip.style.display = 'none';
+  };
 }
 
 function showPayoffFromChart(inst, strike, type, premium){
