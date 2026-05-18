@@ -1501,6 +1501,57 @@ def builtin_strategies():
         "_badge":          "⭐ ARIBA",
         "_badge_color":    "var(--am)",
         "approved":        True,
+    },
+    {
+        "id": "STR_ARIBA2_REVERSAL_PUT_V2",
+        "name": "Ariba 2 — Reversal Put Entry (Advanced)",
+        "category": "REVERSAL",
+        "action": "BUY",
+        "option_type": "PE",
+        "instrument": "NIFTY",
+        "strike_selection": "NEAREST_ATM",
+        "expiry": "CURRENT_WEEKLY",
+        "entry_time": "AFTER 09:30 AM",
+        "max_trades_per_day": 1,
+        "objective": "Capture bearish reversal after initial bullish opening using PE premium recovery confirmation",
+        "market_observation_logic": [
+            "Observe market from 09:15 AM",
+            "If NIFTY opens BULLISH: store ATM PE price as REFERENCE_PE_PRICE",
+            "Wait for trend reversal after 09:30 AM",
+        ],
+        "market_condition": {
+            "opening_trend":   "BULLISH",
+            "current_trend":   "BEARISH",
+            "index_vs_vwap":   "BELOW_VWAP",
+        },
+        "entry_conditions": [
+            "TIME > 09:30",
+            "NIFTY_TREND = DOWNTREND",
+            "NIFTY < VWAP",
+            "CURRENT_PE_PRICE >= REFERENCE_PE_PRICE_AT_09_15",
+            "VOLUME_SPIKE = TRUE",
+            "BEARISH_CONFIRMATION = TRUE",
+        ],
+        "stop_loss_pts": 80,
+        "target_pts":    160,
+        "risk_reward":   "1:2",
+        "safety_filters": [
+            "No trade before 09:30 AM",
+            "No revenge trading",
+            "Avoid sideways market entry",
+            "Skip if premium over-expanded",
+            "Skip if volatility extremely high",
+            "Avoid low liquidity strikes",
+        ],
+        "exit_rules": [
+            "Stop Loss hit (80 pts)",
+            "Target hit (160 pts)",
+            "NIFTY reclaims VWAP strongly",
+            "Momentum weakens significantly",
+        ],
+        "win_rate_estimate": 72,
+        "_badge": "⭐ ARIBA 2",
+        "_advanced": True,
     }
     
     # Add Ariba first so it appears prominently
@@ -3420,7 +3471,7 @@ def options_greeks(spot:float=24000, strike:float=24000, expiry_days:int=7, iv:f
     return g
 
 @app.get("/options/chain")
-def options_chain(spot:float=23644, expiry_days:int=0, vix:float=17.5, rate:float=6.5, instrument:str="NIFTY"):
+def options_chain(spot:float=23644, expiry_days:float=0, vix:float=19.0, rate:float=6.5, instrument:str="NIFTY"):
     """Options chain with REALISTIC pricing matching NSE/BSE live data"""
     # Auto-calculate DTE based on instrument's next expiry
     from datetime import date, timedelta, datetime as _dt
@@ -3465,7 +3516,7 @@ def options_chain(spot:float=23644, expiry_days:int=0, vix:float=17.5, rate:floa
                         break
         
         days_ahead = (expiry_date - today).days
-        expiry_days = max(1, days_ahead + 1)  # +1 buffer for time decay
+        expiry_days = max(1, days_ahead) + 1.5  # +1.5 fractional buffer for weekend + intraday time
     else:
         from datetime import date, timedelta
         expiry_date = date.today() + timedelta(days=expiry_days)
