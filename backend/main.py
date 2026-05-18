@@ -52,7 +52,7 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.4.6"
+_APP_VERSION = "12.4.7"
 _BUILD_DATE = "2026-05-19"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
@@ -5129,31 +5129,31 @@ def admin_clear_old_referral():
 
 @app.get("/market/live")
 def market_live_prices(user_id: str = "", nocache: str = ""):
-    """Live market prices — uses broker if connected, else simulation"""
-    # Try broker live prices first (if user connected)
-    # Try to restore session from DB if not in memory
+    """
+    Live market prices — INSTITUTIONAL grade with full traceability.
+    Priority: broker live > cached broker > REAL_CLOSE simulation
+    """
+    import logging, time
+    from datetime import datetime, date, timezone, timedelta
+    log = logging.getLogger("market_live")
+    
+    IST = timezone(timedelta(hours=5, minutes=30))
+    now_ist = datetime.now(IST)
+    debug_info = []
+    
+    # ── STEP 1: Try to restore session from DB if missing in memory ──
     if user_id and user_id not in _angel_sessions and USER_SYSTEM:
         try:
             with user_db.conn() as _uc:
-                # Auto-migrate: add missing broker columns if needed
-                try:
-                    _uc.execute("ALTER TABLE users ADD COLUMN broker_name TEXT")
-                except Exception: pass
-                try:
-                    _uc.execute("ALTER TABLE users ADD COLUMN broker_mode TEXT")
-                except Exception: pass
-                try:
-                    _uc.execute("ALTER TABLE users ADD COLUMN broker_key_hint TEXT")
-                except Exception: pass
-                try:
-                    _uc.execute("ALTER TABLE users ADD COLUMN api_key TEXT")
-                except Exception: pass
+                for col in ["broker_name","broker_mode","broker_key_hint","api_key"]:
+                    try: _uc.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT")
+                    except Exception: pass
                 _uc.commit()
                 
                 _ur = _uc.execute(
-                    "SELECT api_key, broker_key_hint FROM users WHERE id=?",
-                    (user_id,)
+                    "SELECT api_key, broker_key_hint FROM users WHERE id=?", (user_id,)
                 ).fetchone()
+            
             if _ur and _ur["broker_key_hint"] and "|" in (_ur["broker_key_hint"] or ""):
                 _parts = _ur["broker_key_hint"].split("|")
                 if len(_parts) >= 3:
@@ -5165,36 +5165,53 @@ def market_live_prices(user_id: str = "", nocache: str = ""):
                             "client_code": _cc,
                             "expires":     _exp,
                         }
-        except Exception: pass
+                        debug_info.append("DB_RESTORE_OK")
+                    else:
+                        debug_info.append(f"DB_JWT_EXPIRED_OR_INVALID")
+                else:
+                    debug_info.append(f"DB_HINT_MALFORMED_parts={len(_parts)}")
+            else:
+                debug_info.append("DB_NO_BROKER_HINT")
+        except Exception as _e:
+            debug_info.append(f"DB_ERROR:{str(_e)[:50]}")
     
+    # ── STEP 2: Try broker if session exists ──
     if user_id and user_id in _angel_sessions:
         s = _angel_sessions[user_id]
+        sess_remaining = int(s.get("expires", 0) - time.time())
+        debug_info.append(f"SESSION_FOUND_remaining={sess_remaining}s")
+        
         if time.time() < s.get("expires", 0):
             broker_cache_key = f"broker_live:{user_id}"
-            # Force-fresh if nocache param sent
+            
+            # Force fresh fetch if nocache flag
             if nocache:
                 try: cache.delete(broker_cache_key)
                 except: pass
+                debug_info.append("CACHE_CLEARED_BY_NOCACHE")
             else:
                 bc = cache.get(broker_cache_key)
-                if bc: return bc
+                if bc:
+                    bc["debug_info"] = ["CACHE_HIT"] + (bc.get("debug_info", []) if isinstance(bc.get("debug_info"), list) else [])
+                    return bc
+            
             try:
                 import sys as _sys, os as _os
                 _sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
                 from brokers.angel_one import get_all_live_prices
                 prices = get_all_live_prices(s["api_key"], s["jwt_token"])
+                debug_info.append(f"BROKER_CALLED_keys={list(prices.keys()) if prices else 'empty'}")
                 
-                # Handle BOTH dict and float formats from Angel One
                 def _xp(sym):
-                    """Extract price - handles dict {price,change,pct} or float"""
                     d = prices.get(sym)
                     if isinstance(d, dict):
-                        return d.get("price", 0), d.get("change", 0), d.get("pct", 0)
+                        return d.get("price", 0) or d.get("ltp", 0), d.get("change", 0), d.get("pct", 0)
                     if d is not None:
                         return float(d), 0, 0
                     return 0, 0, 0
                 
                 nifty_p, nifty_chg, nifty_pct = _xp("NIFTY")
+                debug_info.append(f"NIFTY_FROM_BROKER={nifty_p}")
                 
                 if nifty_p > 0:
                     bn_p,bn_c,bn_pp = _xp("BANKNIFTY")
@@ -5203,9 +5220,8 @@ def market_live_prices(user_id: str = "", nocache: str = ""):
                     snx_p,snx_c,snx_pp = _xp("SENSEX")
                     nxt_p,nxt_c,nxt_pp = _xp("NIFTYNXT50")
                     vix_p,_,_       = _xp("INDIA_VIX")
-                    if not vix_p:    vix_p = 18.5
+                    if not vix_p:    vix_p = 18.79
                     
-                    # Use real prices, fall back to ratios for missing
                     if bn_p <= 0:   bn_p = round(nifty_p * 2.2717, 2)
                     if fn_p <= 0:   fn_p = round(nifty_p * 1.0719, 2)
                     if mcp_p <= 0:  mcp_p = round(nifty_p * 0.5993, 2)
@@ -5228,149 +5244,71 @@ def market_live_prices(user_id: str = "", nocache: str = ""):
                         "SENSEX":     snx_p,
                         "NIFTYNXT50": nxt_p,
                         "INDIA_VIX":  vix_p,
-                        "timestamp":  datetime.now(IST).strftime("%H:%M:%S IST"),
+                        "timestamp":  now_ist.strftime("%H:%M:%S IST"),
+                        "debug_info": debug_info,
                     }
-                    # User-specific cache only — NEVER pollute shared "market:live"
+                    # USER-SPECIFIC cache only, never share
                     cache.set(broker_cache_key, result, 5)
                     return result
                 else:
-                    # Angel One returned empty/zero — log and fall through
-                    import logging
-                    logging.warning(f"Angel One returned empty prices for {user_id}: {prices}")
+                    debug_info.append(f"BROKER_RETURNED_ZERO_for_NIFTY")
             except Exception as _e:
-                import logging
-                logging.warning(f"Angel One fetch failed for {user_id}: {_e}")
-                pass
-
-    # Only use SIM cache when no user_id (don't return SIM to user with broker)
-    if not user_id:
-        cached = cache.get("market:live")
-        if cached: return cached
-    from datetime import date
-    import hashlib, math
+                debug_info.append(f"BROKER_EXCEPTION:{str(_e)[:80]}")
+                log.warning(f"Angel One fetch failed for {user_id}: {_e}")
+        else:
+            debug_info.append(f"SESSION_EXPIRED")
+    else:
+        debug_info.append("NO_SESSION_FOR_USER" if user_id else "NO_USER_ID")
     
-    today = date.today()
-    # Seed based on actual date for consistency within same day
-    seed_str = today.strftime("%Y%m%d")
-    h = int(hashlib.md5(seed_str.encode()).hexdigest()[:8], 16)
+    # ── STEP 3: Fall back to REAL CLOSE data (market is closed) ──
+    REAL_CLOSE = {
+        "NIFTY":      23643.5,
+        "BANKNIFTY":  53710.35,
+        "FINNIFTY":   25343.85,
+        "MIDCPNIFTY": 14168.9,
+        "SENSEX":     75237.99,
+        "NIFTYNXT50": 69280.25,
+        "VIX":        18.79,
+    }
+    REAL_CHANGE = {
+        "NIFTY":      (-46.10, -0.19),
+        "BANKNIFTY":  (-418.60, -0.77),
+        "FINNIFTY":   (-128.65, -0.51),
+        "MIDCPNIFTY": (-96.65, -0.68),
+        "SENSEX":     (-160.73, -0.21),
+        "NIFTYNXT50": (-660.05, -0.94),
+        "VIX":        (0.18, 0.97),
+    }
     
-    # Anchored to REAL May 2026 market close levels for accuracy
-    # Real close (15-May-2026): NIFTY 23643.5, BANKNIFTY 53710.35, etc.
-    # Detect if market is currently open or closed
-    from datetime import datetime, timezone, timedelta
-    IST = timezone(timedelta(hours=5, minutes=30))
-    now_ist = datetime.now(IST)
     is_market_open = now_ist.weekday() < 5 and (
         (now_ist.hour == 9 and now_ist.minute >= 15) or
-        (10 <= now_ist.hour <= 14) or
+        (10 <= now_ist.hour < 15) or
         (now_ist.hour == 15 and now_ist.minute <= 30)
     )
     
-    # Real closing prices - exact values from last close
-    REAL_CLOSE = {
-        "NIFTY":      23643.5,
-        "NIFTY_CHG":  -46.10,
-        "NIFTY_PCT":  -0.19,
-        "BANKNIFTY":  53710.35,
-        "BANK_CHG":   -418.60,
-        "BANK_PCT":   -0.77,
-        "FINNIFTY":   25343.85,
-        "FIN_CHG":    -128.65,
-        "FIN_PCT":    -0.51,
-        "MIDCPNIFTY": 14168.9,
-        "MIDCP_CHG":  -96.65,
-        "MIDCP_PCT":  -0.68,
-        "SENSEX":     75237.99,
-        "SENSEX_CHG": -160.73,
-        "SENSEX_PCT": -0.21,
-        "NIFTYNXT50": 69280.25,
-        "NXT_CHG":    -660.05,
-        "NXT_PCT":    -0.94,
-        "VIX":        18.79,
-        "VIX_CHG":    0.18,
-        "VIX_PCT":    0.97,
-    }
-    
-    if not is_market_open:
-        # Market CLOSED — show last close exactly
-        result = {
-            "source":     "MARKET_CLOSED",
-            "nifty":      {"price": REAL_CLOSE["NIFTY"],      "change": REAL_CLOSE["NIFTY_CHG"],  "pct": REAL_CLOSE["NIFTY_PCT"]},
-            "banknifty":  {"price": REAL_CLOSE["BANKNIFTY"],  "change": REAL_CLOSE["BANK_CHG"],   "pct": REAL_CLOSE["BANK_PCT"]},
-            "finnifty":   {"price": REAL_CLOSE["FINNIFTY"],   "change": REAL_CLOSE["FIN_CHG"],    "pct": REAL_CLOSE["FIN_PCT"]},
-            "midcpnifty": {"price": REAL_CLOSE["MIDCPNIFTY"], "change": REAL_CLOSE["MIDCP_CHG"],  "pct": REAL_CLOSE["MIDCP_PCT"]},
-            "sensex":     {"price": REAL_CLOSE["SENSEX"],     "change": REAL_CLOSE["SENSEX_CHG"], "pct": REAL_CLOSE["SENSEX_PCT"]},
-            "niftynxt50": {"price": REAL_CLOSE["NIFTYNXT50"], "change": REAL_CLOSE["NXT_CHG"],    "pct": REAL_CLOSE["NXT_PCT"]},
-            "india_vix":  {"price": REAL_CLOSE["VIX"],        "change": REAL_CLOSE["VIX_CHG"],    "pct": REAL_CLOSE["VIX_PCT"]},
-            "NIFTY":      REAL_CLOSE["NIFTY"],
-            "BANKNIFTY":  REAL_CLOSE["BANKNIFTY"],
-            "FINNIFTY":   REAL_CLOSE["FINNIFTY"],
-            "MIDCPNIFTY": REAL_CLOSE["MIDCPNIFTY"],
-            "SENSEX":     REAL_CLOSE["SENSEX"],
-            "NIFTYNXT50": REAL_CLOSE["NIFTYNXT50"],
-            "INDIA_VIX":  REAL_CLOSE["VIX"],
-            "timestamp":  now_ist.strftime("%H:%M:%S IST"),
-            "market_status": "CLOSED - Last Close Shown",
-        }
-        if not user_id:
-            cache.set("market:live", result, 60)
-        return result
-    
-    # Market is OPEN — simulate intraday
-    base_nifty = REAL_CLOSE["NIFTY"]
-    # Daily variation ±0.8%
-    daily_var = (h % 1000 - 500) / 625  # -0.8 to +0.8
-    nifty = round(base_nifty * (1 + daily_var/100), 2)
-    
-    # BankNifty typically 2.2x NIFTY
-    bnifty = round(nifty * 2.2717, 2)  # Real BN/N ratio
-    
-    # VIX between 12-18 in normal markets
-    vix = round(17.5 + (h % 600) / 100, 2)
-    
-    # Intraday movement (based on current hour IST)
-    from datetime import datetime, timezone, timedelta
-    IST = timezone(timedelta(hours=5, minutes=30))
-    now_ist = datetime.now(IST)
-    hour = now_ist.hour
-    minute = now_ist.minute
-    
-    # Market hours: 9:15 to 15:30
-    if 9 <= hour <= 15:
-        # Intraday variation ±0.5%
-        intra_seed = (hour * 60 + minute) % 1000
-        intra_var = (intra_seed - 500) / 1000  # -0.5 to +0.5%
-        nifty = round(nifty * (1 + intra_var/100), 2)
-        bnifty = round(bnifty * (1 + intra_var/100), 2)
-    
-    prev_nifty = round(nifty * 0.9982, 2)  # Yesterday ~0.18% lower
-    
-    # Live intraday — use ratios from real close
-    finnifty_price  = round(nifty * (REAL_CLOSE["FINNIFTY"]/REAL_CLOSE["NIFTY"]), 2)
-    midcp_price     = round(nifty * (REAL_CLOSE["MIDCPNIFTY"]/REAL_CLOSE["NIFTY"]), 2)
-    sensex_price    = round(nifty * (REAL_CLOSE["SENSEX"]/REAL_CLOSE["NIFTY"]), 2)
-    nxt50_price     = round(nifty * (REAL_CLOSE["NIFTYNXT50"]/REAL_CLOSE["NIFTY"]), 2)
-    prev_change     = round(nifty - REAL_CLOSE["NIFTY"], 2)
-    prev_pct        = round(prev_change / REAL_CLOSE["NIFTY"] * 100, 2)
+    src = "REAL_CLOSE" if not is_market_open else "SIMULATED_LIVE"
+    debug_info.append(f"FALLBACK_market_open={is_market_open}")
     
     result = {
-        "nifty":      {"price": nifty,        "change": prev_change, "pct": prev_pct},
-        "banknifty":  {"price": bnifty,       "change": round(bnifty - prev_nifty * 2.2717, 2), "pct": prev_pct},
-        "finnifty":   {"price": finnifty_price,"change": 0, "pct": 0},
-        "midcpnifty": {"price": midcp_price,  "change": 0, "pct": 0},
-        "sensex":     {"price": sensex_price, "change": 0, "pct": 0},
-        "india_vix":  {"price": vix,          "change": 0, "pct": 0},
-        "NIFTY":      nifty,         "BANKNIFTY":   bnifty,
-        "INDIA_VIX":  vix,           "FINNIFTY":    finnifty_price,
-        "MIDCPNIFTY": midcp_price,   "SENSEX":      sensex_price,
-        "NIFTYNXT50": nxt50_price,
-        "niftynxt50": {"price": nxt50_price, "change": 0, "pct": 0},
+        "source":     src,
+        "nifty":      {"price": REAL_CLOSE["NIFTY"], "change": REAL_CHANGE["NIFTY"][0], "pct": REAL_CHANGE["NIFTY"][1]},
+        "banknifty":  {"price": REAL_CLOSE["BANKNIFTY"], "change": REAL_CHANGE["BANKNIFTY"][0], "pct": REAL_CHANGE["BANKNIFTY"][1]},
+        "finnifty":   {"price": REAL_CLOSE["FINNIFTY"], "change": REAL_CHANGE["FINNIFTY"][0], "pct": REAL_CHANGE["FINNIFTY"][1]},
+        "midcpnifty": {"price": REAL_CLOSE["MIDCPNIFTY"], "change": REAL_CHANGE["MIDCPNIFTY"][0], "pct": REAL_CHANGE["MIDCPNIFTY"][1]},
+        "sensex":     {"price": REAL_CLOSE["SENSEX"], "change": REAL_CHANGE["SENSEX"][0], "pct": REAL_CHANGE["SENSEX"][1]},
+        "niftynxt50": {"price": REAL_CLOSE["NIFTYNXT50"], "change": REAL_CHANGE["NIFTYNXT50"][0], "pct": REAL_CHANGE["NIFTYNXT50"][1]},
+        "india_vix":  {"price": REAL_CLOSE["VIX"], "change": REAL_CHANGE["VIX"][0], "pct": REAL_CHANGE["VIX"][1]},
+        "NIFTY":      REAL_CLOSE["NIFTY"],
+        "BANKNIFTY":  REAL_CLOSE["BANKNIFTY"],
+        "FINNIFTY":   REAL_CLOSE["FINNIFTY"],
+        "MIDCPNIFTY": REAL_CLOSE["MIDCPNIFTY"],
+        "SENSEX":     REAL_CLOSE["SENSEX"],
+        "NIFTYNXT50": REAL_CLOSE["NIFTYNXT50"],
+        "INDIA_VIX":  REAL_CLOSE["VIX"],
         "timestamp":  now_ist.strftime("%H:%M:%S IST"),
-        "source":     "SIMULATION (Angel One not connected)",
+        "market_status": "OPEN" if is_market_open else "CLOSED - Last Close Shown",
+        "debug_info": debug_info,
     }
-    # Only cache under "market:live" when called without user_id
-    if not user_id:
-        cache.set("market:live", result, 30)
     return result
 
 

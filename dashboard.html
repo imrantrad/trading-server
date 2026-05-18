@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.4.6">
+  <meta name="version" content="12.4.7">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -930,7 +930,7 @@ input:focus,select:focus{border-color:var(--bl)}
     <button class="tpill" onclick="adminTab('users',this)">👥 USERS</button>
     <button class="tpill" onclick="adminTab('subs',this)">💎 SUBSCRIPTIONS</button>
     <button class="tpill" onclick="adminTab('payments',this)">💳 PAYMENTS</button>
-    <button class="tpill" onclick="adminTab('referral',this)">🎁 REFERRAL</button>
+    <button class="tpill" onclick="adminTab('referral',this)">ERRAL</button>
     <button class="tpill" onclick="adminTab('analytics',this)">📈 ANALYTICS</button>
     <button class="tpill" onclick="adminTab('sys',this)">⚙️ SYSTEM</button>
     <button class="tpill" onclick="adminTab('audit',this)">🔒 AUDIT</button>
@@ -4661,8 +4661,19 @@ function loadMarketPrices(force){
     var srcEl=$('mkt-source-badge');
     if(srcEl){
       var isLive = d.source && d.source.indexOf('ANGEL_ONE')>=0;
-      srcEl.textContent = isLive ? '🔴 LIVE' : '📊 SIM';
+      srcEl.textContent = isLive ? '🔴 LIVE' : '📊 ' + (d.source||'SIM');
       srcEl.style.color = isLive ? 'var(--am)' : 'var(--mu)';
+      // Add debug info to title for hover
+      var debugText = '';
+      if(d.debug_info){
+        debugText = 'Debug: ' + d.debug_info.join(' | ');
+      }
+      srcEl.title = (isLive ? 'LIVE from Angel One' : 'Source: ' + (d.source||'SIM')) + '\n' + debugText;
+      // Add click handler to show debug
+      srcEl.style.cursor = 'pointer';
+      srcEl.onclick = function(){
+        alert('📊 Data Source Debug:\n\nSource: ' + (d.source||'SIM') + '\nNIFTY: ' + (d.NIFTY||0) + '\nTime: ' + (d.timestamp||'') + '\n\nDebug:\n' + (d.debug_info||['no info']).join('\n'));
+      };
       srcEl.style.fontWeight = isLive ? '900' : '700';
       // Update window flag for auto-refresh interval
       window._brokerLive = isLive;
