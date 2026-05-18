@@ -52,7 +52,7 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.4.2"
+_APP_VERSION = "12.4.5"
 _BUILD_DATE = "2026-05-17"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
@@ -1473,89 +1473,74 @@ def builtin_strategies():
         "avg_monthly_return": 8.5,
         "max_drawdown":  5,
         "type":        "REVERSAL",
-        "strategy_type":"REVERSAL",
-        "indicators":  "VWAP,Volume,PE_Premium,Trend",
-        "description": "Bearish reversal after bullish open. BUY NIFTY PE when trend turns below VWAP with PE premium recovery + volume spike confirmation.",
-        "entry_time":  "AFTER 09:30 AM",
-        "max_trades_per_day": 1,
+        "indicators":  "VWAP,VOLUME,EMA9,EMA21",
+        "category":    "REVERSAL_INTRADAY",
         "expiry":      "CURRENT_WEEKLY",
         "strike_selection": "NEAREST_ATM",
-        "conditions":  "TIME > 09:30 AND NIFTY trend BEARISH AND NIFTY < VWAP AND PE_PRICE >= PE_PRICE_AT_09:15 AND VOLUME_SPIKE = TRUE AND BEARISH_CANDLE_CONFIRMATION",
-        "entry_conditions": [
-            "Time > 09:30 AM",
-            "NIFTY trend = DOWNTREND",
-            "NIFTY price < VWAP",
-            "ATM PE price >= 09:15 reference PE price",
-            "Volume spike detected",
-            "Bearish candle confirmation"
-        ],
-        "risk_management": {
-            "stop_loss_pts": 80,
-            "target_pts":   160,
-            "risk_reward":  "1:2"
-        },
-        "exit_conditions": "SL 80pts hit OR Target 160pts hit OR NIFTY reclaims VWAP OR momentum weakens",
-        "safety_filters":  "No trade before 09:30 | Skip sideways | Skip over-expanded premium | Skip extreme volatility",
-        "no_trade":        "Before 09:30 AM | Sideways market | Premium already over-expanded | Extremely high VIX",
-        "notes":           "Max 1 trade per day. Wait for VWAP rejection + volume confirmation. Bullish open is prerequisite.",
+        "entry_time":  "AFTER 09:30 AM",
+        "max_trades_per_day": 1,
+        "description":     "BUY ATM PE after bullish opening reversal | Time > 09:30 | NIFTY < VWAP | Volume spike",
+        "conditions":      "Time after 9:30 AM AND NIFTY trend bearish AND NIFTY below VWAP AND PE premium rising AND volume spike AND bearish candle confirmation",
+        "exit_conditions": "SL 80pts OR Target 160pts OR NIFTY reclaims VWAP OR momentum weakens",
+        "safety_filters":  "No trade before 09:30 | Skip sideways | Skip over-expanded premium",
+        "no_trade":        "Before 09:30 AM | Sideways market | Premium over-expanded",
+        "notes":           "Max 1 trade per day. Wait for VWAP rejection + volume confirmation.",
         "_badge":          "⭐ ARIBA",
         "_badge_color":    "var(--am)",
         "approved":        True,
-    },
-    {
-        "id": "STR_ARIBA2_REVERSAL_PUT_V2",
-        "name": "Ariba 2 — Reversal Put Entry (Advanced)",
-        "category": "REVERSAL",
-        "action": "BUY",
+    }
+    
+    ariba2_strat = {
+        "id":          "STR_ARIBA2_REVERSAL_PUT_V2",
+        "strategy_id": "STR_ARIBA2_REVERSAL_PUT_V2",
+        "name":        "Ariba 2 — Reversal Put Entry (Advanced)",
+        "creator":     "Ariba",
+        "instrument":  "NIFTY",
+        "action":      "BUY",
         "option_type": "PE",
-        "instrument": "NIFTY",
+        "quantity":    1,
+        "stop_loss":   80,
+        "target":      160,
+        "timeframe":   "5m",
+        "avg_win_rate":72,
+        "avg_monthly_return": 12.0,
+        "max_drawdown":  6,
+        "type":        "REVERSAL",
+        "category":    "REVERSAL_ADVANCED",
         "strike_selection": "NEAREST_ATM",
-        "expiry": "CURRENT_WEEKLY",
-        "entry_time": "AFTER 09:30 AM",
+        "expiry":      "CURRENT_WEEKLY",
+        "entry_time":  "AFTER 09:30 AM",
         "max_trades_per_day": 1,
-        "objective": "Capture bearish reversal after initial bullish opening using PE premium recovery confirmation",
+        "indicators":  "VWAP,VOLUME,REFERENCE_PE_09_15,TREND",
+        "objective":   "Capture bearish reversal after initial bullish opening using PE premium recovery",
+        "description": "Observe from 09:15 → Store ATM PE as REFERENCE → Wait for reversal after 09:30 → Buy when PE >= reference + bearish confirmation",
+        "conditions":  "TIME > 09:30 AND NIFTY_TREND = DOWNTREND AND NIFTY < VWAP AND CURRENT_PE_PRICE >= REFERENCE_PE_PRICE_AT_09_15 AND VOLUME_SPIKE = TRUE AND BEARISH_CONFIRMATION = TRUE",
+        "exit_conditions": "SL 80pts hit OR Target 160pts hit OR NIFTY reclaims VWAP strongly OR Momentum weakens",
+        "safety_filters": "No trade before 09:30 | No revenge | Avoid sideways | Skip over-expanded premium | Skip extreme volatility | Avoid low liquidity strikes",
+        "no_trade":    "Before 09:30 AM | Sideways market | Over-expanded premium | Extreme VIX | Low liquidity",
+        "risk_reward": "1:2",
+        "notes":       "Advanced V2 — uses 09:15 PE price as reference. Highest win rate variant.",
+        "_badge":      "⭐ ARIBA 2",
+        "_badge_color":"var(--p0)",
+        "_advanced":   True,
+        "approved":    True,
         "market_observation_logic": [
             "Observe market from 09:15 AM",
             "If NIFTY opens BULLISH: store ATM PE price as REFERENCE_PE_PRICE",
-            "Wait for trend reversal after 09:30 AM",
+            "Wait for trend reversal after 09:30 AM"
         ],
-        "market_condition": {
-            "opening_trend":   "BULLISH",
-            "current_trend":   "BEARISH",
-            "index_vs_vwap":   "BELOW_VWAP",
-        },
-        "entry_conditions": [
+        "entry_conditions_list": [
             "TIME > 09:30",
             "NIFTY_TREND = DOWNTREND",
             "NIFTY < VWAP",
             "CURRENT_PE_PRICE >= REFERENCE_PE_PRICE_AT_09_15",
             "VOLUME_SPIKE = TRUE",
-            "BEARISH_CONFIRMATION = TRUE",
-        ],
-        "stop_loss_pts": 80,
-        "target_pts":    160,
-        "risk_reward":   "1:2",
-        "safety_filters": [
-            "No trade before 09:30 AM",
-            "No revenge trading",
-            "Avoid sideways market entry",
-            "Skip if premium over-expanded",
-            "Skip if volatility extremely high",
-            "Avoid low liquidity strikes",
-        ],
-        "exit_rules": [
-            "Stop Loss hit (80 pts)",
-            "Target hit (160 pts)",
-            "NIFTY reclaims VWAP strongly",
-            "Momentum weakens significantly",
-        ],
-        "win_rate_estimate": 72,
-        "_badge": "⭐ ARIBA 2",
-        "_advanced": True,
+            "BEARISH_CONFIRMATION = TRUE"
+        ]
     }
     
     # Add Ariba first so it appears prominently
-    all_strats = [ariba_strat] + premium_strats + [s for s in strategies if s.get('id') not in [p['id'] for p in premium_strats] and s.get('id') != 'STR_ARIBA_REVERSAL_PUT']
+    all_strats = [ariba_strat, ariba2_strat] + premium_strats + [s for s in strategies if s.get('id') not in [p['id'] for p in premium_strats] and s.get('id') not in ('STR_ARIBA_REVERSAL_PUT', 'STR_ARIBA2_REVERSAL_PUT_V2')]
     return {"strategies": all_strats, "count": len(all_strats)}
 
 # ── ADVANCED BACKTEST ──────────────────────────────────
@@ -7798,6 +7783,101 @@ def get_option_chart(instrument: str, strike: int, option_type: str, timeframe: 
         "candles": candles,
         "supported_timeframes": list(TF_SEC.keys()),
     }
+
+
+@app.get("/broker/diagnose/{user_id}")
+def diagnose_broker_connection(user_id: str):
+    """Diagnose why broker live data isn't flowing"""
+    result = {
+        "user_id":       user_id,
+        "session_in_memory": user_id in _angel_sessions,
+        "checks": [],
+    }
+    
+    # Check 1: Session in memory
+    if user_id in _angel_sessions:
+        s = _angel_sessions[user_id]
+        is_valid = time.time() < s.get("expires", 0)
+        result["checks"].append({
+            "step": "Memory session",
+            "status": "✅ VALID" if is_valid else "❌ EXPIRED",
+            "expires_in_sec": int(s.get("expires", 0) - time.time()),
+            "broker": s.get("broker", "ANGEL_ONE"),
+        })
+    else:
+        result["checks"].append({"step": "Memory session", "status": "❌ NOT FOUND"})
+    
+    # Check 2: DB session  
+    if USER_SYSTEM:
+        try:
+            with user_db.conn() as c:
+                row = c.execute("SELECT broker_name, broker_mode, broker_key_hint, api_key FROM users WHERE id=?", 
+                              (user_id,)).fetchone()
+                if row:
+                    has_hint = bool(row["broker_key_hint"])
+                    has_key = bool(row["api_key"])
+                    result["checks"].append({
+                        "step": "DB credentials",
+                        "status": "✅ FOUND" if (has_hint or has_key) else "❌ EMPTY",
+                        "broker_name": row["broker_name"],
+                        "broker_mode": row["broker_mode"],
+                        "has_key_hint": has_hint,
+                        "has_api_key": has_key,
+                    })
+                else:
+                    result["checks"].append({"step": "DB credentials", "status": "❌ USER NOT FOUND"})
+        except Exception as e:
+            result["checks"].append({"step": "DB credentials", "status": f"❌ {str(e)[:60]}"})
+    
+    # Check 3: Try fetch live prices
+    if user_id in _angel_sessions:
+        try:
+            s = _angel_sessions[user_id]
+            import sys as _sys, os as _os
+            _sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
+            from brokers.angel_one import get_all_live_prices
+            prices = get_all_live_prices(s.get("api_key",""), s.get("jwt_token",""))
+            
+            nifty_data = prices.get("NIFTY") if prices else None
+            if isinstance(nifty_data, dict):
+                nifty_p = nifty_data.get("price", 0)
+            else:
+                nifty_p = nifty_data or 0
+            
+            result["checks"].append({
+                "step": "Live API call",
+                "status": "✅ SUCCESS" if nifty_p > 0 else "❌ ZERO PRICE",
+                "nifty_price": nifty_p,
+                "symbols_received": list(prices.keys()) if prices else [],
+            })
+        except Exception as e:
+            result["checks"].append({"step": "Live API call", "status": f"❌ {str(e)[:100]}"})
+    
+    # Check 4: Cache status
+    cached = cache.get(f"broker_live:{user_id}")
+    if cached:
+        result["checks"].append({
+            "step": "Cache",
+            "status": "✅ CACHED",
+            "source": cached.get("source"),
+            "timestamp": cached.get("timestamp"),
+        })
+    else:
+        result["checks"].append({"step": "Cache", "status": "ℹ️ NO CACHE"})
+    
+    return result
+
+
+@app.delete("/cache/market")
+def clear_market_cache():
+    """Force clear all market caches"""
+    keys_cleared = []
+    for k in list(cache._store.keys() if hasattr(cache, '_store') else []):
+        if 'market' in k.lower() or 'broker' in k.lower():
+            cache.delete(k) if hasattr(cache, 'delete') else None
+            keys_cleared.append(k)
+    return {"cleared": keys_cleared, "count": len(keys_cleared)}
+
 
 @app.post("/ml/scan_all")
 async def ml_scan_all(request: Request):

@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.4.4">
+  <meta name="version" content="12.4.5">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -2122,6 +2122,45 @@ setTimeout(function(){
     }
   });
 }, 2000);
+
+
+
+function diagnoseBroker(){
+  var uid = window.UID || 'demo';
+  toast('Running broker diagnosis...','info');
+  
+  req('/broker/diagnose/'+uid,'GET',null,function(err,d){
+    if(err||!d){toast('Diagnose failed','error');return;}
+    
+    var html = '<div style="font-size:11px;line-height:1.6;font-family:monospace">';
+    html += '<div style="font-weight:800;color:var(--am);margin-bottom:8px">🔍 BROKER DIAGNOSIS — '+uid+'</div>';
+    html += '<div style="background:'+(d.session_in_memory?'rgba(0,255,136,.1)':'rgba(220,38,38,.1)')+';padding:6px;border-radius:6px;margin-bottom:8px"><b>Memory Session:</b> '+(d.session_in_memory?'✅ FOUND':'❌ NOT FOUND')+'</div>';
+    
+    (d.checks||[]).forEach(function(c){
+      var bg = c.status.indexOf('✅')>=0 ? 'rgba(0,255,136,.08)' : c.status.indexOf('❌')>=0 ? 'rgba(220,38,38,.08)' : 'rgba(245,158,11,.08)';
+      html += '<div style="background:'+bg+';padding:6px;border-radius:4px;margin-bottom:4px">';
+      html += '<b>'+c.step+':</b> '+c.status;
+      Object.keys(c).forEach(function(k){
+        if(k!=='step' && k!=='status'){
+          html += '<div style="font-size:9px;color:var(--mu);margin-left:8px">→ '+k+': '+JSON.stringify(c[k])+'</div>';
+        }
+      });
+      html += '</div>';
+    });
+    
+    html += '<div style="margin-top:10px;display:flex;gap:6px">';
+    html += '<button onclick="document.body.removeChild(document.getElementById(\'diag-modal\'));loadMarketPrices(true);" class="btn g" style="flex:1;font-size:10px;padding:8px">🔄 Force Refresh</button>';
+    html += '<button onclick="document.body.removeChild(document.getElementById(\'diag-modal\'));show(\'prof\');" class="btn b" style="flex:1;font-size:10px;padding:8px">🔗 Reconnect</button>';
+    html += '</div></div>';
+    
+    var modal = document.createElement('div');
+    modal.id = 'diag-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);overflow-y:auto';
+    modal.onclick = function(e){if(e.target===modal)document.body.removeChild(modal);};
+    modal.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--bo);border-radius:12px;padding:14px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto">'+html+'<button onclick="document.body.removeChild(document.getElementById(\'diag-modal\'))" style="background:none;border:none;color:var(--mu);font-size:24px;cursor:pointer;position:absolute;top:8px;right:8px">×</button></div>';
+    document.body.appendChild(modal);
+  });
+}
 
 
 // ── CLOCK ─────────────────────────────────────────
@@ -4573,11 +4612,14 @@ function loadCalcSpot(){
 // ── MARKET PRICES (all 6 instruments) ─────────────
 function loadMarketPrices(force){
   var uid = window.UID || '';
+  // ALWAYS bypass cache when forced - delete server cache first
   if(force){
-    req('/cache/market','DELETE',null,function(){});
+    req('/cache/market','DELETE',null,function(err,d){
+      console.log('Cache cleared:', d);
+    });
   }
-  // Add cache buster to URL to prevent stale data
-  var url = '/market/live?user_id='+encodeURIComponent(uid)+'&_t='+Date.now();
+  // Cache buster + force-fresh header
+  var url = '/market/live?user_id='+encodeURIComponent(uid)+'&_t='+Date.now()+'&nocache='+Math.random();
   console.log('[Market] Fetching:', url, 'UID:', uid);
   req(url,'GET',null,function(err,d){
     if(d){
