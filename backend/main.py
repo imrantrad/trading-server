@@ -52,8 +52,8 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.4.5"
-_BUILD_DATE = "2026-05-17"
+_APP_VERSION = "12.4.6"
+_BUILD_DATE = "2026-05-19"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
 
@@ -5128,7 +5128,7 @@ def admin_clear_old_referral():
 
 
 @app.get("/market/live")
-def market_live_prices(user_id: str = ""):
+def market_live_prices(user_id: str = "", nocache: str = ""):
     """Live market prices — uses broker if connected, else simulation"""
     # Try broker live prices first (if user connected)
     # Try to restore session from DB if not in memory
@@ -5171,8 +5171,13 @@ def market_live_prices(user_id: str = ""):
         s = _angel_sessions[user_id]
         if time.time() < s.get("expires", 0):
             broker_cache_key = f"broker_live:{user_id}"
-            bc = cache.get(broker_cache_key)
-            if bc: return bc
+            # Force-fresh if nocache param sent
+            if nocache:
+                try: cache.delete(broker_cache_key)
+                except: pass
+            else:
+                bc = cache.get(broker_cache_key)
+                if bc: return bc
             try:
                 import sys as _sys, os as _os
                 _sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
@@ -5225,8 +5230,8 @@ def market_live_prices(user_id: str = ""):
                         "INDIA_VIX":  vix_p,
                         "timestamp":  datetime.now(IST).strftime("%H:%M:%S IST"),
                     }
+                    # User-specific cache only — NEVER pollute shared "market:live"
                     cache.set(broker_cache_key, result, 5)
-                    cache.set("market:live", result, 5)
                     return result
                 else:
                     # Angel One returned empty/zero — log and fall through

@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.4.5">
+  <meta name="version" content="12.4.6">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -187,7 +187,6 @@ input:focus,select:focus{border-color:var(--bl)}
     <button class="tab-btn" onclick="show('calc',this)" data-pnl="calc">CALC</button>
     <button class="tab-btn" onclick="show('ai',this)" data-pnl="ai">🤖 AI</button>
     <button class="tab-btn" id="admin-tab-btn" onclick="show('admin',this)" data-pnl="admin" style="display:none">ADMIN</button>
-    <button class="tab-btn" onclick="show('ref',this)" data-pnl="ref">🎁 REF</button>
     <button class="tab-btn" onclick="show('legal',this)" data-pnl="legal">LEGAL</button>
     <button class="tab-btn" onclick="show('livepos',this)" data-pnl="livepos">📊 POSITIONS</button>
   </div>
@@ -4612,14 +4611,13 @@ function loadCalcSpot(){
 // ── MARKET PRICES (all 6 instruments) ─────────────
 function loadMarketPrices(force){
   var uid = window.UID || '';
-  // ALWAYS bypass cache when forced - delete server cache first
+  // CRITICAL: Force broker fetch by passing nocache param
+  var url = '/market/live?user_id='+encodeURIComponent(uid)+'&_t='+Date.now();
   if(force){
-    req('/cache/market','DELETE',null,function(err,d){
-      console.log('Cache cleared:', d);
-    });
+    url += '&nocache=' + Math.random();
+    // Also delete shared cache (doesn't affect broker cache)
+    req('/cache/market','DELETE',null,function(){});
   }
-  // Cache buster + force-fresh header
-  var url = '/market/live?user_id='+encodeURIComponent(uid)+'&_t='+Date.now()+'&nocache='+Math.random();
   console.log('[Market] Fetching:', url, 'UID:', uid);
   req(url,'GET',null,function(err,d){
     if(d){
