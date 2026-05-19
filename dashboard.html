@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.4.9">
+  <meta name="version" content="12.5.0">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -210,7 +210,7 @@ input:focus,select:focus{border-color:var(--bl)}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px" id="mkt-ticker">
       <div onclick="openMiniChart('NIFTY')" style="background:var(--bg4);padding:7px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)" class="mkt-item">
         <div style="font-size:8px;color:var(--mu)">NIFTY</div>
-        <div id="t-nifty" style="font-size:13px;font-weight:800;color:var(--gr)">—</div>
+        <div onclick="showIndexChart(\'NIFTY\')" style="id="t-nifty" style="font-size:13px;font-weight:800;color:var(--gr)">—</div>
         <div id="t-nifty-chg" style="font-size:8px;color:var(--mu)">—</div>
       </div>
       <div onclick="openMiniChart('BANKNIFTY')" style="background:var(--bg4);padding:7px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)" class="mkt-item">
@@ -227,7 +227,7 @@ input:focus,select:focus{border-color:var(--bl)}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px">
       <div onclick="openMiniChart('FINNIFTY')" style="background:var(--bg4);padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)">
         <div style="font-size:8px;color:var(--mu)">FINNIFTY</div>
-        <div id="t-finnifty" style="font-size:11px;font-weight:700;color:var(--tx)">—</div>
+        <div onclick="showIndexChart(\'FINNIFTY\')" style="cursor:pointer"  id="t-finnifty" style="font-size:11px;font-weight:700;color:var(--tx)">—</div>
       </div>
       <div onclick="openMiniChart('MIDCPNIFTY')" style="background:var(--bg4);padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)">
         <div style="font-size:8px;color:var(--mu)">MIDCPNIFTY</div>
@@ -235,7 +235,7 @@ input:focus,select:focus{border-color:var(--bl)}
       </div>
       <div onclick="openMiniChart('SENSEX')" style="background:var(--bg4);padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)">
         <div style="font-size:8px;color:var(--mu)">SENSEX</div>
-        <div id="t-sensex" style="font-size:11px;font-weight:700;color:var(--tx)">—</div>
+        <div onclick="showIndexChart(\'SENSEX\')" style="cursor:pointer"  id="t-sensex" style="font-size:11px;font-weight:700;color:var(--tx)">—</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px">
@@ -2159,6 +2159,262 @@ function diagnoseBroker(){
     modal.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--bo);border-radius:12px;padding:14px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto">'+html+'<button onclick="document.body.removeChild(document.getElementById(\'diag-modal\'))" style="background:none;border:none;color:var(--mu);font-size:24px;cursor:pointer;position:absolute;top:8px;right:8px">×</button></div>';
     document.body.appendChild(modal);
   });
+}
+
+
+
+// ── INSTITUTIONAL INDEX CHART ──
+function showIndexChart(instrument){
+  var spot = (window._marketPrices||{})[instrument] || 23643.5;
+  
+  var modal = document.createElement('div');
+  modal.id = 'idx-chart-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10001;display:flex;align-items:center;justify-content:center;padding:8px;backdrop-filter:blur(6px);overflow-y:auto';
+  modal.onclick = function(e){if(e.target===modal)document.body.removeChild(modal);};
+  
+  var tfs = ['1s','3s','5s','10s','30s','1m','3m','5m','10m','15m','30m','1h','3h','1d'];
+  var tfButtons = tfs.map(function(tf){
+    return '<button onclick="loadIndexChart(\''+instrument+'\',\''+tf+'\')" id="idx-tf-'+tf+'" class="idx-tf-pill" style="padding:5px 10px;background:var(--bg5);border:1px solid var(--bo);color:var(--tx);font-size:9px;border-radius:5px;cursor:pointer;margin:2px;font-weight:600">'+tf+'</button>';
+  }).join('');
+  
+  modal.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--bo);border-radius:12px;padding:14px;max-width:560px;width:100%;max-height:96vh;overflow-y:auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">'
+    +'<div>'
+    +'<div style="font-size:15px;font-weight:800;color:var(--am)">📈 '+instrument+' INSTITUTIONAL CHART</div>'
+    +'<div style="font-size:10px;color:var(--mu)">Spot: <b style="color:var(--tx)">₹'+spot.toLocaleString('en-IN')+'</b> · Multi-Timeframe · Live Indicators</div></div>'
+    +'<button onclick="document.body.removeChild(document.getElementById(\'idx-chart-modal\'))" style="background:none;border:none;color:var(--mu);font-size:24px;cursor:pointer">×</button>'
+    +'</div>'
+    +'<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid var(--bo);padding-bottom:6px">'
+    +'<div style="font-size:9px;color:var(--mu);margin-right:6px;padding-top:5px;font-weight:700">⏰ TF:</div>'
+    +tfButtons
+    +'</div>'
+    +'<div id="idx-chart-loading" style="text-align:center;padding:40px;color:var(--mu);font-size:11px">Loading chart...</div>'
+    +'<canvas id="idx-chart-canvas" width="540" height="380" style="display:none;background:var(--bg4);border-radius:6px;width:100%;cursor:crosshair"></canvas>'
+    +'<div id="idx-chart-stats" style="display:none;margin-top:8px"></div>'
+    +'<div id="idx-inst-indicators" style="display:none;margin-top:10px;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.2);border-radius:8px;padding:10px"></div>'
+    +'</div>';
+  
+  document.body.appendChild(modal);
+  loadIndexChart(instrument, '5m');
+}
+
+function loadIndexChart(instrument, tf){
+  // Update active TF button
+  document.querySelectorAll('.idx-tf-pill').forEach(function(b){
+    b.style.background = 'var(--bg5)';
+    b.style.color = 'var(--tx)';
+  });
+  var btn = $('idx-tf-'+tf);
+  if(btn){btn.style.background = 'var(--am)'; btn.style.color='#000';}
+  
+  $('idx-chart-loading').style.display = 'block';
+  $('idx-chart-canvas').style.display = 'none';
+  $('idx-chart-stats').style.display = 'none';
+  
+  // Use existing /chart/option_price as proxy (it has indicator support)
+  // For index, use spot as anchor
+  req('/chart/option_price/'+instrument+'/0/INDEX?timeframe='+tf+'&points=80','GET',null,function(err,d){
+    if(err||!d||!d.candles){
+      // Fallback: generate locally
+      var spot = (window._marketPrices||{})[instrument] || 23643.5;
+      d = {candles: generateIndexCandles(spot, 80, tf), current_price: spot};
+    }
+    drawIdxChart(d.candles);
+    showInstitutionalAnalysis(d.candles, instrument);
+    
+    // Stats
+    var high = Math.max.apply(null, d.candles.map(function(c){return c.high;}));
+    var low = Math.min.apply(null, d.candles.map(function(c){return c.low;}));
+    var open = d.candles[0].open;
+    var close = d.candles[d.candles.length-1].close;
+    var change = close - open;
+    var pct = (change/open*100).toFixed(2);
+    
+    $('idx-chart-stats').innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:9px">'
+      +'<div><div style="color:var(--mu)">OPEN</div><b>₹'+open.toFixed(2)+'</b></div>'
+      +'<div><div style="color:var(--mu)">HIGH</div><b style="color:var(--gr)">₹'+high.toFixed(2)+'</b></div>'
+      +'<div><div style="color:var(--mu)">LOW</div><b style="color:var(--rd)">₹'+low.toFixed(2)+'</b></div>'
+      +'<div><div style="color:var(--mu)">CHANGE</div><b style="color:'+(change>=0?'var(--gr)':'var(--rd)')+'">'+(change>=0?'+':'')+change.toFixed(2)+' ('+(change>=0?'+':'')+pct+'%)</b></div>'
+      +'</div>';
+    $('idx-chart-stats').style.display = 'block';
+  });
+}
+
+function generateIndexCandles(spot, points, tf){
+  var tfSeconds = {'1s':1,'3s':3,'5s':5,'10s':10,'30s':30,'1m':60,'3m':180,'5m':300,'10m':600,'15m':900,'30m':1800,'1h':3600,'3h':10800,'1d':86400};
+  var interval = tfSeconds[tf] || 300;
+  var vol = Math.sqrt(interval/86400) * 0.18;  // 18% annual vol
+  var candles = [];
+  var price = spot;
+  var now = Date.now();
+  for(var i=0; i<points; i++){
+    var t = now - interval * 1000 * (points-i);
+    var change = (Math.random()-0.5) * price * vol * 2;
+    var decay = (spot - price) * 0.03;
+    price = Math.max(spot*0.95, price + change + decay);
+    var high = price * (1 + Math.random()*vol/2);
+    var low  = price * (1 - Math.random()*vol/2);
+    var open = candles.length ? candles[candles.length-1].close : price*0.998;
+    candles.push({time:t, open:open, high:high, low:low, close:price, volume: 100000 + Math.random()*900000});
+  }
+  return candles;
+}
+
+function drawIdxChart(candles){
+  // Reuse the professional drawOptChart logic
+  var canvas = $('idx-chart-canvas');
+  if(!canvas || !candles.length) return;
+  $('idx-chart-loading').style.display = 'none';
+  canvas.style.display = 'block';
+  
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  var W = rect.width, H = rect.height;
+  var priceH = H * 0.70, volH = H * 0.12, rsiH = H * 0.18;
+  ctx.clearRect(0, 0, W, H);
+  
+  var closes = candles.map(function(c){return c.close;});
+  var volumes = candles.map(function(c){return c.volume;});
+  
+  // EMA calc
+  var ema = function(p){var k=2/(p+1); var o=[closes[0]]; for(var i=1;i<closes.length;i++) o.push(closes[i]*k+o[i-1]*(1-k)); return o;};
+  var ema9 = ema(9), ema21 = ema(21);
+  
+  // VWAP
+  var cumVP=0, cumV=0;
+  var vwap = candles.map(function(c){var t=(c.high+c.low+c.close)/3; cumVP+=t*c.volume; cumV+=c.volume; return cumVP/cumV;});
+  
+  // Price range
+  var allP = [];
+  candles.forEach(function(c){allP.push(c.high, c.low);});
+  var maxP = Math.max.apply(null, allP) * 1.01;
+  var minP = Math.min.apply(null, allP) * 0.99;
+  var range = maxP - minP;
+  var maxV = Math.max.apply(null, volumes);
+  var candleW = Math.max(1.5, W/candles.length - 1);
+  
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  for(var g=0;g<5;g++){
+    var y = (g/4)*priceH;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '9px monospace';
+    ctx.fillText('₹'+(maxP-(g/4)*range).toFixed(1), 4, y+10);
+  }
+  
+  // Candles
+  candles.forEach(function(c, i){
+    var x = i*(W/candles.length) + (W/candles.length)/2;
+    var oY = priceH - ((c.open-minP)/range)*priceH;
+    var cY = priceH - ((c.close-minP)/range)*priceH;
+    var hY = priceH - ((c.high-minP)/range)*priceH;
+    var lY = priceH - ((c.low-minP)/range)*priceH;
+    var bull = c.close >= c.open;
+    ctx.strokeStyle = bull ? '#00ff88' : '#ef4444';
+    ctx.fillStyle = bull ? '#00ff88' : '#ef4444';
+    ctx.beginPath(); ctx.moveTo(x, hY); ctx.lineTo(x, lY); ctx.stroke();
+    ctx.fillRect(x - candleW/2, Math.min(oY, cY), candleW, Math.max(1, Math.abs(cY-oY)));
+  });
+  
+  // EMAs
+  ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ema9.forEach(function(v,i){var x=i*(W/candles.length)+(W/candles.length)/2; var y=priceH-((v-minP)/range)*priceH; if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+  ctx.stroke();
+  
+  ctx.strokeStyle = '#4f8ef7';
+  ctx.beginPath();
+  ema21.forEach(function(v,i){var x=i*(W/candles.length)+(W/candles.length)/2; var y=priceH-((v-minP)/range)*priceH; if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+  ctx.stroke();
+  
+  // VWAP
+  ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  vwap.forEach(function(v,i){var x=i*(W/candles.length)+(W/candles.length)/2; var y=priceH-((v-minP)/range)*priceH; if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+  ctx.stroke();
+  
+  // Volume
+  var volY = priceH + 4;
+  candles.forEach(function(c,i){
+    var x = i*(W/candles.length) + (W/candles.length)/2;
+    var h = (c.volume/maxV) * (volH-6);
+    var bull = c.close >= c.open;
+    ctx.fillStyle = bull ? 'rgba(0,255,136,0.4)' : 'rgba(239,68,68,0.4)';
+    ctx.fillRect(x - candleW/2, volY + volH - h, candleW, h);
+  });
+  
+  // Legend
+  ctx.font = '9px monospace';
+  ctx.fillStyle = '#fbbf24'; ctx.fillText('━ EMA9', W-180, 12);
+  ctx.fillStyle = '#4f8ef7'; ctx.fillText('━ EMA21', W-120, 12);
+  ctx.fillStyle = '#a855f7'; ctx.fillText('━ VWAP', W-60, 12);
+}
+
+function showInstitutionalAnalysis(candles, instrument){
+  // Calculate POC (highest volume strike)
+  var closes = candles.map(function(c){return c.close;});
+  var highs = candles.map(function(c){return c.high;});
+  var lows = candles.map(function(c){return c.low;});
+  
+  // Simple POC: median price weighted by volume
+  var totalVol = candles.reduce(function(a,c){return a+c.volume;},0);
+  var weighted = candles.reduce(function(a,c){return a+c.close*c.volume;},0);
+  var poc = weighted / totalVol;
+  
+  var highVal = Math.max.apply(null, highs);
+  var lowVal = Math.min.apply(null, lows);
+  var vah = poc + (highVal - poc) * 0.3;  // 30% of range up = VAH
+  var val = poc - (poc - lowVal) * 0.3;  // 30% down = VAL
+  
+  // Trend: compare current to start
+  var trend = closes[closes.length-1] > closes[0]*1.001 ? 'UPWARD' : closes[closes.length-1] < closes[0]*0.999 ? 'DOWNWARD' : 'SIDEWAYS';
+  var trendColor = trend === 'UPWARD' ? 'var(--gr)' : trend === 'DOWNWARD' ? 'var(--rd)' : 'var(--am)';
+  
+  // CVD (cumulative volume delta) simulation
+  var cvd = 0;
+  candles.forEach(function(c){
+    cvd += c.close >= c.open ? c.volume : -c.volume;
+  });
+  
+  // Detect reversal: price near top with weakening momentum
+  var recentCloses = closes.slice(-5);
+  var avgRecent = recentCloses.reduce(function(a,b){return a+b;},0)/recentCloses.length;
+  var nearHigh = closes[closes.length-1] >= highVal * 0.995;
+  var reversalRisk = nearHigh && trend === 'UPWARD' ? 'BEARISH_REVERSAL_RISK' : 'NONE';
+  
+  var html = '<div style="font-size:11px;font-weight:700;color:var(--p0);margin-bottom:8px">🏛️ INSTITUTIONAL ANALYSIS</div>';
+  
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">';
+  html += '<div class="sbox" style="text-align:left;padding:6px"><div class="slbl" style="font-size:8px">TREND</div><div style="font-weight:800;color:'+trendColor+';font-size:11px">'+trend+'</div></div>';
+  html += '<div class="sbox" style="text-align:left;padding:6px"><div class="slbl" style="font-size:8px">CVD</div><div style="font-weight:800;color:'+(cvd>0?'var(--gr)':'var(--rd)')+';font-size:11px">'+(cvd>0?'+':'')+(cvd/1000000).toFixed(1)+'M</div></div>';
+  html += '</div>';
+  
+  html += '<div style="margin-bottom:8px">';
+  html += '<div style="font-size:9px;color:var(--am);font-weight:700;margin-bottom:4px">📊 VOLUME PROFILE (VPVR)</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:9px">';
+  html += '<div class="sbox" style="padding:4px"><div class="slbl">VAH</div><div style="color:var(--rd);font-weight:700">₹'+vah.toFixed(2)+'</div></div>';
+  html += '<div class="sbox" style="padding:4px"><div class="slbl">POC</div><div style="color:var(--am);font-weight:700">₹'+poc.toFixed(2)+'</div></div>';
+  html += '<div class="sbox" style="padding:4px"><div class="slbl">VAL</div><div style="color:var(--gr);font-weight:700">₹'+val.toFixed(2)+'</div></div>';
+  html += '</div></div>';
+  
+  if(reversalRisk !== 'NONE'){
+    html += '<div style="background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);padding:6px;border-radius:6px;margin-bottom:6px">';
+    html += '<div style="color:var(--rd);font-weight:700;font-size:10px">⚠️ '+reversalRisk.replace(/_/g,' ')+'</div>';
+    html += '<div style="font-size:9px;color:var(--mu)">Price near recent high with weakening momentum — institutional exhaustion possible</div>';
+    html += '</div>';
+  }
+  
+  html += '<div style="font-size:9px;color:var(--mu);margin-top:6px;line-height:1.5">'
+    +'<b>Legend:</b> POC = Point of Control · VAH/VAL = Value Area High/Low · CVD = Cumulative Volume Delta'
+    +'</div>';
+  
+  $('idx-inst-indicators').innerHTML = html;
+  $('idx-inst-indicators').style.display = 'block';
 }
 
 

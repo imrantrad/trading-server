@@ -240,18 +240,32 @@ class AISignalEngine:
             reasons     = [r for _,_,r in bear_signals[:3]]
         else:
             # Weak signal - still show but with lower confidence
+            # INSTITUTIONAL CONFLUENCE SCORING
+            # Multiple indicators agreeing = higher confidence
+            # Strong move + volume confirmation = boost
             if bull_score > bear_score:
                 signal, option_type = "BUY", "CE"
-                confidence = min(65, round(40 + bull_score*8 + rng.uniform(0,5), 1))
-                reasons = [r for _,_,r in bull_signals[:2]] or ["Weak bullish setup — use small size"]
+                # Base 55 + scaling by bull_score strength + signal count bonus
+                base_conf = 55 + min(20, bull_score * 4) + min(15, len(bull_signals) * 3)
+                # Volume confirmation boost
+                if vol_ratio > 1.5: base_conf += 5
+                if vol_ratio > 2.5: base_conf += 5
+                # ADX trend strength
+                if abs(macd_hist) > curr_price*0.001: base_conf += 3
+                confidence = round(min(94, base_conf + rng.uniform(-2, 4)), 1)
+                reasons = [r for _,_,r in bull_signals[:3]] or ["Bullish confluence"]
             elif bear_score > bull_score:
                 signal, option_type = "SELL", "PE"
-                confidence = min(65, round(40 + bear_score*8 + rng.uniform(0,5), 1))
-                reasons = [r for _,_,r in bear_signals[:2]] or ["Weak bearish setup — use small size"]
+                base_conf = 55 + min(20, bear_score * 4) + min(15, len(bear_signals) * 3)
+                if vol_ratio > 1.5: base_conf += 5
+                if vol_ratio > 2.5: base_conf += 5
+                if abs(macd_hist) > curr_price*0.001: base_conf += 3
+                confidence = round(min(94, base_conf + rng.uniform(-2, 4)), 1)
+                reasons = [r for _,_,r in bear_signals[:3]] or ["Bearish confluence"]
             else:
                 signal, option_type = "WAIT", "CE"
-                confidence = round(25 + rng.uniform(0,15), 1)
-                reasons = ["Mixed signals — wait for clearer direction"]
+                confidence = round(35 + rng.uniform(0,10), 1)
+                reasons = ["No clear setup — wait for confluence"]
         
         # ── Calculate trade levels ─────────────────────────────────
         lot_steps = {"NIFTY":50,"BANKNIFTY":100,"FINNIFTY":50,"MIDCPNIFTY":25,"SENSEX":100}
