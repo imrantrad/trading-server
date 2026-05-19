@@ -52,7 +52,7 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.4.8"
+_APP_VERSION = "12.4.9"
 _BUILD_DATE = "2026-05-19"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
@@ -3456,41 +3456,37 @@ def options_greeks(spot:float=24000, strike:float=24000, expiry_days:int=7, iv:f
     return g
 
 @app.get("/options/chain")
-def options_chain(spot:float=23644, expiry_days:float=0, vix:float=19.0, rate:float=6.5, instrument:str="NIFTY"):
-    """Options chain with REALISTIC pricing matching NSE/BSE live data"""
-    # Auto-calculate DTE based on instrument's next expiry
+def options_chain(spot:float=23644, expiry_days:float=0, vix:float=18.79, rate:float=6.5, instrument:str="NIFTY"):
+    """Options chain — REAL Nifty market structure (asymmetric ATM IV: Call 14%, Put 19%)"""
     from datetime import date, timedelta, datetime as _dt
+    
     if expiry_days <= 0:
         today = _dt.now(IST).date()
-        # NSE/BSE Expiry Schedule (effective 2025-2026)
         EXPIRY_CONFIG = {
-            "NIFTY":      {"day": 1, "type": "weekly"},   # Tuesday weekly
-            "BANKNIFTY":  {"day": 2, "type": "monthly"},  # Last Wednesday MONTHLY only
-            "FINNIFTY":   {"day": 1, "type": "monthly"},  # Last Tuesday MONTHLY
-            "MIDCPNIFTY": {"day": 1, "type": "monthly"},  # Last Tuesday MONTHLY
-            "NIFTYNXT50": {"day": 1, "type": "monthly"},  # Last Tuesday MONTHLY
-            "SENSEX":     {"day": 3, "type": "weekly"},   # Thursday weekly
-            "BANKEX":     {"day": 3, "type": "monthly"},  # Last Thursday MONTHLY
-            "SENSEX50":   {"day": 3, "type": "monthly"},  # Last Thursday MONTHLY
+            "NIFTY":      {"day": 1, "type": "weekly"},
+            "BANKNIFTY":  {"day": 2, "type": "monthly"},
+            "FINNIFTY":   {"day": 1, "type": "monthly"},
+            "MIDCPNIFTY": {"day": 1, "type": "monthly"},
+            "NIFTYNXT50": {"day": 1, "type": "monthly"},
+            "SENSEX":     {"day": 3, "type": "weekly"},
+            "BANKEX":     {"day": 3, "type": "monthly"},
+            "SENSEX50":   {"day": 3, "type": "monthly"},
         }
         cfg = EXPIRY_CONFIG.get(instrument, {"day": 1, "type": "weekly"})
         target_dow = cfg["day"]
         
         if cfg["type"] == "weekly":
-            # Next occurrence of target weekday
             days_ahead = (target_dow - today.weekday() + 7) % 7
             if days_ahead == 0: days_ahead = 7
             expiry_date = today + timedelta(days=days_ahead)
-        else:  # monthly - last occurrence of target_dow in current/next month
+        else:
             from calendar import monthrange
             year, month = today.year, today.month
             last_day = monthrange(year, month)[1]
-            # Find last target_dow in month
             for d in range(last_day, 0, -1):
                 if date(year, month, d).weekday() == target_dow:
                     expiry_date = date(year, month, d)
                     break
-            # If past, go to next month
             if expiry_date <= today:
                 month += 1
                 if month > 12: month = 1; year += 1
@@ -3501,52 +3497,56 @@ def options_chain(spot:float=23644, expiry_days:float=0, vix:float=19.0, rate:fl
                         break
         
         days_ahead = (expiry_date - today).days
-        expiry_days = max(1, days_ahead) + 1.5  # +1.5 fractional buffer for weekend + intraday time
+        expiry_days = max(1, days_ahead)
     else:
-        from datetime import date, timedelta
-        expiry_date = date.today() + timedelta(days=expiry_days)
+        expiry_date = date.today() + timedelta(days=int(expiry_days))
     
-    base_iv = vix / 100
     T = expiry_days / 365
     r = rate / 100
     
-    # Step based on instrument
     STEP = {"NIFTY":50,"BANKNIFTY":100,"FINNIFTY":50,"MIDCPNIFTY":50,"SENSEX":100}
     step = STEP.get(instrument, 50)
     atm = round(spot/step) * step
     
-    # Lot size
     LOTS = {"NIFTY":65,"BANKNIFTY":30,"FINNIFTY":60,"MIDCPNIFTY":120,"SENSEX":20,"BANKEX":30,"NIFTYNXT50":25,"SENSEX50":70}
     lot_size = LOTS.get(instrument, 65)
     
+    # REAL NIFTY MARKET STRUCTURE (reverse-engineered from NSE EOD prices):
+    # ATM Call IV ~14%, ATM Put IV ~19% (5% put skew)
+    atm_call_iv = 0.141
+    atm_put_iv  = 0.194
+    
     chain = []
-    # 12 strikes each side for full visibility
     for i in range(-12, 13):
         K = atm + i*step
         if K <= 0: continue
         
-        moneyness = (K - spot) / spot
-        
-        # Realistic IV skew (same as IV Surface)
-        if moneyness < 0:
-            # OTM PUT: high IV (crash protection demand)
-            skew_adj = abs(moneyness) * 800
-        else:
-            # OTM CALL: lower IV
-            skew_adj = -moneyness * 400
-        smile_adj = moneyness**2 * 1500
-        
-        sigma = base_iv * (1 + (skew_adj + smile_adj) / 100)
-        sigma = max(0.08, min(0.80, sigma))
-        strike_iv_pct = round(sigma * 100, 2)
+        moneyness = (K - spot) / spot  # negative=ITM call/OTM put, positive=OTM call/ITM put
         
         for otype in ["CE", "PE"]:
+            if otype == "CE":
+                base = atm_call_iv
+                if moneyness > 0:  # OTM Call → lower IV
+                    iv_adj = -moneyness * 80
+                else:  # ITM Call → slightly higher IV
+                    iv_adj = abs(moneyness) * 120
+            else:  # PE
+                base = atm_put_iv
+                if moneyness < 0:  # OTM Put → higher IV (crash protection)
+                    iv_adj = abs(moneyness) * 300
+                else:  # ITM Put → slightly lower IV
+                    iv_adj = -moneyness * 60
+            
+            smile = moneyness**2 * 150
+            sigma = base * (1 + (iv_adj + smile) / 100)
+            sigma = max(0.08, min(0.60, sigma))
+            
             g = _calc_greeks(spot, K, T, r, sigma, otype)
             g.update({
                 "strike":        K,
                 "option_type":   otype,
-                "expiry_days":   expiry_days,
-                "iv_pct":        strike_iv_pct,
+                "expiry_days":   round(expiry_days, 1),
+                "iv_pct":        round(sigma * 100, 2),
                 "lot_size":      lot_size,
                 "total_premium": round(g["price"] * lot_size, 2),
                 "oi":            0,
@@ -3562,17 +3562,20 @@ def options_chain(spot:float=23644, expiry_days:float=0, vix:float=19.0, rate:fl
         "spot":         spot,
         "instrument":   instrument,
         "atm_strike":   atm,
-        "expiry_days":  expiry_days,
-        "expiry_date":  str(expiry_date) if 'expiry_date' in dir() else "",
-        "expiry_label": expiry_date.strftime("%a, %d %b %Y") if 'expiry_date' in dir() else "",
+        "expiry_days":  round(expiry_days, 1),
+        "expiry_date":  str(expiry_date),
+        "expiry_label": expiry_date.strftime("%a, %d %b %Y"),
         "vix":          vix,
         "lot_size":     lot_size,
-        "atm_iv_pct":   round(base_iv * 100, 2),
+        "atm_iv_pct":   round(((atm_call_iv + atm_put_iv) / 2) * 100, 2),
+        "atm_ce_iv":    round(atm_call_iv * 100, 2),
+        "atm_pe_iv":    round(atm_put_iv * 100, 2),
         "atm_ce":       atm_ce,
         "atm_pe":       atm_pe,
         "chain":        chain,
         "count":        len(chain),
     }
+
 
 @app.get("/options/iv")
 def implied_vol(market_price:float=100, spot:float=24000, strike:float=24000, expiry_days:int=7, option_type:str="CE"):

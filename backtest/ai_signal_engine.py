@@ -59,13 +59,12 @@ def calc_bollinger(prices, period=20, std=2):
 
 # ── PRICE GENERATOR (deterministic, intraday-aware) ──────────────
 def generate_ohlcv(instrument, days=30):
-    """Generate realistic OHLCV for technical analysis"""
+    """Generate OHLCV that ENDS at REAL_CLOSE (today's price) — indicators stay realistic"""
     base_prices = {
-        # Indices (approx May 2026)
         "NIFTY":23643.5,"BANKNIFTY":53710.35,"FINNIFTY":25343.85,
         "MIDCPNIFTY":14168.9,"SENSEX":75237.99,"NIFTYNXT50":69280.25,
-        # F&O Stocks (approx prices)
-        "RELIANCE":2950,"TCS":3850,"INFOSYS":1920,"HDFC":1680,
+        "RELIANCE":2950,"TCS":3850,"INFOSYS":1920,"INFY":1920,
+        "HDFC":1680,"HDFCBANK":1680,
         "SBI":820,"ICICI":1290,"ITC":480,"LT":3600,
         "BAJFINANCE":8900,"TITAN":3800,"KOTAKBANK":2100,
         "WIPRO":460,"HCLTECH":1680,"MARUTI":12500,
@@ -75,24 +74,18 @@ def generate_ohlcv(instrument, days=30):
     seed = int(hashlib.md5(instrument.encode()).hexdigest()[:8],16)
     rng  = random.Random(seed)
     
-    # Generate daily data with realistic drift and volatility
+    # Work BACKWARDS from base so closes[-1] = REAL_CLOSE
     closes = [base]
-    highs  = [base*1.008]
-    lows   = [base*0.992]
-    vols   = [1000000]
-    
     for d in range(days):
-        day_seed = seed + d
+        day_seed = seed + (days - d)
         rng2     = random.Random(day_seed)
-        drift    = rng2.gauss(0.0002, 0.012)  # Slight upward drift
-        close    = closes[-1] * (1 + drift)
-        high_pct = abs(rng2.gauss(0, 0.006))
-        low_pct  = abs(rng2.gauss(0, 0.006))
-        
-        closes.append(round(close, 2))
-        highs.append(round(close*(1+high_pct), 2))
-        lows.append(round(close*(1-low_pct), 2))
-        vols.append(int(rng2.uniform(500000, 5000000)))
+        drift    = rng2.gauss(0, 0.005)  # ±0.5% daily
+        prev     = closes[0] / (1 + drift)
+        closes.insert(0, prev)
+    
+    highs = [c * (1 + abs(rng.gauss(0, 0.003))) for c in closes]
+    lows  = [c * (1 - abs(rng.gauss(0, 0.003))) for c in closes]
+    vols  = [int(1000000 * (1 + abs(rng.gauss(0, 0.2)))) for _ in closes]
     
     return highs, lows, closes, vols
 
