@@ -52,7 +52,7 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.4.7"
+_APP_VERSION = "12.4.8"
 _BUILD_DATE = "2026-05-19"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")

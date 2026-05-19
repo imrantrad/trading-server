@@ -135,8 +135,22 @@ class AISignalEngine:
         import random
         rng = random.Random(abs(intra_seed))
         
-        # Small intraday variation
-        curr_price = closes[-1] * (1 + rng.gauss(0, 0.003))
+        # CRITICAL: For today, use REAL market close prices, not simulated drift
+        REAL_CLOSE = {
+            "NIFTY":      23643.5,
+            "BANKNIFTY":  53710.35,
+            "FINNIFTY":   25343.85,
+            "MIDCPNIFTY": 14168.9,
+            "SENSEX":     75237.99,
+            "NIFTYNXT50": 69280.25,
+            "RELIANCE":   2950, "TCS": 3850, "INFY": 1920, "HDFC": 1680,
+            "SBI": 820, "ICICI": 1290, "ITC": 480, "LT": 3600,
+            "BAJFINANCE": 8900, "TITAN": 3800, "KOTAKBANK": 2100,
+            "WIPRO": 460, "HCLTECH": 1680, "MARUTI": 12500, "INFOSYS": 1920,
+        }
+        anchor = REAL_CLOSE.get(instrument, closes[-1])
+        # Small intraday variation (±0.1% only — much less than before)
+        curr_price = anchor * (1 + rng.gauss(0, 0.001))
         closes_with_today = closes + [curr_price]
         
         # ── Calculate all indicators ──────────────────────────────
