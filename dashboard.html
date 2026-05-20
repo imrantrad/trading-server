@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.5.1">
+  <meta name="version" content="12.5.2">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -2165,7 +2165,19 @@ function diagnoseBroker(){
 
 // ── INSTITUTIONAL INDEX CHART ──
 function showIndexChart(instrument){
-  var spot = (window._marketPrices||{})[instrument] || 23643.5;
+  // Get real spot from _mktData stored by loadMarketPrices
+  var spot = 23643.5;
+  var d = window._mktData || {};
+  var key = instrument.toLowerCase();
+  if(d[key] && d[key].price){ spot = d[key].price; }
+  else if(d[instrument]){ spot = d[instrument]; }
+  else if(key === 'nifty' && d.nifty) spot = d.nifty.price || d.NIFTY;
+  else if(key === 'banknifty' && d.banknifty) spot = d.banknifty.price || d.BANKNIFTY;
+  else if(key === 'finnifty' && d.finnifty) spot = d.finnifty.price || d.FINNIFTY;
+  else if(key === 'midcpnifty' && d.midcpnifty) spot = d.midcpnifty.price || d.MIDCPNIFTY;
+  else if(key === 'sensex' && d.sensex) spot = d.sensex.price || d.SENSEX;
+  else if(key === 'niftynxt50' && d.niftynxt50) spot = d.niftynxt50.price || d.NIFTYNXT50;
+  spot = spot || 23643.5;
   
   var modal = document.createElement('div');
   modal.id = 'idx-chart-modal';
@@ -2199,7 +2211,6 @@ function showIndexChart(instrument){
 }
 
 function loadIndexChart(instrument, tf){
-  // Update active TF button
   document.querySelectorAll('.idx-tf-pill').forEach(function(b){
     b.style.background = 'var(--bg5)';
     b.style.color = 'var(--tx)';
@@ -2211,12 +2222,17 @@ function loadIndexChart(instrument, tf){
   $('idx-chart-canvas').style.display = 'none';
   $('idx-chart-stats').style.display = 'none';
   
-  // Use existing /chart/option_price as proxy (it has indicator support)
-  // For index, use spot as anchor
-  req('/chart/option_price/'+instrument+'/0/INDEX?timeframe='+tf+'&points=80','GET',null,function(err,d){
+  // Get real spot for this instrument
+  var dm = window._mktData || {};
+  var key = instrument.toLowerCase();
+  var spot = 23643.5;
+  if(dm[key] && dm[key].price) spot = dm[key].price;
+  else if(dm[instrument]) spot = dm[instrument];
+  
+  // Use INDEX chart endpoint (returns index price candles, not option prices)
+  req('/chart/index/'+instrument+'?timeframe='+tf+'&points=80&spot='+spot,'GET',null,function(err,d){
     if(err||!d||!d.candles){
-      // Fallback: generate locally
-      var spot = (window._marketPrices||{})[instrument] || 23643.5;
+      // Local fallback with REAL spot
       d = {candles: generateIndexCandles(spot, 80, tf), current_price: spot};
     }
     drawIdxChart(d.candles);

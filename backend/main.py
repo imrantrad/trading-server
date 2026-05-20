@@ -52,7 +52,7 @@ except ImportError as _e:
     cache = _Cache()
 # ═══════════════════════════════════════════════════
 
-_APP_VERSION = "12.5.1"
+_APP_VERSION = "12.5.2"
 _BUILD_DATE = "2026-05-19"
 
 app = FastAPI(title="Trading System v12.3 - Event-Driven")
@@ -7823,6 +7823,68 @@ def clear_market_cache():
             cache.delete(k) if hasattr(cache, 'delete') else None
             keys_cleared.append(k)
     return {"cleared": keys_cleared, "count": len(keys_cleared)}
+
+
+
+@app.get("/chart/index/{instrument}")
+def get_index_chart(instrument: str, timeframe: str = "5m", points: int = 80, spot: float = 0):
+    """Generate index price candles (NOT option prices) with realistic volatility"""
+    import math, random
+    from datetime import timedelta
+    
+    TF_SEC = {"1s":1,"3s":3,"5s":5,"10s":10,"30s":30,"1m":60,"3m":180,"5m":300,"10m":600,
+              "15m":900,"30m":1800,"1h":3600,"3h":10800,"1d":86400}
+    interval = TF_SEC.get(timeframe, 300)
+    
+    # If spot not provided, use REAL_CLOSE
+    REAL_CLOSE = {
+        "NIFTY": 23643.5, "BANKNIFTY": 53710.35, "FINNIFTY": 25343.85,
+        "MIDCPNIFTY": 14168.9, "SENSEX": 75237.99, "NIFTYNXT50": 69280.25,
+    }
+    if not spot or spot <= 0:
+        spot = REAL_CLOSE.get(instrument, 23643.5)
+    
+    # Index volatility (annualized ~18% for Nifty)
+    annual_vol = 0.18
+    vol_per_period = annual_vol * math.sqrt(interval / (252 * 86400))
+    
+    now = datetime.now(IST)
+    candles = []
+    price = spot
+    
+    # Build candles working BACKWARDS so last close = spot
+    candle_data = []
+    for i in range(points):
+        change = random.gauss(0, price * vol_per_period)
+        prev_close = price - change
+        high = max(price, prev_close) * (1 + abs(random.gauss(0, vol_per_period/2)))
+        low  = min(price, prev_close) * (1 - abs(random.gauss(0, vol_per_period/2)))
+        
+        candle_data.insert(0, {
+            "close":  price,
+            "open":   prev_close,
+            "high":   high,
+            "low":    low,
+            "volume": int(random.uniform(500000, 5000000)),
+        })
+        price = prev_close
+    
+    # Add timestamps
+    for i, c in enumerate(candle_data):
+        ts = now - timedelta(seconds=interval * (points - i - 1))
+        c["time"] = int(ts.timestamp() * 1000)
+    
+    # Ensure last close matches spot exactly
+    if candle_data:
+        candle_data[-1]["close"] = spot
+    
+    return {
+        "instrument":    instrument,
+        "timeframe":     timeframe,
+        "current_price": spot,
+        "candles":       candle_data,
+        "supported_timeframes": list(TF_SEC.keys()),
+    }
 
 
 @app.post("/ml/scan_all")
