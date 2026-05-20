@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.5.0">
+  <meta name="version" content="12.5.1">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -210,7 +210,7 @@ input:focus,select:focus{border-color:var(--bl)}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px" id="mkt-ticker">
       <div onclick="openMiniChart('NIFTY')" style="background:var(--bg4);padding:7px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)" class="mkt-item">
         <div style="font-size:8px;color:var(--mu)">NIFTY</div>
-        <div onclick="showIndexChart(\'NIFTY\')" style="id="t-nifty" style="font-size:13px;font-weight:800;color:var(--gr)">—</div>
+        <div onclick="showIndexChart('NIFTY')" id="t-nifty" style="cursor:pointer;font-size:13px;font-weight:800;color:var(--gr)">—</div>
         <div id="t-nifty-chg" style="font-size:8px;color:var(--mu)">—</div>
       </div>
       <div onclick="openMiniChart('BANKNIFTY')" style="background:var(--bg4);padding:7px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--bo)" class="mkt-item">
@@ -4963,28 +4963,12 @@ function loadMarketPrices(force){
 var _miniChartHistory = {};
 
 function openMiniChart(inst){
-  window._chartInst = inst;
-  var modal = $('mini-chart-modal');
-  if(modal) modal.style.display='flex';
-  
-  var priceMap = {
-    NIFTY:     window._spotPrice||23700,
-    BANKNIFTY: (window._mktData&&window._mktData.banknifty&&window._mktData.banknifty.price)||51800,
-    FINNIFTY:  (window._spotPrice||23700)*1.27,
-    MIDCPNIFTY:(window._spotPrice||23700)*0.95,
-    SENSEX:    (window._spotPrice||23700)*2.68,
-  };
-  var price = priceMap[inst]||23700;
-  var chg   = (window._mktData&&window._mktData.nifty&&window._mktData.nifty.change)||0;
-  var pct   = (window._mktData&&window._mktData.nifty&&window._mktData.nifty.pct)||0;
-  
-  $('mchart-title').textContent = inst;
-  $('mchart-price').textContent = '₹'+Math.round(price).toLocaleString('en-IN');
-  $('mchart-price').style.color = chg>=0?'var(--gr)':'var(--rd)';
-  $('mchart-chg').textContent   = (chg>=0?'+':'')+chg.toFixed(2)+' ('+pct.toFixed(2)+'%)';
-  $('mchart-chg').style.color   = chg>=0?'var(--gr)':'var(--rd)';
-  
-  drawMiniChart(inst, price, chg>=0);
+  // Redirect to institutional chart system
+  if(typeof showIndexChart === 'function'){
+    showIndexChart(inst);
+  } else {
+    console.error('showIndexChart not loaded');
+  }
 }
 
 function drawMiniChart(inst, currentPrice, isPositive){
