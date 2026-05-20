@@ -155,12 +155,22 @@ class UserDB:
         self._seed_demo()
 
     def update_user(self, user_id, updates: dict):
-        allowed = ['full_name','email','phone','capital','subscription_plan','is_active','password_hash']
+        allowed = ['full_name','email','phone','mobile','capital','subscription_plan',
+                   'is_active','password_hash','username',
+                   'broker_name','broker_mode','api_key','broker_key_hint',
+                   'pan_card','address','city','state','aadhaar',
+                   'subscription_expires_at']
         with self.conn() as c:
+            # Auto-add missing columns
+            for col in ['broker_name','broker_mode','api_key','broker_key_hint',
+                       'pan_card','address','city','state','aadhaar','mobile','subscription_expires_at']:
+                try: c.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT")
+                except Exception: pass
             for k,v in updates.items():
                 if k in allowed:
                     c.execute(f"UPDATE users SET {k}=? WHERE id=?", (v, user_id))
-        return {"updated": True}
+            c.commit()  # CRITICAL: persist changes
+        return {"updated": True, "fields": [k for k in updates.keys() if k in allowed]}
 
     def get_user_by_email(self, email):
         with self.conn() as c:
