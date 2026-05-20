@@ -4,7 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="version" content="12.5.3">
+  <meta name="version" content="12.5.4">
   <meta name="build-date" content="2026-05-17">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -1649,6 +1649,18 @@ var _logoClicks = 0, _logoTimer = null;
 var _btCustomStrat = null;
 
 // ── UTILS ─────────────────────────────────────────
+
+// Safely extract numeric price from broker response (handles dict or flat)
+function _xprice(val, fallback){
+  if(val === null || val === undefined) return fallback || 0;
+  if(typeof val === 'number') return val;
+  if(typeof val === 'object'){
+    return val.price || val.ltp || val.close || val.last || fallback || 0;
+  }
+  var n = parseFloat(val);
+  return isNaN(n) ? (fallback || 0) : n;
+}
+
 function $(id){ return document.getElementById(id); }
 function gv(id){ var e=$(id); return e ? e.value : ''; }
 function nv(id){ return parseFloat(gv(id))||0; }
@@ -2165,19 +2177,11 @@ function diagnoseBroker(){
 
 // ── INSTITUTIONAL INDEX CHART ──
 function showIndexChart(instrument){
-  // Get real spot from _mktData stored by loadMarketPrices
-  var spot = 23643.5;
+  // Get real spot from _mktData with safe extraction
   var d = window._mktData || {};
   var key = instrument.toLowerCase();
-  if(d[key] && d[key].price){ spot = d[key].price; }
-  else if(d[instrument]){ spot = d[instrument]; }
-  else if(key === 'nifty' && d.nifty) spot = d.nifty.price || d.NIFTY;
-  else if(key === 'banknifty' && d.banknifty) spot = d.banknifty.price || d.BANKNIFTY;
-  else if(key === 'finnifty' && d.finnifty) spot = d.finnifty.price || d.FINNIFTY;
-  else if(key === 'midcpnifty' && d.midcpnifty) spot = d.midcpnifty.price || d.MIDCPNIFTY;
-  else if(key === 'sensex' && d.sensex) spot = d.sensex.price || d.SENSEX;
-  else if(key === 'niftynxt50' && d.niftynxt50) spot = d.niftynxt50.price || d.NIFTYNXT50;
-  spot = spot || 23643.5;
+  var spot = _xprice(d[key], _xprice(d[instrument], _xprice(d[instrument.toUpperCase()], 23643.5)));
+  if(!spot || isNaN(spot)) spot = 23643.5;
   
   var modal = document.createElement('div');
   modal.id = 'idx-chart-modal';
@@ -2222,12 +2226,9 @@ function loadIndexChart(instrument, tf){
   $('idx-chart-canvas').style.display = 'none';
   $('idx-chart-stats').style.display = 'none';
   
-  // Get real spot for this instrument
+  // Get real spot using safe extraction
   var dm = window._mktData || {};
-  var key = instrument.toLowerCase();
-  var spot = 23643.5;
-  if(dm[key] && dm[key].price) spot = dm[key].price;
-  else if(dm[instrument]) spot = dm[instrument];
+  var spot = _xprice(dm[instrument.toLowerCase()], _xprice(dm[instrument], _xprice(dm[instrument.toUpperCase()], 23643.5)));
   
   // Use INDEX chart endpoint (returns index price candles, not option prices)
   req('/chart/index/'+instrument+'?timeframe='+tf+'&points=80&spot='+spot,'GET',null,function(err,d){
@@ -4913,13 +4914,13 @@ function loadMarketPrices(force){
       }
     }
     
-    var nifty  = (d.nifty&&d.nifty.price)||d.NIFTY||23643;
-    var bnifty = (d.banknifty&&d.banknifty.price)||d.BANKNIFTY||(nifty*2.2717);
-    var vix    = (d.india_vix&&d.india_vix.price)||d.INDIA_VIX||18.79;
-    var finn   = (d.finnifty&&d.finnifty.price)||d.FINNIFTY||(nifty*1.0719);
-    var midcp  = (d.midcpnifty&&d.midcpnifty.price)||d.MIDCPNIFTY||(nifty*0.5993);
-    var sensex = (d.sensex&&d.sensex.price)||d.SENSEX||(nifty*3.1822);
-    var nxt50  = (d.niftynxt50&&d.niftynxt50.price)||d.NIFTYNXT50||(nifty*2.9302);
+    var nifty  = _xprice(d.nifty, _xprice(d.NIFTY, 23643));
+    var bnifty = _xprice(d.banknifty, _xprice(d.BANKNIFTY, nifty*2.2717));
+    var vix    = _xprice(d.india_vix, _xprice(d.INDIA_VIX, 18.79));
+    var finn = _xprice(d.finnifty, _xprice(d.FINNIFTY, (nifty*1.0719)));
+    var midcp = _xprice(d.midcpnifty, _xprice(d.MIDCPNIFTY, (nifty*0.5993)));
+    var sensex = _xprice(d.sensex, _xprice(d.SENSEX, (nifty*3.1822)));
+    var nxt50 = _xprice(d.niftynxt50, _xprice(d.NIFTYNXT50, (nifty*2.9302)));
     window._mktData = d;  // store full data
     
     var nChg  = (d.nifty&&d.nifty.change!=null) ? d.nifty.change : 0;
